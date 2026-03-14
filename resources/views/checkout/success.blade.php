@@ -1,20 +1,31 @@
 @extends('layouts.app')
 
-@section('title', 'Order Confirmation - Bluprinter')
+@section('title', 'Order Success')
 
 @section('content')
+@php
+    $primary = '#f0427c';
+    $orderDate = \Carbon\Carbon::parse($order->created_at);
+    $estimatedStart = $orderDate->copy()->addDays(3);
+    $estimatedEnd = $orderDate->copy()->addDays(5);
+    $gaItems = $order->items->map(function($item, $index) {
+        return [
+            'item_id' => (string) $item->product_id,
+            'item_name' => $item->product_name,
+            'price' => (float) $item->unit_price,
+            'quantity' => (int) $item->quantity,
+            'index' => $index + 1
+        ];
+    })->values()->toArray();
+@endphp
 <script>
-// Track Facebook Pixel Purchase event
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof fbq !== 'undefined') {
-        // Collect product IDs from order items
         const productIds = [
             @foreach($order->items as $item)
                 '{{ $item->product_id }}'{{ !$loop->last ? ',' : '' }}
             @endforeach
         ];
-        
-        // Track Purchase event
         fbq('track', 'Purchase', {
             content_ids: productIds,
             content_type: 'product',
@@ -23,35 +34,10 @@ document.addEventListener('DOMContentLoaded', function() {
             transaction_id: '{{ $order->order_number }}',
             num_items: {{ $order->items->count() }}
         });
-        
-        console.log('✅ Facebook Pixel: Purchase tracked', {
-            order: '{{ $order->order_number }}',
-            total: '{{ $order->total_amount }}',
-            items: {{ $order->items->count() }}
-        });
-        
-        // Clear cart from localStorage after successful purchase
         localStorage.removeItem('cart');
-        
-        // Dispatch cart updated event to update header
         window.dispatchEvent(new CustomEvent('cartUpdated'));
     }
-
-    // Event tracking được xử lý bởi GTM thông qua dataLayer
     if (typeof dataLayer !== 'undefined') {
-        @php
-            $gaItems = $order->items->map(function($item, $index) {
-                return [
-                    'item_id' => (string) $item->product_id,
-                    'item_name' => $item->product_name,
-                    'price' => (float) $item->unit_price,
-                    'quantity' => (int) $item->quantity,
-                    'index' => $index + 1
-                ];
-            })->values()->toArray();
-        @endphp
-        const gaItems = @json($gaItems);
-
         dataLayer.push({
             'event': 'purchase',
             'currency': '{{ $currency ?? "USD" }}',
@@ -59,385 +45,208 @@ document.addEventListener('DOMContentLoaded', function() {
             'value': Number('{{ $order->total_amount }}'),
             'tax': Number('{{ $order->tax_amount }}'),
             'shipping': Number('{{ $order->shipping_cost }}'),
-            items: gaItems
-        });
-
-        console.log('✅ Google Tag: purchase tracked', {
-            order: '{{ $order->order_number }}',
-            total: '{{ $order->total_amount }}',
-            items: gaItems.length
+            items: @json($gaItems)
         });
     }
-
     if (typeof window !== 'undefined' && window.ttq) {
-        const tiktokOrderContents = {!! $order->items->map(function($item) {
-            return [
-                'content_id' => (string) $item->product_id,
-                'content_type' => 'product',
-                'content_name' => $item->product_name,
-                'quantity' => (int) $item->quantity,
-                'price' => (float) $item->unit_price,
-            ];
-        })->values()->toJson(JSON_UNESCAPED_UNICODE) !!};
-
-        const tiktokOrderValue = Number('{{ $order->total_amount }}') || 0;
-        const tiktokPayloadBase = {
-            contents: Array.isArray(tiktokOrderContents) ? tiktokOrderContents : [],
-            value: tiktokOrderValue,
-            currency: '{{ $currency ?? "USD" }}',
-            order_id: '{{ $order->order_number }}'
-        };
-
-        const paymentMethod = {!! json_encode($order->payment_method ?? null) !!};
-        if (paymentMethod) {
-            tiktokPayloadBase.payment_method = paymentMethod;
-        }
-
+        const tiktokOrderContents = {!! $order->items->map(fn($item) => [
+            'content_id' => (string) $item->product_id,
+            'content_type' => 'product',
+            'content_name' => $item->product_name,
+            'quantity' => (int) $item->quantity,
+            'price' => (float) $item->unit_price,
+        ])->values()->toJson(JSON_UNESCAPED_UNICODE) !!};
         try {
-            window.ttq.track('PlaceAnOrder', tiktokPayloadBase);
-            window.ttq.track('Purchase', Object.assign({}, tiktokPayloadBase));
-        } catch (error) {
-            console.error('TikTok Purchase tracking error:', error);
-        }
+            window.ttq.track('PlaceAnOrder', { contents: tiktokOrderContents, value: Number('{{ $order->total_amount }}') || 0, currency: '{{ $currency ?? "USD" }}', order_id: '{{ $order->order_number }}' });
+            window.ttq.track('Purchase', { contents: tiktokOrderContents, value: Number('{{ $order->total_amount }}') || 0, currency: '{{ $currency ?? "USD" }}', order_id: '{{ $order->order_number }}' });
+        } catch (e) {}
     }
 });
 </script>
-<style>
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
 
-    @keyframes scaleIn {
-        from {
-            opacity: 0;
-            transform: scale(0.9);
-        }
-        to {
-            opacity: 1;
-            transform: scale(1);
-        }
-    }
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-    @keyframes bounce {
-        0%, 20%, 53%, 80%, 100% {
-            transform: translate3d(0,0,0);
-        }
-        40%, 43% {
-            transform: translate3d(0, -30px, 0);
-        }
-        70% {
-            transform: translate3d(0, -15px, 0);
-        }
-        90% {
-            transform: translate3d(0, -4px, 0);
-        }
-    }
-
-    .animate-fadeInUp {
-        animation: fadeInUp 0.6s ease-out forwards;
-    }
-
-    .animate-scaleIn {
-        animation: scaleIn 0.5s ease-out forwards;
-    }
-
-    .animate-bounce {
-        animation: bounce 1s ease-in-out;
-    }
-
-    .gradient-text {
-        background: linear-gradient(135deg, #005366 0%, #E2150C 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    .success-icon {
-        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-    }
-</style>
-
-<div class="min-h-screen bg-gray-50 py-8">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- Success Header -->
-        <div class="text-center mb-12 animate-fadeInUp">
-            <div class="success-icon w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
-                <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+<div class="min-h-screen bg-[#f8f6f6] text-slate-900" style="font-family: 'Plus Jakarta Sans', sans-serif;">
+    <main class="flex-1 px-4 md:px-10 lg:px-16 py-8 max-w-[1200px] mx-auto w-full">
+        {{-- Success header (giống code.html) --}}
+        <div class="flex flex-col items-center text-center mb-10">
+            <div class="w-20 h-20 rounded-full flex items-center justify-center mb-6" style="background: rgba(240,66,124,.1);">
+                <svg class="w-12 h-12" style="color: {{ $primary }};" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
             </div>
-            
-            <h1 class="text-4xl font-bold text-gray-900 mb-4">
-                Order 
-                <span class="gradient-text">Confirmed!</span>
-            </h1>
-            <p class="text-lg text-gray-600 mb-6">
-                Thank you for your purchase. Your order has been successfully placed.
-            </p>
-            
-            <div class="bg-white rounded-xl shadow-lg p-6 inline-block animate-scaleIn">
-                <div class="text-center">
-                    <p class="text-sm text-gray-600 mb-2">Order Number</p>
-                    <p class="text-2xl font-bold text-[#005366]">{{ $order->order_number }}</p>
-                </div>
-            </div>
+            <h1 class="text-slate-900 tracking-tight text-3xl md:text-4xl font-extrabold leading-tight mb-2">Thank You for Your Order!</h1>
+            <p class="text-slate-500 text-lg">Your order <span class="font-bold" style="color: {{ $primary }};">#{{ $order->order_number }}</span> has been placed successfully.</p>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- Order Details -->
-            <div class="animate-fadeInUp" style="animation-delay: 0.2s">
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Order Details</h2>
-                    
-                    <!-- Customer Information -->
-                    <div class="mb-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-3">Customer Information</h3>
-                        <div class="space-y-2 text-gray-600">
-                            <p><span class="font-medium">Name:</span> {{ $order->customer_name }}</p>
-                            <p><span class="font-medium">Email:</span> {{ $order->customer_email }}</p>
-                            @if($order->customer_phone)
-                                <p><span class="font-medium">Phone:</span> {{ $order->customer_phone }}</p>
-                            @endif
-                        </div>
-                    </div>
-
-                    <!-- Shipping Address -->
-                    <div class="mb-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-3">Shipping Address</h3>
-                        <div class="text-gray-600">
-                            <p>{{ $order->shipping_address }}</p>
-                            <p>{{ $order->city }}, {{ $order->state }} {{ $order->postal_code }}</p>
-                            <p>{{ $order->country }}</p>
-                        </div>
-                    </div>
-
-                    <!-- Order Items -->
-                    <div class="mb-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-3">Order Items</h3>
-                        <div class="space-y-3">
-                            @foreach($order->items as $item)
-                                @php
-                                    $product = $item->product;
-                                    $imageUrl = null;
-                                    
-                                    if ($product) {
-                                        $media = $product->getEffectiveMedia();
-                                        if ($media && count($media) > 0) {
-                                            if (is_string($media[0])) {
-                                                $imageUrl = $media[0];
-                                            } elseif (is_array($media[0])) {
-                                                $imageUrl = $media[0]['url'] ?? $media[0]['path'] ?? reset($media[0]) ?? null;
-                                            }
-                                        }
-                                    }
-                                @endphp
-                                <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                                    <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-gray-200">
-                                        @if($imageUrl)
-                                            <img src="{{ $imageUrl }}" alt="{{ $item->product_name }}" class="w-full h-full object-cover">
-                                        @else
-                                            <div class="w-full h-full flex items-center justify-center">
-                                                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                                </svg>
-                                            </div>
-                                        @endif
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <h4 class="font-medium text-gray-900 truncate">{{ $item->product_name }}</h4>
-                                        <p class="text-sm text-gray-600">
-                                            Qty: {{ $item->quantity }} × 
-                                            {{ \App\Services\CurrencyService::formatPrice($item->unit_price, $currency ?? 'USD') }}
-                                        </p>
-                                    </div>
-                                    <div class="text-right flex-shrink-0">
-                                        <p class="font-semibold text-gray-900">
-                                            {{ \App\Services\CurrencyService::formatPrice($item->total_price, $currency ?? 'USD') }}
-                                        </p>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-
-                    <!-- Order Totals -->
-                    <div class="border-t border-gray-200 pt-4">
-                        <div class="space-y-2">
-                            <!-- Exchange Rate Display (only show if currency is not USD) -->
-                            @if(($currency ?? 'USD') !== 'USD' && isset($currencyRate))
-                            <div class="text-xs text-gray-500 bg-gray-50 p-2 rounded-lg border border-gray-200 mb-3">
-                                <div class="flex justify-between items-center">
-                                    <span>Exchange Rate:</span>
-                                    <span class="font-medium">1 USD = {{ number_format($currencyRate, 4) }} {{ $currency }}</span>
-                                </div>
-                                <div class="text-[10px] text-gray-400 mt-1">
-                                    Prices converted from USD
-                                </div>
-                            </div>
-                            @endif
-                            
-                            <div class="flex justify-between text-gray-600">
-                                <span>Subtotal</span>
-                                <span>{{ \App\Services\CurrencyService::formatPrice($convertedSubtotal ?? $order->subtotal, $currency ?? 'USD') }}</span>
-                            </div>
-                            <div class="flex justify-between text-gray-600">
-                                <span>Shipping</span>
-                                <span>{{ \App\Services\CurrencyService::formatPrice($convertedShipping ?? $order->shipping_cost, $currency ?? 'USD') }}</span>
-                            </div>
-                            <div class="flex justify-between text-gray-600">
-                                <span>Tax</span>
-                                <span>{{ \App\Services\CurrencyService::formatPrice($convertedTax ?? $order->tax_amount, $currency ?? 'USD') }}</span>
-                            </div>
-                            @if($order->tip_amount > 0)
-                            <div class="flex justify-between text-gray-600">
-                                <span>Tips</span>
-                                <span>{{ \App\Services\CurrencyService::formatPrice($convertedTip ?? $order->tip_amount, $currency ?? 'USD') }}</span>
-                            </div>
-                            @endif
-                            <div class="flex justify-between text-lg font-bold text-gray-900 border-t border-gray-200 pt-2">
-                                <span>Total</span>
-                                <span>{{ \App\Services\CurrencyService::formatPrice($convertedTotal ?? $order->total_amount, $currency ?? 'USD') }}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Order Status & Next Steps -->
-            <div class="animate-fadeInUp" style="animation-delay: 0.4s">
-                <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Order Status</h2>
-                    
-                    <!-- Status Timeline -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {{-- Left: Order Summary + What Happens Next --}}
+            <div class="lg:col-span-2 space-y-6">
+                {{-- Order Summary --}}
+                <section class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-lg font-bold mb-6 flex items-center gap-2" style="color: {{ $primary }};">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                        Order Summary
+                    </h3>
                     <div class="space-y-4">
-                        <div class="flex items-center">
-                            <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-4">
-                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="font-semibold text-gray-900">Order Placed</p>
-                                <p class="text-sm text-gray-600">{{ $order->created_at->format('M d, Y \a\t g:i A') }}</p>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center">
-                            <div class="w-8 h-8 {{ $order->payment_status === 'paid' ? 'bg-green-500' : 'bg-gray-300' }} rounded-full flex items-center justify-center mr-4">
-                                @if($order->payment_status === 'paid')
-                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                    </svg>
-                                @else
-                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                @endif
-                            </div>
-                            <div>
-                                <p class="font-semibold text-gray-900">Payment {{ $order->payment_status === 'paid' ? 'Completed' : 'Pending' }}</p>
-                                <p class="text-sm text-gray-600">
-                                    @if($order->payment_status === 'paid')
-                                        Payment received successfully
+                        @foreach($order->items as $item)
+                            @php
+                                $product = $item->product;
+                                $imageUrl = null;
+                                if ($product) {
+                                    $media = $product->getEffectiveMedia();
+                                    if ($media && count($media) > 0) {
+                                        $imageUrl = is_string($media[0]) ? $media[0] : ($media[0]['url'] ?? $media[0]['path'] ?? reset($media[0]) ?? null);
+                                    }
+                                }
+                            @endphp
+                            <div class="flex items-center gap-4 py-3 border-b border-slate-100 last:border-0">
+                                <div class="aspect-square size-16 shrink-0 rounded-lg overflow-hidden bg-[#f8f6f6] border border-slate-100">
+                                    @if($imageUrl)
+                                        <img src="{{ $imageUrl }}" alt="{{ $item->product_name }}" class="w-full h-full object-cover">
                                     @else
-                                        Awaiting payment confirmation
+                                        <div class="w-full h-full flex items-center justify-center text-slate-300">
+                                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14"/></svg>
+                                        </div>
                                     @endif
-                                </p>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-slate-900 font-semibold truncate">{{ $item->product_name }}</p>
+                                    <p class="text-slate-500 text-sm">
+                                        @if(!empty($item->product_options) && is_array($item->product_options))
+                                            @php
+                                                $parts = [];
+                                                $humanize = function ($key) {
+                                                    if (is_numeric($key)) return null;
+                                                    return ucwords(str_replace(['_', '-'], ' ', (string) $key));
+                                                };
+                                                foreach ($item->product_options as $k => $v) {
+                                                    if (is_array($v)) {
+                                                        if (isset($v['value']) && (string)$v['value'] !== '' && !isset($v['Size']) && !isset($v['Nail Shape'])) {
+                                                            $parts[] = 'Custom: ' . $v['value'];
+                                                        } else {
+                                                            foreach ($v as $subK => $subV) {
+                                                                if ($subK === 'price' || (is_scalar($subV) && (string)$subV === '')) continue;
+                                                                if ($subK === 'value' && count($v) > 1) continue;
+                                                                $label = $humanize($subK);
+                                                                if ($label && is_scalar($subV)) $parts[] = $label . ': ' . $subV;
+                                                            }
+                                                        }
+                                                    } elseif (is_scalar($v)) {
+                                                        $label = $humanize($k);
+                                                        if ($label && (string)$v !== '') $parts[] = $label . ': ' . $v;
+                                                    }
+                                                }
+                                            @endphp
+                                            {{ count($parts) ? implode(', ', $parts) : '—' }}
+                                        @else
+                                            —
+                                        @endif
+                                    </p>
+                                    <p class="text-slate-400 text-xs">Qty: {{ $item->quantity }}</p>
+                                </div>
+                                <div class="text-right shrink-0">
+                                    <p class="font-bold text-slate-900">{{ \App\Services\CurrencyService::formatPrice($item->total_price ?? ($item->unit_price * $item->quantity), $currency ?? 'USD') }}</p>
+                                </div>
                             </div>
-                        </div>
+                        @endforeach
+                    </div>
 
-                        <div class="flex items-center">
-                            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center mr-4">
-                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="font-semibold text-gray-900">Processing</p>
-                                <p class="text-sm text-gray-600">We'll start preparing your order</p>
-                            </div>
+                    @if(($currency ?? 'USD') !== 'USD' && isset($currencyRate))
+                        <div class="text-xs text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100 mt-4">
+                            <div class="flex justify-between"><span>Exchange Rate:</span><span class="font-medium">1 USD = {{ number_format($currencyRate, 4) }} {{ $currency }}</span></div>
                         </div>
+                    @endif
 
-                        <div class="flex items-center">
-                            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center mr-4">
-                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="font-semibold text-gray-900">Shipped</p>
-                                <p class="text-sm text-gray-600">Your order is on its way</p>
-                            </div>
+                    <div class="mt-8 pt-6 border-t border-slate-100 space-y-2">
+                        <div class="flex justify-between text-slate-500"><span>Subtotal</span><span>{{ \App\Services\CurrencyService::formatPrice($convertedSubtotal ?? $order->subtotal, $currency ?? 'USD') }}</span></div>
+                        @if($order->promo_code && (float)($order->discount_amount ?? 0) > 0)
+                        <div class="flex justify-between text-emerald-600"><span>Promo ({{ $order->promo_code }})</span><span>-{{ \App\Services\CurrencyService::formatPrice($order->discount_amount, $currency ?? 'USD') }}</span></div>
+                        @endif
+                        <div class="flex justify-between text-slate-500"><span>Shipping</span><span>{{ \App\Services\CurrencyService::formatPrice($convertedShipping ?? $order->shipping_cost, $currency ?? 'USD') }}</span></div>
+                        <div class="flex justify-between text-slate-500"><span>Tax</span><span>{{ \App\Services\CurrencyService::formatPrice($convertedTax ?? $order->tax_amount, $currency ?? 'USD') }}</span></div>
+                        @if($order->tip_amount > 0)
+                            <div class="flex justify-between text-slate-500"><span>Tips</span><span>{{ \App\Services\CurrencyService::formatPrice($convertedTip ?? $order->tip_amount, $currency ?? 'USD') }}</span></div>
+                        @endif
+                        <div class="flex justify-between text-slate-900 font-bold text-lg pt-2">
+                            <span>Total Amount Paid</span>
+                            <span style="color: {{ $primary }};">{{ \App\Services\CurrencyService::formatPrice($convertedTotal ?? $order->total_amount, $currency ?? 'USD') }}</span>
                         </div>
+                    </div>
+                </section>
 
-                        <div class="flex items-center">
-                            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center mr-4">
-                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
+                {{-- What Happens Next? (timeline giống code.html) --}}
+                <section class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-lg font-bold mb-6 flex items-center gap-2" style="color: {{ $primary }};">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                        What Happens Next?
+                    </h3>
+                    <div class="relative space-y-8 pl-8 before:content-[''] before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-[#f0427c]/30">
+                        <div class="relative">
+                            <div class="absolute -left-8 top-0.5 w-6 h-6 rounded-full flex items-center justify-center border-4 border-white shadow-sm" style="background: {{ $primary }};">
+                                <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                             </div>
-                            <div>
-                                <p class="font-semibold text-gray-900">Delivered</p>
-                                <p class="text-sm text-gray-600">Enjoy your new products!</p>
-                            </div>
+                            <p class="font-bold text-slate-900">Order Confirmed</p>
+                            <p class="text-sm text-slate-500">We've received your order and are getting it ready for processing.</p>
                         </div>
+                        <div class="relative">
+                            <div class="absolute -left-8 top-0.5 w-6 h-6 rounded-full border-4 border-white bg-slate-200"></div>
+                            <p class="font-bold text-slate-900">Processing & Packing</p>
+                            <p class="text-sm text-slate-500">Your items are being hand-picked and beautifully packed. (1-2 business days)</p>
+                        </div>
+                        <div class="relative">
+                            <div class="absolute -left-8 top-0.5 w-6 h-6 rounded-full border-4 border-white bg-slate-200"></div>
+                            <p class="font-bold text-slate-900">Shipping Notification</p>
+                            <p class="text-sm text-slate-500">You'll receive an email with your tracking number as soon as your package ships.</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            {{-- Right: Shipping + Estimated Delivery + Actions --}}
+            <div class="space-y-6">
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2" style="color: {{ $primary }};">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        Shipping Address
+                    </h3>
+                    <div class="text-slate-600 leading-relaxed">
+                        <p class="font-bold text-slate-900">{{ $order->customer_name }}</p>
+                        <p>{{ $order->shipping_address }}</p>
+                        <p>{{ $order->city }}, {{ $order->state }} {{ $order->postal_code }}</p>
+                        <p>{{ $order->country }}</p>
                     </div>
                 </div>
 
-                <!-- What's Next -->
-                <div class="bg-blue-50 rounded-xl p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">What's Next?</h3>
-                    <div class="space-y-3 text-sm text-gray-600">
-                        <div class="flex items-start">
-                            <svg class="w-5 h-5 text-blue-600 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                            </svg>
-                            <p>You'll receive an email confirmation shortly</p>
-                        </div>
-                        <div class="flex items-start">
-                            <svg class="w-5 h-5 text-blue-600 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <p>We'll process your order within 1-2 business days</p>
-                        </div>
-                        <div class="flex items-start">
-                            <svg class="w-5 h-5 text-blue-600 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
-                            </svg>
-                            <p>You'll get tracking information once shipped</p>
-                        </div>
-                    </div>
+                <div class="p-6 rounded-xl border shadow-sm" style="background: rgba(240,66,124,.05); border-color: rgba(240,66,124,.2);">
+                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2" style="color: {{ $primary }};">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        Estimated Delivery
+                    </h3>
+                    <p class="text-2xl font-extrabold text-slate-900">{{ $estimatedStart->format('M j') }} – {{ $estimatedEnd->format('M j') }}</p>
+                    <p class="text-sm text-slate-500 mt-2">Standard Shipping (3-5 Business Days)</p>
+                </div>
+
+                <div class="space-y-3">
+                    <a href="{{ route('products.index') }}" class="w-full flex items-center justify-center gap-2 font-bold py-4 px-6 rounded-xl transition-all shadow-lg text-white" style="background: {{ $primary }};">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                        Continue Shopping
+                    </a>
+                    <a href="{{ route('checkout.receipt', $order->order_number) }}" class="w-full flex items-center justify-center gap-2 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 font-bold py-4 px-6 rounded-xl transition-all">
+                        <svg class="w-5 h-5" style="color: {{ $primary }};" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2h2z"/></svg>
+                        Print Receipt
+                    </a>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl border border-dashed border-slate-300 text-center">
+                    <p class="text-sm font-medium text-slate-600 mb-3">Need help with your order?</p>
+                    <a href="{{ route('customer.orders.show', $order->order_number) }}" class="font-bold hover:underline flex items-center justify-center gap-1" style="color: {{ $primary }};">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        View Order & Contact Support
+                    </a>
                 </div>
             </div>
         </div>
-
-        <!-- Action Buttons -->
-        <div class="text-center mt-12 animate-fadeInUp" style="animation-delay: 0.6s">
-            <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <a href="{{ route('home') }}" 
-                   class="inline-flex items-center px-6 py-3 bg-[#005366] text-white rounded-lg hover:bg-[#003d4d] transition-colors font-semibold">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-                    </svg>
-                    Continue Shopping
-                </a>
-                
-                <a href="{{ route('checkout.receipt', $order->order_number) }}" 
-                   class="inline-flex items-center px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                    Download Receipt
-                </a>
-            </div>
-        </div>
-    </div>
+    </main>
 </div>
 @endsection

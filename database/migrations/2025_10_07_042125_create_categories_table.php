@@ -13,14 +13,24 @@ return new class extends Migration
     {
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
+
             $table->string('name');
             $table->string('slug')->unique();
-            $table->unsignedBigInteger('parent_id')->nullable();
+
+            // Self parent (category cha)
+            $table->foreignId('parent_id')
+                ->nullable()
+                ->constrained('categories')
+                ->onDelete('cascade');
+
             $table->text('description')->nullable();
             $table->string('image')->nullable();
-            $table->timestamps();
 
-            $table->foreign('parent_id')->references('id')->on('categories')->onDelete('cascade');
+            // Thêm mới
+            $table->boolean('featured')->default(false);
+            $table->integer('sort_order')->default(0);
+
+            $table->timestamps();
         });
     }
 

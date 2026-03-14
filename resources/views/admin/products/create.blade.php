@@ -87,6 +87,7 @@
                         <option value="{{ $template->id }}" 
                                 data-name="{{ $template->name }}"
                                 data-price="{{ $template->base_price }}"
+                                data-list-price="{{ $template->list_price ?? '' }}"
                                 data-description="{{ $template->description }}"
                                 data-variants='@json($template->variants)'
                                 {{ old('template_id') == $template->id ? 'selected' : '' }}>
@@ -105,6 +106,10 @@
                         <div>
                             <span class="text-gray-600">Base Price:</span>
                             <span class="font-semibold text-gray-900" id="preview-price">$0.00</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-600">List Price:</span>
+                            <span class="font-semibold text-gray-900" id="preview-list-price">—</span>
                         </div>
                         <div>
                             <span class="text-gray-600">Variants:</span>
@@ -194,6 +199,11 @@
                                        placeholder="0.00">
                             </div>
                             <p class="mt-1 text-xs text-gray-500" id="price-hint">Enter the amount to override template price</p>
+                        </div>
+                        <div class="mt-4">
+                            <label for="list_price" class="block text-sm font-medium text-gray-700 mb-1">List Price (giá niêm yết, hiển thị gạch ngang khi giảm giá)</label>
+                            <input type="number" id="list_price" name="list_price" value="{{ old('list_price') }}" step="0.01" min="0" placeholder="Để trống = dùng từ template"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
                         
                         <!-- Template Price Preview -->
@@ -415,11 +425,13 @@ function loadTemplateData(templateId) {
     // Get template data from option attributes
     const templateName = selectedOption.dataset.name;
     const templatePrice = selectedOption.dataset.price;
+    const templateListPrice = selectedOption.dataset.listPrice || '';
     const templateDescription = selectedOption.dataset.description || '';
     const variants = JSON.parse(selectedOption.dataset.variants || '[]');
     
     // Update preview
     document.getElementById('preview-price').textContent = '$' + parseFloat(templatePrice).toFixed(2);
+    document.getElementById('preview-list-price').textContent = templateListPrice ? '$' + parseFloat(templateListPrice).toFixed(2) : '—';
     document.getElementById('preview-variants-count').textContent = variants.length;
     document.getElementById('preview-description').textContent = templateDescription || 'No description available';
     document.getElementById('template-preview').classList.remove('hidden');
@@ -450,6 +462,7 @@ function loadVariants(variants) {
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Variant</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Template Price</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">List Price</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Override Price</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Quantity</th>
                     </tr>
@@ -476,6 +489,15 @@ function loadVariants(variants) {
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                     <span class="text-sm font-medium text-gray-900">$${parseFloat(variant.price || 0).toFixed(2)}</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <input type="number" 
+                           name="variants[${index}][list_price]" 
+                           value="${variant.list_price != null ? variant.list_price : ''}"
+                           step="0.01" 
+                           min="0"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                           placeholder="${variant.list_price != null ? parseFloat(variant.list_price).toFixed(2) : '—'}">
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                     <input type="number" 

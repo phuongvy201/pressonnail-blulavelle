@@ -3,6613 +3,962 @@
 @section('title', $product->name)
 
 @section('content')
-<!-- SweetAlert2 -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-
 @php
-    $categories = $product->categories ?? collect();
-    if (!($categories instanceof \Illuminate\Support\Collection)) {
-        $categories = collect($categories);
-    }
-    $primaryCategory = optional($categories->first())->name ?? null;
-    
-    // Get currency for current domain
     $currentCurrency = currency();
     $currencySymbol = currency_symbol();
-    $currentCurrencyRate = currency_rate() ?? 1.0;
-    $productPriceUSD = (float) ($product->price ?? $product->base_price);
-    $productPriceConverted = convert_currency($productPriceUSD);
-    $productBasePriceUSD = (float) ($product->base_price ?? 0);
-    $productBasePriceConverted = convert_currency($productBasePriceUSD);
-    
-    // Get current domain
-    $currentDomain = \App\Services\CurrencyService::getCurrentDomain();
-    
-    // Get all shipping rates for all domains (apply to all domains)
-    $shippingRates = \App\Models\ShippingRate::where('is_active', true)
-        ->with('shippingZone')
-        ->orderByRaw("CASE WHEN domain = ? THEN 0 ELSE 1 END", [$currentDomain]) // Prioritize current domain rates
-        ->orderBy('is_default', 'desc')
-        ->orderBy('sort_order')
-        ->get();
-    
-    // Get default shipping rate (the one with is_default = true)
-    $defaultShippingRate = $shippingRates->where('is_default', true)->first();
-    
-    // If no default rate, use the first active rate
-    if (!$defaultShippingRate && $shippingRates->count() > 0) {
-        $defaultShippingRate = $shippingRates->first();
-    }
-    
-    // Prepare shipping rates data for JavaScript (grouped by zone)
-    $shippingRatesByZone = [];
-    $shippingRatesData = [];
-    
-    foreach ($shippingRates as $rate) {
-        // Determine zone name: use shippingZone name if exists, otherwise try to extract from rate name or use 'General'
-        $zoneName = 'General';
-        if ($rate->shippingZone) {
-            $zoneName = $rate->shippingZone->name;
-        } elseif ($rate->shipping_zone_id === null) {
-            // For general domain rates, try to extract zone name from rate name
-            // Check if rate name contains common zone names
-            $rateName = strtolower($rate->name ?? '');
-            if (stripos($rateName, 'euro') !== false || stripos($rateName, 'europe') !== false) {
-                $zoneName = 'Euro';
-            } elseif (stripos($rateName, 'asia') !== false) {
-                $zoneName = 'Asia';
-            } elseif (stripos($rateName, 'america') !== false || stripos($rateName, 'us') !== false) {
-                $zoneName = 'America';
-            }
-        }
-        
-        $rateData = [
-            'id' => $rate->id,
-            'zone_id' => $rate->shipping_zone_id,
-            'zone_name' => $zoneName,
-            'category_id' => $rate->category_id,
-            'name' => $rate->name,
-            'domain' => $rate->domain, // Add domain info to distinguish domain-specific vs general domain rates
-            'first_item_cost' => (float) $rate->first_item_cost,
-            'additional_item_cost' => (float) $rate->additional_item_cost,
-            'is_default' => (bool) $rate->is_default,
-            'min_items' => $rate->min_items,
-            'max_items' => $rate->max_items,
-            'min_order_value' => $rate->min_order_value ? (float) $rate->min_order_value : null,
-            'max_order_value' => $rate->max_order_value ? (float) $rate->max_order_value : null,
-        ];
-        
-        $shippingRatesData[] = $rateData;
-        
-        // Group by zone
-        $zoneId = $rate->shipping_zone_id ?? 'none';
-        if (!isset($shippingRatesByZone[$zoneId])) {
-            $shippingRatesByZone[$zoneId] = [
-                'zone_id' => $rate->shipping_zone_id,
-                'zone_name' => $zoneName,
-                'rates' => []
-            ];
-        }
-        $shippingRatesByZone[$zoneId]['rates'][] = $rateData;
-    }
-    
-    // Get unique shipping zones from rates (with shipping_zone_id)
-    $shippingZones = $shippingRates->pluck('shippingZone')
-        ->filter()
-        ->unique('id')
-        ->sortBy('sort_order')
-        ->values();
-    
-    // Mapping country codes to country names
-    $countryNamesMap = [
-        'US' => 'United States',
-        'GB' => 'United Kingdom',
-        'UK' => 'United Kingdom',
-        'CA' => 'Canada',
-        'AU' => 'Australia',
-        'MX' => 'Mexico',
-        'DE' => 'Germany',
-        'FR' => 'France',
-        'IT' => 'Italy',
-        'ES' => 'Spain',
-        'NL' => 'Netherlands',
-        'BE' => 'Belgium',
-        'CH' => 'Switzerland',
-        'AT' => 'Austria',
-        'SE' => 'Sweden',
-        'NO' => 'Norway',
-        'DK' => 'Denmark',
-        'FI' => 'Finland',
-        'IE' => 'Ireland',
-        'PT' => 'Portugal',
-        'GR' => 'Greece',
-        'PL' => 'Poland',
-        'CZ' => 'Czech Republic',
-        'HU' => 'Hungary',
-        'RO' => 'Romania',
-        'BG' => 'Bulgaria',
-        'HR' => 'Croatia',
-        'SK' => 'Slovakia',
-        'SI' => 'Slovenia',
-        'EE' => 'Estonia',
-        'LV' => 'Latvia',
-        'LT' => 'Lithuania',
-        'JP' => 'Japan',
-        'CN' => 'China',
-        'KR' => 'South Korea',
-        'SG' => 'Singapore',
-        'MY' => 'Malaysia',
-        'TH' => 'Thailand',
-        'ID' => 'Indonesia',
-        'PH' => 'Philippines',
-        'VN' => 'Vietnam',
-        'IN' => 'India',
-        'NZ' => 'New Zealand',
-        'BR' => 'Brazil',
-        'AR' => 'Argentina',
-        'CL' => 'Chile',
-        'CO' => 'Colombia',
-        'PE' => 'Peru',
-        'ZA' => 'South Africa',
-        'EG' => 'Egypt',
-        'AE' => 'United Arab Emirates',
-        'SA' => 'Saudi Arabia',
-        'IL' => 'Israel',
-        'TR' => 'Turkey',
-        'RU' => 'Russia',
-        'UA' => 'Ukraine',
-    ];
-    
-    // Helper function to convert country codes to names
-    $convertCountryCodesToNames = function($countryCodes) use ($countryNamesMap) {
-        if (empty($countryCodes) || !is_array($countryCodes)) {
-            return [];
-        }
-        return array_map(function($code) use ($countryNamesMap) {
-            $codeUpper = strtoupper($code);
-            return $countryNamesMap[$codeUpper] ?? $codeUpper;
-        }, $countryCodes);
+    // Gallery = ảnh product trước, sau đó + media từ template (ảnh + video)
+    $galleryItems = [];
+    $normalizeUrl = function ($u) {
+        if (!$u) return null;
+        return (str_starts_with($u, 'http://') || str_starts_with($u, 'https://')) ? $u : asset('storage/' . $u);
     };
-    
-    // Prepare zones data for dropdown
-    // Create separate options for each country in each zone
-    $zonesData = [];
-    $zonesWithCountries = [];
-    
-    // Include zones with shipping_zone_id (from ShippingZone model)
-    foreach ($shippingZones as $zone) {
-        // Get country codes from zone
-        $countries = $zone->countries ?? [];
-        $countryCodes = is_array($countries) ? $countries : [];
-        
-        // Convert country codes to country names
-        $countryNames = $convertCountryCodesToNames($countryCodes);
-        
-        // If zone has countries, create separate options for each country
-        if (!empty($countryCodes)) {
-            $zoneData = [
-                'id' => $zone->id,
-                'name' => $zone->name,
-                'description' => $zone->description,
-                'countries' => $countryCodes,
-                'country_options' => []
-            ];
-            
-            // Create an option for each country
-            foreach ($countryCodes as $index => $countryCode) {
-                $countryName = $countryNames[$index] ?? strtoupper($countryCode);
-                $zoneData['country_options'][] = [
-                    'value' => $zone->id . ':' . strtoupper($countryCode),
-                    'label' => $countryName,
-                    'zone_id' => $zone->id,
-                    'country_code' => strtoupper($countryCode)
-                ];
-            }
-            
-            $zonesWithCountries[] = $zoneData;
-        } else {
-            // Zone without countries - keep as single option
-            $zonesData[] = [
-                'id' => $zone->id,
-                'name' => $zone->name,
-                'description' => $zone->description,
-                'countries' => [],
-                'display_name' => $zone->name,
-            ];
-        }
-    }
-    
-    // Mapping for common general domain zones to country codes
-    // This can be customized based on your actual country assignments
-    $generalZoneCountries = [
-        'Euro' => ['AT', 'BE', 'DE', 'FR', 'IT', 'NL', 'ES', 'CH', 'UK'], // 9 European countries
-        'Europe' => ['AT', 'BE', 'DE', 'FR', 'IT', 'NL', 'ES', 'CH', 'UK'],
-        'Asia' => ['CN', 'JP', 'KR', 'SG', 'MY', 'TH', 'ID', 'PH', 'VN'],
-        'America' => ['US', 'CA', 'MX'],
-        'US' => ['US'],
-    ];
-    
-    // Also include zones with null shipping_zone_id (general domain zones)
-    // These are zones that don't have a ShippingZone record but have rates
-    // Use zone name as identifier for these zones (prefixed with 'general_')
-    foreach ($shippingRatesByZone as $zoneId => $zoneData) {
-        if ($zoneId === 'none' || $zoneData['zone_id'] === null) {
-            // Check if this zone name already exists in zonesData
-            $exists = collect($zonesData)->contains(function($zone) use ($zoneData) {
-                return $zone['name'] === $zoneData['zone_name'];
-            });
-            
-            if (!$exists && !empty($zoneData['zone_name'])) {
-                // Get countries for this general domain zone from mapping
-                $zoneName = $zoneData['zone_name'];
-                $countries = $generalZoneCountries[$zoneName] ?? [];
-                
-                // Convert country codes to country names
-                $countryNames = $convertCountryCodesToNames($countries);
-                
-                // If zone has countries, create separate options for each country
-                if (!empty($countries)) {
-                    $zoneId = 'general_' . strtolower(str_replace(' ', '_', $zoneName));
-                    $zoneDataItem = [
-                        'id' => $zoneId,
-                        'name' => $zoneName,
-                        'description' => null,
-                        'countries' => $countries,
-                        'country_options' => []
-                    ];
-                    
-                    // Create an option for each country
-                    foreach ($countries as $index => $countryCode) {
-                        $countryName = $countryNames[$index] ?? strtoupper($countryCode);
-                        $zoneDataItem['country_options'][] = [
-                            'value' => $zoneId . ':' . strtoupper($countryCode),
-                            'label' => $countryName,
-                            'zone_id' => $zoneId,
-                            'country_code' => strtoupper($countryCode)
-                        ];
-                    }
-                    
-                    $zonesWithCountries[] = $zoneDataItem;
+    // 1) Media của product
+    $media = $product->media ?? [];
+    if ($media && count($media) > 0) {
+        foreach ($media as $m) {
+            if (is_string($m)) {
+                $url = $normalizeUrl($m);
+                if ($url) $galleryItems[] = ['type' => 'image', 'url' => $url];
+            } elseif (is_array($m)) {
+                $u = $m['url'] ?? $m['path'] ?? reset($m);
+                if (!$u) continue;
+                if (isset($m['type']) && ($m['type'] ?? '') === 'video') {
+                    $poster = isset($m['poster']) ? $normalizeUrl($m['poster']) : null;
+                    $galleryItems[] = ['type' => 'video', 'url' => $normalizeUrl($u), 'poster' => $poster];
                 } else {
-                    // Zone without countries - keep as single option
-                    $zonesData[] = [
-                        'id' => 'general_' . strtolower(str_replace(' ', '_', $zoneName)),
-                        'name' => $zoneName,
-                        'description' => null,
-                        'countries' => [],
-                        'display_name' => $zoneName,
-                    ];
+                    $galleryItems[] = ['type' => 'image', 'url' => $normalizeUrl($u)];
                 }
             }
         }
     }
-    
-    // Prepare default shipping rate data for JavaScript
-    $defaultShippingRateData = null;
-    if ($defaultShippingRate) {
-        $defaultShippingRateData = [
-            'id' => $defaultShippingRate->id,
-            'category_id' => $defaultShippingRate->category_id,
-            'name' => $defaultShippingRate->name,
-            'description' => $defaultShippingRate->description,
-            'first_item_cost' => (float) $defaultShippingRate->first_item_cost,
-            'additional_item_cost' => (float) $defaultShippingRate->additional_item_cost,
-            'is_default' => true,
-            'min_items' => $defaultShippingRate->min_items,
-            'max_items' => $defaultShippingRate->max_items,
-            'min_order_value' => $defaultShippingRate->min_order_value ? (float) $defaultShippingRate->min_order_value : null,
-            'max_order_value' => $defaultShippingRate->max_order_value ? (float) $defaultShippingRate->max_order_value : null,
-            'zone_id' => $defaultShippingRate->shipping_zone_id,
-            'zone_name' => $defaultShippingRate->shippingZone ? $defaultShippingRate->shippingZone->name : null,
-        ];
-    }
-    
-    @endphp
-
-<script>
-const TIKTOK_PRODUCT_ID = {!! json_encode((string) $product->id) !!};
-const TIKTOK_PRODUCT_NAME = {!! json_encode($product->name) !!};
-const TIKTOK_PRIMARY_CATEGORY = @json($primaryCategory);
-const TIKTOK_PRODUCT_PRICE = {{ $productPriceConverted }};
-const CURRENT_CURRENCY = @json($currentCurrency);
-const CURRENCY_SYMBOL = @json($currencySymbol ?? '$');
-const CURRENT_CURRENCY_RATE = {{ $currentCurrencyRate }};
-const SHIPPING_RATES = @json($shippingRatesData);
-const SHIPPING_RATES_BY_ZONE = @json($shippingRatesByZone);
-const SHIPPING_ZONES = @json($zonesData);
-const SHIPPING_ZONES_WITH_COUNTRIES = @json($zonesWithCountries);
-const DEFAULT_SHIPPING_RATE = @json($defaultShippingRateData);
-const DEFAULT_SHIPPING_ZONE_ID = @json($defaultShippingRate ? $defaultShippingRate->shipping_zone_id : null);
-const CURRENT_DOMAIN = @json($currentDomain ?? null);
-
-// Get countries from shipping zones for current domain
-@php
-    $domainCountries = $shippingZones->flatMap(function($zone) {
-        return collect($zone->countries ?? [])->map(function($country) use ($zone) {
-            return [
-                'code' => strtoupper($country),
-                'zone_name' => $zone->name
-            ];
-        });
-    })->unique('code')->values()->toArray();
-@endphp
-const DOMAIN_COUNTRIES = @json($domainCountries);
-
-// Track Facebook Pixel ViewContent for product detail page
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof fbq !== 'undefined') {
-        fbq('track', 'ViewContent', {
-            content_name: '{{ addslashes($product->name) }}',
-            content_ids: ['{{ $product->id }}'],
-            content_type: 'product',
-            value: {{ $productPriceConverted }},
-            currency: CURRENT_CURRENCY
-        });
-    }
-
-    // Event tracking được xử lý bởi GTM thông qua dataLayer
-    if (typeof dataLayer !== 'undefined') {
-        dataLayer.push({
-            'event': 'view_item',
-            'currency': CURRENT_CURRENCY,
-            'value': {{ $productPriceConverted }},
-            'items': [{
-                item_id: '{{ $product->sku ?? $product->id }}',
-                item_name: '{{ addslashes($product->name) }}',
-                item_category: @json($primaryCategory),
-                price: {{ $productPriceConverted }},
-                quantity: 1
-            }]
-        });
-    }
-
-    if (typeof window !== 'undefined' && window.ttq) {
-        const tiktokViewContent = {
-            contents: [{
-                content_id: TIKTOK_PRODUCT_ID,
-                content_type: 'product',
-                content_name: TIKTOK_PRODUCT_NAME,
-                quantity: 1,
-                price: TIKTOK_PRODUCT_PRICE
-            }],
-            value: TIKTOK_PRODUCT_PRICE,
-            currency: CURRENT_CURRENCY
-        };
-
-        if (TIKTOK_PRIMARY_CATEGORY) {
-            tiktokViewContent.contents[0].content_category = TIKTOK_PRIMARY_CATEGORY;
+    // 2) Nếu product không có media, dùng ảnh từ getEffectiveMedia (template)
+    if (empty($galleryItems)) {
+        $media = $product->getEffectiveMedia();
+        if ($media && count($media) > 0) {
+            foreach ($media as $m) {
+                if (is_string($m)) {
+                    $url = $normalizeUrl($m);
+                    if ($url && !preg_match('/\.(mp4|webm|ogg|mov|avi)$/i', $m)) $galleryItems[] = ['type' => 'image', 'url' => $url];
+                } elseif (is_array($m)) {
+                    if (isset($m['type']) && ($m['type'] ?? '') === 'video') {
+                        $u = $m['url'] ?? $m['path'] ?? null;
+                        if ($u) {
+                            $poster = isset($m['poster']) ? $normalizeUrl($m['poster']) : null;
+                            $galleryItems[] = ['type' => 'video', 'url' => $normalizeUrl($u), 'poster' => $poster];
+                        }
+                    } else {
+                        $u = $m['url'] ?? $m['path'] ?? reset($m);
+                        if ($u) $galleryItems[] = ['type' => 'image', 'url' => $normalizeUrl($u)];
+                    }
+                }
+            }
         }
-
-        window.ttq.track('ViewContent', tiktokViewContent);
     }
-});
-</script>
-<!-- Breadcrumb -->
-<div class="bg-gray-50 border-b border-gray-200 hidden md:block">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <nav class="flex" aria-label="Breadcrumb">
-            <ol class="flex items-center space-x-2">
-                @foreach($breadcrumbs as $index => $breadcrumb)
-                    @if($index > 0)
-                        <li>
-                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                            </svg>
-                        </li>
-                    @endif
-                    <li>
-                        @if($breadcrumb['url'] && $index < count($breadcrumbs) - 1)
-                            <a href="{{ $breadcrumb['url'] }}" class="text-gray-500 hover:text-[#005366] transition-colors">
-                                {{ $breadcrumb['name'] }}
-                            </a>
-                        @else
-                            <span class="text-gray-900 font-medium max-w-xs md:max-w-md lg:max-w-lg truncate inline-block" title="{{ $breadcrumb['name'] }}">
-                                {{ $breadcrumb['name'] }}
-                            </span>
-                        @endif
-                    </li>
-                @endforeach
-            </ol>
-        </nav>
-    </div>
-</div>
-
-<!-- Product Details -->
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
-        <!-- Left Column: Product Images & Related Products -->
-        <div class="space-y-4">
-                @php
-                // Combine product and template images FIRST
-                    $media = $product->getEffectiveMedia();
-                $allImages = [];
-                
-                // Add product images first
-                if($media && count($media) > 0) {
-                    foreach($media as $mediaItem) {
-                        if (is_string($mediaItem)) {
-                            $allImages[] = $mediaItem;
-                        } elseif (is_array($mediaItem)) {
-                            $mediaUrl = $mediaItem['url'] ?? $mediaItem['path'] ?? reset($mediaItem) ?? null;
-                            if ($mediaUrl) {
-                                $allImages[] = $mediaUrl;
-                            }
-                        }
+    // 3) Thêm media từ template vào cuối (ảnh + video, có thể trùng một phần nếu product không có media)
+    $templateMedia = ($product->template && $product->template->media && count($product->template->media) > 0) ? $product->template->media : [];
+    $existingUrls = collect($galleryItems)->pluck('url')->flip()->all();
+    foreach ($templateMedia as $m) {
+        if (is_string($m)) {
+            $url = $normalizeUrl($m);
+            if (!$url) continue;
+            if (preg_match('/\.(mp4|webm|ogg|mov|avi)$/i', $m)) {
+                if (empty($existingUrls[$url] ?? null)) { $galleryItems[] = ['type' => 'video', 'url' => $url, 'poster' => $galleryItems[0]['url'] ?? null]; $existingUrls[$url] = true; }
+            } else {
+                if (empty($existingUrls[$url] ?? null)) { $galleryItems[] = ['type' => 'image', 'url' => $url]; $existingUrls[$url] = true; }
+            }
+        } elseif (is_array($m)) {
+            if (isset($m['type']) && ($m['type'] ?? '') === 'video') {
+                $u = $m['url'] ?? $m['path'] ?? null;
+                if ($u) {
+                    $url = $normalizeUrl($u);
+                    if (empty($existingUrls[$url] ?? null)) {
+                        $poster = isset($m['poster']) ? $normalizeUrl($m['poster']) : ($galleryItems[0]['url'] ?? null);
+                        $galleryItems[] = ['type' => 'video', 'url' => $url, 'poster' => $poster];
+                        $existingUrls[$url] = true;
                     }
                 }
-                
-                // Add template images (if different from product images)
-                if($product->template && $product->template->media) {
-                    $templateMedia = is_array($product->template->media) ? $product->template->media : json_decode($product->template->media, true);
-                    $templateMediaUrls = collect($templateMedia)->map(function($item) {
-                        if (is_string($item)) {
-                            return $item;
-                        } elseif (is_array($item)) {
-                            return $item['url'] ?? $item['path'] ?? reset($item) ?? null;
-                        }
-                        return null;
-                    })->filter()->toArray();
-                    
-                    // Only add template images that are not already in product images
-                    foreach($templateMediaUrls as $templateUrl) {
-                        if(!in_array($templateUrl, $allImages)) {
-                            $allImages[] = $templateUrl;
-                        }
-                    }
-                }
-            @endphp
-            
-            <!-- Main Image/Video with Enhanced Effects -->
-            <div class="aspect-square bg-white rounded-xl shadow-lg overflow-hidden relative group" id="image-container">
-                @if($media && count($media) > 0)
-                    @php
-                        // Get first media URL safely
-                        if (is_string($media[0])) {
-                            $firstMediaUrl = $media[0];
-                        } elseif (is_array($media[0])) {
-                            $firstMediaUrl = $media[0]['url'] ?? $media[0]['path'] ?? reset($media[0]) ?? '';
-                        } else {
-                            $firstMediaUrl = '';
-                        }
-                        $isVideo = str_contains($firstMediaUrl, '.mp4') || str_contains($firstMediaUrl, '.mov') || str_contains($firstMediaUrl, '.avi') || str_contains($firstMediaUrl, '.webm');
-                    @endphp
-                    
-                    @if($isVideo)
-                        <!-- Video Player -->
-                        @php
-                            // Get poster image: first image from media array
-                            $posterImage = null;
-                            foreach($allImages as $mediaItem) {
-                                if (!str_contains($mediaItem, '.mp4') && !str_contains($mediaItem, '.mov') && !str_contains($mediaItem, '.avi') && !str_contains($mediaItem, '.webm')) {
-                                    $posterImage = $mediaItem;
-                                    break;
-                                }
-                            }
-                            // If no image, use template media or generate placeholder
-                            if (!$posterImage && $product->template && $product->template->media) {
-                                $templateMedia = is_array($product->template->media) ? $product->template->media : json_decode($product->template->media, true);
-                                if ($templateMedia && count($templateMedia) > 0) {
-                                    foreach($templateMedia as $tmItem) {
-                                        // Get URL safely
-                                        if (is_string($tmItem)) {
-                                            $tmUrl = $tmItem;
-                                        } elseif (is_array($tmItem)) {
-                                            $tmUrl = $tmItem['url'] ?? $tmItem['path'] ?? reset($tmItem) ?? '';
-                                        } else {
-                                            $tmUrl = '';
-                                        }
-                                        if (!str_contains($tmUrl, '.mp4') && !str_contains($tmUrl, '.mov') && !str_contains($tmUrl, '.avi') && !str_contains($tmUrl, '.webm')) {
-                                            $posterImage = $tmUrl;
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                        @endphp
-                        <video id="main-video" 
-                               class="w-full h-full object-cover cursor-pointer" 
-                               controls 
-                               playsinline
-                               @if($posterImage)
-                               poster="{{ $posterImage }}"
-                               @endif>
-                            <source src="{{ $firstMediaUrl }}" type="video/mp4">
-                            <source src="{{ $firstMediaUrl }}" type="video/webm">
-                            Your browser does not support the video tag.
-                        </video>
-                        
-                        <!-- Video Badge -->
-                        <div class="absolute top-3 left-3 bg-purple-600 text-white text-xs px-3 py-1 rounded-full font-medium flex items-center space-x-1 pointer-events-none z-10">
-                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"></path>
-                            </svg>
-                            <span>VIDEO</span>
-                        </div>
-                        
-                        <!-- Custom Play Button Overlay (before playing) -->
-                        <div id="video-play-overlay" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 transition-opacity cursor-pointer z-20" onclick="playVideoOnClick(event)">
-                            <div class="w-20 h-20 bg-white bg-opacity-90 rounded-full flex items-center justify-center shadow-2xl hover:bg-opacity-100 hover:scale-110 transition-all duration-300">
-                                <svg class="w-10 h-10 text-purple-600 ml-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"></path>
-                                </svg>
-                            </div>
-                        </div>
-                    @else
-                        <!-- Image -->
-                        <img src="{{ $firstMediaUrl }}" 
-                             alt="{{ $product->name }}" 
-                             id="main-image"
-                             class="w-full h-full object-cover">
-                        
-                        <!-- Zoom Overlay (Only for images) -->
-                        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center">
-                            <div class="opacity-0 group-hover:opacity-100 transition-all duration-300 transform scale-75 group-hover:scale-100">
-                                <div class="bg-white bg-opacity-90 rounded-full p-3 shadow-lg zoom-icon">
-                                    <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-                    @endif
-                    
-                    <!-- Media Counter Badge -->
-                    @if(!empty($allImages) && count($allImages) > 1)
-                        <div class="absolute top-3 right-3 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded-full">
-                            <span id="image-counter">1</span> / {{ count($allImages) }}
-                        </div>
-                    @endif
-                    
-                    <!-- Stock Status Badge for Mobile/Tablet -->
-                    <div id="mobile-stock-badge" class="absolute top-3 left-3 bg-green-100 rounded-full px-3 py-1.5 items-center space-x-2 pointer-events-none z-10 lg:hidden mobile-stock-badge">
-                        <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        <span class="text-sm font-medium text-green-700">In Stock</span>
-                    </div>
-                    
-                    <!-- Loading Spinner -->
-                    <div id="image-loading" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center hidden">
-                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#005366]"></div>
-                    </div>
-                    
-                @else
-                    <div class="w-full h-full bg-gray-200 flex items-center justify-center">
-                        <svg class="w-24 h-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                        </svg>
-                    </div>
-                @endif
-                
-                <!-- Hover Effects -->
-                <div class="absolute inset-0 border-2 border-transparent group-hover:border-[#005366] transition-all duration-300 rounded-xl"></div>
-            </div>
+            } else {
+                $u = $m['url'] ?? $m['path'] ?? reset($m);
+                if ($u) { $url = $normalizeUrl($u); if (empty($existingUrls[$url] ?? null)) { $galleryItems[] = ['type' => 'image', 'url' => $url]; $existingUrls[$url] = true; } }
+            }
+        }
+    }
+    $primaryImageUrl = isset($galleryItems[0])
+        ? ($galleryItems[0]['type'] === 'image'
+            ? $galleryItems[0]['url']
+            : ($galleryItems[0]['poster'] ?? null))
+        : null;
+    $firstMediaIsVideo = isset($galleryItems[0]) && $galleryItems[0]['type'] === 'video';
+    $reviewsCount = $product->getTotalReviews();
+    $averageRating = $product->getAverageRating();
+    $sizes = $product->variants->pluck('attributes')->filter()->map(function ($a) { return $a['Size'] ?? $a['size'] ?? null; })->filter()->unique()->values();
+    if ($sizes->isEmpty()) { $sizes = collect(['XS', 'S', 'M', 'L']); }
+    $nailShapeKey = 'Nail Shape';
+    $shapes = $product->variants->pluck('attributes')->filter()->map(function ($a) use ($nailShapeKey) {
+        return $a[$nailShapeKey] ?? $a['Shape'] ?? $a['shape'] ?? null;
+    })->filter()->unique()->values();
+    if ($shapes->isEmpty() && $product->template && $product->template->relationLoaded('variants')) {
+        $shapes = $product->template->variants->pluck('attributes')->filter()->map(function ($a) use ($nailShapeKey) {
+            return $a[$nailShapeKey] ?? $a['Shape'] ?? $a['shape'] ?? null;
+        })->filter()->unique()->values();
+    }
+    $shapeIconMap = [
+        'Short - Square' => 'rectangle', 'Medium - Square' => 'rectangle', 'Long - Square' => 'rectangle',
+        'Short - Oval' => 'circle', 'Medium - Oval' => 'circle', 'Long - Oval' => 'circle',
+        'Short - Almond' => 'water_drop', 'Medium - Almond' => 'water_drop', 'Long - Almond' => 'water_drop',
+        'Short - Coffin' => 'straighten', 'Medium - Coffin' => 'straighten', 'Long - Coffin' => 'straighten',
+        'Short - Stiletto' => 'straighten', 'Medium - Stiletto' => 'straighten', 'Long - Stiletto' => 'straighten',
+    ];
+    $shapeIcons = $shapes->mapWithKeys(function ($name) use ($shapeIconMap) {
+        return [$name => $shapeIconMap[$name] ?? 'rectangle'];
+    });
+    if ($shapes->isEmpty()) {
+        $shapes = collect(['Short - Square', 'Short - Oval', 'Short - Almond', 'Medium - Coffin']);
+        $shapeIcons = collect($shapes->mapWithKeys(fn($n) => [$n => $shapeIconMap[$n] ?? 'rectangle']));
+    }
+    $sizeMm = ['XS' => '14-10-11-10-8mm', 'S' => '15-11-12-11-9mm', 'M' => '16-12-13-12-10mm', 'L' => '18-13-14-13-12mm'];
+    $productPrice = (float) ($product->price ?? $product->base_price ?? 0);
+    $productListPrice = (float) ($product->list_price ?? $product->template->list_price ?? 0);
+    $showProductListPrice = $productListPrice > 0 && $productListPrice > $productPrice;
+    $variantsForJs = $product->variants->map(function ($v) {
+        return [
+            'id' => $v->id,
+            'price' => $v->price !== null ? (float) $v->price : null,
+            'list_price' => $v->list_price !== null ? (float) $v->list_price : null,
+            'attributes' => $v->attributes ?? [],
+        ];
+    })->values();
 
-            
-            @if(!empty($allImages) && count($allImages) > 1)
-                <!-- Smart Gallery -->
-                <div class="space-y-4">
-                    <!-- Thumbnail Navigation -->
-                    <div class="relative">
-                        <div class="flex overflow-x-auto scrollbar-hide space-x-2 pb-2" id="thumbnail-container">
-                    @foreach($allImages as $index => $imageUrl)
-                                @php
-                                    $isThumbVideo = str_contains($imageUrl, '.mp4') || str_contains($imageUrl, '.mov') || str_contains($imageUrl, '.avi') || str_contains($imageUrl, '.webm');
-                                @endphp
-                                <button onclick="changeMainImage('{{ $imageUrl }}', {{ $index }})" 
-                                        class="flex-shrink-0 w-16 h-16 bg-white rounded-lg shadow-sm overflow-hidden border-2 {{ $index === 0 ? 'border-[#005366]' : 'border-gray-200' }} hover:border-[#005366] transition-colors group relative">
-                                    @if($isThumbVideo)
-                                        <!-- Video Thumbnail -->
-                                        <div class="w-full h-full bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
-                                            <svg class="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                                                <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"></path>
-                                            </svg>
-                                        </div>
-                                        <!-- Video Badge -->
-                                        <div class="absolute bottom-0 left-0 right-0 bg-purple-600 bg-opacity-90 text-white text-[8px] text-center py-0.5 font-bold">
-                                            VIDEO
-                                        </div>
-                                    @else
-                                        <!-- Image Thumbnail -->
-                                        <img src="{{ $imageUrl }}" 
-                                             alt="{{ $product->name }} - Media {{ $index + 1 }}" 
-                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200">
-                                    @endif
-                        </button>
-                    @endforeach
-                        </div>
-                        
-                        <!-- Navigation Arrows (only show if more than 6 images) -->
-                        @if(!empty($allImages) && count($allImages) > 6)
-                            <button onclick="scrollThumbnails('left')" 
-                                    class="absolute left-0 top-1/2 transform -translate-y-1/2 bg-white shadow-lg rounded-full p-2 border border-gray-200 hover:bg-gray-50 transition-colors">
-                                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                                </svg>
-                            </button>
-                            <button onclick="scrollThumbnails('right')" 
-                                    class="absolute right-0 top-1/2 transform -translate-y-1/2 bg-white shadow-lg rounded-full p-2 border border-gray-200 hover:bg-gray-50 transition-colors">
-                                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                </svg>
-                            </button>
-                        @endif
-                    </div>
-                    
-                    <!-- Gallery Actions -->
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-2 text-sm text-gray-600">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                            </svg>
-                            <span>{{ !empty($allImages) ? count($allImages) : 0 }} {{ !empty($allImages) && count($allImages) === 1 ? 'image' : 'images' }}</span>
-                        </div>
-                        
-                        @if(!empty($allImages) && count($allImages) > 1)
-                            <button onclick="openGalleryModal()" 
-                                    class="text-sm text-[#005366] hover:underline flex items-center space-x-1">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
-                                </svg>
-                                <span>View All</span>
-                            </button>
-                        @endif
-                    </div>
-                </div>
-            @endif
-            
-            <!-- Related Products (Desktop: here, Mobile: below) -->
-            @if($relatedProducts->count() > 0)
-                <div class="space-y-4 hidden lg:block">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-xl font-bold text-gray-900">Related Products</h3>
-                        <a href="{{ route('products.index') }}" class="text-sm text-[#005366] hover:underline">
-                            See All Items
-                        </a>
-                    </div>
-                    
-                    <!-- Related Products Carousel -->
-                    <div class="relative">
-                        <!-- Navigation Buttons -->
-                        @if($relatedProducts->count() > 3)
-                            <button id="relatedPrevBtn" 
-                                    onclick="scrollRelatedProducts('prev')"
-                                    class="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-all opacity-0 group-hover:opacity-100">
-                                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                                </svg>
-                            </button>
-                            
-                            <button id="relatedNextBtn" 
-                                    onclick="scrollRelatedProducts('next')"
-                                    class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-all">
-                                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                </svg>
-                            </button>
-                        @endif
-                        
-                        <!-- Products Container -->
-                        <div id="relatedProductsContainer" class="overflow-hidden group">
-                            <div id="relatedProductsTrack" class="flex gap-3 transition-transform duration-300">
-                                @foreach($relatedProducts->take(12) as $relatedProduct)
-                                    <a href="{{ route('products.show', $relatedProduct->slug) }}" 
-                                       class="flex-shrink-0 w-40 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 group/item overflow-hidden border border-gray-200">
-                                        <!-- Product Image -->
-                                        <div class="relative aspect-square overflow-hidden">
-                                            @php
-                                                $relatedMedia = $relatedProduct->getEffectiveMedia();
-                                                $relatedImageUrl = null;
-                                                if ($relatedMedia && count($relatedMedia) > 0) {
-                                                    if (is_string($relatedMedia[0])) {
-                                                        $relatedImageUrl = $relatedMedia[0];
-                                                    } elseif (is_array($relatedMedia[0])) {
-                                                        $relatedImageUrl = $relatedMedia[0]['url'] ?? $relatedMedia[0]['path'] ?? reset($relatedMedia[0]) ?? null;
-                                                    }
-                                                }
-                                            @endphp
-                                            @if($relatedImageUrl)
-                                                <img src="{{ $relatedImageUrl }}" 
-                                                     alt="{{ $relatedProduct->name }}" 
-                                                     class="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-300">
-                                            @else
-                                                <div class="w-full h-full bg-gray-200 flex items-center justify-center">
-                                                    <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                                    </svg>
-                                                </div>
-                                            @endif
-                                        </div>
+    // Shipping snippet (UI giống mẫu). Country lấy theo tool detect (header/session/currency/domain).
+    $location = app(\App\Services\CustomerLocationService::class);
+    $shipCountryCode = $location->detectCountryCode(request(), 'VN');
+    $shipCountryName = $location->getCountryName($shipCountryCode);
+    $shipsFrom = 'United States';
+    $deliveryStart = now()->addDays(11);
+    $deliveryEnd = now()->addDays(20);
+    $deliveryRangeText = $deliveryStart->format('M j') . '–' . ($deliveryStart->format('M') === $deliveryEnd->format('M') ? $deliveryEnd->format('j') : $deliveryEnd->format('M j'));
+    $shippingCostUsd = null;
+    try {
+        $shippingCalc = app(\App\Services\ShippingCalculator::class);
+        $shippingQuote = $shippingCalc->calculateShipping(collect([
+            ['product_id' => $product->id, 'quantity' => 1, 'price' => $productPrice],
+        ]), $shipCountryCode);
+        if (!empty($shippingQuote['success'])) {
+            $shippingCostUsd = (float) ($shippingQuote['total_shipping'] ?? 0);
+        }
+    } catch (\Throwable $e) {
+        $shippingCostUsd = null;
+    }
+    // Số viewing & in carts ngẫu nhiên theo product (seed bằng id để mỗi sản phẩm cố định)
+    mt_srand(crc32((string) $product->id));
+    $productViewingCount = random_int(8, 120);
+    $productCartsCount = random_int(3, 65);
+    mt_srand();
+@endphp
 
-                                        <!-- Product Info (Compact) -->
-                                        <div class="p-2.5">
-                                            <h4 class="font-medium text-gray-900 text-xs line-clamp-2 group-hover/item:text-[#005366] transition-colors mb-1.5 h-8 overflow-hidden" title="{{ $relatedProduct->name }}">
-                                                {{ Str::limit($relatedProduct->name, 30) }}
-                                            </h4>
-                                            <div class="flex items-center justify-between">
-                                                <span class="text-xs font-bold text-[#E2150C]">{{ format_price_usd($relatedProduct->base_price) }}</span>
-                                                <div class="flex items-center text-xs text-gray-500">
-                                                    <svg class="w-3 h-3 text-yellow-400 mr-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                                                    </svg>
-                                                    <span class="text-xs">4.5</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </a>
-                                @endforeach
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            @endif
-            <!-- Reviews Section (Desktop Only) -->
-            <div class="space-y-6 hidden lg:block">
-                <!-- Reviews Header -->
-                <div class="flex items-center justify-between">
-                    <h3 class="text-2xl font-bold text-gray-900">Reviews</h3>
-                </div>
-
-                <!-- Tabs -->
-                <div class="border-b border-gray-200">
-                    <nav class="-mb-px flex space-x-8">
-                        <button class="border-b-2 border-[#005366] py-2 px-1 text-sm font-medium text-[#005366]">
-                            Reviews for this item
-                        </button>
-                        <button class="border-b-2 border-transparent py-2 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">
-                            Reviews for this shop
-                        </button>
-                    </nav>
-                </div>
-
-                @php
-                    $averageRating = $product->getAverageRating();
-                    $totalReviews = $product->getTotalReviews();
-                    $ratingBreakdown = $product->getRatingBreakdown();
-                @endphp
-
-                <!-- Overall Rating Summary -->
-                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-                    <!-- Average Rating -->
-                    <div class="flex items-center space-x-4">
-                        <div class="flex items-center">
-                            <svg class="w-8 h-8 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                            </svg>
-                            <span class="text-2xl font-bold text-gray-900 ml-2">{{ number_format($averageRating, 1) }} /5.0</span>
-                        </div>
-                        <div class="text-sm text-gray-600">
-                            <span class="underline">{{ $totalReviews }} Reviews</span>
-                        </div>
-                    </div>
-
-                    <!-- Star Rating Distribution -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-2">
-                        <!-- Left Column -->
-                        <div class="space-y-2">
-                            @for($star = 5; $star >= 3; $star--)
-                                @php
-                                    $count = $ratingBreakdown[$star] ?? 0;
-                                    $percentage = $totalReviews > 0 ? round(($count / $totalReviews) * 100) : 0;
-                                @endphp
-                                <div class="flex items-center space-x-2">
-                                    <div class="flex items-center">
-                                        <svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                                        </svg>
-                                        <span class="text-sm font-medium text-gray-700 ml-1">{{ $star }}</span>
-                                    </div>
-                                    <div class="flex-1 bg-gray-200 rounded-full h-2 max-w-[120px]">
-                                        <div class="bg-gray-900 h-2 rounded-full" style="width: {{ $percentage }}%"></div>
-                                    </div>
-                                    <span class="text-xs text-gray-500 w-8">({{ $percentage }}%)</span>
-                                </div>
-                            @endfor
-                        </div>
-                        
-                        <!-- Right Column -->
-                        <div class="space-y-2">
-                            @for($star = 2; $star >= 1; $star--)
-                                @php
-                                    $count = $ratingBreakdown[$star] ?? 0;
-                                    $percentage = $totalReviews > 0 ? round(($count / $totalReviews) * 100) : 0;
-                                @endphp
-                                <div class="flex items-center space-x-2">
-                                    <div class="flex items-center">
-                                        <svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                                        </svg>
-                                        <span class="text-sm font-medium text-gray-700 ml-1">{{ $star }}</span>
-                                    </div>
-                                    <div class="flex-1 bg-gray-200 rounded-full h-2 max-w-[120px]">
-                                        <div class="bg-gray-900 h-2 rounded-full" style="width: {{ $percentage }}%"></div>
-                                    </div>
-                                    <span class="text-xs text-gray-500 w-8">({{ $percentage }}%)</span>
-                                </div>
-                            @endfor
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Individual Reviews -->
-                @if($product->approvedReviews->count() > 0)
-                    <div class="space-y-6">
-                        @foreach($product->approvedReviews->take(3) as $review)
-                            <div class="border-t border-dotted border-gray-300 pt-6">
-                                <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between space-y-4 lg:space-y-0">
-                                    <!-- Review Content -->
-                                    <div class="flex-1">
-                                        <!-- Rating -->
-                                        <div class="flex items-center mb-3">
-                                            @for($i = 1; $i <= 5; $i++)
-                                                @if($i <= floor($review->rating))
-                                                    <svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                                                    </svg>
-                                                @elseif($i - 0.5 <= $review->rating)
-                                                    <svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                                        <defs>
-                                                            <linearGradient id="half-star-{{ $review->id }}-{{ $i }}">
-                                                                <stop offset="50%" stop-color="currentColor"/>
-                                                                <stop offset="50%" stop-color="#E5E7EB"/>
-                                                            </linearGradient>
-                                                        </defs>
-                                                        <path fill="url(#half-star-{{ $review->id }}-{{ $i }})" d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                                                    </svg>
-                                                @else
-                                                    <svg class="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                                                    </svg>
-                                                @endif
-                                            @endfor
-                                        </div>
-
-                                        <!-- Review Title and Text -->
-                                        @if($review->review_text)
-                                            @php
-                                                $words = explode(' ', $review->review_text);
-                                                $title = count($words) > 8 ? implode(' ', array_slice($words, 0, 8)) . '...' : $review->review_text;
-                                            @endphp
-                                            <h4 class="font-semibold text-gray-900 mb-2">{{ $title }}</h4>
-                                            <p class="text-gray-700 text-sm leading-relaxed">{{ $review->review_text }}</p>
-                                        @endif
-                                    </div>
-
-                                    <!-- Reviewer Info -->
-                                    <div class="flex items-center space-x-3 lg:ml-6">
-                                        <div class="flex-shrink-0">
-                                            <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-medium text-sm">
-                                                {{ Str::upper(substr($review->display_name, 0, 2)) }}
-                                            </div>
-                                        </div>
-                                        <div class="text-right">
-                                            <div class="text-sm font-medium text-gray-900">{{ $review->display_name }}</div>
-                                            <div class="text-xs text-gray-500">{{ $review->created_at->format('D M d Y') }}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @else
-                    <div class="text-center py-12">
-                        <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
-                        </svg>
-                        <p class="text-gray-500 text-lg mb-2">No reviews yet</p>
-                        <p class="text-gray-400 text-sm">Be the first to review this product</p>
-                    </div>
-                @endif
-
-                <!-- Write Review and Pagination -->
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0 pt-6 border-t border-gray-200">
-                    <!-- Write Review Button -->
-                    <button class="inline-flex items-center px-4 py-2 border border-orange-500 text-orange-500 rounded-lg hover:bg-orange-50 transition-colors">
-                        <svg class="w-4 h-4 mr-2 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"></path>
-                        </svg>
-                        Write your review
-                    </button>
-
-                    <!-- Pagination -->
-                    @if($product->approvedReviews->count() > 3)
-                        <div class="flex items-center space-x-2">
-                            <button class="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
-                                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                                </svg>
-                            </button>
-                            <span class="text-sm text-gray-600 px-3">1/3</span>
-                            <button class="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
-                                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                </svg>
-                            </button>
-                        </div>
-                    @endif
-                </div>
-            </div>
-        </div>
-        <!-- Product Info -->
-        <div class="space-y-6">
-            <div>
-                <h1 class="text-4xl font-bold text-gray-900 mb-4">{{ $product->name }}</h1>
-                
-                <!-- Engagement Metrics -->
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center space-x-4">
-                        <!-- Stock Status Badge (Desktop only) -->
-                        <div class="hidden lg:flex items-center space-x-2 bg-green-100 rounded-full px-3 py-1.5">
-                            <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            <span class="text-sm font-medium text-green-700">In Stock</span>
-                        </div>
-                         <!-- Viewing Count -->
-                         <div class="flex items-center space-x-2 bg-gray-100 rounded-full px-3 py-1.5">
-                             <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                             </svg>
-                             <span class="text-sm font-medium text-gray-700">{{ rand(20, 100) }} viewing</span>
-                         </div>
-                        
-                        <!-- Cart Count -->
-                        <div class="flex items-center space-x-2 bg-red-50 rounded-full px-3 py-1.5">
-                            <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01"></path>
-                            </svg>
-                            <span class="text-sm font-medium text-red-700">In {{ rand(10, 50) }}+ carts</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Share Button -->
-                    <button onclick="openShareModal()" class="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
-                        </svg>
-                    </button>
-                </div>
-                
-                <!-- Seller Info -->
-                <div class="flex items-center space-x-3 mb-4">
-                    <span class="text-gray-600">Sold by:</span>
-                    <a href="{{ route('shops.show', $product->shop->shop_slug ?? '') }}" class="text-[#005366] hover:underline font-medium">
-                        {{ $product->shop->name ?? 'Unknown Shop' }}
-                    </a>
-                    @if($product->shop && $product->shop->verified)
-                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                            </svg>
-                            Verified
-                        </span>
-                    @endif
-                </div>
-
-            </div>
-
-            <!-- Price -->
-            <div class="bg-gray-50 rounded-xl p-6">
-                <div class="mb-4">
-                    <div class="flex items-center space-x-4 mb-2">
-                    @if($product->template && $product->template->base_price > $product->price)
-                        @php
-                            $templateBasePriceConverted = convert_currency((float) $product->template->base_price);
-                            $discount = round((($product->template->base_price - $product->price) / $product->template->base_price) * 100);
-                        @endphp
-                        <span class="text-2xl text-gray-500 line-through">{{ format_price_usd((float) $product->template->base_price) }}</span>
-                            <span class="text-4xl font-bold text-[#E2150C]" id="base-price" data-price="{{ $productPriceUSD }}" data-price-converted="{{ $productPriceConverted }}">{{ format_price_usd($productPriceUSD) }}</span>
-                        <span class="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                            {{ $discount }}% OFF
-                        </span>
-                    @else
-                            <span class="text-4xl font-bold text-[#E2150C]" id="base-price" data-price="{{ $productBasePriceUSD }}" data-price-converted="{{ $productBasePriceConverted }}">{{ format_price_usd($productBasePriceUSD) }}</span>
-                    @endif
-                    </div>
-                    
-                    <!-- Customization Price Display -->
-                    <div id="customization-price-display" class="hidden mt-2">
-                        <div class="flex items-center justify-between text-sm">
-                            <span class="text-gray-600">Customization:</span>
-                            <span class="text-[#005366] font-medium" id="customization-price">+{{ currency_symbol() }}0.00</span>
-                        </div>
-                        <div class="border-t border-gray-300 mt-2 pt-2 flex items-center justify-between">
-                            <span class="text-gray-900 font-semibold">Total:</span>
-                            <span class="text-2xl font-bold text-[#005366]" id="total-price">{{ format_price_usd($productBasePriceUSD) }}</span>
-                        </div>
-                    </div>
-                </div>
-                
-                @if($product->template && $product->template->base_price > $product->price)
-                    <p class="text-sm text-red-600 font-medium mb-4">
-                        Sale ends at {{ now()->addDays(7)->format('F d, Y') }}
-                    </p>
-                @endif
-
-                <!-- FREE Returns Section -->
-                <div class="flex items-center space-x-2 mb-4">
-                    <span class="text-sm font-medium text-gray-900">FREE Returns</span>
-                    <div class="relative inline-block">
-                        <button onclick="toggleReturnsInfo()" class="w-4 h-4 bg-blue-500 text-white rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors">
-                            <span class="text-xs font-bold">i</span>
-                        </button>
-                        
-                        <!-- Returns Info Popup -->
-                        <div id="returns-info-popup" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-72 z-50 hidden">
-                            <div class="relative">
-                                <p class="text-sm text-gray-700 mb-2">
-                                    Free returns are available for the shipping address you chose. You can return the item for any reason in new and unused condition: no return shipping charges.
-                                </p>
-                                <a href="{{ route('page.show', 'returns-exchanges-policy') }}" class="text-sm text-red-600 hover:underline">
-                                    Read the full returns policy
-                                </a>
-                                
-                                <!-- Arrow pointing down -->
-                                <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white border-r border-b border-gray-200 rotate-45"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Customization Options -->
-                @if($product->template && $product->template->hasCustomization())
-                    <div class="space-y-4 mb-6">
-                        <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900">Personalization Options</h3>
-                            <label class="flex items-center space-x-2 cursor-pointer">
-                                <input type="checkbox" 
-                                       id="enable-customization" 
-                                       onchange="toggleCustomization()"
-                                       class="h-5 w-5 text-[#005366] focus:ring-[#005366] border-gray-300 rounded">
-                                <span class="text-sm font-medium text-gray-700">Add Personalization</span>
-                            </label>
-                        </div>
-                        
-                        <div id="customization-container" class="hidden space-y-4">
-                        @foreach($product->template->getCustomizationTypes() as $index => $customization)
-                            <div class="border border-gray-200 rounded-lg p-4 bg-white">
-                                <div class="flex items-center justify-between mb-3">
-                                    <h4 class="font-medium text-gray-900 text-base">
-                                        {{ $customization['label'] ?? $customization['name'] ?? 'Customization ' . ($index + 1) }}
-                                    </h4>
-                                    <div class="flex items-center space-x-2">
-                                        @if(isset($customization['required']) && $customization['required'])
-                                            <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-medium">Required</span>
-                                        @endif
-                                        @if(isset($customization['price']) && $customization['price'] > 0)
-                                            <span class="text-sm font-medium text-[#E2150C]">+{{ format_price_usd($customization['price'] ?? 0) }}</span>
-                                        @endif
-                                    </div>
-                                </div>
-                                
-                                @if(isset($customization['description']) && !empty($customization['description']))
-                                    <p class="text-sm text-gray-600 mb-3">{{ strip_tags(html_entity_decode($customization['description'], ENT_QUOTES, 'UTF-8')) }}</p>
-                                @endif
-                                
-                                @if(isset($customization['instructions']) && !empty($customization['instructions']))
-                                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
-                                        <div class="flex items-start space-x-2">
-                                            <svg class="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                            </svg>
-                                            <p class="text-xs text-blue-800">{{ strip_tags(html_entity_decode($customization['instructions'], ENT_QUOTES, 'UTF-8')) }}</p>
-                                        </div>
-                                    </div>
-                                @endif
-                                
-                                @if(isset($customization['options']) && is_array($customization['options']) && count($customization['options']) > 0)
-                                    <div class="space-y-3">
-                                        <p class="text-sm text-gray-700 font-medium">Choose an option:</p>
-                                        @foreach($customization['options'] as $optionIndex => $option)
-                                            <label class="flex items-center space-x-3 cursor-pointer p-3 hover:bg-gray-50 rounded-lg border border-gray-100">
-                                                <input type="radio" 
-                                                       name="customization_{{ $index }}_{{ $customization['type'] ?? 'option' }}" 
-                                                       value="{{ $option['value'] ?? $option['label'] ?? $option }}" 
-                                                       data-price="{{ convert_currency((float)($option['price'] ?? 0)) }}"
-                                                       onchange="updateCustomizationPrice()"
-                                                       {{ (isset($customization['required']) && $customization['required']) ? 'required' : '' }}
-                                                       class="customization-input text-[#005366] focus:ring-[#005366] w-4 h-4">
-                                                <div class="flex-1">
-                                                    <span class="text-sm text-gray-700 font-medium">{{ $option['label'] ?? $option['value'] ?? $option }}</span>
-                                                    @if(isset($option['description']) && !empty($option['description']))
-                                                        <p class="text-xs text-gray-500 mt-1">{{ strip_tags(html_entity_decode($option['description'], ENT_QUOTES, 'UTF-8')) }}</p>
-                                                    @endif
-                                                </div>
-                                                @if(isset($option['price']) && $option['price'] > 0)
-                                                    <span class="text-xs text-[#E2150C] font-medium">+{{ format_price_usd($option['price'] ?? 0) }}</span>
-                                                @endif
-                                            </label>
-                                        @endforeach
-                                    </div>
-                                @elseif(isset($customization['input_type']) && $customization['input_type'] === 'textarea')
-                                    <div class="space-y-3">
-                                        <textarea name="customization_{{ $index }}_{{ $customization['type'] ?? 'customization' }}"
-                                                  placeholder="{{ $customization['placeholder'] ?? 'Enter your text here...' }}" 
-                                                  rows="{{ $customization['rows'] ?? 3 }}"
-                                                  data-price="{{ convert_currency((float)($customization['price'] ?? 0)) }}"
-                                                  data-label="{{ $customization['label'] ?? $customization['type'] ?? 'Customization' }}"
-                                                  oninput="updateCustomizationPrice()"
-                                                  {{ (isset($customization['required']) && $customization['required']) ? 'required' : '' }}
-                                                  class="customization-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#005366] focus:border-transparent resize-vertical">{{ old('customization_' . $index) }}</textarea>
-                                        @if(isset($customization['max_length']))
-                                            <p class="text-xs text-gray-500">Maximum {{ $customization['max_length'] }} characters</p>
-                                        @endif
-                                    </div>
+<div class="min-h-screen bg-[#f8f6f6] font-display">
+    <div class="max-w-[1200px] mx-auto w-full px-4 sm:px-6 md:px-10 py-8 md:py-12">
+        <div class="flex flex-col lg:flex-row gap-8 lg:gap-10">
+            {{-- Left: Gallery — thu gọn, ~40% trên desktop --}}
+            <div class="w-full lg:w-[45%] xl:w-[43%] shrink-0">
+                <div class="lg:sticky lg:top-10">
+                    <div class="space-y-3">
+                        <div class="aspect-square max-h-[460px] lg:max-h-[440px] w-full rounded-2xl overflow-hidden bg-white shadow-md border border-slate-100 relative mx-auto" id="product-main-media-wrap">
+                            @if(count($galleryItems) > 0)
+                                @if($firstMediaIsVideo)
+                                    @php
+                                        $mainPoster = $galleryItems[0]['poster'] ?? null;
+                                        if ($mainPoster && preg_match('/\.(mp4|webm|ogg|mov|avi)$/i', $mainPoster)) { $mainPoster = null; }
+                                        $mainPoster = $mainPoster ?: $primaryImageUrl;
+                                    @endphp
+                                    <video id="product-main-video" class="w-full h-full object-cover" controls playsinline poster="{{ $mainPoster }}" src="{{ $galleryItems[0]['url'] }}"></video>
+                                    <img alt="{{ $product->name }}" class="w-full h-full object-cover hidden" id="product-main-image" src="">
                                 @else
-                                    <div class="space-y-3">
-                                        <input type="{{ $customization['input_type'] ?? 'text' }}" 
-                                               name="customization_{{ $index }}_{{ $customization['type'] ?? 'customization' }}"
-                                               placeholder="{{ $customization['placeholder'] ?? 'Enter ' . ($customization['type'] ?? 'customization') . '...' }}" 
-                                               value="{{ old('customization_' . $index) }}"
-                                               data-price="{{ convert_currency((float)($customization['price'] ?? 0)) }}"
-                                               data-label="{{ $customization['label'] ?? $customization['type'] ?? 'Customization' }}"
-                                               oninput="updateCustomizationPrice()"
-                                               {{ (isset($customization['required']) && $customization['required']) ? 'required' : '' }}
-                                               class="customization-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#005366] focus:border-transparent">
-                                        @if(isset($customization['max_length']))
-                                            <p class="text-xs text-gray-500">Maximum {{ $customization['max_length'] }} characters</p>
-                                        @endif
-                                        @if(isset($customization['help_text']) && !empty($customization['help_text']))
-                                            <p class="text-xs text-gray-500">{{ $customization['help_text'] }}</p>
-                                        @endif
-                                    </div>
+                                    <video id="product-main-video" class="w-full h-full object-cover hidden" controls playsinline></video>
+                                    <img alt="{{ $product->name }}" class="w-full h-full object-cover" id="product-main-image" src="{{ $galleryItems[0]['url'] }}">
                                 @endif
-                                
-                                @if(isset($customization['file_upload']) && $customization['file_upload'])
-                                    <div class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                        <label class="block text-sm text-gray-700 font-medium mb-2">
-                                            Upload your file:
-                                        </label>
-                                        <input type="file" 
-                                               name="customization_file_{{ $index }}"
-                                               accept="{{ $customization['accepted_formats'] ?? 'image/*' }}"
-                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#005366] focus:border-transparent">
-                                        @if(isset($customization['file_requirements']))
-                                            <p class="text-xs text-gray-500 mt-1">{{ $customization['file_requirements'] }}</p>
-                                        @endif
-                                    </div>
-                                @endif
-                            </div>
-                        @endforeach
-                        </div>
-                    </div>
-                @endif
-                <!-- Product Options -->
-                @if($product->variants()->count() > 0)
-                    @php
-                        $variants = $product->variants;
-                        $selectedVariant = $variants->first();
-                        
-                        // Extract unique attribute values dynamically
-                        $allAttributes = [];
-                        foreach($variants as $variant) {
-                            if($variant->attributes) {
-                                foreach($variant->attributes as $key => $value) {
-                                    if(!isset($allAttributes[$key])) {
-                                        $allAttributes[$key] = [];
-                                    }
-                                    if(!in_array($value, $allAttributes[$key])) {
-                                        $allAttributes[$key][] = $value;
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // For backward compatibility, check for Size and Color specifically
-                        $sizes = collect($allAttributes['Size'] ?? []);
-                        $colors = collect($allAttributes['Color'] ?? []);
-                    @endphp
-                    
-                    <div class="space-y-6 mb-6">
-                        @foreach($allAttributes as $attributeName => $attributeValues)
-                            @if($attributeName === 'Size')
-                                <!-- Size Selection -->
-                                <div>
-                                    <div class="flex items-center justify-between mb-3">
-                                        <h3 class="text-lg font-semibold text-gray-900">Size</h3>
-                                        <button onclick="openSizeGuide()" class="text-sm text-[#005366] hover:underline flex items-center">
-                                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                                            </svg>
-                                            View Size Guide
-                                        </button>
-                                    </div>
-                                    <div class="relative">
-                                        <select id="{{ strtolower($attributeName) }}-selector" onchange="selectAttribute('{{ $attributeName }}', this.value)" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#005366] focus:border-transparent appearance-none bg-white">
-                                            <option value="">Choose a {{ strtolower($attributeName) }}</option>
-                                            @foreach($attributeValues as $value)
-                                                <option value="{{ $value }}" {{ $loop->first ? 'selected' : '' }}>
-                                                    {{ $value }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                        <svg class="w-5 h-5 text-gray-400 absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                        </svg>
-                                    </div>
-                                </div>
-                            @elseif($attributeName === 'Color' || $attributeName === 'Colour')
-                                <!-- Color Selection -->
-                                @php
-                                    $colorMap = [
-                                        // Basic Colors
-                                        'black' => '#000000', 'white' => '#ffffff', 'red' => '#dc2626',
-                                        'blue' => '#2563eb', 'green' => '#16a34a', 'yellow' => '#eab308',
-                                        'purple' => '#9333ea', 'pink' => '#ec4899', 'orange' => '#ea580c',
-                                        'brown' => '#a16207', 'gray' => '#6b7280', 'grey' => '#6b7280',
-                                        
-                                        // Extended Colors
-                                        'navy' => '#1e3a8a', 'maroon' => '#991b1b', 'teal' => '#0d9488',
-                                        'lime' => '#65a30d', 'cyan' => '#06b6d4', 'indigo' => '#4f46e5',
-                                        'violet' => '#8b5cf6', 'rose' => '#f43f5e', 'amber' => '#f59e0b',
-                                        'emerald' => '#10b981', 'sky' => '#0ea5e9', 'fuchsia' => '#d946ef',
-                                        
-                                        // Dark Variants
-                                        'dark chocolate' => '#3c2415', 'dark gray' => '#374151', 
-                                        'charcoal' => '#374151', 'dark blue' => '#1e40af',
-                                        'dark green' => '#166534', 'dark red' => '#991b1b',
-                                        
-                                        // Light Variants
-                                        'light gray' => '#9ca3af', 'light blue' => '#93c5fd',
-                                        'light green' => '#86efac', 'light pink' => '#fbb6ce',
-                                        'light yellow' => '#fef3c7', 'cream' => '#fef7cd',
-                                        
-                                        // Special Colors
-                                        'gold' => '#fbbf24', 'silver' => '#9ca3af', 'copper' => '#b45309',
-                                        'bronze' => '#92400e', 'platinum' => '#6b7280',
-                                        
-                                        // Pattern Colors
-                                        'camo' => '#365314', 'olive' => '#65a30d', 'khaki' => '#a3a3a3',
-                                        'beige' => '#f5f5dc', 'tan' => '#d2b48c', 'mint' => '#a7f3d0',
-                                        'lavender' => '#e9d5ff', 'coral' => '#fda4af', 'turquoise' => '#5eead4',
-                                        
-                                        // Additional Colors from UI
-                                        'sport grey' => '#9ca3af', 'dark heather' => '#374151',
-                                        'royal blue' => '#1d4ed8', 'sand' => '#fbbf24',
-                                        'forest green' => '#166534', 'military green' => '#365314',
-                                        'ash grey' => '#6b7280', 'natural' => '#fef3c7',
-                                        
-                                        // Complete color set from user request (case insensitive)
-                                        'black' => '#000000', 'white' => '#ffffff',
-                                        'light blue' => '#93c5fd', 'charcoal' => '#374151',
-                                        'sport grey' => '#9ca3af', 'dark heather' => '#374151',
-                                        'navy' => '#1e3a8a', 'maroon' => '#991b1b',
-                                        'light pink' => '#fbb6ce', 'red' => '#dc2626',
-                                        'royal blue' => '#1d4ed8', 'sand' => '#fbbf24',
-                                        'forest green' => '#166534', 'military green' => '#365314',
-                                        'ash grey' => '#6b7280', 'purple' => '#9333ea',
-                                        'orange' => '#ea580c', 'natural' => '#fef3c7',
-                                    ];
-                                @endphp
-                                <div>
-                                    <div class="flex items-center justify-between mb-3">
-                                        <h3 class="text-lg font-semibold text-gray-900">
-                                            {{ $attributeName }}: <span id="selected-color-name" class="text-[#005366]">{{ $attributeValues[0] ?? '' }}</span>
-                                        </h3>
-                                    </div>
-                                    <div class="flex flex-wrap gap-2">
-                                        @foreach($attributeValues as $color)
-                                            @php
-                                                $colorCode = $colorMap[strtolower($color)] ?? '#6b7280';
-                                            @endphp
-                                            <button onclick="selectAttribute('{{ $attributeName }}', '{{ $color }}')" 
-                                                    class="color-swatch variant-option w-10 h-10 rounded-full border-2 {{ $loop->first ? 'border-[#005366] ring-2 ring-[#005366] ring-offset-1 scale-105' : 'border-gray-300 hover:border-gray-400 hover:scale-105' }} transition-all duration-200 relative shadow-sm hover:shadow-md group"
-                                                    data-attribute="{{ $attributeName }}"
-                                                    data-value="{{ $color }}"
-                                                    style="background: {{ $colorCode }}; background-image: linear-gradient(45deg, {{ $colorCode }}cc, {{ $colorCode }});"
-                                                    title="{{ $color }}">
-                                                
-                                                <!-- Gradient overlay for special colors -->
-                                                @if(in_array(strtolower($color), ['gold', 'silver', 'copper', 'bronze', 'platinum']))
-                                                    <div class="absolute inset-0 rounded-full bg-gradient-to-br from-white/20 to-transparent"></div>
-                                                @elseif(in_array(strtolower($color), ['white', 'cream', 'light yellow']))
-                                                    <div class="absolute inset-0 rounded-full border border-gray-200"></div>
-                                                @endif
-                                                
-                                                <!-- Checkmark for selected color -->
-                                                @if($loop->first)
-                                                    <svg class="w-4 h-4 text-white absolute inset-0 m-auto drop-shadow-lg" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                                                    </svg>
-                                                @endif
-                                                
-                                                <!-- Color name tooltip on hover -->
-                                                <div class="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                                                    {{ $color }}
-                                                </div>
-                                            </button>
-                                        @endforeach
-                                    </div>
-                                </div>
                             @else
-                                <!-- Other Attributes -->
-                                <div>
-                                    <h3 class="text-lg font-semibold text-gray-900 mb-3">{{ $attributeName }}</h3>
-                                    <div class="flex flex-wrap gap-3">
-                                        @foreach($attributeValues as $value)
-                                            <button onclick="selectAttribute('{{ $attributeName }}', '{{ $value }}')" 
-                                                    class="attribute-option px-4 py-2 border-2 border-gray-300 rounded-lg hover:border-[#005366] transition-colors {{ $loop->first ? 'border-[#005366] bg-[#005366] text-white' : '' }}"
-                                                    data-attribute="{{ $attributeName }}"
-                                                    data-value="{{ $value }}">
-                                                {{ $value }}
-                                            </button>
-                                        @endforeach
-                                    </div>
+                                <img alt="{{ $product->name }}" class="w-full h-full object-cover" id="product-main-image" src="{{ $primaryImageUrl ?? '' }}">
+                                <video id="product-main-video" class="w-full h-full object-cover hidden" controls playsinline></video>
+                            @endif
+                            @if(count($galleryItems) === 0)
+                                <div class="absolute inset-0 flex items-center justify-center bg-slate-100">
+                                    <span class="material-symbols-outlined text-6xl text-slate-300">image</span>
                                 </div>
                             @endif
-                        @endforeach
+                            @if(count($galleryItems) > 1)
+                            <button type="button" id="main-media-prev" class="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/90 backdrop-blur border border-slate-200 shadow-md hover:bg-white transition flex items-center justify-center" aria-label="Ảnh/Video trước">
+                                <span class="material-symbols-outlined text-slate-700">chevron_left</span>
+                            </button>
+                            <button type="button" id="main-media-next" class="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/90 backdrop-blur border border-slate-200 shadow-md hover:bg-white transition flex items-center justify-center" aria-label="Ảnh/Video sau">
+                                <span class="material-symbols-outlined text-slate-700">chevron_right</span>
+                            </button>
+                            @endif
+                        </div>
+                        @if(count($galleryItems) > 1)
+                        <div class="relative" id="gallery-thumbnails">
+                            <button type="button" id="gallery-prev"
+                                    class="absolute -left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/90 backdrop-blur border border-slate-200 shadow-md hover:bg-white transition hidden md:inline-flex items-center justify-center"
+                                    aria-label="Previous media">
+                                <span class="material-symbols-outlined text-slate-700">chevron_left</span>
+                            </button>
 
-                        <!-- Selected Variant Summary -->
-                        <div id="selected-variant-summary" class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h4 class="font-medium text-gray-900">
-                                        <span id="selected-variant-name">
-                                            @if($selectedVariant->variant_name)
-                                                {{ $selectedVariant->variant_name }}
-                                            @elseif($selectedVariant->attributes)
-                                                @php
-                                                    $attrParts = [];
-                                                    foreach($selectedVariant->attributes as $key => $value) {
-                                                        $attrParts[] = $value;
-                                                    }
-                                                    echo implode(' - ', $attrParts);
-                                                @endphp
-                                            @else
-                                                Standard
-                                            @endif
-                                        </span>
-                                    </h4>
-                                    @if($selectedVariant->quantity !== null)
-                                        <p class="text-xs text-gray-500 mt-1" id="selected-variant-stock">
-                                            Stock: {{ $selectedVariant->quantity > 0 ? $selectedVariant->quantity . ' available' : 'Out of stock' }}
-                                        </p>
-                                    @endif
+                            <div id="gallery-viewport" class="overflow-hidden">
+                                <div id="gallery-track" class="flex gap-3 overflow-x-auto scroll-smooth no-scrollbar py-1">
+                                    @foreach($galleryItems as $index => $item)
+                                    <button type="button"
+                                            class="gallery-thumb shrink-0 w-[88px] sm:w-[96px] md:w-[104px] aspect-square rounded-xl overflow-hidden border-2 {{ $index === 0 ? 'border-primary' : 'border-slate-200' }} bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all relative group"
+                                            data-index="{{ $index }}"
+                                            data-type="{{ $item['type'] }}"
+                                            data-url="{{ $item['url'] }}"
+                                            data-poster="{{ $item['poster'] ?? '' }}"
+                                            aria-label="{{ $item['type'] === 'video' ? 'Xem video ' : 'Xem ảnh ' }}{{ $index + 1 }}">
+                                        @if($item['type'] === 'video')
+                                            @php
+                                                $thumbPoster = $item['poster'] ?? null;
+                                                if ($thumbPoster && preg_match('/\.(mp4|webm|ogg|mov|avi)$/i', $thumbPoster)) { $thumbPoster = null; }
+                                                $thumbPoster = $thumbPoster ?: ($primaryImageUrl ?: null);
+                                            @endphp
+                                            <img class="w-full h-full object-cover" src="{{ $thumbPoster }}" alt="">
+                                            <span class="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
+                                                <span class="material-symbols-outlined text-white text-3xl drop-shadow">play_circle</span>
+                                            </span>
+                                        @else
+                                            <img class="w-full h-full object-cover" src="{{ $item['url'] }}" alt="">
+                                        @endif
+                                    </button>
+                                    @endforeach
                                 </div>
-                                <div class="text-right">
-                                    <span class="text-lg font-bold text-[#E2150C]" id="selected-variant-price">
-                                        {{ format_price_usd($selectedVariant->price ?? $product->base_price) }}
+                            </div>
+
+                            <button type="button" id="gallery-next"
+                                    class="absolute -right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/90 backdrop-blur border border-slate-200 shadow-md hover:bg-white transition hidden md:inline-flex items-center justify-center"
+                                    aria-label="Next media">
+                                <span class="material-symbols-outlined text-slate-700">chevron_right</span>
+                            </button>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            {{-- Right: Nội dung + form — chiếm nhiều diện tích hơn --}}
+            <div class="w-full lg:flex-1 min-w-0">
+                {{-- Title + tag --}}
+                <div class="mb-6">
+                    @if($reviewsCount > 0)
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="flex text-amber-400">
+                            @for($i = 1; $i <= 5; $i++)
+                                @if($i <= floor($averageRating))
+                                    <span class="material-symbols-outlined text-lg fill-current">star</span>
+                                @elseif($i - 0.5 <= $averageRating)
+                                    <span class="material-symbols-outlined text-lg fill-current">star_half</span>
+                                @else
+                                    <span class="material-symbols-outlined text-lg text-slate-200">star</span>
+                                @endif
+                            @endfor
+                        </div>
+                        <span class="text-sm font-medium text-slate-500">{{ $reviewsCount }} {{ $reviewsCount === 1 ? 'Review' : 'Reviews' }}</span>
+                    </div>
+                    @endif
+                    <h1 class="text-2xl md:text-3xl text-heading font-extrabold text-slate-900 tracking-tight leading-tight">{{ $product->name }}</h1>
+                    @if($product->shop)
+                    <p class="mt-2 text-sm text-slate-600">
+                        Sold by <a href="{{ route('shops.show', $product->shop->shop_slug) }}" class="font-semibold text-slate-800 hover:text-[#f0427c] transition-colors underline underline-offset-2">{{ $product->shop->shop_name ?? $product->shop->name ?? 'Shop' }}</a>
+                    </p>
+                    @endif
+                    @if($product->collections->isNotEmpty())
+                    <div class="mt-3 flex items-center gap-2">
+                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-[#fce7ef] text-[#f0427c] border border-[#f0427c]/20 uppercase tracking-wide">
+                            {{ $product->collections->first()->name }}
+                        </span>
+                    </div>
+                    @endif
+
+                    {{-- In Stock, Viewing, In Cart (fake), Share --}}
+                    <div class="mt-4 flex flex-wrap items-center gap-2 text-sm">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                            <span class="material-symbols-outlined text-base">check_circle</span>
+                            In Stock
+                        </span>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                            <span class="material-symbols-outlined text-base">visibility</span>
+                            <span id="product-viewers">{{ $productViewingCount }}</span> viewing
+                        </span>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[#fce7ef] text-[#f0427c] border border-[#f0427c]/15">
+                            <span class="material-symbols-outlined text-base">shopping_cart</span>
+                            In <span id="product-carts">{{ $productCartsCount }}+</span> carts
+                        </span>
+                        <button type="button" class="ml-auto p-1.5 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors" aria-label="Share product" id="product-share-btn">
+                            <span class="material-symbols-outlined text-xl">share</span>
+                        </button>
+                    </div>
+
+                    <div class="mt-4 inline-flex flex-wrap items-center gap-2">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-widest bg-[#fce7ef] text-[#f0427c] border border-[#f0427c]/15">
+                            Total
+                        </span>
+                        <span id="product-price" data-base-price="{{ $productPrice }}" data-list-price="{{ $productListPrice }}"
+                              class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight drop-shadow-[0_1px_0_rgba(255,255,255,0.8)]">
+                            {{ format_price($productPrice) }}
+                        </span>
+                        @if($showProductListPrice)
+                            <span id="product-list-price" class="text-lg sm:text-xl text-slate-400 line-through font-semibold">{{ format_price($productListPrice) }}</span>
+                        @else
+                            <span id="product-list-price" class="text-lg sm:text-xl text-slate-400 line-through font-semibold hidden"></span>
+                        @endif
+                        <span id="product-price-note" class="text-sm font-bold text-[#f0427c] hidden"></span>
+                    </div>
+                </div>
+
+                {{-- Toast thông báo (thay alert) --}}
+                <div id="product-toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] max-w-md w-full mx-4 hidden" role="alert" aria-live="polite">
+                    <div class="flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border bg-white border-slate-200">
+                        <span id="product-toast-icon" class="material-symbols-outlined text-2xl text-[#f0427c]">error</span>
+                        <p id="product-toast-message" class="flex-1 text-sm font-medium text-slate-800"></p>
+                        <button type="button" id="product-toast-close" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" aria-label="Đóng">
+                            <span class="material-symbols-outlined text-xl">close</span>
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Form + Add to Cart + Shipping + Product Details --}}
+                <div class="product-sticky-sidebar flex flex-col gap-6 rounded-2xl bg-white/80 backdrop-blur-sm p-6 shadow-sm border border-slate-100">
+                
+                    {{-- Customization (từ ProductTemplate) — nằm trên Select Size --}}
+                    @if($product->template && $product->template->hasCustomization())
+                    @php $customizationTypes = $product->template->getCustomizationTypes(); @endphp
+                    <div class="space-y-4" id="product-customizations">
+                        <label class="text-xs font-semibold text-slate-700 uppercase tracking-wide">Customization</label>
+                        @foreach($customizationTypes as $index => $custom)
+                        @php
+                            $type = $custom['type'] ?? 'text';
+                            $label = $custom['label'] ?? ('Option ' . ($index + 1));
+                            $placeholder = $custom['placeholder'] ?? '';
+                            $price = (float) ($custom['price'] ?? 0);
+                            $required = !empty($custom['required']);
+                            $options = isset($custom['options']) ? preg_split('/\r\n|\r|\n/', trim($custom['options']), -1, PREG_SPLIT_NO_EMPTY) : [];
+                        @endphp
+                        <div class="space-y-1.5 customization-row" data-customization-index="{{ $index }}" data-label="{{ e($label) }}" data-price="{{ $price }}">
+                            <label class="text-sm font-medium text-slate-800">
+                                {{ $label }}
+                                @if($price > 0)<span class="text-slate-500 font-normal">(+{{ format_price($price) }})</span>@endif
+                                @if($required)<span class="text-red-500">*</span>@endif
+                            </label>
+                            @if($type === 'text')
+                                <input type="text" class="customization-field w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#f0427c]/30 focus:border-[#f0427c]" name="customization[{{ $index }}]" placeholder="{{ $placeholder }}" @if($required) data-required="1" @endif>
+                            @elseif($type === 'number')
+                                <input type="number" class="customization-field w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#f0427c]/30 focus:border-[#f0427c]" name="customization[{{ $index }}]" placeholder="{{ $placeholder }}" @if($required) data-required="1" @endif>
+                            @elseif($type === 'textarea')
+                                <textarea class="customization-field w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#f0427c]/30 focus:border-[#f0427c] resize-none" name="customization[{{ $index }}]" rows="2" placeholder="{{ $placeholder }}" @if($required) data-required="1" @endif></textarea>
+                            @elseif($type === 'select')
+                                <select class="customization-field w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#f0427c]/30 focus:border-[#f0427c]" name="customization[{{ $index }}]" @if($required) data-required="1" @endif>
+                                    <option value="">— Select —</option>
+                                    @foreach($options as $opt)
+                                    <option value="{{ e(trim($opt)) }}">{{ e(trim($opt)) }}</option>
+                                    @endforeach
+                                </select>
+                            @elseif($type === 'checkbox')
+                                <label class="inline-flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" class="customization-field w-4 h-4 rounded border-slate-300 text-[#f0427c] focus:ring-[#f0427c]" name="customization[{{ $index }}]" value="1" @if($required) data-required="1" @endif>
+                                    <span class="text-sm text-slate-600">{{ $placeholder ?: 'Yes' }}</span>
+                                </label>
+                            @else
+                                <input type="text" class="customization-field w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#f0427c]/30 focus:border-[#f0427c]" name="customization[{{ $index }}]" placeholder="{{ $placeholder }}" @if($required) data-required="1" @endif>
+                            @endif
+                        </div>
+                        @endforeach
+                    </div>
+                    @endif
+
+                    {{-- Select Size --}}
+                    <div class="space-y-2">
+                        <label class="text-xs font-semibold text-slate-700 uppercase tracking-wide">Select Size</label>
+                        <div class="flex flex-wrap gap-2" id="size-options">
+                            @foreach($sizes as $size)
+                            <div class="size-badge" data-size="{{ $size }}" role="button" tabindex="0">
+                                <span class="size-label">{{ $size }}</span>
+                                <span class="size-mm">{{ $sizeMm[$size] ?? '' }}</span>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    {{-- Select Shape (Nail Shape) - chỉ chữ, không icon --}}
+                    <div class="space-y-2">
+                        <label class="text-xs font-semibold text-slate-700 uppercase tracking-wide">Nail Shape</label>
+                        <div class="flex flex-wrap gap-2" id="shape-options">
+                            @foreach($shapes as $shape)
+                            <div class="shape-button shape-button-text" data-shape="{{ $shape }}" role="button" tabindex="0">
+                                <span class="text-xs font-medium text-slate-900">{{ $shape }}</span>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    {{-- Quantity --}}
+                    <div class="space-y-2">
+                        <label class="text-xs font-semibold text-slate-700 uppercase tracking-wide" for="product-quantity">Quantity</label>
+                        <div class="flex items-center gap-2 w-fit">
+                            <button type="button" id="qty-minus" class="w-10 h-10 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Giảm số lượng">
+                                <span class="material-symbols-outlined text-xl">remove</span>
+                            </button>
+                            <input type="number" id="product-quantity" name="quantity" min="1" max="99" value="1" class="w-16 text-center py-2 text-sm font-medium border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#f0427c]/30 focus:border-[#f0427c]">
+                            <button type="button" id="qty-plus" class="w-10 h-10 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Tăng số lượng">
+                                <span class="material-symbols-outlined text-xl">add</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- Add to Cart + Favorite --}}
+                    <div class="flex gap-3 pt-1">
+                        <button type="button" id="add-to-cart-btn" class="flex-1 bg-[#f0427c] hover:bg-[#e03a70] text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg shadow-[#f0427c]/25 flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-xl">shopping_cart</span>
+                            Add to Cart
+                        </button>
+                        <a href="{{ route('cart.index') }}" class="shrink-0 w-14 h-14 rounded-xl border-2 border-slate-200 hover:border-[#f0427c]/50 hover:bg-[#fce7ef]/50 transition-all inline-flex items-center justify-center" aria-label="Yêu thích">
+                            <span class="material-symbols-outlined text-slate-600 text-2xl">favorite</span>
+                        </a>
+                    </div>
+
+                    {{-- Shipping info --}}
+                    <div class="flex items-center justify-between pt-4 border-t border-slate-200 gap-4 flex-wrap">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-green-600 text-xl">verified</span>
+                            <span class="text-xs font-bold text-slate-600 uppercase tracking-wider">Ships within 24 hours</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-blue-600 text-xl">local_shipping</span>
+                            <span class="text-xs font-bold text-slate-600 uppercase tracking-wider">Free US Shipping</span>
+                        </div>
+                    </div>
+
+                    {{-- Product Details (trong sticky sidebar) --}}
+                    <div class="pt-6 border-t border-slate-200">
+                        <h3 class="text-lg font-extrabold text-slate-900 mb-3">Product Details</h3>
+                        <div class="text-slate-600 text-sm leading-relaxed space-y-2 product-detail-description">
+                            {!! nl2br(e(strip_tags($product->getEffectiveDescription()))) !!}
+                        </div>
+                    </div>
+
+                    {{-- Shipping and return policies (nằm dưới Product Details, vẫn trong right content) --}}
+                    <div class="pt-6 border-t border-slate-200">
+                        <h3 class="text-base font-extrabold text-slate-900 mb-4">Shipping and return policies</h3>
+
+                        <div class="space-y-3 text-sm text-slate-700">
+                            <div class="flex items-start gap-3">
+                                <span class="material-symbols-outlined text-slate-600 text-xl leading-none">calendar_month</span>
+                                <div class="leading-snug">
+                                    <span class="text-slate-600">Order today to get by</span>
+                                    <span class="font-bold underline underline-offset-2 ml-1" style="text-decoration-color: #f0427c;">{{ $deliveryRangeText }}</span>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start gap-3">
+                                <span class="material-symbols-outlined text-slate-600 text-xl leading-none">assignment_return</span>
+                                <div class="relative leading-snug">
+                                    <span class="group inline-flex items-center gap-1 font-bold underline underline-offset-2 cursor-help" style="text-decoration-color: #f0427c;">
+                                        Returns &amp; exchanges accepted
+                                        <span class="material-symbols-outlined text-base text-slate-500">info</span>
+
+                                        <span class="pointer-events-none absolute left-0 top-full mt-2 z-20 hidden w-[320px] max-w-[85vw] rounded-xl border border-slate-200 bg-white p-3 text-xs font-medium text-slate-700 shadow-xl group-hover:block">
+                                            <span class="block font-extrabold text-slate-900 mb-1">Return policy</span>
+                                            <span class="block leading-relaxed">
+                                                - Return within 30 days of delivery.<br>
+                                                - Item must be unused and in original packaging.<br>
+                                                - Custom/Personalized items are not eligible unless defective.<br>
+                                                - Buyer pays return shipping unless the item is damaged/incorrect.
+                                            </span>
+                                        </span>
                                     </span>
                                 </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- Hidden data for JavaScript -->
-                    <script type="application/json" id="variants-data">
-                        {!! $variants->map(function($variant) use ($product) {
-                            $variantPriceUSD = (float) ($variant->price ?? $product->base_price);
-                            $variantPriceConverted = convert_currency($variantPriceUSD);
-                            return [
-                                'id' => $variant->id,
-                                'attributes' => $variant->attributes ?? [],
-                                'size' => $variant->attributes['Size'] ?? null,
-                                'color' => $variant->attributes['Color'] ?? null,
-                                'colour' => $variant->attributes['Colour'] ?? null,
-                                'price' => $variantPriceConverted,
-                                'price_usd' => $variantPriceUSD, // Giữ giá USD gốc để tính toán
-                                'quantity' => $variant->quantity,
-                                'variant_name' => $variant->variant_name,
-                                'media' => $variant->media
-                            ];
-                        })->values()->toJson() !!}
-                    </script>
-                @endif
-
-                <!-- Custom File Upload Section -->
-                @if($product->allow_customization)
-                    <x-custom-file-upload :product="$product" />
-                @endif
-
-                <!-- Action Buttons -->
-                <div class="flex space-x-3 md:space-x-4">
-                    <button id="add-to-cart-btn" 
-                            onclick="addToCart()"
-                            class="flex-1 bg-[#005366] hover:bg-[#003d4d] text-white font-semibold py-3 md:py-4 px-4 md:px-6 rounded-lg md:rounded-xl transition-colors duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base min-h-[44px]">
-                            <svg id="cart-icon" class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-                            </svg>
-                            <span id="cart-text">Add to Cart</span>
-                            <div id="cart-loading" class="hidden">
-                                <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                            </div>
-                        </button>
-                        <button onclick="buyNow()" class="flex-1 bg-[#E2150C] hover:bg-[#c0120a] text-white font-semibold py-3 md:py-4 px-4 md:px-6 rounded-lg md:rounded-xl transition-colors duration-200 flex items-center justify-center space-x-2 text-sm md:text-base min-h-[44px]">
-                            <span>Buy Now</span>
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
-                            </svg>
-                        </button>
-                    </div>
-
-                <!-- Wishlist Button -->
-                <div class="w-full mt-4">
-                    <x-wishlist-button :product="$product" size="lg" :showText="true" />
-                </div>
-
-                <!-- Guarantee & Delivery Info Section -->
-                <div class="bg-amber-50 border border-amber-200 rounded-xl p-6 mt-6">
-                    <!-- Printerval Guarantee -->
-                    <div class="flex items-center space-x-3 mb-4">
-                        <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
-                            <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold text-gray-900">Bluprinter Guarantee</h4>
-                            <p class="text-sm text-gray-600">Don't love it? We'll fix it. For free.</p>
-                        </div>
-                    </div>
-
-                    <!-- Delivery Info -->
-                    <div class="flex items-start space-x-3">
-                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <h4 class="font-semibold text-gray-900" id="delivery-location">Deliver to <span id="customer-location">Loading...</span></h4>
-                            @if($defaultShippingRate)
-                                <p class="text-sm text-gray-600" id="delivery-shipping-rate">{{ $defaultShippingRate->name }}</p>
-                                @if($defaultShippingRate->description)
-                                    <p class="text-sm text-gray-600" id="delivery-estimate">{{ $defaultShippingRate->description }}</p>
-                                @else
-                                    <p class="text-sm text-gray-600" id="delivery-estimate">Calculating delivery time...</p>
-                                @endif
-                            @else
-                                <p class="text-sm text-gray-600" id="delivery-estimate">Calculating delivery time...</p>
-                            @endif
-                            <p class="text-sm text-gray-600" id="ready-to-ship">Ready to ship in: 2 business days</p>
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- Designer & Policies Section -->
-                <div class="space-y-6 mt-6">
-                    <!-- Designed by -->
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-3">
-                            <span class="text-gray-700">Designed by</span>
-                            <a href="{{ route('shops.show', $product->shop->shop_slug ?? '') }}" class="text-[#005366] hover:underline font-medium flex items-center space-x-1">
-                                <span>{{ $product->shop->name ?? 'Bluprinter Team' }}</span>
-                                <svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                                </svg>
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Policies -->
-                    <div class="flex items-start space-x-3">
-                        <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold text-gray-900 mb-1">Policies</h4>
-                            <p class="text-sm text-gray-600">
-                                Eligible for <a href="{{ route('page.show', 'returns-exchanges-policy') }}" class="text-orange-600 font-medium hover:underline">Refund</a> or <a href="{{ route('page.show', 'returns-exchanges-policy') }}" class="text-orange-600 font-medium hover:underline">Return and Replacement</a> within 30 days from the date of delivery
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Need Support -->
-                    <div class="flex items-start space-x-3">
-                        <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold text-gray-900 mb-2">Need Support?</h4>
-                            <div class="flex items-center space-x-4">
-                                <a href="{{ route('page.show', 'contact-us') }}" class="text-[#005366] hover:underline text-sm">Submit a ticket</a>
-                                <span class="text-gray-300">|</span>
-                                <a href="{{ route('page.show', 'contact-us') }}" class="text-[#005366] hover:underline text-sm">Report Product</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- Product Details -->
-            <div class="space-y-6">
-                <div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-3">Product Description</h3>
-                    @php
-                        $description = $product->description ?? 'No description available for this product.';
-                        
-                        // Convert HTML to text
-                        $description = strip_tags($description);
-                        
-                        // Decode HTML entities
-                        $description = html_entity_decode($description, ENT_QUOTES, 'UTF-8');
-                        
-                        // Replace &nbsp; with regular spaces
-                        $description = str_replace('&nbsp;', ' ', $description);
-                        
-                        // Replace multiple hyphens with section breaks
-                        $description = preg_replace('/-{3,}/', "\n\n", $description);
-                        
-                        // Clean up extra spaces and line breaks
-                        $description = preg_replace('/\s+/', ' ', $description);
-                        $description = preg_replace('/\n\s*\n/', "\n\n", $description);
-                        $description = trim($description);
-                        
-                        // Calculate preview length (approximately 4 lines = ~300 characters)
-                        $previewLength = 300;
-                        $hasMoreContent = strlen($description) > $previewLength;
-                        
-                        if ($hasMoreContent) {
-                            // Find a good break point (end of sentence or word)
-                            $previewText = substr($description, 0, $previewLength);
-                            $lastPeriod = strrpos($previewText, '.');
-                            $lastSpace = strrpos($previewText, ' ');
-                            
-                            if ($lastPeriod !== false && $lastPeriod > $previewLength * 0.7) {
-                                $previewText = substr($previewText, 0, $lastPeriod + 1);
-                            } elseif ($lastSpace !== false) {
-                                $previewText = substr($previewText, 0, $lastSpace) . '...';
-                            } else {
-                                $previewText .= '...';
-                            }
-                        } else {
-                            $previewText = $description;
-                        }
-                        
-                        // Split by double line breaks to create sections for full display
-                        $sections = array_filter(array_map('trim', explode("\n\n", $description)));
-                    @endphp
-                    
-                    <!-- Description Preview (Always Visible) -->
-                    <div id="description-preview" class="text-gray-700 leading-relaxed whitespace-pre-line">
-                        {{ $previewText }}
-                </div>
-
-                    <!-- Full Description (Hidden by default) -->
-                    <div id="description-full" class="hidden text-gray-700 leading-relaxed space-y-4">
-                        @foreach($sections as $index => $section)
-                            @if(strpos($section, ':') !== false)
-                                @php
-                                    list($title, $content) = explode(':', $section, 2);
-                                    $title = trim($title);
-                                    $content = trim($content);
-                                @endphp
-                                <div class="border-l-4 border-[#005366] pl-4 py-2">
-                                    <h4 class="font-semibold text-gray-900 mb-1">{{ $title }}</h4>
-                                    <p class="text-gray-700">{{ $content }}</p>
+                            <div class="flex items-start gap-3">
+                                <span class="material-symbols-outlined text-slate-600 text-xl leading-none">local_shipping</span>
+                                <div class="leading-snug">
+                                    <span class="text-slate-600">Cost to ship:</span>
+                                    <span class="font-bold ml-1">
+                                        @if(is_numeric($shippingCostUsd))
+                                            {{ format_price_usd((float) $shippingCostUsd) }}
+                                        @else
+                                            Calculated at checkout
+                                        @endif
+                                    </span>
                                 </div>
-                            @else
-                                <p class="text-gray-700">{{ $section }}</p>
-                            @endif
-                        @endforeach
-                    </div>
-                    
-                    <!-- Show More/Less Button -->
-                    @if($hasMoreContent)
-                        <button id="toggle-description" onclick="toggleDescription()" class="mt-4 text-[#005366] hover:underline font-medium flex items-center space-x-2">
-                            <span id="description-toggle-text">Show More</span>
-                            <svg id="description-toggle-icon" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </button>
-                    @endif
-                </div>
-
-
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Related Products (Mobile Only) -->
-@if($relatedProducts->count() > 0)
-<div class="lg:hidden bg-gray-50 py-8 border-t border-gray-200">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="space-y-4">
-            <div class="flex items-center justify-between">
-                <h3 class="text-xl font-bold text-gray-900">Related Products</h3>
-                <a href="{{ route('products.index') }}" class="text-sm text-[#005366] hover:underline">
-                    See All Items
-                </a>
-            </div>
-            
-            <!-- Related Products Scroll Container -->
-            <div class="overflow-x-auto mobile-scroll-hide" style="scroll-behavior: smooth;">
-                <div class="flex gap-3 pb-2">
-                        @foreach($relatedProducts->take(12) as $relatedProduct)
-                            <a href="{{ route('products.show', $relatedProduct->slug) }}" 
-                               class="flex-shrink-0 w-40 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 group/item overflow-hidden border border-gray-200">
-                    <!-- Product Image -->
-                    <div class="relative aspect-square overflow-hidden">
-                        @php
-                            $relatedMedia = $relatedProduct->getEffectiveMedia();
-                            $relatedImageUrl = null;
-                            if ($relatedMedia && count($relatedMedia) > 0) {
-                                if (is_string($relatedMedia[0])) {
-                                    $relatedImageUrl = $relatedMedia[0];
-                                } elseif (is_array($relatedMedia[0])) {
-                                    $relatedImageUrl = $relatedMedia[0]['url'] ?? $relatedMedia[0]['path'] ?? reset($relatedMedia[0]) ?? null;
-                                }
-                            }
-                        @endphp
-                        @if($relatedImageUrl)
-                            <img src="{{ $relatedImageUrl }}" 
-                                 alt="{{ $relatedProduct->name }}" 
-                                            class="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-300">
-                        @else
-                            <div class="w-full h-full bg-gray-200 flex items-center justify-center">
-                                            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                </svg>
                             </div>
-                        @endif
-                    </div>
 
-                                <!-- Product Info (Compact) -->
-                                <div class="p-2.5">
-                                    <h4 class="font-medium text-gray-900 text-xs line-clamp-2 group-hover/item:text-[#005366] transition-colors mb-1.5 h-8 overflow-hidden" title="{{ $relatedProduct->name }}">
-                                        {{ Str::limit($relatedProduct->name, 30) }}
-                                    </h4>
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-xs font-bold text-[#E2150C]">{{ format_price_usd($relatedProduct->base_price) }}</span>
-                                        <div class="flex items-center text-xs text-gray-500">
-                                            <svg class="w-3 h-3 text-yellow-400 mr-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                                            </svg>
-                                            <span class="text-xs">4.5</span>
-                                        </div>
-                                    </div>
+                            <div class="flex items-start gap-3">
+                                <span class="material-symbols-outlined text-slate-600 text-xl leading-none">public</span>
+                                <div class="leading-snug">
+                                    <span class="text-slate-600">Ships from:</span>
+                                    <span class="font-bold ml-1">{{ $shipsFrom }}</span>
                                 </div>
-                            </a>
-                    @endforeach
+                            </div>
+
+                            <div class="pt-2">
+                                <button type="button" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-slate-900">
+                                    Deliver to {{ $shipCountryName }}
+                                    <span class="material-symbols-outlined text-base">edit</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
-@endif
-<!-- Reviews Section (Mobile & Tablet Only) -->
-<div class="lg:hidden bg-white py-8 border-t border-gray-200">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="space-y-6">
-            <!-- Reviews Header -->
-            <div class="flex items-center justify-between">
-                <h3 class="text-2xl font-bold text-gray-900">Reviews</h3>
-            </div>
 
-            <!-- Tabs -->
-            <div class="border-b border-gray-200">
-                <nav class="-mb-px flex space-x-8">
-                    <button class="border-b-2 border-[#005366] py-2 px-1 text-sm font-medium text-[#005366]">
-                        Reviews for this item
-                    </button>
-                    <button class="border-b-2 border-transparent py-2 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">
-                        Reviews for this shop
-                    </button>
-                </nav>
-            </div>
-
+        {{-- Full width: Video, Recently Viewed --}}
+        <div class="mt-12 space-y-12">
+            @if($product->template && $product->template->media && count($product->template->media) > 0)
             @php
-                $averageRating = $product->getAverageRating();
-                $totalReviews = $product->getTotalReviews();
-                $ratingBreakdown = $product->getRatingBreakdown();
+                $videoUrl = null;
+                foreach ($product->template->media as $m) {
+                    if (is_array($m) && isset($m['type']) && ($m['type'] ?? '') === 'video') { $videoUrl = $m['url'] ?? $m['path'] ?? null; break; }
+                    if (is_string($m) && preg_match('/\.(mp4|webm|ogg)$/i', $m)) { $videoUrl = asset('storage/'.$m); break; }
+                }
             @endphp
-
-            <!-- Overall Rating Summary -->
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-                <!-- Average Rating -->
-                <div class="flex items-center space-x-4">
-                    <div class="flex items-center">
-                        <svg class="w-8 h-8 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                        </svg>
-                        <span class="text-2xl font-bold text-gray-900 ml-2">{{ number_format($averageRating, 1) }} /5.0</span>
-                    </div>
-                    <div class="text-sm text-gray-600">
-                        <span class="underline">{{ $totalReviews }} Reviews</span>
-                    </div>
-                </div>
-
-                <!-- Star Rating Distribution -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-2">
-                    <!-- Left Column -->
-                    <div class="space-y-2">
-                        @for($star = 5; $star >= 3; $star--)
-                            @php
-                                $count = $ratingBreakdown[$star] ?? 0;
-                                $percentage = $totalReviews > 0 ? round(($count / $totalReviews) * 100) : 0;
-                            @endphp
-                            <div class="flex items-center space-x-2">
-                                <div class="flex items-center">
-                                    <svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                                    </svg>
-                                    <span class="text-sm font-medium text-gray-700 ml-1">{{ $star }}</span>
-                                </div>
-                                <div class="flex-1 bg-gray-200 rounded-full h-2 max-w-[120px]">
-                                    <div class="bg-gray-900 h-2 rounded-full" style="width: {{ $percentage }}%"></div>
-                                </div>
-                                <span class="text-xs text-gray-500 w-8">({{ $percentage }}%)</span>
-                            </div>
-                        @endfor
-                    </div>
-                    
-                    <!-- Right Column -->
-                    <div class="space-y-2">
-                        @for($star = 2; $star >= 1; $star--)
-                            @php
-                                $count = $ratingBreakdown[$star] ?? 0;
-                                $percentage = $totalReviews > 0 ? round(($count / $totalReviews) * 100) : 0;
-                            @endphp
-                            <div class="flex items-center space-x-2">
-                                <div class="flex items-center">
-                                    <svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                                    </svg>
-                                    <span class="text-sm font-medium text-gray-700 ml-1">{{ $star }}</span>
-                                </div>
-                                <div class="flex-1 bg-gray-200 rounded-full h-2 max-w-[120px]">
-                                    <div class="bg-gray-900 h-2 rounded-full" style="width: {{ $percentage }}%"></div>
-                                </div>
-                                <span class="text-xs text-gray-500 w-8">({{ $percentage }}%)</span>
-                            </div>
-                        @endfor
-                    </div>
+            @if($videoUrl)
+            <div>
+                <h3 class="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[#f0427c]">play_circle</span>
+                    See it in Action
+                </h3>
+                <div class="aspect-video w-full max-w-3xl rounded-2xl overflow-hidden bg-slate-200">
+                    <video class="w-full h-full object-cover" src="{{ $videoUrl }}" controls poster="{{ $primaryImageUrl }}"></video>
                 </div>
             </div>
-
-            <!-- Individual Reviews -->
-            @if($product->approvedReviews->count() > 0)
-                <div class="space-y-6">
-                    @foreach($product->approvedReviews->take(3) as $review)
-                        <div class="border-t border-dotted border-gray-300 pt-6">
-                            <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between space-y-4 lg:space-y-0">
-                                <!-- Review Content -->
-                                <div class="flex-1">
-                                    <!-- Rating -->
-                                    <div class="flex items-center mb-3">
-                                        @for($i = 1; $i <= 5; $i++)
-                                            @if($i <= floor($review->rating))
-                                                <svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                                                </svg>
-                                            @elseif($i - 0.5 <= $review->rating)
-                                                <svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                                    <defs>
-                                                        <linearGradient id="half-star-mobile-{{ $review->id }}-{{ $i }}">
-                                                            <stop offset="50%" stop-color="currentColor"/>
-                                                            <stop offset="50%" stop-color="#E5E7EB"/>
-                                                        </linearGradient>
-                                                    </defs>
-                                                    <path fill="url(#half-star-mobile-{{ $review->id }}-{{ $i }})" d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                                                </svg>
-                                            @else
-                                                <svg class="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                                                </svg>
-                                            @endif
-                                        @endfor
-                                    </div>
-
-                                    <!-- Review Title and Text -->
-                                    @if($review->review_text)
-                                        @php
-                                            $words = explode(' ', $review->review_text);
-                                            $title = count($words) > 8 ? implode(' ', array_slice($words, 0, 8)) . '...' : $review->review_text;
-                                        @endphp
-                                        <h4 class="font-semibold text-gray-900 mb-2">{{ $title }}</h4>
-                                        <p class="text-gray-700 text-sm leading-relaxed">{{ $review->review_text }}</p>
-                                    @endif
-                                </div>
-
-                                <!-- Reviewer Info -->
-                                <div class="flex items-center space-x-3 lg:ml-6">
-                                    <div class="flex-shrink-0">
-                                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-medium text-sm">
-                                            {{ Str::upper(substr($review->display_name, 0, 2)) }}
-                                        </div>
-                                    </div>
-                                    <div class="text-right">
-                                        <div class="text-sm font-medium text-gray-900">{{ $review->display_name }}</div>
-                                        <div class="text-xs text-gray-500">{{ $review->created_at->format('D M d Y') }}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            @else
-                <div class="text-center py-12">
-                    <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
-                    </svg>
-                    <p class="text-gray-500 text-lg mb-2">No reviews yet</p>
-                    <p class="text-gray-400 text-sm">Be the first to review this product</p>
-                </div>
+            @endif
             @endif
 
-            <!-- Write Review and Pagination -->
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0 pt-6 border-t border-gray-200">
-                <!-- Write Review Button -->
-                <button class="inline-flex items-center px-4 py-2 border border-orange-500 text-orange-500 rounded-lg hover:bg-orange-50 transition-colors">
-                    <svg class="w-4 h-4 mr-2 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"></path>
-                    </svg>
-                    Write your review
-                </button>
+            <x-related-products :products="$youMayAlsoProducts ?? collect()" title="You may also like" :limit="5" />
 
-                <!-- Pagination -->
-                @if($product->approvedReviews->count() > 3)
-                    <div class="flex items-center space-x-2">
-                        <button class="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
-                            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                            </svg>
-                        </button>
-                        <span class="text-sm text-gray-600 px-3">1/3</span>
-                        <button class="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
-                            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                            </svg>
-                        </button>
-                    </div>
-                @endif
-            </div>
+            <x-see-it-in-action />
+
+            <x-testimonials />
+
+            {{-- Recently Viewed (dùng chung) --}}
+            <x-recently-viewed
+                :products="$recentlyViewedProducts ?? null"
+                :exclude-id="$product->id"
+                :limit="5"
+                wrapper-class=""
+            />
         </div>
     </div>
 </div>
-
-<!-- Recently Viewed Products -->
-<div class="bg-gray-50 py-8 border-t border-gray-200">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="space-y-4">
-            <div class="flex items-center justify-between">
-                <h3 class="text-xl font-bold text-gray-900">Recently Viewed</h3>
-                <a href="{{ route('products.index') }}" class="text-sm text-[#005366] hover:underline">
-                    See All Items
-                </a>
-            </div>
-            
-            <!-- Recently Viewed Container -->
-            <div class="relative" id="recently-viewed-wrapper">
-                <!-- Navigation Buttons (Desktop only) -->
-                <button id="recentlyViewedPrevBtn" 
-                        onclick="scrollRecentlyViewed('prev')"
-                        class="hidden lg:block absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-all opacity-0 group-hover:opacity-100">
-                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                    </svg>
-                </button>
-                
-                <button id="recentlyViewedNextBtn" 
-                        onclick="scrollRecentlyViewed('next')"
-                        class="hidden lg:block absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-all">
-                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
-                </button>
-                
-                <!-- Products Container -->
-                <div id="recentlyViewedContainer" class="overflow-x-auto lg:overflow-hidden mobile-scroll-hide group pb-2" style="scroll-behavior: smooth;">
-                    <div id="recently-viewed-container" class="flex gap-3 lg:transition-transform lg:duration-300">
-                        <!-- Products will be loaded here by JavaScript -->
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Empty State -->
-            <div id="recently-viewed-empty" class="text-center py-12 hidden">
-                <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                </svg>
-                <p class="text-gray-500 text-lg mb-2">No products viewed yet</p>
-                <p class="text-gray-400 text-sm">Products you view will appear here</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Gallery Modal -->
-<div id="gallery-modal" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 hidden">
-    <div class="relative w-full h-full max-w-7xl mx-auto p-4">
-        <!-- Close Button -->
-        <button onclick="closeGalleryModal()" 
-                class="absolute top-4 right-4 z-10 bg-black bg-opacity-50 text-white rounded-full p-2 hover:bg-opacity-70 transition-colors">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-        </button>
-        
-        <!-- Main Media (Image or Video) -->
-        <div class="flex items-center justify-center h-full">
-            <!-- Image -->
-            <img id="modal-main-image" src="" alt="" class="max-w-full max-h-full object-contain">
-            
-            <!-- Video Player -->
-            <video id="modal-main-video" 
-                   class="max-w-full max-h-full object-contain hidden" 
-                   controls 
-                   playsinline
-                   controlsList="nodownload">
-                <source id="modal-video-source" src="" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
-        </div>
-        
-        <!-- Media Type Badge -->
-        <div id="modal-media-badge" class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-purple-600 text-white text-xs px-3 py-1 rounded-full font-medium items-center space-x-1 hidden">
-            <svg class="w-3 h-3 inline" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"></path>
-            </svg>
-            <span class="inline">VIDEO</span>
-        </div>
-        
-        <!-- Navigation -->
-        <button onclick="previousImage()" 
-                class="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full p-3 hover:bg-opacity-70 transition-colors">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-            </svg>
-        </button>
-        <button onclick="nextImage()" 
-                class="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full p-3 hover:bg-opacity-70 transition-colors">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                </svg>
-        </button>
-        
-        <!-- Thumbnail Strip -->
-        <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-            <div class="flex space-x-2 bg-black bg-opacity-50 rounded-lg p-2">
-                @foreach($allImages as $index => $imageUrl)
-                    @php
-                        $isModalThumbVideo = str_contains($imageUrl, '.mp4') || str_contains($imageUrl, '.mov') || str_contains($imageUrl, '.avi') || str_contains($imageUrl, '.webm');
-                    @endphp
-                    <button onclick="selectModalImage('{{ $imageUrl }}', {{ $index }})" 
-                            class="w-12 h-12 rounded overflow-hidden border-2 border-transparent hover:border-white transition-colors relative">
-                        @if($isModalThumbVideo)
-                            <div class="w-full h-full bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
-                                <svg class="w-5 h-5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"></path>
-                                </svg>
-                            </div>
-                        @else
-                            <img src="{{ $imageUrl }}" alt="" class="w-full h-full object-cover">
-                        @endif
-                    </button>
-                @endforeach
-        </div>
-    </div>
-        
-        <!-- Media Counter -->
-        <div class="absolute top-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
-            <span id="modal-image-counter">1</span> / {{ !empty($allImages) ? count($allImages) : 0 }}
-</div>
-    </div>
-</div>
-
-<!-- Enhanced Color Picker -->
-<script src="{{ asset('js/color-picker.js') }}"></script>
 
 <style>
-/* Hide scrollbar for thumbnail container */
-.scrollbar-hide {
-    -ms-overflow-style: none;  /* Internet Explorer 10+ */
-    scrollbar-width: none;  /* Firefox */
-}
-.scrollbar-hide::-webkit-scrollbar { 
-    display: none;  /* Safari and Chrome */
-}
-
-/* Mobile scrollbar hiding for Related Products and Recently Viewed */
-@media (max-width: 1023px) {
-    .mobile-scroll-hide {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-    }
-    .mobile-scroll-hide::-webkit-scrollbar {
-        display: none;
-    }
-}
-
-/* Cart Popup Animations */
-.cart-popup-enter {
-    animation: cartPopupEnter 0.3s ease-out;
-}
-
-@keyframes cartPopupEnter {
-    from {
-        opacity: 0;
-        transform: scale(0.9) translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-}
-
-.cart-popup-exit {
-    animation: cartPopupExit 0.2s ease-in;
-}
-
-@keyframes cartPopupExit {
-    from {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-    to {
-        opacity: 0;
-        transform: scale(0.95) translateY(-10px);
-    }
-}
-
-/* Cross-sell product hover effects */
-.cross-sell-product {
-    transition: all 0.2s ease;
-}
-
-.cross-sell-product:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* Responsive popup */
-@media (max-width: 640px) {
-    .cart-popup-content {
-        margin: 0.5rem;
-        max-height: calc(100vh - 1rem);
-        max-width: calc(100vw - 1rem);
-    }
-    
-    .cart-popup-content .grid-cols-2 {
-        grid-template-columns: 1fr;
-    }
-    
-    .cart-popup-content .flex.space-x-3 {
-        flex-direction: column;
-        space-x: 0;
-        gap: 0.75rem;
-    }
-}
-
-/* Smooth scrolling */
-#thumbnail-container {
-    scroll-behavior: smooth;
-}
-
-/* Gallery modal animations */
-#gallery-modal {
-    transition: opacity 0.3s ease-in-out;
-}
-
-#gallery-modal.hidden {
-    opacity: 0;
-    pointer-events: none;
-}
-
-/* Main Image Effects */
-#main-image {
-    transition: transform 0.3s ease-out, opacity 0.15s ease-in-out;
-    cursor: zoom-in;
-}
-
-/* Hover Effects - Disabled for zoom effect */
-.aspect-square:hover #main-image {
-    /* Scale handled by JavaScript for zoom effect */
-}
-
-/* Zoom Icon Animation */
-.group:hover .zoom-icon {
-    animation: zoomPulse 1.5s infinite;
-}
-
-@keyframes zoomPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-}
-
-/* Image Counter Badge */
-#image-counter {
-    font-weight: 600;
-    letter-spacing: 0.5px;
-}
-
-/* Loading Spinner */
-#image-loading {
-    backdrop-filter: blur(2px);
-}
-
-/* Smooth Image Transitions */
-.image-fade-in {
-    animation: fadeIn 0.5s ease-in-out;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-/* Hover Border Effect */
-.group:hover .hover-border {
-    border-color: #005366;
-    box-shadow: 0 0 0 3px rgba(0, 83, 102, 0.1);
-}
-
-/* Thumbnail Hover Effects */
-#thumbnail-container button:hover img {
-    transform: scale(1.1);
-    filter: brightness(1.1);
-}
-
-/* Gallery Modal Enhancements */
-#gallery-modal img {
-    transition: all 0.3s ease-in-out;
-}
-
-#gallery-modal:hover img {
-    transform: scale(1.02);
-}
-
-/* Responsive Image Effects */
-@media (max-width: 768px) {
-    .group:hover #main-image {
-        transform: scale(1.02);
-    }
-}
-/* Returns Info Popup */
-#returns-info-popup {
-    animation: fadeInScale 0.2s ease-out;
-}
-@keyframes fadeInScale {
-    from {
-        opacity: 0;
-        transform: translateX(-50%) scale(0.9);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(-50%) scale(1);
-    }
-}
-
-/* Close popup when clicking outside */
-.returns-popup-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 40;
-}
-
-/* Hide default select arrows - Force override */
-select {
-    -webkit-appearance: none !important;
-    -moz-appearance: none !important;
-    appearance: none !important;
-    background-image: none !important;
-}
-
-select::-ms-expand {
-    display: none !important;
-}
-
-select::-webkit-appearance {
-    -webkit-appearance: none !important;
-}
-
-
-/* Video Player Styles */
-video#main-video,
-video#modal-main-video {
-    background-color: #000;
-}
-
-video#main-video::-webkit-media-controls-panel {
-    background-color: rgba(0, 0, 0, 0.8);
-}
-
-video#modal-main-video::-webkit-media-controls-panel {
-    background-color: rgba(0, 0, 0, 0.8);
-}
-
-/* Video Badge Animation */
-.absolute.top-3.left-3 {
-    animation: fadeInSlide 0.5s ease-out;
-}
-
-@keyframes fadeInSlide {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Video player responsive */
-@media (max-width: 768px) {
-    video#main-video,
-    video#modal-main-video {
-        max-height: 100%;
-        object-fit: contain;
-    }
-}
-
-/* Video Play Overlay */
-#video-play-overlay {
-    transition: opacity 0.3s ease-in-out;
-}
-
-#video-play-overlay:hover .w-20 {
-    transform: scale(1.1);
-}
-
-/* Video Poster */
-video[poster] {
-    object-fit: cover;
-}
-
-/* Play button pulse animation */
-@keyframes playPulse {
-    0%, 100% { 
-        transform: scale(1); 
-        box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.4);
-    }
-    50% { 
-        transform: scale(1.05); 
-        box-shadow: 0 0 0 15px rgba(147, 51, 234, 0);
-    }
-}
-
-#video-play-overlay .w-20 {
-    animation: playPulse 2s infinite;
-}
-
-/* Video container hover */
-#image-container:has(video) {
-    cursor: pointer;
-}
-
-#image-container:has(video):hover #video-play-overlay .w-20 {
-    transform: scale(1.15);
-}
-
-/* Mobile Stock Badge Responsive */
-.mobile-stock-badge {
-    display: none;
-}
-
-@media (max-width: 1023px) {
-    .mobile-stock-badge {
-        display: flex;
-        background-color: rgba(34, 197, 94, 0.1);
-        border: 1px solid rgba(34, 197, 94, 0.2);
-        backdrop-filter: blur(4px);
-    }
-    
-    .mobile-stock-badge svg {
-        width: 0.875rem;
-        height: 0.875rem;
-    }
-    
-    .mobile-stock-badge span {
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-}
-
-@media (max-width: 640px) {
-    .mobile-stock-badge {
-        top: 0.5rem;
-        left: 0.5rem;
-        padding: 0.25rem 0.5rem;
-    }
-    
-    .mobile-stock-badge svg {
-        width: 0.75rem;
-        height: 0.75rem;
-    }
-    
-    .mobile-stock-badge span {
-        font-size: 0.6875rem;
-    }
-}
+/* Hide scrollbar but keep scroll (gallery thumbnails) */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 </style>
 
 <script>
-// Global variables for variant selection
-let selectedAttributes = {};
-let variants = [];
-
-// Helpers to ensure consistent attribute/value comparisons
-const normalizeAttributeKey = (key) => {
-    return (key ?? '').toString().trim();
-};
-
-const normalizeAttributeValue = (value) => {
-    return (value ?? '').toString().trim();
-};
-
-// Gallery variables
-let currentImageIndex = 0;
-let allImages = [
-    @if(!empty($allImages))
-        @foreach($allImages as $index => $imageUrl)
-            '{{ $imageUrl }}'{{ $index < count($allImages) - 1 ? ',' : '' }}
-        @endforeach
-    @endif
-];
-
-// Helper function for showing alerts with SweetAlert2 or fallback
-function showAlert(options) {
-    if (typeof Swal !== 'undefined') {
-        return Swal.fire(options);
-    } else {
-        // Fallback to native confirm/alert
-        if (options.showCancelButton) {
-            const result = confirm(options.text || options.html?.replace(/<[^>]*>/g, '') || '');
-            return Promise.resolve({ isConfirmed: result });
-        } else {
-            alert((options.title ? options.title + '\n\n' : '') + (options.text || options.html?.replace(/<[^>]*>/g, '') || ''));
-            return Promise.resolve({ isConfirmed: true });
-        }
-    }
-}
-
-// Buy Now Function - Add to cart and go to checkout (defined early to ensure availability)
-window.buyNow = function buyNow() {
-    // Validate required customizations first
-    const validation = validateRequiredCustomizations();
-    if (!validation.isValid) {
-        const message = validation.needToEnableCustomization 
-            ? `<div class="text-left">
-                    <p class="mb-3 text-gray-600">This product requires personalization. Please enable "Add Personalization" and fill in:</p>
-                    <ul class="list-disc list-inside space-y-1 text-gray-700">
-                        ${validation.missingFields.map(field => `<li>${field}</li>`).join('')}
-                    </ul>
-                </div>`
-            : `<div class="text-left">
-                    <p class="mb-3 text-gray-600">Please fill in all required personalization information:</p>
-                    <ul class="list-disc list-inside space-y-1 text-gray-700">
-                        ${validation.missingFields.map(field => `<li>${field}</li>`).join('')}
-                    </ul>
-                </div>`;
-        
-        showAlert({
-            icon: 'warning',
-            title: 'Missing Information',
-            html: message,
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#005366',
-            customClass: {
-                popup: 'rounded-xl',
-                confirmButton: 'px-6 py-3 rounded-lg'
-            }
-        });
-        
-        // Scroll to customization section and auto-enable if needed
-        if (validation.needToEnableCustomization) {
-            const enableCheckbox = document.getElementById('enable-customization');
-            if (enableCheckbox) {
-                enableCheckbox.checked = true;
-                toggleCustomization();
-            }
-        }
-        
-        const customizationContainer = document.getElementById('customization-container');
-        if (customizationContainer) {
-            setTimeout(() => {
-                customizationContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 300);
-        }
-        return;
-    }
-    
-    // Get selected variant and customizations
-    const selectedVariant = getSelectedVariant();
-    
-    // Check if variant is out of stock
-    if (selectedVariant && selectedVariant.quantity !== null && selectedVariant.quantity <= 0) {
-        showAlert({
-            icon: 'error',
-            title: 'Out of Stock',
-            text: 'This product is currently out of stock. Please choose another product.',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#005366',
-            customClass: {
-                popup: 'rounded-xl',
-                confirmButton: 'px-6 py-3 rounded-lg'
-            }
-        });
-        return;
-    }
-    
-    const rawVariantPrice = selectedVariant && selectedVariant.price != null
-        ? selectedVariant.price
-        : {{ (float)($product->price ?? $product->base_price ?? 0) }};
-    const variantPrice = Number(rawVariantPrice) || 0;
-    
-    // Get product data
-    const customizations = getSelectedCustomizations();
-    let customizationTotal = 0;
-    Object.values(customizations).forEach(customization => {
-        customizationTotal += parseFloat(customization.price) || 0;
-    });
-    const totalPrice = variantPrice + customizationTotal;
-    const totalPriceValue = Math.round((totalPrice + Number.EPSILON) * 100) / 100;
-
-    const productData = {
-        id: {{ $product->id }},
-        name: '{{ addslashes($product->name) }}',
-        slug: '{{ $product->slug }}',
-        price: totalPriceValue,
-        image: '@php
-            if ($media && count($media) > 0) {
-                if (is_string($media[0])) {
-                    echo $media[0];
-                } elseif (is_array($media[0])) {
-                    echo $media[0]["url"] ?? $media[0]["path"] ?? reset($media[0]) ?? "";
-                }
-            }
-        @endphp',
-        shop: '{{ $product->shop->name ?? "Unknown Shop" }}',
-        quantity: 1,
-        selectedVariant: selectedVariant,
-        customizations: customizations,
-        addedAt: Date.now()
-    };
-    
-    // Add to localStorage
-    addToLocalCart(productData);
-    
-    // Track Facebook Pixel AddToCart
-    if (typeof fbq !== 'undefined') {
-        fbq('track', 'AddToCart', {
-            content_name: productData.name,
-            content_ids: [productData.id],
-            content_type: 'product',
-            value: totalPriceValue,
-            currency: CURRENT_CURRENCY
-        });
-    }
-    
-    // Event tracking được xử lý bởi GTM thông qua dataLayer
-    if (typeof dataLayer !== 'undefined') {
-        const gaItem = {
-            item_id: '{{ $product->sku ?? $product->id }}',
-            item_name: '{{ addslashes($product->name) }}',
-            item_category: @json($primaryCategory),
-            item_variant: selectedVariant && selectedVariant.attributes ? Object.values(selectedVariant.attributes).join(' / ') : undefined,
-            price: totalPriceValue,
-            quantity: 1
-        };
-        if (!gaItem.item_variant) {
-            delete gaItem.item_variant;
-        }
-        dataLayer.push({
-            'event': 'add_to_cart',
-            'currency': CURRENT_CURRENCY,
-            'value': totalPriceValue,
-            'items': [gaItem]
-        });
-    }
-
-    if (typeof window !== 'undefined' && window.ttq) {
-        const tiktokAddToCartPayload = {
-            contents: [{
-                content_id: TIKTOK_PRODUCT_ID,
-                content_type: 'product',
-                content_name: productData.name,
-                quantity: productData.quantity || 1,
-                price: totalPriceValue
-            }],
-            value: totalPriceValue,
-            currency: CURRENT_CURRENCY
-        };
-
-        if (TIKTOK_PRIMARY_CATEGORY) {
-            tiktokAddToCartPayload.contents[0].content_category = TIKTOK_PRIMARY_CATEGORY;
-        }
-
-        if (selectedVariant && selectedVariant.attributes) {
-            const variantLabel = Object.values(selectedVariant.attributes)
-                .filter(Boolean)
-                .join(' / ')
-                .trim();
-            if (variantLabel) {
-                tiktokAddToCartPayload.contents[0].content_variant = variantLabel;
-            }
-        }
-
-        window.ttq.track('AddToCart', tiktokAddToCartPayload);
-    }
-    
-    // Sync with backend
-    syncCartToBackend(productData)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                syncLocalStorageWithBackend();
-            }
-        })
-        .catch(error => {
-            console.log('Backend sync failed, proceeding anyway:', error);
-        })
-        .finally(() => {
-            // Track InitiateCheckout
-            if (typeof fbq !== 'undefined') {
-                fbq('track', 'InitiateCheckout', {
-                    content_ids: [productData.id],
-                    content_type: 'product',
-                    value: totalPriceValue,
-                    currency: CURRENT_CURRENCY,
-                    num_items: 1
-                });
-                
-                console.log('✅ Facebook Pixel: Buy Now - AddToCart & InitiateCheckout tracked');
-            }
-
-            if (typeof gtag === 'function') {
-                const gaItem = {
-                    item_id: '{{ $product->sku ?? $product->id }}',
-                    item_name: '{{ addslashes($product->name) }}',
-                    item_category: @json($primaryCategory),
-                    item_variant: selectedVariant && selectedVariant.attributes ? Object.values(selectedVariant.attributes).join(' / ') : undefined,
-                    price: totalPriceValue,
-                    quantity: 1
-                };
-                if (!gaItem.item_variant) {
-                    delete gaItem.item_variant;
-                }
-
-                // Event tracking được xử lý bởi GTM thông qua dataLayer
-                if (typeof dataLayer !== 'undefined') {
-                    dataLayer.push({
-                        'event': 'begin_checkout',
-                        'currency': CURRENT_CURRENCY,
-                        'value': totalPriceValue,
-                        'items': [gaItem]
-                    });
-
-                    console.log('✅ GTM: begin_checkout tracked from buyNow', {
-                        value: totalPriceValue
-                    });
-                }
-            }
-
-            if (typeof window !== 'undefined' && window.ttq) {
-                const tiktokCheckoutPayload = {
-                    contents: [{
-                        content_id: TIKTOK_PRODUCT_ID,
-                        content_type: 'product',
-                        content_name: productData.name,
-                        quantity: productData.quantity || 1,
-                        price: totalPriceValue
-                    }],
-                    value: totalPriceValue,
-                    currency: CURRENT_CURRENCY
-                };
-
-                if (TIKTOK_PRIMARY_CATEGORY) {
-                    tiktokCheckoutPayload.contents[0].content_category = TIKTOK_PRIMARY_CATEGORY;
-                }
-
-                if (selectedVariant && selectedVariant.attributes) {
-                    const variantLabel = Object.values(selectedVariant.attributes)
-                        .filter(Boolean)
-                        .join(' / ')
-                        .trim();
-                    if (variantLabel) {
-                        tiktokCheckoutPayload.contents[0].content_variant = variantLabel;
-                    }
-                }
-
-                window.ttq.track('InitiateCheckout', tiktokCheckoutPayload);
-            }
-            
-            // Redirect to checkout
-            window.location.href = '{{ route("checkout.index") }}';
-        });
-}
-
-// Video control function
-function playVideoOnClick(event) {
-    console.log('playVideoOnClick called', event);
-    event.preventDefault();
-    event.stopPropagation();
-    
-    const video = document.getElementById('main-video');
-    const overlay = document.getElementById('video-play-overlay');
-    
-    console.log('Video element:', video);
-    console.log('Overlay element:', overlay);
-    
-    if (video && overlay) {
-        // Hide overlay immediately
-        overlay.style.display = 'none';
-        overlay.style.opacity = '0';
-        overlay.style.visibility = 'hidden';
-        overlay.style.pointerEvents = 'none';
-        console.log('Overlay hidden immediately');
-        
-        // Play video
-        video.play().then(() => {
-            console.log('Video playing successfully');
-        }).catch((error) => {
-            console.log('Video play failed:', error);
-            // Show overlay again if play failed
-            overlay.style.display = 'flex';
-            overlay.style.opacity = '1';
-            overlay.style.visibility = 'visible';
-            overlay.style.pointerEvents = 'auto';
-        });
-    }
-}
-
-// Generate video thumbnail from first frame
-function generateVideoThumbnail(videoUrl, callback) {
-    const video = document.createElement('video');
-    video.crossOrigin = 'anonymous';
-    video.preload = 'metadata';
-    
-    video.addEventListener('loadedmetadata', function() {
-        // Seek to 1 second or 10% of duration, whichever is smaller
-        const seekTime = Math.min(1, video.duration * 0.1);
-        video.currentTime = seekTime;
-    });
-    
-    video.addEventListener('seeked', function() {
-        // Create canvas to capture frame
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Set canvas size to video size
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        
-        // Draw video frame to canvas
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        // Convert canvas to data URL
-        const thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        
-        // Call callback with thumbnail
-        if (callback) {
-            callback(thumbnailDataUrl);
-        }
-    });
-    
-    video.addEventListener('error', function() {
-        console.warn('Could not generate thumbnail for video:', videoUrl);
-        if (callback) {
-            callback(null);
-        }
-    });
-    
-    // Start loading video
-    video.src = videoUrl;
-}
-
-// Set video thumbnail as poster
-function setVideoThumbnail(videoElement, videoUrl) {
-    if (!videoElement || !videoUrl) return;
-    
-    // Check if video already has a poster
-    if (videoElement.poster && videoElement.poster.trim() !== '') {
-        return; // Already has poster, don't override
-    }
-    
-    generateVideoThumbnail(videoUrl, function(thumbnailDataUrl) {
-        if (thumbnailDataUrl && videoElement) {
-            videoElement.poster = thumbnailDataUrl;
-            console.log('Video thumbnail generated and set as poster');
-        }
-    });
-}
-
-// Generate thumbnails for all videos on page load
-function generateVideoThumbnailsOnLoad() {
-    // Check if current media is video and needs thumbnail
-    const mainVideo = document.getElementById('main-video');
-    if (mainVideo && mainVideo.src && !mainVideo.poster) {
-        setTimeout(() => {
-            setVideoThumbnail(mainVideo, mainVideo.src);
-        }, 1000);
-    }
-    
-    // Generate thumbnails for video thumbnails in gallery
-    document.querySelectorAll('#thumbnail-container button').forEach((btn, index) => {
-        const mediaUrl = allImages[index];
-        if (mediaUrl && (mediaUrl.includes('.mp4') || mediaUrl.includes('.mov') || mediaUrl.includes('.avi') || mediaUrl.includes('.webm'))) {
-            // Check if thumbnail already shows video content
-            const thumbnailImg = btn.querySelector('img');
-            if (thumbnailImg) {
-                // This is an image thumbnail, generate video thumbnail
-                setTimeout(() => {
-                    generateVideoThumbnail(mediaUrl, function(thumbnailDataUrl) {
-                        if (thumbnailDataUrl) {
-                            thumbnailImg.src = thumbnailDataUrl;
-                            thumbnailImg.alt = 'Video thumbnail';
-                        }
-                    });
-                }, 500 * (index + 1)); // Stagger the generation
-            }
-        }
-    });
-}
-
-// Show overlay when video pauses/ends
-function setupVideoControls() {
-    const video = document.getElementById('main-video');
-    const overlay = document.getElementById('video-play-overlay');
-    
-    if (video && overlay) {
-        // Add click event to video element
-        video.addEventListener('click', function(e) {
-            e.stopPropagation();
-            playVideoOnClick(e);
-        });
-        
-        // Show overlay when paused/ended
-        video.addEventListener('pause', () => {
-            console.log('Video pause - showing overlay');
-            overlay.style.display = 'flex';
-            overlay.style.visibility = 'visible';
-            overlay.style.pointerEvents = 'auto';
-            overlay.style.opacity = '1';
-        });
-        
-        video.addEventListener('ended', () => {
-            console.log('Video ended - showing overlay');
-            overlay.style.display = 'flex';
-            overlay.style.visibility = 'visible';
-            overlay.style.pointerEvents = 'auto';
-            overlay.style.opacity = '1';
-        });
-        
-        // Hide overlay when playing
-        video.addEventListener('play', () => {
-            console.log('Video play - hiding overlay');
-            overlay.style.display = 'none';
-            overlay.style.visibility = 'hidden';
-            overlay.style.pointerEvents = 'none';
-            overlay.style.opacity = '0';
-        });
-    }
-}
-
-// Initialize variants data when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    const variantsDataElement = document.getElementById('variants-data');
-    if (variantsDataElement) {
-        variants = JSON.parse(variantsDataElement.textContent);
-        
-        // Set initial selections from first variant
-        if (variants.length > 0) {
-            const firstVariant = variants[0];
-            selectedAttributes = { ...firstVariant.attributes };
-            updateAllAttributeButtons();
-            updateVariantSelection();
-        } else {
-            // No variants, check product stock
-            const productStock = {{ $product->quantity ?? 0 }};
-            updateStockStatusBadge(productStock);
-        }
-    }
-    
-    // Preload all images for smooth transitions
-    preloadImages();
-    
-    // Initialize image effects
-    initializeImageEffects();
-    
-    // Setup video controls and overlay
-    setupVideoControls();
-    
-    // Add direct click handler for video
-    const mainVideo = document.getElementById('main-video');
-    if (mainVideo) {
-        mainVideo.addEventListener('click', function(e) {
-            console.log('Video clicked directly');
-            playVideoOnClick(e);
-        });
-    }
-    
-    // Generate video thumbnails if needed
-    generateVideoThumbnailsOnLoad();
-    
-    // Save current product to recently viewed
-    saveToRecentlyViewed();
-    
-    // Load and display recently viewed products
-    loadRecentlyViewed();
-    
-});
+    var mainImg = document.getElementById('product-main-image');
+    var mainVideo = document.getElementById('product-main-video');
+    var thumbs = document.querySelectorAll('.gallery-thumb');
+    var totalItems = thumbs.length;
+    var currentMainIndex = 0;
 
-
-// Preload all images
-function preloadImages() {
-    if (allImages && allImages.length > 0) {
-        allImages.forEach(imageUrl => {
-            const img = new Image();
-            img.src = imageUrl;
-        });
-    }
-}
-
-// Initialize image effects
-function initializeImageEffects() {
-    const mainImage = document.getElementById('main-image');
-    const mainVideo = document.getElementById('main-video');
-    const imageContainer = document.getElementById('image-container');
-    
-    if (mainImage && imageContainer) {
-        // Add fade-in animation on load
-        mainImage.addEventListener('load', function() {
-            this.classList.add('image-fade-in');
-        });
-        
-        // Add zoom effect on mouse move (only for images, not videos)
-        imageContainer.addEventListener('mousemove', function(e) {
-            // Don't apply zoom if video is visible
-            if (mainVideo && !mainVideo.classList.contains('hidden')) {
-                return;
+    function showMainMediaIndex(index) {
+        if (index < 0 || index >= totalItems) return;
+        currentMainIndex = index;
+        var btn = thumbs[index];
+        if (!btn) return;
+        var type = btn.getAttribute('data-type');
+        var url = btn.getAttribute('data-url');
+        var poster = btn.getAttribute('data-poster') || '';
+        if (type === 'video' && url) {
+            if (mainVideo) {
+                mainVideo.src = url;
+                mainVideo.poster = poster || (mainImg ? mainImg.src : '');
+                mainVideo.classList.remove('hidden');
+                mainVideo.currentTime = 0;
+                mainVideo.play().catch(function(){});
             }
-            
-            const rect = imageContainer.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            
-            // Calculate percentage position
-            const xPercent = (x / rect.width) * 100;
-            const yPercent = (y / rect.height) * 100;
-            
-            // Apply transform origin and scale
-            mainImage.style.transformOrigin = `${xPercent}% ${yPercent}%`;
-            mainImage.style.transform = 'scale(2)';
-            mainImage.style.cursor = 'zoom-in';
-        });
-        
-        // Reset transform on mouse leave
-        imageContainer.addEventListener('mouseleave', function() {
-            mainImage.style.transformOrigin = 'center center';
-            mainImage.style.transform = 'scale(1)';
-            mainImage.style.cursor = 'zoom-in';
-        });
-        
-        // Click to open gallery modal (only for images, videos have their own controls)
-        imageContainer.addEventListener('click', function(e) {
-            // Don't open modal if clicking on video or video controls
-            if (mainVideo && !mainVideo.classList.contains('hidden')) {
-                // Check if click is on video element itself or video overlay
-                if (e.target === mainVideo || 
-                    mainVideo.contains(e.target) || 
-                    e.target.closest('#video-play-overlay') ||
-                    e.target.closest('video')) {
-                    // Play video on click
-                    playVideoOnClick(e);
-                    return; // Don't open modal
-                }
-            }
-            openGalleryModal();
-        });
-    }
-}
-function changeMainImage(mediaUrl, index = null) {
-    const mainImage = document.getElementById('main-image');
-    const mainVideo = document.getElementById('main-video');
-    const imageContainer = document.getElementById('image-container');
-    const imageLoading = document.getElementById('image-loading');
-    const imageCounter = document.getElementById('image-counter');
-    const videoOverlay = document.getElementById('video-play-overlay');
-    
-    // Check if media is video
-    const isVideo = mediaUrl.includes('.mp4') || mediaUrl.includes('.mov') || mediaUrl.includes('.avi') || mediaUrl.includes('.webm');
-    
-    // Update current image index
-    if (index !== null) {
-        currentImageIndex = index;
-    } else {
-        currentImageIndex = allImages.indexOf(mediaUrl);
-    }
-    
-    // Update image counter
-    if (imageCounter) {
-        imageCounter.textContent = currentImageIndex + 1;
-    }
-    
-    if (isVideo) {
-        // Get poster from first available image
-        const posterImage = allImages.find(url => 
-            !url.includes('.mp4') && !url.includes('.mov') && !url.includes('.avi') && !url.includes('.webm')
-        );
-        
-        // Hide image, show video
-        if (mainImage) {
-            mainImage.classList.add('hidden');
+            if (mainImg) mainImg.classList.add('hidden');
+        } else if (url) {
+            if (mainVideo) { mainVideo.pause(); mainVideo.classList.add('hidden'); mainVideo.removeAttribute('src'); }
+            if (mainImg) { mainImg.src = url; mainImg.classList.remove('hidden'); }
         }
-        if (mainVideo) {
-            mainVideo.classList.remove('hidden');
-            mainVideo.src = mediaUrl;
-            if (posterImage) {
-                mainVideo.poster = posterImage;
+        thumbs.forEach(function(b) { b.classList.remove('border-primary'); b.classList.add('border-slate-200'); });
+        btn.classList.add('border-primary'); btn.classList.remove('border-slate-200');
+        btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+
+    thumbs.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var index = parseInt(this.getAttribute('data-index'), 10);
+            showMainMediaIndex(index);
+        });
+    });
+
+    var mainPrev = document.getElementById('main-media-prev');
+    var mainNext = document.getElementById('main-media-next');
+    if (mainPrev) mainPrev.addEventListener('click', function() {
+        showMainMediaIndex((currentMainIndex - 1 + totalItems) % totalItems);
+    });
+    if (mainNext) mainNext.addEventListener('click', function() {
+        showMainMediaIndex((currentMainIndex + 1) % totalItems);
+    });
+
+    // Thumbnails carousel (Prev/Next)
+    var track = document.getElementById('gallery-track');
+    var prevBtn = document.getElementById('gallery-prev');
+    var nextBtn = document.getElementById('gallery-next');
+    function updateGalleryNav() {
+        if (!track || !prevBtn || !nextBtn) return;
+        var maxScrollLeft = track.scrollWidth - track.clientWidth;
+        var left = track.scrollLeft;
+        prevBtn.classList.toggle('opacity-30', left <= 2);
+        prevBtn.classList.toggle('pointer-events-none', left <= 2);
+        nextBtn.classList.toggle('opacity-30', left >= maxScrollLeft - 2);
+        nextBtn.classList.toggle('pointer-events-none', left >= maxScrollLeft - 2);
+    }
+    function scrollGallery(dir) {
+        if (!track) return;
+        var delta = Math.max(240, Math.floor(track.clientWidth * 0.85));
+        track.scrollBy({ left: dir * delta, behavior: 'smooth' });
+    }
+    if (track && prevBtn && nextBtn) {
+        prevBtn.addEventListener('click', function() { scrollGallery(-1); });
+        nextBtn.addEventListener('click', function() { scrollGallery(1); });
+        track.addEventListener('scroll', function() { updateGalleryNav(); }, { passive: true });
+        window.addEventListener('resize', function() { updateGalleryNav(); });
+        updateGalleryNav();
+    }
+
+    document.querySelectorAll('.size-badge').forEach(function(el) {
+        el.addEventListener('click', function() {
+            document.querySelectorAll('.size-badge').forEach(function(b) { b.classList.remove('active'); });
+            this.classList.add('active');
+            updateDisplayedPrice();
+        });
+    });
+    document.querySelectorAll('.shape-button').forEach(function(el) {
+        el.addEventListener('click', function() {
+            document.querySelectorAll('.shape-button').forEach(function(b) { b.classList.remove('active'); });
+            this.classList.add('active');
+            updateDisplayedPrice();
+        });
+    });
+    if (document.querySelector('.size-badge')) document.querySelector('.size-badge').classList.add('active');
+    if (document.querySelector('.shape-button')) document.querySelector('.shape-button').classList.add('active');
+
+    // Variants data for pricing (variant.price overrides base)
+    var PRODUCT_VARIANTS = @json($variantsForJs);
+    var CURRENCY_CODE = @json($currentCurrency);
+    var CURRENCY_SYMBOL = @json($currencySymbol);
+
+    var toastTimeout = null;
+    function showToast(message, type) {
+        type = type || 'error';
+        var toast = document.getElementById('product-toast');
+        var icon = document.getElementById('product-toast-icon');
+        var msgEl = document.getElementById('product-toast-message');
+        if (!toast || !msgEl) return;
+        if (toastTimeout) clearTimeout(toastTimeout);
+        msgEl.textContent = message;
+        if (icon) {
+            icon.textContent = type === 'success' ? 'check_circle' : 'error';
+            icon.className = 'material-symbols-outlined text-2xl ' + (type === 'success' ? 'text-emerald-500' : 'text-[#f0427c]');
+        }
+        toast.classList.remove('hidden');
+        toastTimeout = setTimeout(function() { toast.classList.add('hidden'); }, 5000);
+    }
+    document.getElementById('product-toast-close') && document.getElementById('product-toast-close').addEventListener('click', function() {
+        document.getElementById('product-toast').classList.add('hidden');
+        if (toastTimeout) clearTimeout(toastTimeout);
+    });
+
+    function formatMoney(amount) {
+        try {
+            if (typeof Intl !== 'undefined' && Intl.NumberFormat) {
+                return new Intl.NumberFormat(undefined, { style: 'currency', currency: CURRENCY_CODE }).format(amount);
+            }
+        } catch (e) {}
+        return CURRENCY_SYMBOL + (Math.round(amount * 100) / 100).toFixed(2);
+    }
+
+    function getSelectedSize() {
+        var el = document.querySelector('.size-badge.active');
+        return el ? (el.getAttribute('data-size') || '').trim() : '';
+    }
+    function getSelectedShape() {
+        var el = document.querySelector('.shape-button.active');
+        return el ? (el.getAttribute('data-shape') || '').trim() : '';
+    }
+    function pickAttr(attrs, keys) {
+        if (!attrs) return null;
+        for (var i = 0; i < keys.length; i++) {
+            var k = keys[i];
+            if (attrs[k] !== undefined && attrs[k] !== null && String(attrs[k]).trim() !== '') return String(attrs[k]).trim();
+        }
+        return null;
+    }
+    function getVariantPrice(selectedSize, selectedShape) {
+        if (!selectedSize && !selectedShape) return null;
+        for (var i = 0; i < PRODUCT_VARIANTS.length; i++) {
+            var v = PRODUCT_VARIANTS[i];
+            var attrs = v.attributes || {};
+            var vSize = pickAttr(attrs, ['Size', 'size']);
+            var vShape = pickAttr(attrs, ['Nail Shape', 'Shape', 'shape']);
+            var sizeOk = selectedSize ? (vSize === selectedSize) : true;
+            var shapeOk = selectedShape ? (vShape === selectedShape) : true;
+            if (sizeOk && shapeOk) return v.price;
+        }
+        return null;
+    }
+    function getVariantListPrice(selectedSize, selectedShape) {
+        if (!selectedSize && !selectedShape) return null;
+        for (var i = 0; i < PRODUCT_VARIANTS.length; i++) {
+            var v = PRODUCT_VARIANTS[i];
+            var attrs = v.attributes || {};
+            var vSize = pickAttr(attrs, ['Size', 'size']);
+            var vShape = pickAttr(attrs, ['Nail Shape', 'Shape', 'shape']);
+            var sizeOk = selectedSize ? (vSize === selectedSize) : true;
+            var shapeOk = selectedShape ? (vShape === selectedShape) : true;
+            if (sizeOk && shapeOk && v.list_price != null) return v.list_price;
+        }
+        return null;
+    }
+    function getCustomizationTotal() {
+        var total = 0;
+        document.querySelectorAll('.customization-row').forEach(function(row) {
+            var price = parseFloat(row.getAttribute('data-price')) || 0;
+            if (!price) return;
+            var field = row.querySelector('.customization-field');
+            if (!field) return;
+            var value = field.type === 'checkbox' ? (field.checked ? '1' : '') : (field.value || '').trim();
+            if (value) total += price;
+        });
+        return total;
+    }
+    function updateDisplayedPrice() {
+        var priceEl = document.getElementById('product-price');
+        if (!priceEl) return;
+        var base = parseFloat(priceEl.getAttribute('data-base-price')) || 0;
+        var selectedSize = getSelectedSize();
+        var selectedShape = getSelectedShape();
+        var variantPrice = getVariantPrice(selectedSize, selectedShape);
+        var baseToUse = (variantPrice !== null && !isNaN(variantPrice)) ? parseFloat(variantPrice) : base;
+        var customizationTotal = getCustomizationTotal();
+        var finalPrice = baseToUse + customizationTotal;
+        priceEl.textContent = formatMoney(finalPrice);
+
+        var listPriceEl = document.getElementById('product-list-price');
+        if (listPriceEl) {
+            var variantListPrice = getVariantListPrice(selectedSize, selectedShape);
+            var listPrice = (variantListPrice !== null && !isNaN(variantListPrice)) ? parseFloat(variantListPrice) : (parseFloat(priceEl.getAttribute('data-list-price')) || 0);
+            if (listPrice > 0 && listPrice > finalPrice) {
+                listPriceEl.textContent = formatMoney(listPrice);
+                listPriceEl.classList.remove('hidden');
             } else {
-                // Generate thumbnail from video if no poster image
-                setTimeout(() => {
-                    setVideoThumbnail(mainVideo, mediaUrl);
-                }, 500);
-            }
-            mainVideo.load();
-            
-            // Show play overlay
-            if (videoOverlay) {
-                videoOverlay.style.display = 'flex';
-                videoOverlay.style.opacity = '1';
-            }
-        } else {
-            // Create video element if doesn't exist
-            const videoEl = document.createElement('video');
-            videoEl.id = 'main-video';
-            videoEl.className = 'w-full h-full object-cover cursor-pointer';
-            videoEl.controls = true;
-            videoEl.playsinline = true;
-            videoEl.addEventListener('click', function(e) {
-                e.stopPropagation();
-                playVideoOnClick(e);
-            });
-            if (posterImage) {
-                videoEl.poster = posterImage;
-            }
-            videoEl.innerHTML = `<source src="${mediaUrl}" type="video/mp4">`;
-            
-            const container = mainImage.parentElement;
-            container.insertBefore(videoEl, mainImage);
-            mainImage.classList.add('hidden');
-            
-            // Create overlay if doesn't exist
-            if (!videoOverlay) {
-                const overlayEl = document.createElement('div');
-                overlayEl.id = 'video-play-overlay';
-                overlayEl.className = 'absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 transition-opacity cursor-pointer z-20';
-                overlayEl.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    playVideoOnClick(e);
-                });
-                overlayEl.innerHTML = `
-                    <div class="w-20 h-20 bg-white bg-opacity-90 rounded-full flex items-center justify-center shadow-2xl hover:bg-opacity-100 hover:scale-110 transition-all duration-300">
-                        <svg class="w-10 h-10 text-purple-600 ml-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"></path>
-                        </svg>
-                    </div>
-                `;
-                imageContainer.appendChild(overlayEl);
-            }
-            
-            // Generate thumbnail from video if no poster image
-            if (!posterImage) {
-                setTimeout(() => {
-                    setVideoThumbnail(videoEl, mediaUrl);
-                }, 500);
-            }
-            
-            // Setup video event listeners
-            setupVideoControls();
-        }
-    } else {
-        // Hide video, show image
-        if (mainVideo) {
-            mainVideo.classList.add('hidden');
-            mainVideo.pause();
-        }
-        if (videoOverlay) {
-            videoOverlay.style.display = 'none';
-        }
-        if (mainImage) {
-            mainImage.classList.remove('hidden');
-            
-            // Show loading spinner
-            if (imageLoading) {
-                imageLoading.classList.remove('hidden');
-            }
-            
-            // Create new image element for smooth transition
-            const newImage = new Image();
-            newImage.onload = function() {
-                // Hide loading spinner
-                if (imageLoading) {
-                    imageLoading.classList.add('hidden');
-                }
-                
-                // Update main image with fade effect
-                mainImage.style.opacity = '0';
-                setTimeout(() => {
-                    mainImage.src = mediaUrl;
-                    mainImage.style.opacity = '1';
-                }, 150);
-            };
-            
-            newImage.onerror = function() {
-                // Hide loading spinner on error
-                if (imageLoading) {
-                    imageLoading.classList.add('hidden');
-                }
-                console.error('Failed to load image:', mediaUrl);
-            };
-            
-            // Start loading the new image
-            newImage.src = mediaUrl;
-        }
-    }
-    
-    // Update active thumbnail
-    document.querySelectorAll('#thumbnail-container button').forEach((btn, btnIndex) => {
-        if (btnIndex === currentImageIndex) {
-            btn.classList.remove('border-gray-200');
-            btn.classList.add('border-[#005366]');
-        } else {
-            btn.classList.remove('border-[#005366]');
-            btn.classList.add('border-gray-200');
-        }
-    });
-}
-// Gallery Modal Functions
-function openGalleryModal() {
-    const modal = document.getElementById('gallery-modal');
-    const imageCounter = document.getElementById('modal-image-counter');
-    
-    modal.classList.remove('hidden');
-    imageCounter.textContent = currentImageIndex + 1;
-    
-    // Display current media (image or video)
-    updateModalMedia(allImages[currentImageIndex]);
-    
-    // Update modal thumbnails
-    updateModalThumbnails();
-    
-    // Prevent body scroll
-    document.body.style.overflow = 'hidden';
-}
-
-function closeGalleryModal() {
-    const modal = document.getElementById('gallery-modal');
-    const modalVideo = document.getElementById('modal-main-video');
-    
-    // Pause video if playing
-    if (modalVideo && !modalVideo.paused) {
-        modalVideo.pause();
-    }
-    
-    modal.classList.add('hidden');
-    
-    // Restore body scroll
-    document.body.style.overflow = 'auto';
-}
-
-function previousImage() {
-    currentImageIndex = currentImageIndex > 0 ? currentImageIndex - 1 : allImages.length - 1;
-    updateModalImage();
-}
-
-function nextImage() {
-    currentImageIndex = currentImageIndex < allImages.length - 1 ? currentImageIndex + 1 : 0;
-    updateModalImage();
-}
-
-function selectModalImage(imageUrl, index) {
-    currentImageIndex = index;
-    updateModalImage();
-}
-
-function updateModalImage() {
-    const imageCounter = document.getElementById('modal-image-counter');
-    
-    // Update media (image or video)
-    updateModalMedia(allImages[currentImageIndex]);
-    
-    imageCounter.textContent = currentImageIndex + 1;
-    
-    // Update modal thumbnails
-    updateModalThumbnails();
-    
-    // Update main image and thumbnails
-    changeMainImage(allImages[currentImageIndex], currentImageIndex);
-}
-
-// New function to handle both image and video in modal
-function updateModalMedia(mediaUrl) {
-    const modalImage = document.getElementById('modal-main-image');
-    const modalVideo = document.getElementById('modal-main-video');
-    const modalVideoSource = document.getElementById('modal-video-source');
-    const modalMediaBadge = document.getElementById('modal-media-badge');
-    
-    const isVideo = mediaUrl.includes('.mp4') || mediaUrl.includes('.mov') || mediaUrl.includes('.avi') || mediaUrl.includes('.webm');
-    
-    if (isVideo) {
-        // Get poster from first available image
-        const posterImage = allImages.find(url => 
-            !url.includes('.mp4') && !url.includes('.mov') && !url.includes('.avi') && !url.includes('.webm')
-        );
-        
-        // Show video, hide image
-        if (modalImage) {
-            modalImage.classList.add('hidden');
-        }
-        if (modalVideo) {
-            modalVideo.classList.remove('hidden');
-            if (modalVideoSource) {
-                modalVideoSource.src = mediaUrl;
-            }
-            if (posterImage) {
-                modalVideo.poster = posterImage;
-            }
-            modalVideo.load();
-        }
-        if (modalMediaBadge) {
-            modalMediaBadge.classList.remove('hidden');
-            modalMediaBadge.classList.add('flex');
-        }
-    } else {
-        // Show image, hide video
-        if (modalVideo) {
-            modalVideo.classList.add('hidden');
-            modalVideo.pause();
-        }
-        if (modalImage) {
-            modalImage.classList.remove('hidden');
-            modalImage.src = mediaUrl;
-        }
-        if (modalMediaBadge) {
-            modalMediaBadge.classList.add('hidden');
-            modalMediaBadge.classList.remove('flex');
-        }
-    }
-}
-
-function updateModalThumbnails() {
-    document.querySelectorAll('#gallery-modal .absolute.bottom-4 button').forEach((btn, index) => {
-        if (index === currentImageIndex) {
-            btn.classList.add('border-white');
-            btn.classList.remove('border-transparent');
-        } else {
-            btn.classList.remove('border-white');
-        btn.classList.add('border-transparent');
-        }
-    });
-}
-
-// Thumbnail scrolling for horizontal scroll
-function scrollThumbnails(direction) {
-    const container = document.getElementById('thumbnail-container');
-    const scrollAmount = 200;
-    
-    if (direction === 'left') {
-        container.scrollLeft -= scrollAmount;
-    } else {
-        container.scrollLeft += scrollAmount;
-    }
-}
-
-// Keyboard navigation for gallery
-document.addEventListener('keydown', function(e) {
-    const modal = document.getElementById('gallery-modal');
-    if (!modal.classList.contains('hidden')) {
-        switch(e.key) {
-            case 'Escape':
-                closeGalleryModal();
-                break;
-            case 'ArrowLeft':
-                previousImage();
-                break;
-            case 'ArrowRight':
-                nextImage();
-                break;
-        }
-    }
-});
-
-function selectAttribute(attributeName, value) {
-            const normalizedAttribute = normalizeAttributeKey(attributeName);
-            const normalizedValue = normalizeAttributeValue(value);
-            
-            if (normalizedAttribute !== attributeName) {
-                delete selectedAttributes[attributeName];
-            }
-            
-            selectedAttributes[normalizedAttribute] = normalizedValue;
-            updateVariantSelection();
-            updateAllAttributeButtons();
-            
-            // Update selected color name display if it's a color attribute
-            if (normalizedAttribute === 'Color' || normalizedAttribute === 'Colour') {
-                const selectedColorName = document.getElementById('selected-color-name');
-                if (selectedColorName) {
-                    selectedColorName.textContent = normalizedValue;
-                }
+                listPriceEl.classList.add('hidden');
             }
         }
 
-        // Legacy functions for backward compatibility
-        function selectColor(color) {
-            selectAttribute('Color', color);
-        }
-        
-        function selectColour(color) {
-            selectAttribute('Colour', color);
-        }
-
-        function selectSize(size) {
-            selectAttribute('Size', size);
-        }
-
-function updateAllAttributeButtons() {
-    // Update color swatches
-    document.querySelectorAll('.color-swatch').forEach(btn => {
-        const attribute = normalizeAttributeKey(btn.dataset.attribute);
-        const value = normalizeAttributeValue(btn.dataset.value);
-        const selectedValue = normalizeAttributeValue(selectedAttributes[attribute]);
-        
-        if (selectedValue && selectedValue === value) {
-            btn.classList.add('border-[#005366]', 'ring-2', 'ring-[#005366]', 'ring-offset-2');
-            btn.classList.remove('border-gray-300', 'hover:border-gray-400');
-            // Add checkmark
-            if (!btn.querySelector('svg')) {
-                btn.innerHTML = `
-                    <svg class="w-4 h-4 text-white absolute inset-0 m-auto" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                    </svg>
-                `;
-            }
-        } else {
-            btn.classList.remove('border-[#005366]', 'ring-2', 'ring-[#005366]', 'ring-offset-2');
-            btn.classList.add('border-gray-300', 'hover:border-gray-400');
-            // Remove checkmark
-            const svg = btn.querySelector('svg');
-            if (svg) {
-                svg.remove();
-            }
-        }
-    });
-    
-    // Update attribute buttons
-    document.querySelectorAll('.attribute-option').forEach(btn => {
-        const attribute = normalizeAttributeKey(btn.dataset.attribute);
-        const value = normalizeAttributeValue(btn.dataset.value);
-        const selectedValue = normalizeAttributeValue(selectedAttributes[attribute]);
-        
-        if (selectedValue && selectedValue === value) {
-            btn.classList.add('border-[#005366]', 'bg-[#005366]', 'text-white');
-            btn.classList.remove('border-gray-300', 'text-gray-700');
-        } else {
-            btn.classList.remove('border-[#005366]', 'bg-[#005366]', 'text-white');
-            btn.classList.add('border-gray-300', 'text-gray-700');
-        }
-    });
-    
-    // Update dropdowns
-    Object.keys(selectedAttributes).forEach(attributeKey => {
-        const normalizedAttribute = normalizeAttributeKey(attributeKey);
-        const selector = document.getElementById(`${normalizedAttribute.toLowerCase()}-selector`);
-        if (selector) {
-            selector.value = normalizeAttributeValue(selectedAttributes[attributeKey]) || '';
-        }
-    });
-}
-
-// Helper function to convert HTML to text
-function htmlToText(html) {
-    if (!html) return '';
-    
-    // Create a temporary div element
-    const temp = document.createElement('div');
-    temp.innerHTML = html;
-    
-    // Get text content (this automatically strips HTML tags)
-    let text = temp.textContent || temp.innerText || '';
-    
-    // Decode HTML entities
-    text = text.replace(/&nbsp;/g, ' ');
-    text = text.replace(/&amp;/g, '&');
-    text = text.replace(/&lt;/g, '<');
-    text = text.replace(/&gt;/g, '>');
-    text = text.replace(/&quot;/g, '"');
-    text = text.replace(/&#39;/g, "'");
-    
-    // Clean up extra spaces
-    text = text.replace(/\s+/g, ' ').trim();
-    
-    return text;
-}
-
-// Legacy functions for backward compatibility
-function updateColorButtons() {
-    updateAllAttributeButtons();
-}
-
-function updateSizeButtons() {
-    updateAllAttributeButtons();
-}
-function updateVariantSelection() {
-    // Find matching variant based on selected attributes
-    const matchingVariant = variants.find(variant => {
-        if (!variant.attributes) return false;
-        
-        // Check if all selected attributes match
-        for (const [attribute, value] of Object.entries(selectedAttributes)) {
-            const normalizedAttribute = normalizeAttributeKey(attribute);
-            const normalizedSelectedValue = normalizeAttributeValue(value);
-            const variantValueRaw = variant.attributes[normalizedAttribute] ?? variant.attributes[attribute];
-            const normalizedVariantValue = normalizeAttributeValue(variantValueRaw);
-            
-            if (normalizedSelectedValue && normalizedVariantValue !== normalizedSelectedValue) {
-                return false;
-            }
-        }
-        
-        // Check if variant has attributes that are not selected (should not match)
-        for (const [attribute, value] of Object.entries(variant.attributes)) {
-            const normalizedAttribute = normalizeAttributeKey(attribute);
-            const normalizedVariantValue = normalizeAttributeValue(value);
-            const selectedValueRaw = selectedAttributes[normalizedAttribute] ?? selectedAttributes[attribute];
-            const normalizedSelectedValue = normalizeAttributeValue(selectedValueRaw);
-            
-            if (normalizedSelectedValue && normalizedSelectedValue !== normalizedVariantValue) {
-                return false;
-            }
-        }
-        
-        return true;
-    });
-    
-    if (matchingVariant) {
-        // Update variant name
-        let variantName = '';
-        if (matchingVariant.variant_name) {
-            variantName = matchingVariant.variant_name;
-        } else if (matchingVariant.attributes && Object.keys(matchingVariant.attributes).length > 0) {
-            const attrParts = [];
-            for (const [key, value] of Object.entries(matchingVariant.attributes)) {
-                attrParts.push(value);
-            }
-            variantName = attrParts.join(' - ');
-        } else if (matchingVariant.color && matchingVariant.size) {
-            variantName = `${matchingVariant.color} - ${matchingVariant.size}`;
-        } else if (matchingVariant.size) {
-            variantName = `Size: ${matchingVariant.size}`;
-        } else if (matchingVariant.color) {
-            variantName = `Color: ${matchingVariant.color}`;
-        } else if (matchingVariant.colour) {
-            variantName = `Colour: ${matchingVariant.colour}`;
-        } else {
-            variantName = 'Standard';
-        }
-        
-        document.getElementById('selected-variant-name').textContent = variantName;
-        
-        // Update price
-        const currencySymbol = typeof CURRENCY_SYMBOL !== 'undefined' ? CURRENCY_SYMBOL : '$';
-        document.getElementById('selected-variant-price').textContent = `${currencySymbol}${parseFloat(matchingVariant.price).toFixed(2)}`;
-        
-        // Update stock
-        const stockElement = document.getElementById('selected-variant-stock');
-        if (stockElement) {
-            if (matchingVariant.quantity !== null) {
-                stockElement.textContent = matchingVariant.quantity > 0 
-                    ? `Stock: ${matchingVariant.quantity} available`
-                    : 'Stock: Out of stock';
-                stockElement.style.display = 'block';
+        var note = document.getElementById('product-price-note');
+        if (note) {
+            if (customizationTotal > 0) {
+                note.textContent = '(+' + formatMoney(customizationTotal) + ' custom)';
+                note.classList.remove('hidden');
             } else {
-                stockElement.style.display = 'none';
+                note.textContent = '';
+                note.classList.add('hidden');
             }
         }
-        
-        // Update Add to Cart button based on stock
-        const addToCartBtn = document.getElementById('add-to-cart-btn');
-        const cartText = document.getElementById('cart-text');
-        if (addToCartBtn && cartText) {
-            if (matchingVariant.quantity !== null && matchingVariant.quantity <= 0) {
-                addToCartBtn.disabled = true;
-                cartText.textContent = 'Out of stock';
-                addToCartBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            } else {
-                addToCartBtn.disabled = false;
-                cartText.textContent = 'Add to Cart';
-                addToCartBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
+    }
+
+    // Update price when customizing
+    document.querySelectorAll('.customization-field').forEach(function(field) {
+        field.addEventListener('input', updateDisplayedPrice);
+        field.addEventListener('change', updateDisplayedPrice);
+    });
+    updateDisplayedPrice();
+
+    // Quantity +/- 
+    var qtyEl = document.getElementById('product-quantity');
+    if (qtyEl) {
+        document.getElementById('qty-minus') && document.getElementById('qty-minus').addEventListener('click', function() {
+            var n = Math.max(1, parseInt(qtyEl.value, 10) - 1);
+            qtyEl.value = n;
+        });
+        document.getElementById('qty-plus') && document.getElementById('qty-plus').addEventListener('click', function() {
+            var n = Math.min(99, (parseInt(qtyEl.value, 10) || 1) + 1);
+            qtyEl.value = n;
+        });
+        qtyEl.addEventListener('change', function() {
+            var n = Math.min(99, Math.max(1, parseInt(qtyEl.value, 10) || 1));
+            qtyEl.value = n;
+        });
+    }
+
+    function getMatchingVariant(selectedSize, selectedShape) {
+        for (var i = 0; i < PRODUCT_VARIANTS.length; i++) {
+            var v = PRODUCT_VARIANTS[i];
+            var attrs = v.attributes || {};
+            var vSize = pickAttr(attrs, ['Size', 'size']);
+            var vShape = pickAttr(attrs, ['Nail Shape', 'Shape', 'shape']);
+            var sizeOk = selectedSize ? (vSize === selectedSize) : true;
+            var shapeOk = selectedShape ? (vShape === selectedShape) : true;
+            if (sizeOk && shapeOk) return v;
         }
-        
-        // Update stock status badge
-        updateStockStatusBadge(matchingVariant.quantity);
-        
-        // Update description
-        const descElement = document.getElementById('selected-variant-description');
-        if (descElement) {
-            if (matchingVariant.description) {
-                // Convert HTML to text before setting textContent
-                descElement.textContent = htmlToText(matchingVariant.description);
-                descElement.style.display = 'block';
-            } else {
-                descElement.style.display = 'none';
-            }
-        }
-        
-        // Update attributes
-        const attributesElement = document.getElementById('selected-variant-attributes');
-        if (attributesElement && matchingVariant.attributes) {
-            attributesElement.innerHTML = '';
-            Object.entries(matchingVariant.attributes).forEach(([key, value]) => {
-                const attrDiv = document.createElement('div');
-                attrDiv.className = 'text-xs';
-                attrDiv.innerHTML = `
-                    <span class="font-medium text-gray-600">${key.charAt(0).toUpperCase() + key.slice(1)}:</span>
-                    <span class="text-gray-700">${value}</span>
-                `;
-                attributesElement.appendChild(attrDiv);
-            });
-        }
-        
-        // Update main image if variant has specific media
-        if (matchingVariant.media && matchingVariant.media.length > 0) {
-            const firstMediaUrl = Array.isArray(matchingVariant.media[0]) 
-                ? matchingVariant.media[0].url 
-                : matchingVariant.media[0];
-            if (firstMediaUrl) {
-                document.getElementById('main-image').src = firstMediaUrl;
-                
-                // Update thumbnail selection
-                document.querySelectorAll('[onclick*="changeMainImage"]').forEach(btn => {
-                    btn.classList.remove('border-[#005366]');
-                    btn.classList.add('border-transparent');
-                    
-                    const img = btn.querySelector('img');
-                    if (img && img.src === firstMediaUrl) {
-                        btn.classList.add('border-[#005366]');
-                        btn.classList.remove('border-transparent');
+        return null;
+    }
+
+    var addBtn = document.getElementById('add-to-cart-btn');
+    if (addBtn) {
+        addBtn.addEventListener('click', function() {
+            var customizations = [];
+            var customizationTotal = 0;
+            var valid = true;
+            document.querySelectorAll('.customization-row').forEach(function(row) {
+                var label = row.getAttribute('data-label');
+                var price = parseFloat(row.getAttribute('data-price')) || 0;
+                var field = row.querySelector('.customization-field');
+                if (!field) return;
+                var value = field.type === 'checkbox' ? (field.checked ? (field.value || 'Yes') : '') : (field.value || '').trim();
+                if (field.getAttribute('data-required') && !value) {
+                    if (valid) {
+                        showToast('Please fill in: ' + label);
+                        field.focus();
+                        field.closest('.customization-row') && field.closest('.customization-row').scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
+                    valid = false;
+                    return;
+                }
+                if (value) {
+                    customizations.push({ label: label, value: value, price: price });
+                    customizationTotal += price;
+                }
+            });
+            if (!valid) return;
+
+            // Cập nhật số tiền hiển thị cho đúng với giá sẽ gửi (base + customization)
+            updateDisplayedPrice();
+
+            var selectedSize = getSelectedSize();
+            var selectedShape = getSelectedShape();
+            if (PRODUCT_VARIANTS.length > 0) {
+                var match = getMatchingVariant(selectedSize, selectedShape);
+                if (!match) {
+                    if (!selectedSize && document.getElementById('size-options')) {
+                        showToast('Please select a size.');
+                        document.querySelector('.size-badge') && document.querySelector('.size-badge').focus();
+                        return;
+                    }
+                    if (!selectedShape && document.getElementById('shape-options')) {
+                        showToast('Please select a nail shape.');
+                        document.querySelector('.shape-button') && document.querySelector('.shape-button').focus();
+                        return;
+                    }
+                    showToast('Please select size and nail shape.');
+                    return;
+                }
+            }
+
+            var basePrice = (function() {
+                var base = parseFloat(document.getElementById('product-price')?.getAttribute('data-base-price') || '0') || 0;
+                var vp = getVariantPrice(selectedSize, selectedShape);
+                return (vp !== null && !isNaN(vp)) ? parseFloat(vp) : base;
+            })();
+            var unitPrice = basePrice + customizationTotal;
+            var quantity = Math.min(99, Math.max(1, parseInt(document.getElementById('product-quantity')?.value, 10) || 1));
+            if (document.getElementById('product-quantity')) document.getElementById('product-quantity').value = quantity;
+
+            var formData = new FormData();
+            formData.append('_token', '{{ csrf_token() }}');
+            formData.append('id', '{{ $product->id }}');
+            formData.append('quantity', String(quantity));
+            formData.append('price', String(unitPrice));
+
+            var matchingVariant = PRODUCT_VARIANTS.length > 0 ? getMatchingVariant(selectedSize, selectedShape) : null;
+            if (matchingVariant) {
+                formData.append('selectedVariant[id]', String(matchingVariant.id));
+                var attrs = matchingVariant.attributes || {};
+                Object.keys(attrs).forEach(function(k) {
+                    // Don't encode bracket keys; PHP will parse them as-is
+                    formData.append('selectedVariant[attributes][' + k + ']', attrs[k]);
                 });
             }
-        }
-        
-        // Update main price display
-        const mainPriceElement = document.querySelector('.text-4xl.font-bold.text-\\[\\#E2150C\\]');
-        if (mainPriceElement) {
-            mainPriceElement.textContent = `${CURRENCY_SYMBOL}${parseFloat(matchingVariant.price).toFixed(2)}`;
-        }
-    } else {
-        // No matching variant found, enable button and reset text
-        const addToCartBtn = document.getElementById('add-to-cart-btn');
-        const cartText = document.getElementById('cart-text');
-        if (addToCartBtn && cartText) {
-            addToCartBtn.disabled = false;
-            cartText.textContent = 'Add to Cart';
-            addToCartBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        }
-        
-        // Update stock status badge to out of stock
-        updateStockStatusBadge(0);
-    }
-}
 
-function updateStockStatusBadge(quantity) {
-    const stockBadge = document.getElementById('stock-status-badge');
-    if (!stockBadge) {
-        return;
-    }
-    
-    const stockText = stockBadge.querySelector('span');
-    const stockIcon = stockBadge.querySelector('svg');
-    
-    if (!stockText || !stockIcon) {
-        return;
-    }
-    
-    if (quantity === null || quantity > 0) {
-        // In Stock
-        stockBadge.className = 'flex items-center space-x-2 bg-green-100 rounded-full px-3 py-1.5';
-        stockText.className = 'text-sm font-medium text-green-700';
-        stockText.textContent = 'In Stock';
-        stockIcon.className = 'w-4 h-4 text-green-600';
-        stockIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>';
-    } else {
-        // Out of Stock
-        stockBadge.className = 'flex items-center space-x-2 bg-red-100 rounded-full px-3 py-1.5';
-        stockText.className = 'text-sm font-medium text-red-700';
-        stockText.textContent = 'Out of Stock';
-        stockIcon.className = 'w-4 h-4 text-red-600';
-        stockIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>';
-    }
-}
+            customizations.forEach(function(c) {
+                // Don't encode bracket keys; otherwise "Nail Shape" becomes "Nail%20Shape" and breaks merging
+                formData.append('customizations[' + c.label + '][value]', c.value);
+                formData.append('customizations[' + c.label + '][price]', String(c.price));
+            });
 
-// Recently Viewed Functions
-function saveToRecentlyViewed() {
-    const currentProduct = {
-        id: {{ $product->id }},
-        slug: '{{ $product->slug }}',
-        name: '{{ addslashes($product->name) }}',
-        price: {{ $product->base_price }},
-        image: '@php
-            if ($media && count($media) > 0) {
-                if (is_string($media[0])) {
-                    echo $media[0];
-                } elseif (is_array($media[0])) {
-                    echo $media[0]["url"] ?? $media[0]["path"] ?? reset($media[0]) ?? "";
-                }
-            }
-        @endphp',
-        shop: '{{ $product->shop->name ?? "Unknown Shop" }}',
-        shop_slug: '{{ $product->shop->shop_slug ?? "" }}',
-        timestamp: Date.now()
-    };
-    
-    // Get existing recently viewed products
-    let recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
-    
-    // Remove current product if it exists
-    recentlyViewed = recentlyViewed.filter(p => p.id !== currentProduct.id);
-    
-    // Add current product to the beginning
-    recentlyViewed.unshift(currentProduct);
-    
-    // Keep only last 10 products in history (but only show 5)
-    recentlyViewed = recentlyViewed.slice(0, 10);
-    
-    // Save back to localStorage
-    localStorage.setItem('recentlyViewed', JSON.stringify(recentlyViewed));
-}
-
-function loadRecentlyViewed() {
-    const recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
-    const container = document.getElementById('recently-viewed-container');
-    const emptyState = document.getElementById('recently-viewed-empty');
-    const wrapper = document.getElementById('recently-viewed-wrapper');
-    
-    if (!container) return;
-    
-    // Filter out current product and limit to 12 products
-    const productsToShow = recentlyViewed
-        .filter(p => p.id !== {{ $product->id }})
-        .slice(0, 12);
-    
-    if (productsToShow.length === 0) {
-        if (wrapper) wrapper.classList.add('hidden');
-        emptyState.classList.remove('hidden');
-        return;
-    }
-    
-    if (wrapper) wrapper.classList.remove('hidden');
-    emptyState.classList.add('hidden');
-    
-    // Generate HTML for each product (same style as Related Products)
-    container.innerHTML = productsToShow.map(product => `
-        <a href="/products/${product.slug}" 
-           class="flex-shrink-0 w-40 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 group/item overflow-hidden border border-gray-200">
-            <!-- Product Image -->
-            <div class="relative aspect-square overflow-hidden">
-                ${product.image ? `
-                    <img src="${product.image}" 
-                         alt="${product.name}" 
-                         class="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-300"
-                         onerror="this.parentElement.innerHTML='<div class=\\'w-full h-full bg-gray-200 flex items-center justify-center\\'><svg class=\\'w-6 h-6 text-gray-400\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'2\\' d=\\'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z\\'></path></svg></div>'">
-                ` : `
-                    <div class="w-full h-full bg-gray-200 flex items-center justify-center">
-                        <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                        </svg>
-                    </div>
-                `}
-            </div>
-
-            <!-- Product Info (Compact) -->
-            <div class="p-2.5">
-                <h4 class="font-medium text-gray-900 text-xs line-clamp-2 group-hover/item:text-[#005366] transition-colors mb-1.5 h-8 overflow-hidden" title="${product.name}">
-                    ${product.name.length > 30 ? product.name.substring(0, 30) + '...' : product.name}
-                </h4>
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-[#E2150C]">${CURRENCY_SYMBOL}${parseFloat(product.price).toFixed(2)}</span>
-                    <div class="flex items-center text-xs text-gray-500">
-                        <svg class="w-3 h-3 text-yellow-400 mr-0.5" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                        </svg>
-                        <span class="text-xs">4.5</span>
-                    </div>
-                </div>
-            </div>
-        </a>
-    `).join('');
-    
-    // Show/hide navigation buttons based on number of products
-    updateRecentlyViewedNavigation(productsToShow.length);
-}
-
-function formatTimeAgo(timestamp) {
-    const now = Date.now();
-    const diff = now - timestamp;
-    
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-    
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 7) return `${days}d ago`;
-    return 'Recently';
-}
-
-// Related Products Carousel (Desktop)
-let relatedCurrentIndex = 0;
-
-function scrollRelatedProducts(direction) {
-    const container = document.getElementById('relatedProductsContainer');
-    const track = document.getElementById('relatedProductsTrack');
-    const prevBtn = document.getElementById('relatedPrevBtn');
-    const nextBtn = document.getElementById('relatedNextBtn');
-    
-    if (!track) return;
-    
-    const itemWidth = 160 + 12; // w-40 (160px) + gap-3 (12px)
-    const containerWidth = container.offsetWidth;
-    const itemsVisible = Math.floor(containerWidth / itemWidth);
-    const totalItems = track.children.length;
-    const maxIndex = Math.max(0, totalItems - itemsVisible);
-    
-    if (direction === 'next') {
-        relatedCurrentIndex = Math.min(relatedCurrentIndex + itemsVisible, maxIndex);
-    } else {
-        relatedCurrentIndex = Math.max(0, relatedCurrentIndex - itemsVisible);
-    }
-    
-    const translateX = -relatedCurrentIndex * itemWidth;
-    track.style.transform = `translateX(${translateX}px)`;
-    
-    // Update button states
-    if (prevBtn) {
-        if (relatedCurrentIndex === 0) {
-            prevBtn.classList.add('opacity-0');
-        } else {
-            prevBtn.classList.remove('opacity-0');
-        }
-    }
-    
-    if (nextBtn) {
-        if (relatedCurrentIndex >= maxIndex) {
-            nextBtn.classList.add('opacity-0');
-        } else {
-            nextBtn.classList.remove('opacity-0');
-        }
-    }
-}
-
-// Clear recently viewed (utility function)
-function clearRecentlyViewed() {
-    localStorage.removeItem('recentlyViewed');
-    loadRecentlyViewed();
-}
-
-// Recently Viewed Carousel Navigation
-let recentlyViewedCurrentIndex = 0;
-
-function scrollRecentlyViewed(direction) {
-    const container = document.getElementById('recentlyViewedContainer');
-    const track = document.getElementById('recently-viewed-container');
-    const prevBtn = document.getElementById('recentlyViewedPrevBtn');
-    const nextBtn = document.getElementById('recentlyViewedNextBtn');
-    
-    if (!track) return;
-    
-    const itemWidth = 160 + 12; // w-40 (160px) + gap-3 (12px)
-    const containerWidth = container.offsetWidth;
-    const itemsVisible = Math.floor(containerWidth / itemWidth);
-    const totalItems = track.children.length;
-    const maxIndex = Math.max(0, totalItems - itemsVisible);
-    
-    if (direction === 'next') {
-        recentlyViewedCurrentIndex = Math.min(recentlyViewedCurrentIndex + itemsVisible, maxIndex);
-    } else {
-        recentlyViewedCurrentIndex = Math.max(0, recentlyViewedCurrentIndex - itemsVisible);
-    }
-    
-    const translateX = -recentlyViewedCurrentIndex * itemWidth;
-    track.style.transform = `translateX(${translateX}px)`;
-    
-    // Update button states
-    if (prevBtn) {
-        if (recentlyViewedCurrentIndex === 0) {
-            prevBtn.classList.add('opacity-0');
-        } else {
-            prevBtn.classList.remove('opacity-0');
-        }
-    }
-    
-    if (nextBtn) {
-        if (recentlyViewedCurrentIndex >= maxIndex) {
-            nextBtn.classList.add('opacity-0');
-        } else {
-            nextBtn.classList.remove('opacity-0');
-        }
-    }
-}
-function updateRecentlyViewedNavigation(totalProducts) {
-    const prevBtn = document.getElementById('recentlyViewedPrevBtn');
-    const nextBtn = document.getElementById('recentlyViewedNextBtn');
-    
-    if (!prevBtn || !nextBtn) return;
-    
-    // Only show navigation buttons on desktop (lg: 1024px+) if more than what can fit on screen
-    const isDesktop = window.innerWidth >= 1024;
-    
-    if (isDesktop && totalProducts > 5) {
-        prevBtn.classList.remove('hidden');
-        prevBtn.classList.add('lg:block');
-        nextBtn.classList.remove('hidden');
-        nextBtn.classList.add('lg:block');
-        
-        // Set initial state
-        prevBtn.classList.add('opacity-0');
-        nextBtn.classList.remove('opacity-0');
-        
-        // Reset index
-        recentlyViewedCurrentIndex = 0;
-        
-        // Reset transform (only for desktop)
-        const track = document.getElementById('recently-viewed-container');
-        if (track) {
-            track.style.transform = 'translateX(0px)';
-        }
-    } else {
-        // Hide navigation buttons on mobile or if 5 or fewer products
-        prevBtn.classList.add('hidden');
-        nextBtn.classList.add('hidden');
-        
-        // Remove transform on mobile
-        const track = document.getElementById('recently-viewed-container');
-        if (track && !isDesktop) {
-            track.style.transform = '';
-        }
-    }
-}
-
-// Returns Info Popup Functions
-function toggleReturnsInfo() {
-    const popup = document.getElementById('returns-info-popup');
-    const backdrop = document.querySelector('.returns-popup-backdrop');
-    
-    if (popup.classList.contains('hidden')) {
-        // Show popup
-        popup.classList.remove('hidden');
-        
-        // Add backdrop
-        if (!backdrop) {
-            const backdropEl = document.createElement('div');
-            backdropEl.className = 'returns-popup-backdrop';
-            backdropEl.onclick = closeReturnsInfo;
-            document.body.appendChild(backdropEl);
-        }
-    } else {
-        closeReturnsInfo();
-    }
-}
-
-function closeReturnsInfo() {
-    const popup = document.getElementById('returns-info-popup');
-    const backdrop = document.querySelector('.returns-popup-backdrop');
-    
-    popup.classList.add('hidden');
-    if (backdrop) {
-        backdrop.remove();
-    }
-}
-
-// Close popup on Escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeReturnsInfo();
-    }
-});
-
-// Toggle Description Function
-function toggleDescription() {
-    const descriptionPreview = document.getElementById('description-preview');
-    const descriptionFull = document.getElementById('description-full');
-    const toggleText = document.getElementById('description-toggle-text');
-    const toggleIcon = document.getElementById('description-toggle-icon');
-    
-    if (descriptionFull.classList.contains('hidden')) {
-        // Show full description
-        descriptionPreview.classList.add('hidden');
-        descriptionFull.classList.remove('hidden');
-        toggleText.textContent = 'Show Less';
-        toggleIcon.style.transform = 'rotate(180deg)';
-    } else {
-        // Show preview only
-        descriptionPreview.classList.remove('hidden');
-        descriptionFull.classList.add('hidden');
-        toggleText.textContent = 'Show More';
-        toggleIcon.style.transform = 'rotate(0deg)';
-    }
-}
-
-// Cart Functions
-function addToCart() {
-    console.log('addToCart function called');
-    const btn = document.getElementById('add-to-cart-btn');
-    const cartIcon = document.getElementById('cart-icon');
-    const cartText = document.getElementById('cart-text');
-    const cartLoading = document.getElementById('cart-loading');
-    
-    // Check if required elements exist
-    if (!btn) {
-        console.error('Add to cart button not found');
-        return;
-    }
-    
-    console.log('Button found, checking variant...');
-    
-    // Validate required customizations first
-    const validation = validateRequiredCustomizations();
-    if (!validation.isValid) {
-        const message = validation.needToEnableCustomization 
-            ? `<div class="text-left">
-                    <p class="mb-3 text-gray-600">This product requires personalization. Please enable "Add Personalization" and fill in:</p>
-                    <ul class="list-disc list-inside space-y-1 text-gray-700">
-                        ${validation.missingFields.map(field => `<li>${field}</li>`).join('')}
-                    </ul>
-                </div>`
-            : `<div class="text-left">
-                    <p class="mb-3 text-gray-600">Please fill in all required personalization information:</p>
-                    <ul class="list-disc list-inside space-y-1 text-gray-700">
-                        ${validation.missingFields.map(field => `<li>${field}</li>`).join('')}
-                    </ul>
-                </div>`;
-        
-        showAlert({
-            icon: 'warning',
-            title: 'Missing Information',
-            html: message,
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#005366',
-            customClass: {
-                popup: 'rounded-xl',
-                confirmButton: 'px-6 py-3 rounded-lg'
-            }
-        });
-        
-        // Scroll to customization section and auto-enable if needed
-        if (validation.needToEnableCustomization) {
-            const enableCheckbox = document.getElementById('enable-customization');
-            if (enableCheckbox) {
-                enableCheckbox.checked = true;
-                toggleCustomization();
-            }
-        }
-        
-        const customizationContainer = document.getElementById('customization-container');
-        if (customizationContainer) {
-            setTimeout(() => {
-                customizationContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 300);
-        }
-        return;
-    }
-    
-    // Get selected variant to check quantity first
-    const selectedVariant = getSelectedVariant();
-    console.log('Selected variant:', selectedVariant);
-    
-    // Check if variant is out of stock
-    if (selectedVariant && selectedVariant.quantity !== null && selectedVariant.quantity <= 0) {
-        showAlert({
-            icon: 'error',
-            title: 'Out of Stock',
-            text: 'This product is currently out of stock. Please choose another product.',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#005366',
-            customClass: {
-                popup: 'rounded-xl',
-                confirmButton: 'px-6 py-3 rounded-lg'
-            }
-        });
-        return;
-    }
-    
-    console.log('Variant check passed, proceeding...');
-    
-    // Disable button and show loading
-    btn.disabled = true;
-    if (cartIcon) cartIcon.classList.add('hidden');
-    if (cartLoading) cartLoading.classList.remove('hidden');
-    if (cartText) cartText.textContent = 'Adding...';
-    
-    const rawVariantPrice = selectedVariant && selectedVariant.price != null
-        ? selectedVariant.price
-        : {{ (float)($product->price ?? $product->base_price ?? 0) }};
-    const variantPrice = Number(rawVariantPrice) || 0;
-    
-    // Calculate customization total
-    const customizations = getSelectedCustomizations();
-    let customizationTotal = 0;
-    Object.values(customizations).forEach(customization => {
-        customizationTotal += parseFloat(customization.price) || 0;
-    });
-    
-    // Total price including customizations
-    const totalPrice = variantPrice + customizationTotal;
-    const totalPriceValue = Math.round((totalPrice + Number.EPSILON) * 100) / 100;
-    
-    // Get current product data
-    const productData = {
-        id: {{ $product->id }},
-        name: '{{ addslashes($product->name) }}',
-        slug: '{{ $product->slug }}',
-        price: totalPriceValue,
-        image: '@php
-            if ($media && count($media) > 0) {
-                if (is_string($media[0])) {
-                    echo $media[0];
-                } elseif (is_array($media[0])) {
-                    echo $media[0]["url"] ?? $media[0]["path"] ?? reset($media[0]) ?? "";
-                }
-            }
-        @endphp',
-        shop: '{{ $product->shop->name ?? "Unknown Shop" }}',
-        quantity: 1,
-        selectedVariant: selectedVariant,
-        customizations: customizations,
-        addedAt: Date.now()
-    };
-    
-    // Add to localStorage immediately for fast UX
-    addToLocalCart(productData);
-    
-    // Track Facebook Pixel AddToCart event
-    if (typeof fbq !== 'undefined') {
-        fbq('track', 'AddToCart', {
-            content_name: productData.name,
-            content_ids: [productData.id],
-            content_type: 'product',
-            value: totalPriceValue,
-            currency: CURRENT_CURRENCY
-        });
-    }
-
-    // Event tracking được xử lý bởi GTM thông qua dataLayer
-    if (typeof dataLayer !== 'undefined') {
-        const gaItem = {
-            item_id: '{{ $product->sku ?? $product->id }}',
-            item_name: '{{ addslashes($product->name) }}',
-            item_category: @json($primaryCategory),
-            item_variant: selectedVariant && selectedVariant.attributes ? Object.values(selectedVariant.attributes).join(' / ') : undefined,
-            price: totalPriceValue,
-            quantity: 1
-        };
-        if (!gaItem.item_variant) {
-            delete gaItem.item_variant;
-        }
-        dataLayer.push({
-            'event': 'add_to_cart',
-            'currency': CURRENT_CURRENCY,
-            'value': totalPriceValue,
-            'items': [gaItem]
-        });
-    }
-
-    if (typeof window !== 'undefined' && window.ttq) {
-        const tiktokAddToCartPayload = {
-            contents: [{
-                content_id: TIKTOK_PRODUCT_ID,
-                content_type: 'product',
-                content_name: productData.name,
-                quantity: productData.quantity || 1,
-                price: totalPriceValue
-            }],
-            value: totalPriceValue,
-            currency: CURRENT_CURRENCY
-        };
-
-        if (TIKTOK_PRIMARY_CATEGORY) {
-            tiktokAddToCartPayload.contents[0].content_category = TIKTOK_PRIMARY_CATEGORY;
-        }
-
-        if (selectedVariant && selectedVariant.attributes) {
-            const variantLabel = Object.values(selectedVariant.attributes)
-                .filter(Boolean)
-                .join(' / ')
-                .trim();
-            if (variantLabel) {
-                tiktokAddToCartPayload.contents[0].content_variant = variantLabel;
-            }
-        }
-
-        window.ttq.track('AddToCart', tiktokAddToCartPayload);
-    }
-    
-    // Try to sync with backend
-    syncCartToBackend(productData)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Success - sync localStorage with backend
-                syncLocalStorageWithBackend();
-                showCartSuccess();
-            } else {
-                console.error('Backend sync failed:', data.message);
-                showCartSuccess('Cart saved locally');
-            }
-        })
-        .catch((error) => {
-            console.log('Network error - cart saved locally:', error);
-            showCartSuccess('Cart saved locally');
-        })
-        .finally(() => {
-            console.log('Finally block executed, showing popup...');
-            // Reset button safely
-            btn.disabled = false;
-            if (cartIcon) cartIcon.classList.remove('hidden');
-            if (cartLoading) cartLoading.classList.add('hidden');
-            if (cartText) cartText.textContent = 'Add to Cart';
-            
-            // Show cart popup
-            console.log('About to show cart popup with productData:', productData);
-            showCartPopup(productData);
-        });
-}
-
-function addToLocalCart(productData) {
-    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    
-    // Check if product already exists in cart using same logic as backend
-    const existingIndex = cart.findIndex(item => {
-        if (item.id !== productData.id) return false;
-        
-        // Compare variants using attributes
-        const variantMatch = compareVariantsLocal(item.selectedVariant, productData.selectedVariant);
-        const customizationMatch = compareCustomizationsLocal(item.customizations, productData.customizations);
-        
-        return variantMatch && customizationMatch;
-    });
-    
-    if (existingIndex !== -1) {
-        // Update quantity
-        cart[existingIndex].quantity += 1;
-    } else {
-        // Add new item
-        cart.push(productData);
-    }
-    
-    localStorage.setItem('cart', JSON.stringify(cart));
-    updateCartCount();
-}
-
-function compareVariantsLocal(variant1, variant2) {
-    // Compare attributes if both have them
-    if (variant1 && variant1.attributes && variant2 && variant2.attributes) {
-        // Sort keys for consistent comparison
-        const sorted1 = Object.keys(variant1.attributes).sort().reduce((result, key) => {
-            result[key] = variant1.attributes[key];
-            return result;
-        }, {});
-        const sorted2 = Object.keys(variant2.attributes).sort().reduce((result, key) => {
-            result[key] = variant2.attributes[key];
-            return result;
-        }, {});
-        
-        return JSON.stringify(sorted1) === JSON.stringify(sorted2);
-    }
-    
-    // Fallback: compare entire objects
-    return JSON.stringify(variant1) === JSON.stringify(variant2);
-}
-
-function compareCustomizationsLocal(custom1, custom2) {
-    return JSON.stringify(custom1 || {}) === JSON.stringify(custom2 || {});
-}
-
-function syncCartToBackend(productData) {
-    return fetch('/api/cart/add', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        },
-        body: JSON.stringify(productData)
-    });
-}
-
-function getSelectedVariant() {
-    const variantsDataElement = document.getElementById('variants-data');
-    if (!variantsDataElement) return null;
-    
-    const variants = JSON.parse(variantsDataElement.textContent);
-    
-    // Find matching variant based on selected attributes
-    const matchingVariant = variants.find(variant => {
-        if (!variant.attributes) return false;
-        
-        // Check if all selected attributes match
-        for (const [attribute, value] of Object.entries(selectedAttributes)) {
-            if (variant.attributes[attribute] !== value) {
-                return false;
-            }
-        }
-        
-        return true;
-    });
-    
-    // Return full variant info including price
-    const variant = matchingVariant || variants[0] || null;
-    return variant ? { 
-        id: variant.id,
-        attributes: variant.attributes,
-        price: variant.price,
-        quantity: variant.quantity,
-        variant_name: variant.variant_name,
-        media: variant.media
-    } : null;
-}
-
-function getSelectedCustomizations() {
-    const customizations = {};
-    const inputs = document.querySelectorAll('.customization-input');
-    
-    inputs.forEach(input => {
-        let label = input.name; // fallback to name
-        
-        // Try to get friendly label from data attribute or nearby element
-        if (input.dataset.label) {
-            label = input.dataset.label;
-        } else {
-            // Look for label element
-            const labelElement = document.querySelector(`label[for="${input.id}"]`);
-            if (labelElement) {
-                label = labelElement.textContent.trim();
-            } else {
-                // Look for nearby text (for custom inputs without proper labels)
-                const container = input.closest('.customization-group');
-                if (container) {
-                    const titleElement = container.querySelector('.customization-title');
-                    if (titleElement) {
-                        label = titleElement.textContent.trim();
-                    }
-                }
-            }
-        }
-        
-        if (input.type === 'radio' && input.checked) {
-            customizations[label] = {
-                value: input.value,
-                price: parseFloat(input.dataset.price) || 0
-            };
-        } else if (input.type === 'checkbox' && input.checked) {
-            customizations[label] = {
-                value: input.value,
-                price: parseFloat(input.dataset.price) || 0
-            };
-        } else if (input.type === 'text' || input.type === 'textarea') {
-            if (input.value.trim() !== '') {
-                customizations[label] = {
-                    value: input.value.trim(),
-                    price: parseFloat(input.dataset.price) || 0
-                };
-            }
-        }
-    });
-    
-    return customizations;
-}
-
-// Kiểm tra required customizations
-function validateRequiredCustomizations() {
-    const enableCustomizationCheckbox = document.getElementById('enable-customization');
-    const customizationContainer = document.getElementById('customization-container');
-    
-    // Nếu không có customization container, không cần validate
-    if (!customizationContainer) {
-        return { isValid: true, missingFields: [] };
-    }
-    
-    const missingFields = [];
-    
-    // Tìm tất cả các customization boxes
-    const customizationBoxes = customizationContainer.querySelectorAll('.border.border-gray-200.rounded-lg.p-4.bg-white');
-    
-    // Kiểm tra xem có customization nào là required không
-    let hasRequiredCustomizations = false;
-    
-    customizationBoxes.forEach(box => {
-        const requiredBadge = box.querySelector('.bg-red-100.text-red-800');
-        if (requiredBadge) {
-            hasRequiredCustomizations = true;
-        }
-    });
-    
-    // Nếu có required customizations nhưng checkbox chưa được check
-    if (hasRequiredCustomizations && (!enableCustomizationCheckbox || !enableCustomizationCheckbox.checked)) {
-        customizationBoxes.forEach(box => {
-            const titleElement = box.querySelector('h4');
-            const requiredBadge = box.querySelector('.bg-red-100.text-red-800');
-            
-            if (requiredBadge && titleElement) {
-                const customizationLabel = titleElement.textContent.trim();
-                missingFields.push(customizationLabel);
-            }
-        });
-        
-        return {
-            isValid: false,
-            missingFields: missingFields,
-            needToEnableCustomization: true
-        };
-    }
-    
-    // Nếu checkbox được check, kiểm tra các required fields
-    if (enableCustomizationCheckbox && enableCustomizationCheckbox.checked) {
-        customizationBoxes.forEach(box => {
-            const titleElement = box.querySelector('h4');
-            const requiredBadge = box.querySelector('.bg-red-100.text-red-800');
-            
-            // Chỉ kiểm tra nếu có required badge
-            if (requiredBadge && titleElement) {
-                const customizationLabel = titleElement.textContent.trim();
-                let hasValidInput = false;
-                
-                // Tìm các input trong box này
-                const inputs = box.querySelectorAll('.customization-input');
-                
-                inputs.forEach(input => {
-                    if (input.type === 'radio' || input.type === 'checkbox') {
-                        if (input.checked) {
-                            hasValidInput = true;
+            addBtn.disabled = true;
+            fetch('{{ route("api.cart.add") }}', { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    addBtn.disabled = false;
+                    if (data.success) {
+                        showToast('Added to cart.', 'success');
+                        if (typeof window.promoPopupShow === 'function') {
+                            setTimeout(function() { window.promoPopupShow('add_to_cart'); }, 400);
                         }
-                    } else if (input.type === 'text' || input.type === 'textarea') {
-                        if (input.value.trim() !== '') {
-                            hasValidInput = true;
-                        }
-                    }
-                });
-                
-                // Nếu là radio button, kiểm tra xem có input nào trong group được checked không
-                if (!hasValidInput && inputs.length > 0) {
-                    if (inputs[0].type === 'radio') {
-                        const inputName = inputs[0].name;
-                        const radioInputs = customizationContainer.querySelectorAll(`input[name="${inputName}"]`);
-                        hasValidInput = Array.from(radioInputs).some(radio => radio.checked);
-                    }
-                }
-                
-                if (!hasValidInput) {
-                    missingFields.push(customizationLabel);
-                }
-            }
-        });
-    }
-    
-    return {
-        isValid: missingFields.length === 0,
-        missingFields: missingFields,
-        needToEnableCustomization: false
-    };
-}
-
-function updateCartCount() {
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-    
-    // Update cart count in header if exists
-    const cartCountElements = document.querySelectorAll('.cart-count');
-    cartCountElements.forEach(element => {
-        element.textContent = totalItems;
-        element.style.display = totalItems > 0 ? 'flex' : 'none';
-    });
-    
-    // Dispatch custom event to update header
-    window.dispatchEvent(new CustomEvent('cartUpdated'));
-}
-
-function showCartSuccess(message = 'Added to cart successfully!') {
-    // Create success notification
-    const notification = document.createElement('div');
-    notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-2';
-    notification.innerHTML = `
-        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-        </svg>
-        <span>${message}</span>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    // Remove notification after 3 seconds
-    setTimeout(() => {
-        notification.remove();
-    }, 3000);
-}
-function showCartPopup(addedProduct) {
-    console.log('showCartPopup called with:', addedProduct);
-    
-    // Remove any existing popup first
-    const existingPopup = document.getElementById('cart-popup-overlay');
-    if (existingPopup) {
-        existingPopup.remove();
-    }
-    
-    // Create popup overlay
-    const overlay = document.createElement('div');
-    overlay.id = 'cart-popup-overlay';
-    overlay.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
-    
-    console.log('Created overlay element');
-    
-    // Create popup content
-    const popup = document.createElement('div');
-    popup.className = 'bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto cart-popup-content';
-    
-    // Show loading state
-    popup.innerHTML = `
-        <div class="flex items-center justify-center p-12">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#005366]"></div>
-        </div>
-    `;
-    
-    overlay.appendChild(popup);
-    document.body.appendChild(overlay);
-    
-    console.log('Overlay appended to body');
-    
-    // Fetch cart data from backend
-    fetch('/api/cart/get', {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-        },
-        credentials: 'same-origin'
-    })
-    .then(response => {
-        console.log('Response status:', response.status);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log('Cart API Response:', data); // Debug log
-        if (data.success) {
-            const cartItems = data.cart_items || [];
-            console.log('Cart Items count:', cartItems.length);
-            if (cartItems.length > 0) {
-                console.log('First item:', cartItems[0]);
-                console.log('First item product:', cartItems[0].product);
-                console.log('First item media:', cartItems[0].product?.media);
-            }
-            renderCartPopup(popup, cartItems, data.summary || {}, data.shipping_details || null);
-        } else {
-            console.warn('Backend returned failed status');
-            renderCartPopup(popup, [], {}, null);
-        }
-    })
-    .catch(error => {
-        console.error('Failed to fetch cart:', error);
-        popup.innerHTML = `
-            <div class="p-6 text-center">
-                <p class="text-red-600 mb-4">Unable to load cart. Please try again.</p>
-                <p class="text-sm text-gray-600 mb-4">Error: ${error.message}</p>
-                <button onclick="closeCartPopup()" class="bg-[#005366] text-white px-6 py-2 rounded-lg hover:bg-[#003d4d]">
-                    Close
-                </button>
-            </div>
-        `;
-    });
-    
-    // Close on overlay click
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) {
-            closeCartPopup();
-        }
-    });
-    
-    // Close on escape key
-    const handleEscape = (e) => {
-        if (e.key === 'Escape') {
-            closeCartPopup();
-            document.removeEventListener('keydown', handleEscape);
-        }
-    };
-    document.addEventListener('keydown', handleEscape);
-}
-
-
-function renderCartPopup(popup, cartItems, summary, shippingDetails) {
-    const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-    
-    // Get currency and rate from summary or use defaults
-    const currency = summary.currency || CURRENT_CURRENCY || 'USD';
-    // Use currency rate from summary, or fallback to CURRENT_CURRENCY_RATE, or default to 1.0
-    const currencyRate = parseFloat(summary.currency_rate || CURRENT_CURRENCY_RATE || 1.0);
-    
-    console.log('Currency info:', {
-        currency: currency,
-        currencyRate: currencyRate,
-        summaryCurrencyRate: summary.currency_rate,
-        CURRENT_CURRENCY_RATE: CURRENT_CURRENCY_RATE
-    });
-    
-    // Calculate base subtotal
-    let baseSubtotal = 0;
-    
-    // Priority 1: Use base_subtotal if explicitly provided (should be in USD)
-    if (summary.base_subtotal !== undefined && summary.base_subtotal !== null) {
-        baseSubtotal = parseFloat(summary.base_subtotal);
-    } 
-    // Priority 2: Calculate from cart items (most reliable)
-    // item.price is usually in current currency (converted), so we need to convert back to USD
-    else if (cartItems && cartItems.length > 0) {
-        cartItems.forEach(item => {
-            const itemPrice = parseFloat(item.price) || 0;
-            // If item has base_price_usd, use it directly (already in USD)
-            // Otherwise, assume item.price is in current currency and convert back to USD
-            let basePrice = 0;
-            if (item.base_price_usd !== undefined && item.base_price_usd !== null) {
-                basePrice = parseFloat(item.base_price_usd);
-            } else {
-                // Convert from current currency to USD
-                basePrice = currency !== 'USD' && currencyRate > 0 
-                    ? itemPrice / currencyRate 
-                    : itemPrice;
-            }
-            
-            let customizationTotal = 0;
-            if (item.customizations) {
-                Object.values(item.customizations).forEach(customization => {
-                    if (customization && customization.price) {
-                        const customPrice = parseFloat(customization.price) || 0;
-                        // Convert customization price back to USD if needed
-                        let baseCustomPrice = 0;
-                        if (customization.base_price_usd !== undefined && customization.base_price_usd !== null) {
-                            baseCustomPrice = parseFloat(customization.base_price_usd);
-                        } else {
-                            baseCustomPrice = currency !== 'USD' && currencyRate > 0
-                                ? customPrice / currencyRate
-                                : customPrice;
-                        }
-                        customizationTotal += baseCustomPrice;
-                    }
-                });
-            }
-            
-            baseSubtotal += (basePrice + customizationTotal) * item.quantity;
-        });
-    }
-    // Priority 3: Fallback to summary.subtotal (assume it's in current currency if not USD)
-    else if (summary.subtotal !== undefined && summary.subtotal !== null) {
-        const providedSubtotal = parseFloat(summary.subtotal);
-        // If currency is not USD, convert back to USD
-        // If currency is USD, subtotal is already in USD
-        baseSubtotal = currency !== 'USD' && currencyRate > 0 
-            ? providedSubtotal / currencyRate 
-            : providedSubtotal;
-    }
-    
-    // Use converted subtotal if available, otherwise convert from base
-    const subtotal = summary.converted_subtotal !== undefined 
-        ? parseFloat(summary.converted_subtotal) 
-        : (currency !== 'USD' ? baseSubtotal * currencyRate : baseSubtotal);
-    
-    // Get selected zone from localStorage or use default
-    let selectedZoneId = localStorage.getItem('selectedShippingZoneId');
-    if (selectedZoneId) {
-        // Check if it's in format "zone_id:country_code" or just zone_id
-        let zoneIdToCheck = selectedZoneId;
-        if (selectedZoneId.includes(':')) {
-            zoneIdToCheck = selectedZoneId.split(':')[0];
-        }
-        
-        // Check if it's a general domain zone (starts with 'general_') or a numeric ID
-        if (zoneIdToCheck.toString().startsWith('general_')) {
-            // Keep as string for general domain zones
-            // Verify zone exists in zones with countries or regular zones
-            const existsInZonesWithCountries = SHIPPING_ZONES_WITH_COUNTRIES && SHIPPING_ZONES_WITH_COUNTRIES.some(z => z.id === zoneIdToCheck);
-            const existsInZones = SHIPPING_ZONES && SHIPPING_ZONES.some(z => z.id === zoneIdToCheck);
-            if (!existsInZonesWithCountries && !existsInZones) {
-                selectedZoneId = DEFAULT_SHIPPING_ZONE_ID;
-            }
-        } else {
-            // Parse as integer for regular zones
-            const parsed = parseInt(zoneIdToCheck);
-            if (!isNaN(parsed)) {
-                // Verify zone exists
-                const existsInZonesWithCountries = SHIPPING_ZONES_WITH_COUNTRIES && SHIPPING_ZONES_WITH_COUNTRIES.some(z => z.id === parsed);
-                const existsInZones = SHIPPING_ZONES && SHIPPING_ZONES.some(z => z.id === parsed);
-                if (!existsInZonesWithCountries && !existsInZones) {
-                    selectedZoneId = DEFAULT_SHIPPING_ZONE_ID;
-                }
-            } else {
-                selectedZoneId = DEFAULT_SHIPPING_ZONE_ID;
-            }
-        }
-    } else {
-        selectedZoneId = DEFAULT_SHIPPING_ZONE_ID;
-    }
-    
-    // Calculate shipping cost
-    const shippingInfo = calculateShippingCost(cartItems, baseSubtotal, selectedZoneId);
-    const shippingCost = shippingInfo.costConverted;
-    
-    // Calculate total price including shipping
-    const totalPrice = subtotal + shippingCost;
-    
-    popup.innerHTML = `
-        <!-- Header -->
-        <div class="bg-white border-b border-gray-200 p-6 flex items-center justify-between">
-            <h2 class="text-2xl font-bold text-gray-900">Shopping Cart</h2>
-            <button onclick="closeCartPopup()" class="text-gray-400 hover:text-gray-600 transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-            </button>
-        </div>
-        
-        <!-- Cart Items -->
-        <div class="p-6">
-            <div class="space-y-4" id="cart-popup-items">
-                ${generateCartPopupItems(cartItems)}
-            </div>
-        </div>
-        
-        <!-- Total Section -->
-        <div class="border-t border-gray-200 p-6 bg-gray-50">
-            <div class="space-y-2 mb-4">
-                <!-- Exchange Rate Display (only show if currency is not USD) -->
-                ${currency !== 'USD' && currencyRate !== 1.0 ? 
-                    `<div class="text-xs text-gray-500 bg-gray-50 p-2 rounded-lg border border-gray-200 mb-3">
-                        <div class="flex justify-between items-center">
-                            <span>Exchange Rate:</span>
-                            <span class="font-medium">1 USD = ${currencyRate.toFixed(4)} ${currency}</span>
-                        </div>
-                        <div class="text-[10px] text-gray-400 mt-1">
-                            Prices converted from USD
-                        </div>
-                    </div>` : ''
-                }
-                
-                <div class="flex justify-between text-gray-600">
-                    <span>Subtotal (${totalItems} items)</span>
-                    <span class="font-semibold">${CURRENCY_SYMBOL}${subtotal.toFixed(2)}</span>
-                </div>
-                
-                <!-- Shipping Zone Selector -->
-                ${(SHIPPING_ZONES && SHIPPING_ZONES.length > 0) || (SHIPPING_ZONES_WITH_COUNTRIES && SHIPPING_ZONES_WITH_COUNTRIES.length > 0) ? `
-                    <div class="mb-2">
-                        <label for="shipping-zone-select" class="block text-sm font-medium text-gray-600 mb-1">Shipping Zone:</label>
-                        <select id="shipping-zone-select" 
-                                onchange="updateShippingZone(this.value)" 
-                                class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#005366] focus:border-transparent">
-                            ${SHIPPING_ZONES_WITH_COUNTRIES && SHIPPING_ZONES_WITH_COUNTRIES.length > 0 ? SHIPPING_ZONES_WITH_COUNTRIES.map(zone => `
-                                <optgroup label="${zone.name}">
-                                    ${zone.country_options.map(country => `
-                                        <option value="${country.value}" ${selectedZoneId === country.value || (selectedZoneId === country.zone_id && !selectedZoneId.toString().includes(':')) ? 'selected' : ''}>
-                                            ${country.label}
-                                        </option>
-                                    `).join('')}
-                                </optgroup>
-                            `).join('') : ''}
-                            ${SHIPPING_ZONES && SHIPPING_ZONES.length > 0 ? SHIPPING_ZONES.map(zone => `
-                                <option value="${zone.id}" ${selectedZoneId === zone.id ? 'selected' : ''}>
-                                    ${zone.display_name || zone.name}
-                                </option>
-                            `).join('') : ''}
-                        </select>
-                    </div>
-                ` : ''}
-                
-                <div class="flex justify-between text-gray-600">
-                    <span class="${shippingInfo.available === false ? 'text-red-600' : ''}">${shippingInfo.available === false ? 'Shipping not available for this area' : `Shipping${shippingInfo.zoneName ? ` (${shippingInfo.zoneName})` : shippingInfo.name ? ` (${shippingInfo.name})` : ''}`}</span>
-                    <span class="font-semibold ${shippingInfo.available === false ? 'text-red-600' : ''}">${shippingInfo.available === false ? 'N/A' : `${CURRENCY_SYMBOL}${shippingCost.toFixed(2)}`}</span>
-                </div>
-                
-            </div>
-            <div class="border-t pt-3 flex justify-between items-center text-xl font-bold">
-                <span>Total:</span>
-                <span class="text-[#005366]">${CURRENCY_SYMBOL}${parseFloat(totalPrice).toFixed(2)}</span>
-            </div>
-        </div>
-        
-        <!-- Checkout Section -->
-        <div class="p-6 bg-white">
-            <!-- Checkout Buttons -->
-            <div class="flex space-x-3 mb-3">
-                <button onclick="goToCheckoutFromPopup()" 
-                        class="flex-1 bg-[#005366] hover:bg-[#003d4d] text-white font-bold py-4 px-6 rounded-xl transition-colors">
-                    Checkout
-                </button>
-                <button onclick="closeCartPopup(); window.location.href='{{ route('cart.index') }}'" 
-                        class="flex-1 bg-white text-gray-800 font-semibold py-4 px-6 rounded-xl border-2 border-gray-300 hover:border-gray-400 transition-colors">
-                    View cart
-                </button>
-            </div>
-            
-            <!-- Continue Shopping -->
-            <div class="text-center">
-                <button onclick="closeCartPopup(); window.location.href='{{ route('products.index') }}'" 
-                        class="text-[#005366] hover:underline font-medium">
-                    Continue Shopping
-                </button>
-            </div>
-        </div>
-        
-        <!-- You may also like -->
-        <div class="p-6 bg-gray-50 border-t border-gray-200">
-            <h3 class="font-bold text-gray-900 mb-4">You may also like</h3>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4" id="cross-sell-products">
-                ${generateCrossSellProducts()}
-            </div>
-        </div>
-    `;
-    
-    // Setup event delegation for cart buttons
-    setTimeout(() => {
-        setupCartPopupEventDelegation();
-    }, 100);
-}
-
-// Setup event delegation for cart popup buttons
-function setupCartPopupEventDelegation() {
-    const cartPopupOverlay = document.getElementById('cart-popup-overlay');
-    if (!cartPopupOverlay) return;
-    
-    // Remove existing listener if any
-    cartPopupOverlay.removeEventListener('click', handleCartPopupClick);
-    
-    // Add event listener
-    cartPopupOverlay.addEventListener('click', handleCartPopupClick);
-}
-
-// Handle all cart popup clicks
-function handleCartPopupClick(e) {
-    const target = e.target.closest('button');
-    
-    // Check if clicking on a button first
-    if (target) {
-        // Handle remove item button
-        if (target.classList.contains('remove-cart-item')) {
-            e.preventDefault();
-            e.stopPropagation();
-            const cartItemId = parseInt(target.dataset.cartItemId);
-            if (cartItemId) {
-                removeCartItemById(cartItemId);
-            }
-            return;
-        }
-        
-        // Handle decrease quantity button
-        if (target.classList.contains('decrease-quantity')) {
-            e.preventDefault();
-            e.stopPropagation();
-            const cartItemId = parseInt(target.dataset.cartItemId);
-            const newQuantity = parseInt(target.dataset.newQuantity);
-            if (cartItemId && newQuantity >= 0) {
-                updateCartItemQuantity(e, cartItemId, newQuantity);
-            }
-            return;
-        }
-        
-        // Handle increase quantity button
-        if (target.classList.contains('increase-quantity')) {
-            e.preventDefault();
-            e.stopPropagation();
-            const cartItemId = parseInt(target.dataset.cartItemId);
-            const newQuantity = parseInt(target.dataset.newQuantity);
-            if (cartItemId && newQuantity > 0) {
-                updateCartItemQuantity(e, cartItemId, newQuantity);
-            }
-            return;
-        }
-        
-        // Handle cross-sell add button - stop propagation to parent div
-        if (target.classList.contains('cross-sell-add-btn')) {
-            e.preventDefault();
-            e.stopPropagation();
-            return; // Let the cross-sell-product handler take care of it
-        }
-    }
-    
-    // Check for cross-sell product click (div click, not button)
-    const crossSellProduct = e.target.closest('.cross-sell-product');
-    if (crossSellProduct) {
-        e.preventDefault();
-        const productId = parseInt(crossSellProduct.dataset.productId);
-        const productName = crossSellProduct.dataset.productName;
-        const productPrice = parseFloat(crossSellProduct.dataset.productPrice);
-        const productImage = crossSellProduct.dataset.productImage;
-        const productSlug = crossSellProduct.dataset.productSlug;
-        const hasVariants = crossSellProduct.dataset.hasVariants === 'true';
-        
-        handleCrossSellClick(productId, productName, productPrice, productImage, productSlug, hasVariants);
-        return;
-    }
-}
-
-
-// Calculate item total including customizations (same as Cart model getTotalPrice())
-function calculateItemTotal(item) {
-    let total = parseFloat(item.price) * item.quantity;
-    
-    // Add customization prices
-    if (item.customizations && typeof item.customizations === 'object') {
-        Object.values(item.customizations).forEach(customization => {
-            const customPrice = parseFloat(customization.price || 0);
-            total += customPrice * item.quantity;
-        });
-    }
-    
-    return total;
-}
-
-/**
- * Calculate shipping cost for cart items based on categories and zone
- * @param {Array} cartItems - Array of cart items
- * @param {number} baseSubtotal - Base subtotal in USD
- * @param {number|null} zoneId - Selected shipping zone ID (optional)
- * @returns {Object} - Object containing shipping cost details
- */
-function calculateShippingCost(cartItems, baseSubtotal, zoneId = null) {
-    if (!cartItems || cartItems.length === 0) {
-        return {
-            cost: 0,
-            costConverted: 0,
-            rate: null,
-            name: null,
-            zoneId: null,
-            zoneName: null
-        };
-    }
-    
-    // Filter rates by zone if zoneId is provided
-    let availableRates = SHIPPING_RATES;
-    let currentZoneName = null; // Initialize zone name variable for use throughout function
-    
-    if (zoneId !== null) {
-        // Extract zone_id from value if format is "zone_id:country_code"
-        let actualZoneId = zoneId;
-        if (typeof zoneId === 'string' && zoneId.includes(':')) {
-            actualZoneId = zoneId.split(':')[0];
-        }
-        
-        // Determine zone name for display (set before filtering rates)
-        if (typeof actualZoneId === 'string' && actualZoneId.startsWith('general_')) {
-            // Extract zone name from zoneId (e.g., 'general_euro' -> 'Euro')
-            currentZoneName = actualZoneId.replace('general_', '').split('_').map(word => 
-                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-            ).join(' ');
-        } else {
-            // Regular zone: get name from SHIPPING_ZONES
-            const parsedZoneId = typeof actualZoneId === 'string' && !isNaN(actualZoneId) 
-                ? parseInt(actualZoneId) 
-                : actualZoneId;
-            currentZoneName = SHIPPING_ZONES.find(z => z.id === parsedZoneId)?.name || null;
-        }
-        
-        // Check if it's a general domain zone (starts with 'general_')
-        if (typeof actualZoneId === 'string' && actualZoneId.startsWith('general_')) {
-            // Extract zone name from zoneId (e.g., 'general_euro' -> 'Euro')
-            const zoneName = actualZoneId.replace('general_', '').split('_').map(word => 
-                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-            ).join(' ');
-            
-            // Filter rates with null zone_id and matching zone_name
-            // Use flexible matching: normalize both zone names for comparison
-            const normalizeZoneName = (name) => name ? name.toLowerCase().trim().replace(/\s+/g, ' ') : '';
-            const normalizedZoneName = normalizeZoneName(zoneName);
-            
-            availableRates = SHIPPING_RATES.filter(r => {
-                if (r.zone_id !== null) return false;
-                if (!r.zone_name) return false;
-                const normalizedRateZoneName = normalizeZoneName(r.zone_name);
-                return normalizedRateZoneName === normalizedZoneName || 
-                       normalizedRateZoneName.includes(normalizedZoneName) ||
-                       normalizedZoneName.includes(normalizedRateZoneName);
-            });
-            
-            // If no rates found with matching zone_name, fallback to all general domain rates (zone_id = null)
-            // This allows any general rate to be used when specific zone_name rates don't exist
-            if (availableRates.length === 0) {
-                const allGeneralRates = SHIPPING_RATES.filter(r => r.zone_id === null);
-                if (allGeneralRates.length > 0) {
-                    availableRates = allGeneralRates;
-                }
-            }
-        } else {
-            // Regular zone: filter by zone_id
-            // Parse to integer if it's a numeric string
-            const parsedZoneId = typeof actualZoneId === 'string' && !isNaN(actualZoneId) 
-                ? parseInt(actualZoneId) 
-                : actualZoneId;
-            availableRates = SHIPPING_RATES.filter(r => r.zone_id === parsedZoneId);
-            
-            // If no rates found for this specific zone, include general domain rates (zone_id = null) as fallback
-            // This allows general rates to be used when zone-specific rates don't exist
-            if (availableRates.length === 0) {
-                const generalRates = SHIPPING_RATES.filter(r => r.zone_id === null);
-                if (generalRates.length > 0) {
-                    availableRates = generalRates;
-                }
-            }
-        }
-    }
-    
-    // Group items by category
-    const itemsByCategory = {};
-    let totalItems = 0;
-    
-    cartItems.forEach(item => {
-        const product = item.product || {};
-        const categories = product.categories || [];
-        
-        // Get first category ID (primary category)
-        let categoryId = null;
-        if (categories && categories.length > 0) {
-            const firstCategory = categories[0];
-            categoryId = firstCategory.id || (typeof firstCategory === 'object' ? firstCategory.category_id : null);
-        }
-        
-        // If no category, use null as key for general items
-        const key = categoryId || 'general';
-        
-        if (!itemsByCategory[key]) {
-            itemsByCategory[key] = {
-                categoryId: categoryId,
-                items: [],
-                quantity: 0
-            };
-        }
-        
-        itemsByCategory[key].items.push(item);
-        itemsByCategory[key].quantity += item.quantity;
-        totalItems += item.quantity;
-    });
-    
-    // Calculate shipping cost for each category group
-    let totalShippingCost = 0;
-    let shippingRateUsed = null;
-    let shippingName = null;
-    let zoneName = null;
-    let allGroupsHaveRate = true;
-    
-    Object.values(itemsByCategory).forEach(group => {
-        const categoryId = group.categoryId;
-        const quantity = group.quantity;
-        
-        // Find shipping rate for this category
-        let rate = null;
-        
-        // First, try to find rate specific to this category with all conditions
-        if (categoryId) {
-            rate = availableRates.find(r => 
-                r.category_id === categoryId && 
-                (!r.min_items || quantity >= r.min_items) &&
-                (!r.max_items || quantity <= r.max_items) &&
-                (!r.min_order_value || baseSubtotal >= r.min_order_value) &&
-                (!r.max_order_value || baseSubtotal <= r.max_order_value)
-            );
-        }
-        
-        // If no category-specific rate with conditions, try category-specific rate without quantity/order value conditions
-        if (!rate && categoryId) {
-            rate = availableRates.find(r => r.category_id === categoryId);
-        }
-        
-        // If no category-specific rate, try general rate (category_id is null) with all conditions
-        if (!rate) {
-            rate = availableRates.find(r => 
-                r.category_id === null &&
-                (!r.min_items || quantity >= r.min_items) &&
-                (!r.max_items || quantity <= r.max_items) &&
-                (!r.min_order_value || baseSubtotal >= r.min_order_value) &&
-                (!r.max_order_value || baseSubtotal <= r.max_order_value)
-            );
-        }
-        
-        // If no general rate with conditions, try any general rate (category_id is null)
-        if (!rate) {
-            rate = availableRates.find(r => r.category_id === null);
-        }
-        
-        // If still no rate found, use default shipping rate (if it meets conditions and matches zone)
-        if (!rate && DEFAULT_SHIPPING_RATE) {
-            const defaultRate = DEFAULT_SHIPPING_RATE;
-            
-            // Extract actual zone ID for comparison
-            let actualZoneIdForComparison = zoneId;
-            if (zoneId !== null) {
-                if (typeof zoneId === 'string' && zoneId.includes(':')) {
-                    actualZoneIdForComparison = zoneId.split(':')[0];
-                }
-                // Parse to integer if it's a numeric string
-                if (typeof actualZoneIdForComparison === 'string' && !isNaN(actualZoneIdForComparison)) {
-                    actualZoneIdForComparison = parseInt(actualZoneIdForComparison);
-                }
-            }
-            
-            // Check if default rate meets the conditions and zone
-            // Allow default rate if: zoneId is null OR default rate zone matches OR default rate is general (zone_id = null)
-            // If availableRates is empty, be more lenient with zone matching
-            let zoneMatches = false;
-            if (availableRates.length === 0) {
-                // When no rates exist for the zone, allow default rate regardless of zone (as final fallback)
-                zoneMatches = true;
-            } else {
-                // Normal zone matching when rates exist
-                zoneMatches = zoneId === null || 
-                             defaultRate.zone_id === actualZoneIdForComparison || 
-                             defaultRate.zone_id === null; // General domain rate can be used for any zone
-            }
-            
-            // When availableRates is empty, be more lenient with conditions (use default rate as last resort)
-            const meetsConditions = zoneMatches && (
-                availableRates.length === 0 
-                    ? true // When no rates available, use default rate regardless of quantity/order value conditions
-                    : (
-                        (!defaultRate.min_items || quantity >= defaultRate.min_items) &&
-                        (!defaultRate.max_items || quantity <= defaultRate.max_items) &&
-                        (!defaultRate.min_order_value || baseSubtotal >= defaultRate.min_order_value) &&
-                        (!defaultRate.max_order_value || baseSubtotal <= defaultRate.max_order_value)
-                    )
-            );
-            
-            if (meetsConditions) {
-                rate = defaultRate;
-            }
-        }
-        
-        // Priority 6: If still no rate, use first available rate from availableRates
-        if (!rate && availableRates.length > 0) {
-            rate = availableRates[0]; // Use first available rate
-        }
-        
-        // Priority 7: If still no rate, use first rate from all SHIPPING_RATES
-        if (!rate && SHIPPING_RATES.length > 0) {
-            rate = SHIPPING_RATES[0]; // Use first rate as final fallback
-        }
-        
-        // Always use a rate if available (never return unavailable)
-        if (rate) {
-            // Calculate cost for this group: first_item_cost + (quantity - 1) * additional_item_cost
-            const groupCost = rate.first_item_cost + (quantity - 1) * rate.additional_item_cost;
-            totalShippingCost += groupCost;
-            
-            // Store the rate used (prefer category-specific rate)
-            if (!shippingRateUsed || (categoryId && rate.category_id === categoryId)) {
-                shippingRateUsed = rate;
-                shippingName = rate.name;
-                zoneName = rate.zone_name;
-            }
-        } else {
-            allGroupsHaveRate = false;
-        }
-    });
-    
-    // If no rates found for any group, try to use default rate or first available rate
-    if (!allGroupsHaveRate || (totalShippingCost === 0 && !shippingRateUsed)) {
-        // Try to use default rate
-        if (DEFAULT_SHIPPING_RATE) {
-            const defaultRate = DEFAULT_SHIPPING_RATE;
-            const quantity = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
-            const groupCost = defaultRate.first_item_cost + (quantity - 1) * defaultRate.additional_item_cost;
-            totalShippingCost = groupCost;
-            shippingRateUsed = defaultRate;
-            shippingName = defaultRate.name;
-            zoneName = defaultRate.zone_name;
-        } else if (SHIPPING_RATES.length > 0) {
-            // Use first available rate
-            const firstRate = SHIPPING_RATES[0];
-            const quantity = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
-            const groupCost = firstRate.first_item_cost + (quantity - 1) * firstRate.additional_item_cost;
-            totalShippingCost = groupCost;
-            shippingRateUsed = firstRate;
-            shippingName = firstRate.name;
-            zoneName = firstRate.zone_name;
-        } else {
-            // Only return unavailable if absolutely no rates exist
-            return {
-                cost: 0,
-                costConverted: 0,
-                rate: null,
-                name: null,
-                zoneId: zoneId,
-                zoneName: currentZoneName,
-                available: false
-            };
-        }
-    }
-    
-    // Convert to current currency if needed
-    const costConverted = CURRENT_CURRENCY !== 'USD' && CURRENT_CURRENCY_RATE > 0
-        ? totalShippingCost * CURRENT_CURRENCY_RATE
-        : totalShippingCost;
-    
-    return {
-        cost: totalShippingCost, // Cost in USD
-        costConverted: costConverted, // Cost in current currency
-        rate: shippingRateUsed,
-        name: shippingName || 'Standard Shipping',
-        zoneId: zoneId,
-        zoneName: zoneName,
-        available: true
-    };
-}
-
-function generateCartPopupItems(cartItems) {
-    if (!cartItems || cartItems.length === 0) {
-        return '<p class="text-gray-500 text-center py-8">Your cart is empty</p>';
-    }
-    
-    return cartItems.map((item) => {
-        const product = item.product || {};
-        const shop = product.shop || {};
-        
-        // Debug log for media
-        console.log('Product media:', product.media);
-        
-        // Handle both array of URLs and array of objects
-        let productImage = null;
-        if (product.media) {
-            if (Array.isArray(product.media) && product.media.length > 0) {
-                const firstMedia = product.media[0];
-                productImage = typeof firstMedia === 'object' ? (firstMedia.url || firstMedia) : firstMedia;
-            } else if (typeof product.media === 'string') {
-                // If media is a string (single URL)
-                productImage = product.media;
-            }
-        }
-        
-        console.log('Final product image:', productImage); // Debug
-        
-        return `
-            <div class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
-                <div class="flex gap-4">
-            <!-- Product Image -->
-                    <div class="flex-shrink-0">
-                        ${productImage && productImage !== 'undefined' && productImage !== '' ? `
-                            <img src="${productImage}" alt="${product.name || ''}" class="w-20 h-20 object-cover rounded-lg" onerror="this.parentElement.innerHTML='<div class=\\'w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center\\'><svg class=\\'w-8 h-8 text-gray-400\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'2\\' d=\\'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z\\'></path></svg></div>'">
-                        ` : `
-                            <div class="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
-                                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                </svg>
-                            </div>
-                        `}
-                    </div>
-                    
-                    <!-- Product Info -->
-            <div class="flex-1 min-w-0">
-                        <div class="flex justify-between items-start mb-2">
-                            <div class="flex-1">
-                                <h4 class="font-semibold text-gray-900 text-sm line-clamp-2 mb-1">${product.name || 'Unknown Product'}</h4>
-                                ${shop.name ? `
-                                    <p class="text-xs text-gray-500">Sold by: <a href="/shops/${shop.shop_slug || ''}" class="text-[#005366] font-medium hover:underline">${shop.name}</a></p>
-                                ` : ''}
-                            </div>
-                            <button class="remove-cart-item ml-2 p-1 text-gray-400 hover:text-red-500 transition-colors" data-cart-item-id="${item.id}">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                </svg>
-                            </button>
-                        </div>
-                        
-                        <!-- Variants -->
-                        ${item.selected_variant && item.selected_variant.attributes ? `
-                            <div class="flex flex-wrap gap-1 mb-2">
-                                ${Object.entries(item.selected_variant.attributes).map(([key, value]) => `
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                                        ${key}: ${value}
-                                    </span>
-                                `).join('')}
-                </div>
-                        ` : ''}
-                
-                <!-- Customizations -->
-                ${item.customizations && Object.keys(item.customizations).length > 0 ? `
-                    <div class="text-xs text-gray-600 mb-2">
-                        ${Object.entries(item.customizations).map(([key, custom]) => 
-                                    `<div>${key}: ${custom.value}${custom.price > 0 ? ` (+${CURRENCY_SYMBOL}${parseFloat(custom.price).toFixed(2)})` : ''}</div>`
-                                ).join('')}
-                    </div>
-                ` : ''}
-                
-                <!-- Price and Quantity -->
-                        <div class="flex items-center justify-between mt-3">
-                    <div class="flex items-center space-x-2">
-                                <button class="decrease-quantity w-7 h-7 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors ${item.quantity <= 1 ? 'opacity-50 cursor-not-allowed' : ''}" 
-                                        data-cart-item-id="${item.id}" 
-                                        data-new-quantity="${item.quantity - 1}"
-                                        ${item.quantity <= 1 ? 'disabled' : ''}>
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
-                            </svg>
-                        </button>
-                                <span class="text-sm font-semibold min-w-[1.5rem] text-center" id="quantity-${item.id}">${item.quantity}</span>
-                                <button class="increase-quantity w-7 h-7 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors" 
-                                        data-cart-item-id="${item.id}" 
-                                        data-new-quantity="${item.quantity + 1}">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                            </svg>
-                        </button>
-                    </div>
-                            <div class="text-right">
-                                <p class="text-lg font-bold text-[#005366]">${CURRENCY_SYMBOL}${calculateItemTotal(item).toFixed(2)}</p>
-                                ${item.quantity > 1 ? `
-                                    <p class="text-xs text-gray-500">${CURRENCY_SYMBOL}${parseFloat(item.price).toFixed(2)} each</p>
-                                ` : ''}
-                </div>
-            </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-function updateCartItemQuantity(e, cartItemId, newQuantity) {
-    if (newQuantity < 1) {
-        removeCartItemById(cartItemId);
-        return;
-    }
-    
-    console.log('Updating cart item:', cartItemId, 'to quantity:', newQuantity);
-    
-    // Show loading state
-    const quantitySpan = document.getElementById(`quantity-${cartItemId}`);
-    let originalText = '';
-    if (quantitySpan) {
-        originalText = quantitySpan.textContent;
-        quantitySpan.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-[#005366] mx-auto"></div>';
-    }
-    
-    fetch(`/api/cart/update/${cartItemId}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-        },
-        body: JSON.stringify({ quantity: newQuantity })
-    })
-    .then(response => {
-        console.log('Update response status:', response.status);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log('Update response data:', data);
-        if (data.success) {
-            console.log('Quantity updated successfully');
-            // Sync localStorage first
-            syncLocalStorageWithBackend();
-            // Then refresh popup content
-            setTimeout(() => {
-                refreshCartPopupContent();
-            }, 100);
-        } else {
-            if (quantitySpan) quantitySpan.textContent = originalText;
-            const errorMsg = data.message || 'An error occurred while updating quantity';
-            showAlert({
-                icon: 'error',
-                title: 'Unable to Update',
-                text: errorMsg,
-                confirmButtonText: 'Close',
-                confirmButtonColor: '#005366'
-            });
-        }
-    })
-    .catch(error => {
-        console.error('Error updating quantity:', error);
-        if (quantitySpan) quantitySpan.textContent = originalText;
-        const errorMsg = error.message || 'An error occurred';
-        showAlert({
-            icon: 'error',
-            title: 'Error',
-            text: errorMsg,
-            confirmButtonText: 'Close',
-            confirmButtonColor: '#005366'
-        });
-    });
-}
-
-function removeCartItemById(cartItemId) {
-    showAlert({
-        icon: 'question',
-        title: 'Confirm Removal',
-        text: 'Are you sure you want to remove this product from your cart?',
-        showCancelButton: true,
-        confirmButtonText: 'Remove',
-        cancelButtonText: 'Cancel',
-        confirmButtonColor: '#E2150C',
-        cancelButtonColor: '#6b7280',
-        customClass: {
-            popup: 'rounded-xl',
-            confirmButton: 'px-6 py-3 rounded-lg',
-            cancelButton: 'px-6 py-3 rounded-lg'
-        }
-    }).then((result) => {
-        if (!result.isConfirmed) return;
-        
-        console.log('Removing cart item:', cartItemId);
-        
-        fetch(`/api/cart/remove/${cartItemId}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-            }
-        })
-        .then(response => {
-            console.log('Remove response status:', response.status);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Remove response data:', data);
-            if (data.success) {
-                console.log('Item removed successfully');
-                // Sync localStorage
-                syncLocalStorageWithBackend();
-                // Refresh popup content
-                setTimeout(() => {
-                    refreshCartPopupContent();
-                }, 100);
-                // Show notification
-                showCartSuccess('Product removed from cart');
-            } else {
-                const errorMsg = data.message || 'An error occurred while removing the product';
-                showAlert({
-                    icon: 'error',
-                    title: 'Unable to Remove',
-                    text: errorMsg,
-                    confirmButtonText: 'Close',
-                    confirmButtonColor: '#005366'
-                });
-            }
-        })
-        .catch(error => {
-            console.error('Error removing item:', error);
-            const errorMsg = error.message || 'An error occurred';
-            showAlert({
-                icon: 'error',
-                title: 'Error',
-                text: errorMsg,
-                confirmButtonText: 'Close',
-                confirmButtonColor: '#005366'
-            });
-        });
-    });
-}
-function refreshCartPopupContent() {
-    // Fetch latest cart data and update popup
-    fetch('/api/cart/get', {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-        },
-        credentials: 'same-origin'
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success && data.cart_items) {
-            console.log('Refreshing popup with:', data.cart_items.length, 'items');
-            
-            // Update items container
-            const cartItemsContainer = document.getElementById('cart-popup-items');
-            if (cartItemsContainer) {
-                cartItemsContainer.innerHTML = generateCartPopupItems(data.cart_items);
-            }
-            
-            // Update totals
-            const totalItems = data.cart_items.reduce((sum, item) => sum + item.quantity, 0);
-            const summary = data.summary || {};
-            const currency = data.currency || CURRENT_CURRENCY || 'USD';
-            const currencyRate = parseFloat(data.currency_rate || 1.0);
-            
-            // Calculate base subtotal in USD for shipping calculation
-            let baseSubtotal = 0;
-            if (summary.base_subtotal !== undefined && summary.base_subtotal !== null) {
-                baseSubtotal = parseFloat(summary.base_subtotal);
-            } else if (data.cart_items && data.cart_items.length > 0) {
-                data.cart_items.forEach(item => {
-                    const itemPrice = parseFloat(item.price) || 0;
-                    let basePrice = 0;
-                    if (item.base_price_usd !== undefined && item.base_price_usd !== null) {
-                        basePrice = parseFloat(item.base_price_usd);
-                    } else {
-                        basePrice = currency !== 'USD' && currencyRate > 0 
-                            ? itemPrice / currencyRate 
-                            : itemPrice;
-                    }
-                    
-                    let customizationTotal = 0;
-                    if (item.customizations) {
-                        Object.values(item.customizations).forEach(customization => {
-                            if (customization && customization.price) {
-                                const customPrice = parseFloat(customization.price) || 0;
-                                let baseCustomPrice = 0;
-                                if (customization.base_price_usd !== undefined && customization.base_price_usd !== null) {
-                                    baseCustomPrice = parseFloat(customization.base_price_usd);
-                                } else {
-                                    baseCustomPrice = currency !== 'USD' && currencyRate > 0
-                                        ? customPrice / currencyRate
-                                        : customPrice;
+                        // Sync header badge
+                        fetch('{{ route("api.cart.get") }}', { method: 'GET', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                            .then(function(res) { return res.json(); })
+                            .then(function(cartData) {
+                                if (cartData.success && cartData.cart_items) {
+                                    var backendCart = cartData.cart_items.map(function(item) {
+                                        return {
+                                            id: item.product_id,
+                                            name: item.product && item.product.name ? item.product.name : '',
+                                            price: parseFloat(item.price) || 0,
+                                            quantity: item.quantity,
+                                            selectedVariant: item.selected_variant || null,
+                                            customizations: item.customizations || null,
+                                            addedAt: Date.now()
+                                        };
+                                    });
+                                    try {
+                                        localStorage.setItem('cart', JSON.stringify(backendCart));
+                                        window.dispatchEvent(new CustomEvent('cartUpdated'));
+                                    } catch (e) {}
                                 }
-                                customizationTotal += baseCustomPrice;
-                            }
-                        });
+                                window.dispatchEvent(new CustomEvent('cartDrawerOpen'));
+                            })
+                            .catch(function() { window.dispatchEvent(new CustomEvent('cartDrawerOpen')); });
+                    } else {
+                        showToast(data.message || 'Could not add to cart.');
                     }
-                    
-                    baseSubtotal += (basePrice + customizationTotal) * item.quantity;
+                })
+                .catch(function() {
+                    addBtn.disabled = false;
+                    showToast('Could not add to cart. Please try again.');
                 });
-            } else if (summary.subtotal !== undefined && summary.subtotal !== null) {
-                const providedSubtotal = parseFloat(summary.subtotal);
-                baseSubtotal = currency !== 'USD' && currencyRate > 0 
-                    ? providedSubtotal / currencyRate 
-                    : providedSubtotal;
-            }
-            
-            // Calculate converted subtotal for display
-            const convertedSubtotal = summary.converted_subtotal !== undefined 
-                ? parseFloat(summary.converted_subtotal) 
-                : (currency !== 'USD' ? baseSubtotal * currencyRate : baseSubtotal);
-            
-            // Get selected zone from localStorage or use default
-            let selectedZoneId = localStorage.getItem('selectedShippingZoneId');
-            if (selectedZoneId) {
-                // Check if it's in format "zone_id:country_code" or just zone_id
-                let zoneIdToCheck = selectedZoneId;
-                if (selectedZoneId.includes(':')) {
-                    zoneIdToCheck = selectedZoneId.split(':')[0];
-                }
-                
-                // Check if it's a general domain zone (starts with 'general_') or a numeric ID
-                if (zoneIdToCheck.toString().startsWith('general_')) {
-                    // Keep as string for general domain zones
-                    // Verify zone exists in zones with countries or regular zones
-                    const existsInZonesWithCountries = SHIPPING_ZONES_WITH_COUNTRIES && SHIPPING_ZONES_WITH_COUNTRIES.some(z => z.id === zoneIdToCheck);
-                    const existsInZones = SHIPPING_ZONES && SHIPPING_ZONES.some(z => z.id === zoneIdToCheck);
-                    if (!existsInZonesWithCountries && !existsInZones) {
-                        selectedZoneId = DEFAULT_SHIPPING_ZONE_ID;
-                    }
-                } else {
-                    // Parse as integer for regular zones
-                    const parsed = parseInt(zoneIdToCheck);
-                    if (!isNaN(parsed)) {
-                        // Verify zone exists
-                        const existsInZonesWithCountries = SHIPPING_ZONES_WITH_COUNTRIES && SHIPPING_ZONES_WITH_COUNTRIES.some(z => z.id === parsed);
-                        const existsInZones = SHIPPING_ZONES && SHIPPING_ZONES.some(z => z.id === parsed);
-                        if (!existsInZonesWithCountries && !existsInZones) {
-                            selectedZoneId = DEFAULT_SHIPPING_ZONE_ID;
-                        }
-                    } else {
-                        selectedZoneId = DEFAULT_SHIPPING_ZONE_ID;
-                    }
-                }
-            } else {
-                selectedZoneId = DEFAULT_SHIPPING_ZONE_ID;
-            }
-            
-            // Calculate shipping cost
-            const shippingInfo = calculateShippingCost(data.cart_items, baseSubtotal, selectedZoneId);
-            const shippingCost = shippingInfo.costConverted;
-            
-            // Update dropdown if exists
-            const zoneSelect = document.getElementById('shipping-zone-select');
-            if (zoneSelect) {
-                zoneSelect.value = selectedZoneId || '';
-            }
-            
-            // Calculate total price including shipping
-            const totalPrice = convertedSubtotal + shippingCost;
-            
-            // Update subtotal - find by text content "Subtotal"
-            const allTotalElements = document.querySelectorAll('#cart-popup-overlay .space-y-2 .flex.justify-between');
-            allTotalElements.forEach(element => {
-                const firstSpan = element.querySelector('span:first-child');
-                if (firstSpan && firstSpan.textContent.includes('Subtotal')) {
-                    const subtotalSpan = element.querySelector('span:last-child');
-                    const subtotalLabel = element.querySelector('span:first-child');
-                    if (subtotalSpan) subtotalSpan.textContent = `${CURRENCY_SYMBOL}${convertedSubtotal.toFixed(2)}`;
-                    if (subtotalLabel) subtotalLabel.textContent = `Subtotal (${totalItems} items)`;
-                }
-                
-                // Update shipping cost
-                if (firstSpan && firstSpan.textContent.includes('Shipping')) {
-                    const shippingSpan = element.querySelector('span:last-child');
-                    if (shippingInfo.available === false) {
-                        if (shippingSpan) {
-                            shippingSpan.textContent = 'N/A';
-                            shippingSpan.classList.add('text-red-600');
-                        }
-                        if (firstSpan) {
-                            firstSpan.textContent = 'Shipping not available for this area';
-                            firstSpan.classList.add('text-red-600');
-                        }
-                    } else {
-                        if (shippingSpan) {
-                            shippingSpan.textContent = `${CURRENCY_SYMBOL}${shippingCost.toFixed(2)}`;
-                            shippingSpan.classList.remove('text-red-600');
-                        }
-                        // Update shipping label with zone name or rate name
-                        if (firstSpan) {
-                            firstSpan.textContent = `Shipping${shippingInfo.zoneName ? ` (${shippingInfo.zoneName})` : shippingInfo.name ? ` (${shippingInfo.name})` : ''}`;
-                            firstSpan.classList.remove('text-red-600');
-                        }
-                    }
-                }
-            });
-            
-            // If shipping row doesn't exist, add it
-            const hasShippingRow = Array.from(allTotalElements).some(element => {
-                const firstSpan = element.querySelector('span:first-child');
-                return firstSpan && firstSpan.textContent.includes('Shipping');
-            });
-            
-            if (!hasShippingRow) {
-                const totalsSection = document.querySelector('#cart-popup-overlay .space-y-2');
-                if (totalsSection) {
-                    const shippingRow = document.createElement('div');
-                    shippingRow.className = 'flex justify-between text-gray-600';
-                    shippingRow.innerHTML = `
-                        <span>Shipping${shippingInfo.name ? ` (${shippingInfo.name})` : ''}</span>
-                        <span class="font-semibold">${CURRENCY_SYMBOL}${shippingCost.toFixed(2)}</span>
-                    `;
-                    // Insert before the border-t element (total row)
-                    const totalRow = totalsSection.parentElement.querySelector('.border-t.pt-3');
-                    if (totalRow) {
-                        totalsSection.insertBefore(shippingRow, totalRow);
-                    } else {
-                        totalsSection.appendChild(shippingRow);
-                    }
-                }
-            }
-            
-            
-            // Update exchange rate display if needed
-            const exchangeRateDisplay = document.querySelector('#cart-popup-overlay .text-xs.text-gray-500.bg-gray-50');
-            if (currency !== 'USD' && currencyRate !== 1.0) {
-                if (!exchangeRateDisplay) {
-                    // Add exchange rate display before subtotal
-                    if (totalsSection) {
-                        const exchangeRateDiv = document.createElement('div');
-                        exchangeRateDiv.className = 'text-xs text-gray-500 bg-gray-50 p-2 rounded-lg border border-gray-200 mb-3';
-                        exchangeRateDiv.innerHTML = `
-                            <div class="flex justify-between items-center">
-                                <span>Exchange Rate:</span>
-                                <span class="font-medium">1 USD = ${currencyRate.toFixed(4)} ${currency}</span>
-                            </div>
-                            <div class="text-[10px] text-gray-400 mt-1">
-                                Prices converted from USD
-                            </div>
-                        `;
-                        totalsSection.insertBefore(exchangeRateDiv, totalsSection.firstChild);
-                    }
-                }
-            } else if (exchangeRateDisplay) {
-                exchangeRateDisplay.remove();
-            }
-            
-            // Update total
-            const totalElement = document.querySelector('#cart-popup-overlay .border-t.pt-3 span:last-child');
-            if (totalElement) {
-                totalElement.textContent = `${CURRENCY_SYMBOL}${totalPrice.toFixed(2)}`;
-            }
-            
-            // Update header cart count
-            updateCartCount();
-            
-            // Setup event delegation after refresh
-            setTimeout(() => {
-                setupCartPopupEventDelegation();
-            }, 100);
-            
-            // If cart is empty, close popup
-            if (data.cart_items.length === 0) {
-                closeCartPopup();
-                showCartSuccess('Cart is empty');
-            }
-        }
-    })
-    .catch(error => {
-        console.error('Failed to refresh popup:', error);
-        // Don't close popup, just show error in items area
-        const cartItemsContainer = document.getElementById('cart-popup-items');
-        if (cartItemsContainer) {
-            cartItemsContainer.innerHTML = `
-                <div class="text-center py-4">
-                    <p class="text-red-600">Unable to update cart</p>
-                    <p class="text-sm text-gray-500">${error.message}</p>
-                    <button onclick="refreshCartPopupContent()" class="mt-2 text-[#005366] hover:underline">Try again</button>
-        </div>
-            `;
-        }
-    });
-}
-
-function closeCartPopup() {
-    const overlay = document.getElementById('cart-popup-overlay');
-    if (overlay) {
-        const popup = overlay.querySelector('.cart-popup-content');
-        if (popup) {
-            popup.classList.add('cart-popup-exit');
-            setTimeout(() => {
-                overlay.remove();
-            }, 200);
-        } else {
-            overlay.remove();
-        }
-    }
-}
-
-/**
- * Update shipping zone and recalculate shipping cost
- * @param {string|number} zoneId - Selected shipping zone ID
- */
-function updateShippingZone(zoneId) {
-    if (!zoneId) return;
-    
-    // Extract zone_id from value if format is "zone_id:country_code"
-    let actualZoneId = zoneId;
-    if (typeof zoneId === 'string' && zoneId.includes(':')) {
-        actualZoneId = zoneId.split(':')[0];
-    }
-    
-    // Check if it's a general domain zone (starts with 'general_') or a numeric ID
-    // For general domain zones, keep as string; for regular zones, parse as integer
-    if (!actualZoneId.toString().startsWith('general_')) {
-        const parsed = parseInt(actualZoneId);
-        if (!isNaN(parsed)) {
-            actualZoneId = parsed;
-        }
-    }
-    
-    // Save selected zone to localStorage (save the full value including country code)
-    localStorage.setItem('selectedShippingZoneId', zoneId);
-    
-    // Get current cart items from popup
-    const cartItemsContainer = document.getElementById('cart-popup-items');
-    if (!cartItemsContainer) return;
-    
-    // Fetch latest cart data to get accurate items
-    fetch('/api/cart/get', {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-        },
-        credentials: 'same-origin'
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success && data.cart_items) {
-            const summary = data.summary || {};
-            const currency = data.currency || CURRENT_CURRENCY || 'USD';
-            const currencyRate = parseFloat(data.currency_rate || 1.0);
-            
-            // Calculate base subtotal in USD
-            let baseSubtotal = 0;
-            if (summary.base_subtotal !== undefined && summary.base_subtotal !== null) {
-                baseSubtotal = parseFloat(summary.base_subtotal);
-            } else if (data.cart_items && data.cart_items.length > 0) {
-                data.cart_items.forEach(item => {
-                    const itemPrice = parseFloat(item.price) || 0;
-                    let basePrice = 0;
-                    if (item.base_price_usd !== undefined && item.base_price_usd !== null) {
-                        basePrice = parseFloat(item.base_price_usd);
-                    } else {
-                        basePrice = currency !== 'USD' && currencyRate > 0 
-                            ? itemPrice / currencyRate 
-                            : itemPrice;
-                    }
-                    
-                    let customizationTotal = 0;
-                    if (item.customizations) {
-                        Object.values(item.customizations).forEach(customization => {
-                            if (customization && customization.price) {
-                                const customPrice = parseFloat(customization.price) || 0;
-                                let baseCustomPrice = 0;
-                                if (customization.base_price_usd !== undefined && customization.base_price_usd !== null) {
-                                    baseCustomPrice = parseFloat(customization.base_price_usd);
-                                } else {
-                                    baseCustomPrice = currency !== 'USD' && currencyRate > 0
-                                        ? customPrice / currencyRate
-                                        : customPrice;
-                                }
-                                customizationTotal += baseCustomPrice;
-                            }
-                        });
-                    }
-                    
-                    baseSubtotal += (basePrice + customizationTotal) * item.quantity;
-                });
-            } else if (summary.subtotal !== undefined && summary.subtotal !== null) {
-                const providedSubtotal = parseFloat(summary.subtotal);
-                baseSubtotal = currency !== 'USD' && currencyRate > 0 
-                    ? providedSubtotal / currencyRate 
-                    : providedSubtotal;
-            }
-            
-            // Calculate converted subtotal
-            const subtotal = summary.converted_subtotal !== undefined 
-                ? parseFloat(summary.converted_subtotal) 
-                : (currency !== 'USD' ? baseSubtotal * currencyRate : baseSubtotal);
-            
-            // Calculate shipping cost with new zone
-            const shippingInfo = calculateShippingCost(data.cart_items, baseSubtotal, zoneId);
-            const shippingCost = shippingInfo.costConverted;
-            const totalPrice = subtotal + shippingCost;
-            
-            // Update shipping cost display
-            const allTotalElements = document.querySelectorAll('#cart-popup-overlay .space-y-2 .flex.justify-between');
-            allTotalElements.forEach(element => {
-                const firstSpan = element.querySelector('span:first-child');
-                if (firstSpan && firstSpan.textContent.includes('Shipping')) {
-                    const shippingSpan = element.querySelector('span:last-child');
-                    if (shippingSpan) {
-                        shippingSpan.textContent = `${CURRENCY_SYMBOL}${shippingCost.toFixed(2)}`;
-                    }
-                    // Update shipping label
-                    if (firstSpan) {
-                        firstSpan.textContent = `Shipping${shippingInfo.zoneName ? ` (${shippingInfo.zoneName})` : shippingInfo.name ? ` (${shippingInfo.name})` : ''}`;
-                    }
-                }
-            });
-            
-            // Update total
-            const totalElement = document.querySelector('#cart-popup-overlay .border-t.pt-3 span:last-child');
-            if (totalElement) {
-                totalElement.textContent = `${CURRENCY_SYMBOL}${totalPrice.toFixed(2)}`;
-            }
-        }
-    })
-    .catch(error => {
-        console.error('Failed to update shipping zone:', error);
-    });
-}
-
-function triggerCheckoutTrackingFromLocalCart() {
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-
-    if (cart.length === 0) {
-        return;
-    }
-
-    let cartTotal = 0;
-    const productIds = [];
-
-    const gaItems = cart.map((item, index) => {
-        const quantity = parseInt(item.quantity, 10) || 1;
-        const unitPrice = parseFloat(item.price) || 0;
-        cartTotal += unitPrice * quantity;
-        productIds.push(item.id);
-
-        const gaItem = {
-            item_id: (item.selectedVariant && item.selectedVariant.id) ? String(item.selectedVariant.id) : String(item.id),
-            item_name: item.name || `Cart Item ${index + 1}`,
-            price: Number(unitPrice.toFixed(2)),
-            quantity
-        };
-
-        if (item.selectedVariant && item.selectedVariant.attributes) {
-            const variantAttributes = Object.values(item.selectedVariant.attributes || {}).filter(Boolean);
-            if (variantAttributes.length > 0) {
-                gaItem.item_variant = variantAttributes.join(' / ');
-            }
-        }
-
-        return gaItem;
-    });
-
-    if (typeof fbq !== 'undefined') {
-        fbq('track', 'InitiateCheckout', {
-            content_ids: productIds,
-            content_type: 'product',
-            value: cartTotal.toFixed(2),
-            currency: CURRENT_CURRENCY,
-            num_items: cart.length
-        });
-
-        console.log('✅ Facebook Pixel: InitiateCheckout tracked from popup/cart', {
-            items: cart.length,
-            total: cartTotal.toFixed(2),
-            ids: productIds
         });
     }
 
-    // Event tracking được xử lý bởi GTM thông qua dataLayer
-    if (typeof dataLayer !== 'undefined') {
-        dataLayer.push({
-            'event': 'begin_checkout',
-            'currency': CURRENT_CURRENCY,
-            'value': Number(cartTotal.toFixed(2)),
-            'items': gaItems
-        });
-
-        console.log('✅ GTM: begin_checkout tracked from popup/cart', {
-            items: gaItems.length,
-            value: cartTotal.toFixed(2)
-        });
-    }
-}
-
-function goToCheckoutFromPopup() {
-    triggerCheckoutTrackingFromLocalCart();
-    closeCartPopup();
-    window.location.href = '{{ route("checkout.index") }}';
-}
-
-@php
-    $crossSellData = $relatedProducts->map(function($product) {
-        $media = $product->getEffectiveMedia();
-        
-        // Get image URL safely
-        $imageUrl = null;
-        if ($media && count($media) > 0) {
-            if (is_string($media[0])) {
-                $imageUrl = $media[0];
-            } elseif (is_array($media[0])) {
-                $imageUrl = $media[0]['url'] ?? $media[0]['path'] ?? reset($media[0]) ?? null;
-            }
-        }
-        
-        return [
-            'id' => $product->id,
-            'name' => $product->name,
-            'slug' => $product->slug,
-            'price' => $product->base_price,
-            'image' => $imageUrl,
-            'has_variants' => $product->variants()->count() > 0,
-        ];
-    })->toArray();
-@endphp
-
-function generateCrossSellProducts() {
-    // Get related products from the page
-    const relatedProducts = @json($crossSellData ?? []);
-    
-    if (!relatedProducts || relatedProducts.length === 0) {
-        return '<p class="col-span-2 sm:col-span-4 text-center text-gray-500 py-4">No recommendations available</p>';
-    }
-    
-    // Take first 4 related products for cross-sell
-    const crossSellProducts = relatedProducts.slice(0, 4);
-    
-    return crossSellProducts.map(product => `
-        <div class="border border-gray-200 rounded-lg p-3 hover:border-[#005366] transition-colors cursor-pointer cross-sell-product relative" 
-             data-product-id="${product.id}"
-             data-product-name="${product.name}"
-             data-product-price="${product.price}"
-             data-product-image="${product.image || ''}"
-             data-product-slug="${product.slug}"
-             data-has-variants="${product.has_variants}">
-            ${product.image && product.image !== 'undefined' && product.image !== '' ? `
-                <div class="relative">
-                    <img src="${product.image}" 
-                     alt="${product.name}" 
-                         class="w-full h-24 object-cover rounded-md mb-2"
-                         onerror="this.parentElement.innerHTML='<div class=\\'w-full h-24 bg-gray-200 rounded-md mb-2 flex items-center justify-center\\'><svg class=\\'w-8 h-8 text-gray-400\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'2\\' d=\\'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z\\'></path></svg></div>'">
-                    ${product.has_variants ? `
-                        <div class="absolute top-1 left-1 bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium flex items-center space-x-0.5">
-                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
-                            </svg>
-                            <span>Options</span>
-                        </div>
-                    ` : ''}
-                </div>
-            ` : `
-                <div class="w-full h-24 bg-gray-200 rounded-md mb-2 flex items-center justify-center">
-                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                </div>
-            `}
-            <h4 class="font-medium text-gray-900 text-xs line-clamp-2 mb-1">${product.name}</h4>
-            <div class="flex items-center justify-between">
-                <div class="flex flex-col">
-                    <span class="text-sm font-bold text-[#005366]">${CURRENCY_SYMBOL}${product.price}</span>
-                    ${product.originalPrice && product.originalPrice > product.price ? `
-                        <span class="text-xs text-gray-500 line-through">${CURRENCY_SYMBOL}${product.originalPrice}</span>
-                    ` : ''}
-                </div>
-                <button class="cross-sell-add-btn bg-[#005366] text-white text-xs px-3 py-1 rounded hover:bg-[#003d4d] transition-colors flex items-center space-x-1">
-                    ${product.has_variants ? `
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                        </svg>
-                        <span>Select</span>
-                    ` : `
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                        </svg>
-                        <span>Add</span>
-                    `}
-                </button>
-            </div>
-        </div>
-    `).join('');
-}
-
-// Handle cross-sell product click
-function handleCrossSellClick(productId, productName, productPrice, productImage, productSlug, hasVariants) {
-    if (hasVariants) {
-        // If product has variants, redirect to product page to select
-        window.location.href = `/products/${productSlug}`;
-    } else {
-        // If no variants, add directly to cart
-        addCrossSellToCart(productId, productName, productPrice, productImage);
-    }
-}
-
-function addCrossSellToCart(productId, productName, productPrice, productImage) {
-    const crossSellProduct = {
-        id: productId,
-        name: productName,
-        price: productPrice,
-        image: productImage && productImage !== 'undefined' && productImage !== '' ? productImage : null,
-        quantity: 1,
-        addedAt: Date.now()
-    };
-    
-    // Add to localStorage
-    addToLocalCart(crossSellProduct);
-    
-    // Sync with backend
-    fetch('/api/cart/add', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        },
-        body: JSON.stringify({
-            id: productId,
-            quantity: 1,
-            price: productPrice,
-            selectedVariant: null,
-            customizations: null
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            syncLocalStorageWithBackend();
-            // Refresh popup content
-            refreshCartPopupContent();
-            showCartSuccess('Product added to cart successfully!');
-        }
-    })
-    .catch(error => {
-        console.error('Failed to add cross-sell product:', error);
-        showAlert({
-            icon: 'error',
-            title: 'Unable to Add',
-            text: 'An error occurred while adding the product to cart',
-            confirmButtonText: 'Close',
-            confirmButtonColor: '#005366'
-        });
-    });
-}
-
-
-// Legacy functions for backward compatibility - redirecting to new functions
-function updateCartQuantity(index, newQuantity) {
-    console.warn('Legacy updateCartQuantity called with index:', index);
-    // This should not be used anymore as we're using backend IDs
-    // Refresh the popup to get correct IDs
-    refreshCartPopupContent();
-}
-
-function removeCartItem(index) {
-    console.warn('Legacy removeCartItem called with index:', index);
-    // This should not be used anymore as we're using backend IDs
-    // Refresh the popup to get correct IDs
-    refreshCartPopupContent();
-}
-function syncLocalStorageWithBackend() {
-    // Fetch current cart from backend
-    fetch('/api/cart/get', {
-        method: 'GET',
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success && data.cart_items) {
-            // Convert backend cart items to localStorage format with full product info
-            const backendCart = data.cart_items.map(item => {
-                const product = item.product || {};
-                const shop = product.shop || {};
-                
-                // Get image from media
-                let productImage = null;
-                if (product.media) {
-                    if (Array.isArray(product.media) && product.media.length > 0) {
-                        const firstMedia = product.media[0];
-                        productImage = typeof firstMedia === 'object' ? (firstMedia.url || firstMedia) : firstMedia;
-                    } else if (typeof product.media === 'string') {
-                        productImage = product.media;
-                    }
-                }
-                
-                return {
-                    cart_item_id: item.id, // Backend cart item ID
-                id: item.product_id,
-                    name: product.name || 'Unknown Product',
-                    slug: product.slug || '',
-                price: parseFloat(item.price),
-                    image: productImage,
-                    shop: shop.name || 'Unknown Shop',
-                    shop_slug: shop.shop_slug || '',
-                quantity: item.quantity,
-                selectedVariant: item.selected_variant,
-                customizations: item.customizations,
-                addedAt: Date.now()
-                };
-            });
-            
-            // Update localStorage to match backend
-            localStorage.setItem('cart', JSON.stringify(backendCart));
-            
-            // Update header count
-            updateCartCount();
-            
-            console.log('LocalStorage synced with backend:', backendCart);
-        }
-    })
-    .catch(error => {
-        console.error('Failed to sync with backend:', error);
-    });
-}
-
-// Initialize cart count on page load
-document.addEventListener('DOMContentLoaded', function() {
-    // Try to sync localStorage with backend on page load
-    syncLocalStorageWithBackend();
-});
-
-// Customization Functions
-function toggleCustomization() {
-    const checkbox = document.getElementById('enable-customization');
-    const container = document.getElementById('customization-container');
-    const priceDisplay = document.getElementById('customization-price-display');
-    
-    if (checkbox.checked) {
-        container.classList.remove('hidden');
-        updateCustomizationPrice();
-    } else {
-        container.classList.add('hidden');
-        priceDisplay.classList.add('hidden');
-        
-        // Clear all customization inputs
-        const inputs = container.querySelectorAll('.customization-input');
-        inputs.forEach(input => {
-            if (input.type === 'radio' || input.type === 'checkbox') {
-                input.checked = false;
-            } else {
-                input.value = '';
-            }
-        });
-        
-        updateCustomizationPrice();
-    }
-}
-
-function updateCustomizationPrice() {
-    const checkbox = document.getElementById('enable-customization');
-    
-    // If customization is not enabled, don't calculate
-    if (!checkbox || !checkbox.checked) {
-        return;
-    }
-    
-    let customizationTotal = 0;
-    
-    // Get all customization inputs
-    const inputs = document.querySelectorAll('.customization-input');
-    
-    inputs.forEach(input => {
-        if (input.type === 'radio') {
-            // For radio buttons, only count if checked
-            if (input.checked) {
-                const price = parseFloat(input.dataset.price) || 0;
-                customizationTotal += price;
-            }
-        } else if (input.type === 'checkbox') {
-            // For checkboxes, only count if checked
-            if (input.checked) {
-                const price = parseFloat(input.dataset.price) || 0;
-                customizationTotal += price;
-            }
-        } else {
-            // For text/textarea inputs, count if has value
-            if (input.value.trim() !== '') {
-                const price = parseFloat(input.dataset.price) || 0;
-                customizationTotal += price;
-            }
-        }
-    });
-    
-    // Update display
-    const basePriceElement = document.getElementById('base-price');
-    // Sử dụng data-price-converted (đã convert) thay vì data-price (USD gốc)
-    const basePrice = parseFloat(basePriceElement.dataset.priceConverted || basePriceElement.dataset.price) || 0;
-    const totalPrice = basePrice + customizationTotal;
-    
-    const customizationPriceElement = document.getElementById('customization-price');
-    const totalPriceElement = document.getElementById('total-price');
-    const priceDisplay = document.getElementById('customization-price-display');
-    
-    if (customizationTotal > 0) {
-        priceDisplay.classList.remove('hidden');
-        customizationPriceElement.textContent = '+' + CURRENCY_SYMBOL + customizationTotal.toFixed(2);
-        totalPriceElement.textContent = CURRENCY_SYMBOL + totalPrice.toFixed(2);
-    } else {
-        priceDisplay.classList.add('hidden');
-    }
-}
-
-// Size Guide Modal Functions
-let currentGender = 'male';
-let currentUnit = 'cm';
-
-// Size data for different product types and genders
-const sizeData = {
-    'baseball-jackets': {
-        male: {
-            'LENGTH': { 'S': 66, 'M': 69, 'L': 71, 'XL': 74, '2XL': 76, '3XL': 79, '4XL': 81, '5XL': 83 },
-            'BUST': { 'S': 102, 'M': 112, 'L': 122, 'XL': 132, '2XL': 142, '3XL': 152, '4XL': 158, '5XL': 164 },
-            'SLEEVE': { 'S': 62, 'M': 63, 'L': 65, 'XL': 66, '2XL': 67, '3XL': 68, '4XL': 69, '5XL': 70 }
-        },
-        female: {
-            'LENGTH': { 'S': 60, 'M': 63, 'L': 66, 'XL': 69, '2XL': 71, '3XL': 74, '4XL': 76, '5XL': 78 },
-            'BUST': { 'S': 86, 'M': 91, 'L': 97, 'XL': 102, '2XL': 107, '3XL': 112, '4XL': 117, '5XL': 122 },
-            'SLEEVE': { 'S': 58, 'M': 59, 'L': 60, 'XL': 61, '2XL': 62, '3XL': 63, '4XL': 64, '5XL': 65 }
-        },
-        youth: {
-            'LENGTH': { 'S': 50, 'M': 53, 'L': 56, 'XL': 59, '2XL': 62, '3XL': 65, '4XL': 68, '5XL': 71 },
-            'BUST': { 'S': 66, 'M': 71, 'L': 76, 'XL': 81, '2XL': 86, '3XL': 91, '4XL': 96, '5XL': 102 },
-            'SLEEVE': { 'S': 45, 'M': 47, 'L': 49, 'XL': 51, '2XL': 53, '3XL': 55, '4XL': 57, '5XL': 59 }
-        },
-        unisex: {
-            'LENGTH': { 'S': 66, 'M': 69, 'L': 71, 'XL': 74, '2XL': 76, '3XL': 79, '4XL': 81, '5XL': 83 },
-            'BUST': { 'S': 102, 'M': 112, 'L': 122, 'XL': 132, '2XL': 142, '3XL': 152, '4XL': 158, '5XL': 164 },
-            'SLEEVE': { 'S': 62, 'M': 63, 'L': 65, 'XL': 66, '2XL': 67, '3XL': 68, '4XL': 69, '5XL': 70 }
-        },
-        kids: {
-            'LENGTH': { 'S': 40, 'M': 43, 'L': 46, 'XL': 49, '2XL': 52, '3XL': 55, '4XL': 58, '5XL': 61 },
-            'BUST': { 'S': 56, 'M': 61, 'L': 66, 'XL': 71, '2XL': 76, '3XL': 81, '4XL': 86, '5XL': 91 },
-            'SLEEVE': { 'S': 35, 'M': 37, 'L': 39, 'XL': 41, '2XL': 43, '3XL': 45, '4XL': 47, '5XL': 49 }
-        }
-    },
-    't-shirts': {
-        male: {
-            'LENGTH': { 'S': 70, 'M': 72, 'L': 74, 'XL': 76, '2XL': 78, '3XL': 80, '4XL': 82, '5XL': 84 },
-            'BUST': { 'S': 96, 'M': 101, 'L': 106, 'XL': 111, '2XL': 116, '3XL': 121, '4XL': 126, '5XL': 131 },
-            'SLEEVE': { 'S': 20, 'M': 21, 'L': 22, 'XL': 23, '2XL': 24, '3XL': 25, '4XL': 26, '5XL': 27 }
-        },
-        female: {
-            'LENGTH': { 'S': 64, 'M': 66, 'L': 68, 'XL': 70, '2XL': 72, '3XL': 74, '4XL': 76, '5XL': 78 },
-            'BUST': { 'S': 86, 'M': 91, 'L': 97, 'XL': 102, '2XL': 107, '3XL': 112, '4XL': 117, '5XL': 122 },
-            'SLEEVE': { 'S': 18, 'M': 19, 'L': 20, 'XL': 21, '2XL': 22, '3XL': 23, '4XL': 24, '5XL': 25 }
-        },
-        youth: {
-            'LENGTH': { 'S': 50, 'M': 53, 'L': 56, 'XL': 59, '2XL': 62, '3XL': 65, '4XL': 68, '5XL': 71 },
-            'BUST': { 'S': 66, 'M': 71, 'L': 76, 'XL': 81, '2XL': 86, '3XL': 91, '4XL': 96, '5XL': 102 },
-            'SLEEVE': { 'S': 15, 'M': 16, 'L': 17, 'XL': 18, '2XL': 19, '3XL': 20, '4XL': 21, '5XL': 22 }
-        },
-        unisex: {
-            'LENGTH': { 'S': 70, 'M': 72, 'L': 74, 'XL': 76, '2XL': 78, '3XL': 80, '4XL': 82, '5XL': 84 },
-            'BUST': { 'S': 96, 'M': 101, 'L': 106, 'XL': 111, '2XL': 116, '3XL': 121, '4XL': 126, '5XL': 131 },
-            'SLEEVE': { 'S': 20, 'M': 21, 'L': 22, 'XL': 23, '2XL': 24, '3XL': 25, '4XL': 26, '5XL': 27 }
-        },
-        kids: {
-            'LENGTH': { 'S': 40, 'M': 43, 'L': 46, 'XL': 49, '2XL': 52, '3XL': 55, '4XL': 58, '5XL': 61 },
-            'BUST': { 'S': 56, 'M': 61, 'L': 66, 'XL': 71, '2XL': 76, '3XL': 81, '4XL': 86, '5XL': 91 },
-            'SLEEVE': { 'S': 15, 'M': 16, 'L': 17, 'XL': 18, '2XL': 19, '3XL': 20, '4XL': 21, '5XL': 22 }
-        }
-    },
-    'hoodies': {
-        male: {
-            'LENGTH': { 'S': 68, 'M': 70, 'L': 72, 'XL': 74, '2XL': 76, '3XL': 78, '4XL': 80, '5XL': 82 },
-            'BUST': { 'S': 104, 'M': 109, 'L': 114, 'XL': 119, '2XL': 124, '3XL': 129, '4XL': 134, '5XL': 139 },
-            'SLEEVE': { 'S': 64, 'M': 65, 'L': 66, 'XL': 67, '2XL': 68, '3XL': 69, '4XL': 70, '5XL': 71 }
-        },
-        female: {
-            'LENGTH': { 'S': 62, 'M': 64, 'L': 66, 'XL': 68, '2XL': 70, '3XL': 72, '4XL': 74, '5XL': 76 },
-            'BUST': { 'S': 88, 'M': 93, 'L': 98, 'XL': 103, '2XL': 108, '3XL': 113, '4XL': 118, '5XL': 123 },
-            'SLEEVE': { 'S': 60, 'M': 61, 'L': 62, 'XL': 63, '2XL': 64, '3XL': 65, '4XL': 66, '5XL': 67 }
-        },
-        youth: {
-            'LENGTH': { 'S': 48, 'M': 51, 'L': 54, 'XL': 57, '2XL': 60, '3XL': 63, '4XL': 66, '5XL': 69 },
-            'BUST': { 'S': 68, 'M': 73, 'L': 78, 'XL': 83, '2XL': 88, '3XL': 93, '4XL': 98, '5XL': 103 },
-            'SLEEVE': { 'S': 47, 'M': 49, 'L': 51, 'XL': 53, '2XL': 55, '3XL': 57, '4XL': 59, '5XL': 61 }
-        },
-        unisex: {
-            'LENGTH': { 'S': 68, 'M': 70, 'L': 72, 'XL': 74, '2XL': 76, '3XL': 78, '4XL': 80, '5XL': 82 },
-            'BUST': { 'S': 104, 'M': 109, 'L': 114, 'XL': 119, '2XL': 124, '3XL': 129, '4XL': 134, '5XL': 139 },
-            'SLEEVE': { 'S': 64, 'M': 65, 'L': 66, 'XL': 67, '2XL': 68, '3XL': 69, '4XL': 70, '5XL': 71 }
-        },
-        kids: {
-            'LENGTH': { 'S': 38, 'M': 41, 'L': 44, 'XL': 47, '2XL': 50, '3XL': 53, '4XL': 56, '5XL': 59 },
-            'BUST': { 'S': 58, 'M': 63, 'L': 68, 'XL': 73, '2XL': 78, '3XL': 83, '4XL': 88, '5XL': 93 },
-            'SLEEVE': { 'S': 37, 'M': 39, 'L': 41, 'XL': 43, '2XL': 45, '3XL': 47, '4XL': 49, '5XL': 51 }
-        }
-    }
-};
-
-function openSizeGuide() {
-    const modal = document.getElementById('size-guide-modal');
-    modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-    updateSizeTable();
-}
-
-function closeSizeGuide() {
-    const modal = document.getElementById('size-guide-modal');
-    modal.classList.add('hidden');
-    document.body.style.overflow = 'auto';
-}
-
-function selectGender(gender) {
-    currentGender = gender;
-    
-    // Update button styles
-    document.querySelectorAll('[id^="gender-"]').forEach(btn => {
-        btn.classList.remove('bg-[#005366]', 'text-white');
-        btn.classList.add('bg-gray-100', 'text-gray-700');
-    });
-    
-    document.getElementById(`gender-${gender}`).classList.remove('bg-gray-100', 'text-gray-700');
-    document.getElementById(`gender-${gender}`).classList.add('bg-[#005366]', 'text-white');
-    
-    updateSizeTable();
-}
-
-function selectUnit(unit) {
-    currentUnit = unit;
-    
-    // Update button styles
-    document.querySelectorAll('[id^="unit-"]').forEach(btn => {
-        btn.classList.remove('bg-[#005366]', 'text-white');
-        btn.classList.add('bg-gray-100', 'text-gray-700');
-    });
-    
-    document.getElementById(`unit-${unit}`).classList.remove('bg-gray-100', 'text-gray-700');
-    document.getElementById(`unit-${unit}`).classList.add('bg-[#005366]', 'text-white');
-    
-    updateSizeTable();
-}
-function updateSizeTable() {
-    const productType = document.getElementById('product-type-selector').value;
-    const tableBody = document.getElementById('size-table-body');
-    
-    if (!sizeData[productType] || !sizeData[productType][currentGender]) {
-        tableBody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-gray-500">No size data available for this selection</td></tr>';
-        return;
-    }
-    
-    const measurements = sizeData[productType][currentGender];
-    const sizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL'];
-    
-    let tableHTML = '';
-    
-    Object.entries(measurements).forEach(([measurement, values]) => {
-        tableHTML += '<tr class="border-b border-gray-100">';
-        tableHTML += `<td class="py-2 font-medium text-gray-700">${measurement}:</td>`;
-        
-        sizes.forEach(size => {
-            let value = values[size] || '-';
-            if (value !== '-' && currentUnit === 'inches') {
-                // Convert cm to inches (1 cm = 0.393701 inches)
-                value = Math.round(value * 0.393701);
-            }
-            tableHTML += `<td class="text-center py-2 text-gray-600">${value}</td>`;
-        });
-        
-        tableHTML += '</tr>';
-    });
-    
-    tableBody.innerHTML = tableHTML;
-}
-
-// Close modal on escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeSizeGuide();
-    }
-});
-
-// Close modal on overlay click
-document.addEventListener('DOMContentLoaded', function() {
-    const sizeGuideModal = document.getElementById('size-guide-modal');
-    if (sizeGuideModal) {
-        sizeGuideModal.addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeSizeGuide();
+    var shareBtn = document.getElementById('product-share-btn');
+    if (shareBtn) {
+        shareBtn.addEventListener('click', function() {
+            var url = window.location.href;
+            var title = (document.querySelector('h1') && document.querySelector('h1').textContent) ? document.querySelector('h1').textContent.trim() : @json($product->name);
+            if (navigator.share) {
+                navigator.share({ title: title, url: url }).catch(function() {});
+            } else if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(function() { showToast('Link copied!', 'success'); }).catch(function() {});
             }
         });
     }
-});
-</script>
-<!-- Size Guide Modal -->
-<div id="size-guide-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <!-- Modal Header -->
-        <div class="flex items-center justify-between p-6 border-b border-gray-200">
-            <h2 class="text-2xl font-bold text-gray-900">Size & Fit Info</h2>
-            <button onclick="closeSizeGuide()" class="text-gray-400 hover:text-gray-600 transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-            </button>
-        </div>
-        
-        <!-- Modal Content -->
-        <div class="p-6">
-            <!-- Introduction Text -->
-            <p class="text-gray-700 mb-6">
-                If you're in between sizes, order a size up as our items can shrink up to half a size in the wash.
-            </p>
-            
-            <!-- Gender/Age Selection Tabs -->
-            <div class="flex flex-wrap gap-2 mb-6">
-                <button onclick="selectGender('male')" id="gender-male" class="px-4 py-2 rounded-lg font-medium transition-colors bg-[#005366] text-white">
-                    Male
-                </button>
-                <button onclick="selectGender('female')" id="gender-female" class="px-4 py-2 rounded-lg font-medium transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200">
-                    Female
-                </button>
-                <button onclick="selectGender('youth')" id="gender-youth" class="px-4 py-2 rounded-lg font-medium transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200">
-                    Youth
-                </button>
-                <button onclick="selectGender('unisex')" id="gender-unisex" class="px-4 py-2 rounded-lg font-medium transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200">
-                    Unisex
-                </button>
-                <button onclick="selectGender('kids')" id="gender-kids" class="px-4 py-2 rounded-lg font-medium transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200">
-                    Kids
-                </button>
-            </div>
-            
-            <!-- Product Type Dropdown -->
-            <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Product Type</label>
-                <select id="product-type-selector" onchange="updateSizeTable()" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#005366] focus:border-transparent">
-                    <option value="baseball-jackets">Baseball Jackets</option>
-                    <option value="t-shirts">T-Shirts</option>
-                    <option value="hoodies">Hoodies</option>
-                    <option value="tank-tops">Tank Tops</option>
-                    <option value="long-sleeve">Long Sleeve</option>
-                </select>
-            </div>
-            
-            <!-- Size Table -->
-            <div class="bg-gray-50 rounded-lg p-4 mb-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Product Measurements</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead>
-                            <tr class="border-b border-gray-200">
-                                <th class="text-left py-2 font-medium text-gray-700">Size</th>
-                                <th class="text-center py-2 font-medium text-gray-700">S</th>
-                                <th class="text-center py-2 font-medium text-gray-700">M</th>
-                                <th class="text-center py-2 font-medium text-gray-700">L</th>
-                                <th class="text-center py-2 font-medium text-gray-700">XL</th>
-                                <th class="text-center py-2 font-medium text-gray-700">2XL</th>
-                                <th class="text-center py-2 font-medium text-gray-700">3XL</th>
-                                <th class="text-center py-2 font-medium text-gray-700">4XL</th>
-                                <th class="text-center py-2 font-medium text-gray-700">5XL</th>
-                            </tr>
-                        </thead>
-                        <tbody id="size-table-body">
-                            <!-- Table content will be populated by JavaScript -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <!-- Unit Selection -->
-            <div class="flex items-center justify-end space-x-2">
-                <button onclick="selectUnit('cm')" id="unit-cm" class="px-4 py-2 rounded-lg font-medium transition-colors bg-[#005366] text-white">
-                    cm
-                </button>
-                <button onclick="selectUnit('inches')" id="unit-inches" class="px-4 py-2 rounded-lg font-medium transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200">
-                    inches
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Share Modal -->
-<div id="share-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 p-6">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-2xl font-bold text-gray-900">Share product</h3>
-            <button onclick="closeShareModal()" class="text-gray-400 hover:text-gray-600">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-            </button>
-        </div>
-
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center mb-6">
-            <a id="share-mail" target="_blank" rel="noopener" class="group">
-                <div class="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-2 group-hover:scale-105 transition-transform">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8m-18 8h18a2 2 0 002-2V8a2 2 0 00-2-2H3a2 2 0 00-2 2v6a2 2 0 002 2z"></path>
-                    </svg>
-                </div>
-                <div class="text-sm font-medium">Mail</div>
-            </a>
-
-            <a id="share-facebook" target="_blank" rel="noopener" class="group">
-                <div class="w-14 h-14 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mx-auto mb-2 group-hover:scale-105 transition-transform">
-                    <svg class="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987H7.898v-2.89h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.463h-1.261c-1.243 0-1.63.772-1.63 1.562v1.875h2.773l-.443 2.89h-2.33V21.88C18.343 21.128 22 16.991 22 12"></path>
-                    </svg>
-                </div>
-                <div class="text-sm font-medium">Facebook</div>
-            </a>
-
-            <a id="share-pinterest" target="_blank" rel="noopener" class="group">
-                <div class="w-14 h-14 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-2 group-hover:scale-105 transition-transform">
-                    <svg class="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12.04 2C6.58 2 4 5.64 4 8.94c0 1.89.72 3.57 2.27 4.2.25.11.47 0 .54-.27.05-.19.17-.67.22-.87.07-.27.04-.36-.15-.59-.44-.53-.73-1.22-.73-2.2 0-2.84 2.13-5.4 5.53-5.4 3.01 0 4.66 1.84 4.66 4.29 0 3.23-1.43 5.96-3.55 5.96-1.17 0-2.04-.97-1.76-2.16.34-1.44 1-2.99 1-4.03 0-.93-.5-1.7-1.54-1.7-1.22 0-2.2 1.26-2.2 2.95 0 1.08.36 1.81.36 1.81l-1.46 6.18c-.43 1.82-.06 4.05-.03 4.27.02.13.19.16.27.06.11-.14 1.5-1.86 1.97-3.57.13-.48.76-2.99.76-2.99.38.73 1.49 1.37 2.67 1.37 3.52 0 5.91-3.21 5.91-7.52C19.23 5.35 16.4 2 12.04 2z"></path>
-                    </svg>
-                </div>
-                <div class="text-sm font-medium">Pinterest</div>
-            </a>
-
-            <a id="share-twitter" target="_blank" rel="noopener" class="group">
-                <div class="w-14 h-14 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center mx-auto mb-2 group-hover:scale-105 transition-transform">
-                    <svg class="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M22.46 6c-.77.35-1.6.59-2.46.7a4.27 4.27 0 001.87-2.36 8.51 8.51 0 01-2.7 1.03 4.25 4.25 0 00-7.24 3.88 12.07 12.07 0 01-8.76-4.44 4.24 4.24 0 001.32 5.67 4.22 4.22 0 01-1.93-.53v.05a4.25 4.25 0 003.41 4.17 4.26 4.26 0 01-1.92.07 4.25 4.25 0 003.97 2.95A8.53 8.53 0 012 19.54a12.04 12.04 0 006.53 1.92c7.84 0 12.13-6.5 12.13-12.13 0-.18-.01-.36-.02-.54A8.64 8.64 0 0022.46 6z"></path>
-                    </svg>
-                </div>
-                <div class="text-sm font-medium">Twitter</div>
-            </a>
-        </div>
-
-        <div class="text-center text-gray-500 mb-3">or copy this link</div>
-        <div class="flex gap-2">
-            <input id="share-link" type="text" readonly class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm" value="{{ route('products.show', $product->slug) }}">
-            <button onclick="copyShareLink()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium">Copy</button>
-        </div>
-    </div>
-</div>
-
-<script>
-function openShareModal() {
-    const url = `{{ route('products.show', $product->slug) }}`;
-    const title = `{{ addslashes($product->name) }}`;
-    const image = @json(($media && count($media) > 0) ? (is_string($media[0]) ? $media[0] : ($media[0]['url'] ?? $media[0]['path'] ?? reset($media[0]) ?? '')) : '');
-
-    // Build share links
-    document.getElementById('share-mail').href = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(url)}`;
-    document.getElementById('share-facebook').href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
-    const pinParams = new URLSearchParams({ url, media: image || url, description: title });
-    document.getElementById('share-pinterest').href = `https://pinterest.com/pin/create/button/?${pinParams.toString()}`;
-    document.getElementById('share-twitter').href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`;
-
-    // Set input value
-    const input = document.getElementById('share-link');
-    if (input) input.value = url;
-
-    // Show modal
-    const modal = document.getElementById('share-modal');
-    modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeShareModal() {
-    const modal = document.getElementById('share-modal');
-    modal.classList.add('hidden');
-    document.body.style.overflow = 'auto';
-}
-function copyShareLink() {
-    const input = document.getElementById('share-link');
-    input.select();
-    input.setSelectionRange(0, 99999);
+    var productId = {{ $product->id }};
     try {
-        document.execCommand('copy');
-    } catch (e) {
-        navigator.clipboard?.writeText(input.value);
-    }
-    showCartSuccess('Copied link to clipboard');
-}
-
-// Close on backdrop click
-document.addEventListener('DOMContentLoaded', function() {
-    const shareModal = document.getElementById('share-modal');
-    if (shareModal) {
-        shareModal.addEventListener('click', function(e) {
-            if (e.target === this) closeShareModal();
-        });
-    }
-    
-    // Update delivery location based on domain
-    updateDeliveryLocation();
+        var stored = localStorage.getItem('recentlyViewedIds');
+        var ids = stored ? JSON.parse(stored) : [];
+        ids = ids.filter(function(id) { return id !== productId; });
+        ids.unshift(productId);
+        ids = ids.slice(0, 20);
+        localStorage.setItem('recentlyViewedIds', JSON.stringify(ids));
+    } catch (e) {}
 });
-
-/**
- * Update delivery location and estimate based on current domain and default shipping rate
- */
-function updateDeliveryLocation() {
-    const customerLocationEl = document.getElementById('customer-location');
-    const deliveryEstimateEl = document.getElementById('delivery-estimate');
-    const deliveryShippingRateEl = document.getElementById('delivery-shipping-rate');
-    
-    if (!customerLocationEl || !deliveryEstimateEl) return;
-    
-    // Get location from domain configuration
-    let locationName = 'your location';
-    let deliveryEstimate = 'Calculating delivery time...';
-    
-    // Use default shipping rate information if available
-    if (typeof DEFAULT_SHIPPING_RATE !== 'undefined' && DEFAULT_SHIPPING_RATE) {
-        // Use description from default shipping rate if available
-        if (DEFAULT_SHIPPING_RATE.description) {
-            deliveryEstimate = DEFAULT_SHIPPING_RATE.description;
-        }
-        
-        // Update shipping rate name if element exists
-        if (deliveryShippingRateEl && DEFAULT_SHIPPING_RATE.name) {
-            deliveryShippingRateEl.textContent = DEFAULT_SHIPPING_RATE.name;
-        }
-        
-        // Use zone name from default shipping rate if available
-        if (DEFAULT_SHIPPING_RATE.zone_name) {
-            locationName = DEFAULT_SHIPPING_RATE.zone_name;
-        }
-    }
-    
-    // Try to get location from domain or shipping zones if not set from default rate
-    if (locationName === 'your location' && typeof CURRENT_DOMAIN !== 'undefined' && CURRENT_DOMAIN) {
-        // Map domain to country/region name
-        const domainMap = {
-            'us': 'United States',
-            'uk': 'United Kingdom',
-            'ca': 'Canada',
-            'au': 'Australia',
-            'mx': 'Mexico',
-            'eu': 'Europe',
-            'asia': 'Asia',
-            'global': 'International'
-        };
-        
-        const domainKey = CURRENT_DOMAIN.toLowerCase();
-        locationName = domainMap[domainKey] || CURRENT_DOMAIN.toUpperCase();
-    }
-    
-    // If we have shipping zones with countries, try to get a representative country
-    if (locationName === 'your location' && DOMAIN_COUNTRIES && DOMAIN_COUNTRIES.length > 0) {
-        // Get the first country as representative
-        const firstCountry = DOMAIN_COUNTRIES[0];
-        const countryNames = {
-            'US': 'United States',
-            'GB': 'United Kingdom',
-            'CA': 'Canada',
-            'AU': 'Australia',
-            'MX': 'Mexico',
-            'DE': 'Germany',
-            'FR': 'France',
-            'IT': 'Italy',
-            'ES': 'Spain',
-            'NL': 'Netherlands',
-            'BE': 'Belgium',
-            'CH': 'Switzerland',
-            'AT': 'Austria',
-            'SE': 'Sweden',
-            'NO': 'Norway',
-            'DK': 'Denmark',
-            'FI': 'Finland',
-            'IE': 'Ireland',
-            'PT': 'Portugal',
-            'GR': 'Greece',
-            'PL': 'Poland',
-            'CZ': 'Czech Republic',
-            'HU': 'Hungary',
-            'RO': 'Romania',
-            'BG': 'Bulgaria',
-            'HR': 'Croatia',
-            'SK': 'Slovakia',
-            'SI': 'Slovenia',
-            'EE': 'Estonia',
-            'LV': 'Latvia',
-            'LT': 'Lithuania',
-            'JP': 'Japan',
-            'CN': 'China',
-            'KR': 'South Korea',
-            'SG': 'Singapore',
-            'MY': 'Malaysia',
-            'TH': 'Thailand',
-            'ID': 'Indonesia',
-            'PH': 'Philippines',
-            'VN': 'Vietnam',
-            'IN': 'India',
-            'NZ': 'New Zealand',
-            'BR': 'Brazil',
-            'AR': 'Argentina',
-            'CL': 'Chile',
-            'CO': 'Colombia',
-            'PE': 'Peru',
-            'ZA': 'South Africa',
-            'EG': 'Egypt',
-            'AE': 'United Arab Emirates',
-            'SA': 'Saudi Arabia',
-            'IL': 'Israel',
-            'TR': 'Turkey',
-            'RU': 'Russia',
-            'UA': 'Ukraine'
-        };
-        
-        const countryCode = firstCountry.code;
-        locationName = countryNames[countryCode] || countryCode;
-        
-        // If multiple countries, show zone name
-        if (DOMAIN_COUNTRIES.length > 1 && firstCountry.zone_name) {
-            locationName = firstCountry.zone_name;
-        }
-    }
-    
-    // Set delivery estimate based on domain/zone if not set from default shipping rate
-    if (deliveryEstimate === 'Calculating delivery time...' && DOMAIN_COUNTRIES && DOMAIN_COUNTRIES.length > 0) {
-        // Estimate delivery time (can be customized per zone)
-        deliveryEstimate = 'Estimated delivery: 5-10 business days';
-        
-        // You can customize this based on zone if needed
-        if (DOMAIN_COUNTRIES[0].zone_name) {
-            const zoneName = DOMAIN_COUNTRIES[0].zone_name.toLowerCase();
-            if (zoneName.includes('domestic') || zoneName.includes('local')) {
-                deliveryEstimate = 'Estimated delivery: 3-5 business days';
-            } else if (zoneName.includes('international') || zoneName.includes('global')) {
-                deliveryEstimate = 'Estimated delivery: 10-15 business days';
-            }
-        }
-    }
-    
-    // Update the UI
-    customerLocationEl.textContent = locationName;
-    deliveryEstimateEl.textContent = deliveryEstimate;
-}
 </script>
-
-
 @endsection

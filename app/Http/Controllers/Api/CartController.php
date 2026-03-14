@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\Product;
+use App\Models\PromoCode;
 use App\Services\ShippingCalculator;
 use App\Services\CurrencyService;
+use App\Services\PromoCodeSendService;
 use App\Services\TikTokEventsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -52,22 +54,25 @@ class CartController extends Controller
                 }
             }
 
+            $selectedVariant = $this->normalizeSelectedVariant($request->selectedVariant ?? []);
+            $customizations = $this->normalizeCustomizations($request->customizations ?? []);
+
             if ($existingCart) {
                 // Update quantity and price (in case variant price changed)
                 $existingCart->increment('quantity', $request->quantity);
                 $existingCart->update(['price' => $request->price]);
                 $cartItem = $existingCart;
             } else {
-                // Create new cart item
+                // Create new cart item with variant + customizations for correct production
                 $cartItem = Cart::create([
                     'session_id' => $userId ? null : $sessionId,
                     'user_id' => $userId,
                     'product_id' => $request->id,
-                    'variant_id' => $request->selectedVariant['id'] ?? null,
-                    'quantity' => $request->quantity,
-                    'price' => $request->price,
-                    'selected_variant' => $request->selectedVariant,
-                    'customizations' => $request->customizations
+                    'variant_id' => $selectedVariant['id'] ?? null,
+                    'quantity' => (int) $request->quantity,
+                    'price' => (float) $request->price,
+                    'selected_variant' => $selectedVariant ?: null,
+                    'customizations' => $customizations ?: null,
                 ]);
             }
 
@@ -80,6 +85,19 @@ class CartController extends Controller
             ]);
 
             $this->trackTikTokAddToCartEvent($request, $product, $cartItem->quantity, $request->price);
+
+            // Gửi email promo cho user đã đăng nhập (throttle 24h)
+            if ($userId) {
+                $user = Auth::user();
+                if ($user && $user->email) {
+                    app(PromoCodeSendService::class)->sendForTrigger(
+                        $user->email,
+                        PromoCodeSendService::TRIGGER_ADD_TO_CART,
+                        $userId,
+                        true
+                    );
+                }
+            }
 
             return response()->json([
                 'success' => true,
@@ -167,36 +185,8 @@ class CartController extends Controller
                 });
 
                 // Calculate shipping
-                // PRIORITY: Get current domain to prioritize rates for this domain
                 $currentDomain = CurrencyService::getCurrentDomain();
-                
-                // Get country from domain's zone or use default
-                $country = $request->get('country');
-                if (!$country && $currentDomain) {
-                    // Try to find zone for this domain and get country from it
-                    $zoneForDomain = \App\Models\ShippingZone::active()
-                        ->where('domain', $currentDomain)
-                        ->first();
-                    
-                    if ($zoneForDomain && $zoneForDomain->countries && is_array($zoneForDomain->countries) && !empty($zoneForDomain->countries)) {
-                        // Use first country from zone's countries array
-                        $country = strtoupper($zoneForDomain->countries[0]);
-                    } else {
-                        // Fallback: try to get country from domain region
-                        $region = \App\Models\DomainShippingCost::getRegionFromDomain($currentDomain);
-                        // Map region to country code
-                        $regionToCountry = [
-                            'US' => 'US',
-                            'UK' => 'GB',
-                            'CA' => 'CA',
-                            'MX' => 'MX',
-                        ];
-                        $country = $regionToCountry[$region] ?? 'US';
-                    }
-                }
-                
-                // Final fallback to US
-                $country = $country ?? 'US';
+                $country = $request->get('country') ?? 'US';
                 
                 $calculator = new ShippingCalculator();
                 $shippingResult = $calculator->calculateShipping($items, $country, $currentDomain);
@@ -210,9 +200,26 @@ class CartController extends Controller
             // Convert shipping from USD to current currency (shipping is always calculated in USD)
             $convertedShipping = $currency !== 'USD' ? CurrencyService::convertFromUSDWithRate($shipping, $currency, $currencyRate) : $shipping;
 
-            // Subtotal is already in current currency, no need to convert
+            // Subtotal is already in current currency
             $convertedSubtotal = $subtotal;
-            $total = $subtotal + $convertedShipping;
+            $subtotalUsd = $currency !== 'USD' ? $subtotal / $currencyRate : $subtotal;
+
+            // Promo code discount (stored in session)
+            $discount = 0.0;
+            $appliedPromoCode = null;
+            $promoId = session('applied_promo_code_id');
+            if ($promoId && $subtotalUsd > 0) {
+                $promo = PromoCode::find($promoId);
+                if ($promo && $promo->isValidForSubtotal($subtotalUsd)) {
+                    $discountUsd = $promo->calculateDiscountUsd($subtotalUsd);
+                    $discount = $currency !== 'USD' ? $discountUsd * $currencyRate : $discountUsd;
+                    $appliedPromoCode = $promo->code;
+                } else {
+                    session()->forget(['applied_promo_code_id', 'applied_promo_code']);
+                }
+            }
+
+            $total = $convertedSubtotal - $discount + $convertedShipping;
             $convertedTotal = $total;
 
             return response()->json([
@@ -223,10 +230,13 @@ class CartController extends Controller
                 'summary' => [
                     'subtotal' => $subtotal,
                     'shipping' => $shipping,
+                    'discount' => $discount,
                     'total' => $total,
                     'converted_subtotal' => $convertedSubtotal,
                     'converted_shipping' => $convertedShipping,
+                    'converted_discount' => $discount,
                     'converted_total' => $convertedTotal,
+                    'applied_promo_code' => $appliedPromoCode,
                 ],
                 'shipping_details' => $shippingDetails,
                 'currency' => $currency,
@@ -242,6 +252,72 @@ class CartController extends Controller
                 'message' => 'Failed to get cart'
             ], 500);
         }
+    }
+
+    /**
+     * Apply promo code. Stores in session; cart get() will apply discount.
+     */
+    public function applyPromo(Request $request)
+    {
+        $request->validate(['code' => 'required|string|max:64']);
+        $code = strtoupper(trim($request->code));
+        if ($code === '') {
+            return response()->json(['success' => false, 'message' => 'Please enter a promo code.'], 422);
+        }
+
+        $promo = PromoCode::whereRaw('UPPER(TRIM(code)) = ?', [$code])->first();
+        if (!$promo) {
+            return response()->json(['success' => false, 'message' => 'Invalid or expired promo code.'], 422);
+        }
+
+        $sessionId = session()->getId();
+        $userId = Auth::id();
+        $cartItems = Cart::where(function ($query) use ($sessionId, $userId) {
+            if ($userId) {
+                $query->where('user_id', $userId);
+            } else {
+                $query->where('session_id', $sessionId);
+            }
+        })->get();
+
+        $subtotal = $cartItems->sum(fn ($item) => $item->getTotalPriceWithCustomizations());
+        $currency = CurrencyService::getCurrencyForDomain() ?? 'USD';
+        $currencyRate = CurrencyService::getCurrencyRateForDomain() ?: 1.0;
+        $subtotalUsd = $currency !== 'USD' ? $subtotal / $currencyRate : $subtotal;
+
+        if (!$promo->isValidForSubtotal($subtotalUsd)) {
+            if (!$promo->isValid()) {
+                return response()->json(['success' => false, 'message' => 'This promo code is no longer valid.'], 422);
+            }
+            if ($promo->min_order_value !== null && $subtotalUsd < (float) $promo->min_order_value) {
+                $minDisplay = $currency !== 'USD' ? (float) $promo->min_order_value * $currencyRate : (float) $promo->min_order_value;
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Minimum order for this code is ' . number_format($minDisplay, 2) . ' (before shipping).',
+                ], 422);
+            }
+            return response()->json(['success' => false, 'message' => 'Invalid or expired promo code.'], 422);
+        }
+
+        session([
+            'applied_promo_code_id' => $promo->id,
+            'applied_promo_code' => $promo->code,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Promo code applied.',
+            'applied_promo_code' => $promo->code,
+        ]);
+    }
+
+    /**
+     * Remove applied promo code from session.
+     */
+    public function removePromo()
+    {
+        session()->forget(['applied_promo_code_id', 'applied_promo_code']);
+        return response()->json(['success' => true, 'message' => 'Promo code removed.']);
     }
 
     public function show($id)
@@ -470,47 +546,88 @@ class CartController extends Controller
     /**
      * Compare two variant objects for equality
      */
-    private function compareVariants($variant1, $variant2)
+    /**
+     * Normalize selectedVariant from request (id + attributes) for storage.
+     */
+    private function normalizeSelectedVariant($input): array
     {
-        // Normalize both variants to arrays
-        $var1 = is_array($variant1) ? $variant1 : json_decode(json_encode($variant1), true);
-        $var2 = is_array($variant2) ? $variant2 : json_decode(json_encode($variant2), true);
+        if (! is_array($input) || empty($input)) {
+            return [];
+        }
+        $id = isset($input['id']) ? (is_numeric($input['id']) ? (int) $input['id'] : $input['id']) : null;
+        $attributes = isset($input['attributes']) && is_array($input['attributes'])
+            ? $input['attributes']
+            : [];
+        return [
+            'id' => $id,
+            'attributes' => $attributes,
+        ];
+    }
 
-        // Compare attributes if both have them
+    /**
+     * Normalize customizations to [ label => [ 'value' => ..., 'price' => float ] ] for storage.
+     */
+    private function normalizeCustomizations($input): array
+    {
+        if (! is_array($input) || empty($input)) {
+            return [];
+        }
+        $out = [];
+        foreach ($input as $label => $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+
+            // Support legacy shape: [ { label, value, price }, ... ]
+            if (is_int($label) && isset($entry['label'])) {
+                $label = (string) $entry['label'];
+            }
+
+            $value = $entry['value'] ?? $entry['text'] ?? '';
+            $price = isset($entry['price']) ? (float) $entry['price'] : 0.0;
+            $out[(string) $label] = ['value' => (string) $value, 'price' => $price];
+        }
+        return $out;
+    }
+
+    private function compareVariants($variant1, $variant2): bool
+    {
+        $var1 = is_array($variant1) ? $variant1 : (is_object($variant1) ? json_decode(json_encode($variant1), true) : []);
+        $var2 = is_array($variant2) ? $variant2 : (is_object($variant2) ? json_decode(json_encode($variant2), true) : []);
+        $var1 = $var1 ?: [];
+        $var2 = $var2 ?: [];
+
+        if (empty($var1) && empty($var2)) {
+            return true;
+        }
         if (isset($var1['attributes']) && isset($var2['attributes'])) {
-            // Sort arrays by keys to ensure consistent comparison
             ksort($var1['attributes']);
             ksort($var2['attributes']);
             return $var1['attributes'] === $var2['attributes'];
         }
-
-        // Fallback: compare the entire arrays
         return $var1 === $var2;
     }
 
     /**
      * Compare two customization objects for equality
      */
-    private function compareCustomizations($custom1, $custom2)
+    private function compareCustomizations($custom1, $custom2): bool
     {
-        // Normalize both customizations to arrays
-        $c1 = is_array($custom1) ? $custom1 : json_decode(json_encode($custom1), true);
-        $c2 = is_array($custom2) ? $custom2 : json_decode(json_encode($custom2), true);
+        $raw1 = is_array($custom1) ? $custom1 : (is_object($custom1) ? json_decode(json_encode($custom1), true) : []);
+        $raw2 = is_array($custom2) ? $custom2 : (is_object($custom2) ? json_decode(json_encode($custom2), true) : []);
 
-        // If both are empty, they match
+        $c1 = $this->normalizeCustomizations($raw1);
+        $c2 = $this->normalizeCustomizations($raw2);
+
         if (empty($c1) && empty($c2)) {
             return true;
         }
-
-        // If one is empty and other is not, they don't match
         if (empty($c1) || empty($c2)) {
             return false;
         }
 
-        // Compare by sorting keys to ensure consistent comparison
         ksort($c1);
         ksort($c2);
-
         return $c1 === $c2;
     }
 

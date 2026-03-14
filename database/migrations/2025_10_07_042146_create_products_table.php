@@ -13,17 +13,59 @@ return new class extends Migration
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('template_id');
+
+            // Quan hệ
+            $table->foreignId('template_id')
+                  ->constrained('product_templates')
+                  ->onDelete('cascade');
+
+            $table->foreignId('user_id')
+                  ->nullable()
+                  ->constrained()
+                  ->onDelete('cascade');
+
+            $table->foreignId('shop_id')
+                  ->nullable()
+                  ->constrained()
+                  ->onDelete('cascade');
+
+            // Thông tin cơ bản
             $table->string('name');
             $table->string('slug')->unique();
-            $table->decimal('price', 10, 2)->nullable(); // Override từ template
-            $table->text('description')->nullable(); // Override từ template
-            $table->json('media')->nullable(); // Media riêng của sản phẩm
+            $table->string('sku')->unique()->nullable();
+
+            $table->decimal('price', 10, 2)->nullable(); 
+            $table->text('description')->nullable();
+            $table->json('media')->nullable();
             $table->integer('quantity')->default(0);
-            $table->enum('status', ['active', 'inactive', 'draft'])->default('active');
+
+            $table->enum('status', ['active', 'inactive', 'draft'])
+                  ->default('active');
+
+            // Tracking
+            $table->string('created_by')->nullable();
+            $table->unsignedBigInteger('api_token_id')->nullable();
+
+            // Feed / Marketing fields
+            $table->string('google_product_category', 200)->nullable();
+            $table->string('fb_product_category', 200)->nullable();
+            $table->string('gender', 20)->nullable();
+            $table->string('color', 200)->nullable();
+            $table->string('age_group', 50)->nullable();
+            $table->string('material', 200)->nullable();
+            $table->string('pattern', 100)->nullable();
+            $table->string('shipping', 200)->nullable();
+            $table->string('shipping_weight', 50)->nullable();
+            $table->integer('quantity_to_sell_on_facebook')
+                  ->default(100);
+
             $table->timestamps();
 
-            $table->foreign('template_id')->references('id')->on('product_templates')->onDelete('cascade');
+            // Foreign keys
+            $table->foreign('api_token_id')
+                  ->references('id')
+                  ->on('api_tokens')
+                  ->onDelete('set null');
         });
     }
 

@@ -14,10 +14,9 @@ class ShippingCalculator
      * 
      * @param Collection $cartItems Array of items with 'product_id', 'quantity', 'price'
      * @param string $countryCode ISO country code (e.g., 'US', 'VN')
-     * @param string|null $domain Optional domain to prioritize rates for this domain
      * @return array Shipping details with cost breakdown per item
      */
-    public function calculateShipping(Collection $cartItems, string $countryCode, ?string $domain = null): array
+    public function calculateShipping(Collection $cartItems, string $countryCode): array
     {
         // Find shipping zone for the country
         $zone = ShippingZone::findByCountry($countryCode);
@@ -48,8 +47,7 @@ class ShippingCalculator
             $product = Product::with('template.category')->find($item['product_id']);
             $categoryId = $product->template->category_id ?? null;
 
-            // Find applicable shipping rate (with domain priority)
-            $shippingRate = $this->findApplicableRate($zone->id, $categoryId, $totalItems, $totalValue, $domain);
+            $shippingRate = $this->findApplicableRate($zone->id, $categoryId, $totalItems, $totalValue);
 
             if (!$shippingRate) {
                 // Get zone name for better error message
@@ -143,146 +141,63 @@ class ShippingCalculator
 
     /**
      * Find the most applicable shipping rate
-     * 
+     *
      * @param int $zoneId
      * @param int|null $categoryId
      * @param int $itemCount
      * @param float $orderValue
-     * @param string|null $domain Optional domain to prioritize rates for this domain
      * @return ShippingRate|null
      */
-    protected function findApplicableRate(int $zoneId, ?int $categoryId, int $itemCount, float $orderValue, ?string $domain = null): ?ShippingRate
+    protected function findApplicableRate(int $zoneId, ?int $categoryId, int $itemCount, float $orderValue): ?ShippingRate
     {
-        // PRIORITY ORDER:
-        // 1. Default rate for domain + category
-        // 2. Default rate for domain (general)
-        // 3. Category-specific rate matching domain
-        // 4. General rate matching domain
-        // 5. Category-specific rate (any domain)
-        // 6. General rate (any domain)
+        $applicable = fn($r) => $r->isApplicable($itemCount, $orderValue);
 
-        // First, try to find default rate for domain and category
-        if ($categoryId && $domain) {
+        // 1. Default rate for category
+        if ($categoryId) {
             $defaultRate = ShippingRate::active()
                 ->forZone($zoneId)
-                ->forDomain($domain)
                 ->where('category_id', $categoryId)
                 ->where('is_default', true)
                 ->ordered()
                 ->get()
-                ->first(fn($r) => $r->isApplicable($itemCount, $orderValue));
-
+                ->first($applicable);
             if ($defaultRate) {
                 return $defaultRate;
             }
         }
 
-        // Second, try default general rate for domain
-        if ($domain) {
-            $defaultGeneralRate = ShippingRate::active()
-                ->forZone($zoneId)
-                ->forDomain($domain)
-                ->whereNull('category_id')
-                ->where('is_default', true)
-                ->ordered()
-                ->get()
-                ->first(fn($r) => $r->isApplicable($itemCount, $orderValue));
-
-            if ($defaultGeneralRate) {
-                return $defaultGeneralRate;
-            }
+        // 2. Default general rate (no category)
+        $defaultGeneral = ShippingRate::active()
+            ->forZone($zoneId)
+            ->whereNull('category_id')
+            ->where('is_default', true)
+            ->ordered()
+            ->get()
+            ->first($applicable);
+        if ($defaultGeneral) {
+            return $defaultGeneral;
         }
 
-        // Third, try to find category-specific rate matching domain (non-default)
-        if ($categoryId && $domain) {
-            $rate = ShippingRate::active()
-                ->forZone($zoneId)
-                ->forDomain($domain)
-                ->where('category_id', $categoryId)
-                ->ordered()
-                ->get()
-                ->first(fn($r) => $r->isApplicable($itemCount, $orderValue));
-
-            if ($rate) {
-                return $rate;
-            }
-        }
-
-        // Second, try category-specific rate (without domain filter)
+        // 3. Category-specific rate (any)
         if ($categoryId) {
             $rate = ShippingRate::active()
                 ->forZone($zoneId)
                 ->where('category_id', $categoryId)
                 ->ordered()
                 ->get()
-                ->first(function ($r) use ($itemCount, $orderValue, $domain) {
-                    // If domain provided, prioritize rates matching domain
-                    if ($domain && $r->matchesDomain($domain)) {
-                        return $r->isApplicable($itemCount, $orderValue);
-                    }
-                    return false;
-                });
-
-            if ($rate) {
-                return $rate;
-            }
-
-            // Fallback: any category-specific rate
-            $rate = ShippingRate::active()
-                ->forZone($zoneId)
-                ->where('category_id', $categoryId)
-                ->ordered()
-                ->get()
-                ->first(fn($r) => $r->isApplicable($itemCount, $orderValue));
-
+                ->first($applicable);
             if ($rate) {
                 return $rate;
             }
         }
 
-        // Third, try general rate matching domain
-        if ($domain) {
-            $generalRate = ShippingRate::active()
-                ->forZone($zoneId)
-                ->forDomain($domain)
-                ->whereNull('category_id')
-                ->ordered()
-                ->get()
-                ->first(fn($r) => $r->isApplicable($itemCount, $orderValue));
-
-            if ($generalRate) {
-                return $generalRate;
-            }
-        }
-
-        // Fall back to general rate (category_id is null)
-        // First, try to find rate matching domain if domain is provided
-        if ($domain) {
-            $generalRate = ShippingRate::active()
-                ->forZone($zoneId)
-                ->forDomain($domain)
-                ->whereNull('category_id')
-                ->ordered()
-                ->get()
-                ->first(fn($r) => $r->isApplicable($itemCount, $orderValue));
-
-            if ($generalRate) {
-                return $generalRate;
-            }
-        }
-
-        // Fallback: any general rate for this zone (without domain filter)
-        // This ensures we always get a rate for the zone, even if no domain match
-        $generalRate = ShippingRate::active()
+        // 4. General rate for zone
+        return ShippingRate::active()
             ->forZone($zoneId)
             ->whereNull('category_id')
             ->ordered()
             ->get()
-            ->first(fn($r) => $r->isApplicable($itemCount, $orderValue));
-
-        if ($generalRate) {
-            return $generalRate;
-        }
+            ->first($applicable);
 
         // If still no rate found, try to get any active rate for this zone (ignore applicability)
         // This is a last resort fallback
@@ -326,7 +241,7 @@ class ShippingCalculator
      * @param float $estimatedValue
      * @return array
      */
-    public function estimateShipping(string $countryCode, int $itemCount = 1, float $estimatedValue = 0, ?string $domain = null): array
+    public function estimateShipping(string $countryCode, int $itemCount = 1, float $estimatedValue = 0): array
     {
         $zone = ShippingZone::findByCountry($countryCode);
 

@@ -102,7 +102,11 @@ class Wishlist extends Model
      */
     public static function getWishlistItems($userId = null, $sessionId = null, $perPage = 12)
     {
-        $query = static::with('product');
+        $query = static::with(['product' => function ($q) {
+            $q->with(['template.category', 'shop'])
+                ->withCount('approvedReviews')
+                ->withAvg('approvedReviews', 'rating');
+        }]);
 
         if ($userId) {
             $query->where('user_id', $userId);

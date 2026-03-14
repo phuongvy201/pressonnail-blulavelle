@@ -27,8 +27,8 @@ class AnalyticsController extends Controller
 
         // Check if no domain is configured
         if (empty($availableDomains)) {
-            return redirect()->route('admin.settings.domain-config.index')
-                ->with('error', 'No domain is configured. Please configure a domain before viewing analytics.');
+            return redirect()->route('admin.dashboard')
+                ->with('error', 'No domain is configured for analytics.');
         }
 
         // Get the domain selected from the request
@@ -52,8 +52,8 @@ class AnalyticsController extends Controller
 
         // Check if the service is not initialized (due to no config)
         if (!$this->analyticsService->isInitialized()) {
-            return redirect()->route('admin.settings.domain-config.index')
-                ->with('error', "Domain '{$selectedDomain}' is not fully configured. Please check the configuration.");
+            return redirect()->route('admin.dashboard')
+                ->with('error', "Domain '{$selectedDomain}' is not fully configured for analytics.");
         }
 
         $displayDomain = $selectedDomain;

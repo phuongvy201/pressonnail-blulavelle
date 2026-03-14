@@ -117,13 +117,15 @@ class Product extends Model
                                 $sku = 'SKU-' . strtoupper(\Illuminate\Support\Str::random(8));
                             }
 
-                            // Get price, quantity, media from TemplateVariant if available
+                            // Get price, list_price, quantity, media from TemplateVariant if available
                             $variantPrice = null;
+                            $variantListPrice = null;
                             $variantQuantity = 0;
                             $variantMedia = null;
 
                             if ($freshTemplateVariant) {
                                 $variantPrice = $freshTemplateVariant->price;
+                                $variantListPrice = $freshTemplateVariant->list_price;
                                 $variantQuantity = $freshTemplateVariant->quantity ?? 0;
                                 $variantMedia = $freshTemplateVariant->media;
                             }
@@ -136,6 +138,7 @@ class Product extends Model
                                 'attributes' => $attributes,
                                 'sku' => $sku, // SKU is required by database
                                 'price' => $variantPrice, // From TemplateVariant
+                                'list_price' => $variantListPrice, // From TemplateVariant
                                 'quantity' => $variantQuantity, // From TemplateVariant
                                 'media' => $variantMedia, // From TemplateVariant
                             ]);
@@ -239,6 +242,7 @@ class Product extends Model
         'slug',
         'sku',
         'price',
+        'list_price',
         'description',
         'media',
         'quantity',
@@ -263,6 +267,7 @@ class Product extends Model
 
     protected $casts = [
         'price' => 'decimal:2',
+        'list_price' => 'decimal:2',
         'media' => 'array',
         'quantity' => 'integer',
     ];
@@ -355,14 +360,19 @@ class Product extends Model
         return is_array($media) ? $media : [];
     }
 
-    // Check if current user can edit this product
+    // Check if current user can edit this product (admin, product owner, or shop owner)
     public function canEdit($user = null): bool
     {
         $user = $user ?? auth()->user();
         if (!$user) {
             return false;
         }
-        return $user->hasRole('admin') || $this->user_id === $user->id;
+        if ($user->hasRole('admin') || $this->user_id === $user->id) {
+            return true;
+        }
+        return $this->shop_id && $this->relationLoaded('shop')
+            ? $this->shop->user_id === $user->id
+            : optional($this->shop)->user_id === $user->id;
     }
 
     /**

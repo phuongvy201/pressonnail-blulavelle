@@ -33,6 +33,37 @@ class HomeController extends Controller
             ->limit(6)
             ->get();
 
-        return view('home', compact('featuredCollections', 'featuredProducts', 'popularTemplates'));
+        $canEdit = auth()->check() && auth()->user()->hasRole('admin');
+        $editMode = request()->boolean('edit');
+        return view('home', compact('featuredCollections', 'featuredProducts', 'popularTemplates', 'canEdit', 'editMode'));
+    }
+
+    /**
+     * Preview trang chủ với chế độ chỉnh sửa (chỉ admin). Gọi từ dashboard admin.
+     */
+    public function preview()
+    {
+        $featuredCollections = Collection::with(['products.template'])
+            ->where('featured', true)
+            ->where('admin_approved', true)
+            ->where('status', 'active')
+            ->orderBy('sort_order')
+            ->limit(6)
+            ->get();
+
+        $featuredProducts = Product::with(['template.category', 'shop'])
+            ->availableForDisplay()
+            ->inRandomOrder()
+            ->limit(8)
+            ->get();
+
+        $popularTemplates = ProductTemplate::with(['category', 'user'])
+            ->inRandomOrder()
+            ->limit(6)
+            ->get();
+
+        $canEdit = true;
+        $editMode = true;
+        return view('home', compact('featuredCollections', 'featuredProducts', 'popularTemplates', 'canEdit', 'editMode'));
     }
 }

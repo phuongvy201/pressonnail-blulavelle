@@ -130,6 +130,12 @@ class WishlistManager {
 
                     // Dispatch custom event for other components
                     window.dispatchEvent(new CustomEvent("wishlistUpdated"));
+                    // Promo popup: "Get 10% OFF! Enter your email..."
+                    if (typeof window.promoPopupShow === "function") {
+                        setTimeout(function () {
+                            window.promoPopupShow("wishlist");
+                        }, 400);
+                    }
                 } else {
                     this.showMessage(data.message, "error");
                     button.disabled = false;

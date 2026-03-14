@@ -10,24 +10,50 @@ return new class extends Migration
     {
         Schema::create('collections', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Creator/Owner
+
+            // Owner
+            $table->foreignId('user_id')
+                ->constrained()
+                ->onDelete('cascade');
+
+            $table->foreignId('shop_id')
+                ->nullable()
+                ->constrained()
+                ->onDelete('cascade');
+
             $table->string('name');
             $table->string('slug')->unique();
             $table->text('description')->nullable();
-            $table->string('image')->nullable(); // Collection cover image
-            $table->enum('type', ['manual', 'automatic'])->default('manual'); // Manual or auto-generated
-            $table->json('auto_rules')->nullable(); // Rules for automatic collections
-            $table->enum('status', ['active', 'inactive', 'draft'])->default('active');
-            $table->integer('sort_order')->default(0); // For ordering collections
-            $table->boolean('featured')->default(false); // Featured collection
-            $table->string('meta_title')->nullable(); // SEO
-            $table->text('meta_description')->nullable(); // SEO
+            $table->string('image')->nullable();
+
+            // Collection type
+            $table->enum('type', ['manual', 'automatic'])
+                ->default('manual');
+
+            $table->json('auto_rules')->nullable();
+
+            // Status
+            $table->enum('status', ['active', 'inactive', 'draft'])
+                ->default('active');
+
+            $table->integer('sort_order')->default(0);
+            $table->boolean('featured')->default(false);
+
+            // Admin control
+            $table->boolean('admin_approved')->default(false);
+            $table->text('admin_notes')->nullable();
+
+            // SEO
+            $table->string('meta_title')->nullable();
+            $table->text('meta_description')->nullable();
+
             $table->timestamps();
 
             // Indexes
             $table->index(['status', 'featured']);
             $table->index(['user_id', 'status']);
-            $table->index('slug');
+            $table->index(['shop_id', 'admin_approved']);
+            $table->index('admin_approved');
         });
     }
 

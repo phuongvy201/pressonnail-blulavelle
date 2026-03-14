@@ -41,27 +41,6 @@
                 @enderror
             </div>
 
-            <!-- Domain -->
-            <div>
-                <label for="domain" class="block text-sm font-semibold text-gray-700 mb-2">
-                    Domain (Optional)
-                </label>
-                <select name="domain" 
-                        id="domain" 
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent @error('domain') border-red-500 @enderror">
-                    <option value="">General (All Domains)</option>
-                    @foreach($domains as $domain)
-                    <option value="{{ $domain }}" {{ old('domain') == $domain ? 'selected' : '' }}>
-                        {{ $domain }}
-                    </option>
-                    @endforeach
-                </select>
-                <p class="mt-1 text-xs text-gray-500">Để trống = áp dụng chung cho tất cả domains</p>
-                @error('domain')
-                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                @enderror
-            </div>
-
             <!-- Countries -->
             <div>
                 <label for="countries" class="block text-sm font-semibold text-gray-700 mb-2">

@@ -25,6 +25,7 @@ class UploadController extends Controller
                 'secret' => config('filesystems.disks.s3.secret'),
             ],
             'use_accelerate_endpoint' => true,
+            'use_path_style_endpoint' => false, // S3 Accelerate requires virtual-hosted style
         ]);
     }
 

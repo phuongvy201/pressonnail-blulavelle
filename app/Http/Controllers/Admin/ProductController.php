@@ -11,6 +11,8 @@ use App\Models\Category;
 use App\Models\Collection;
 use App\Models\GmcConfig;
 use App\Services\GoogleMerchantCenterService;
+use App\Services\VideoThumbnailService;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
@@ -19,6 +21,55 @@ use Illuminate\Support\Facades\Response;
 
 class ProductController extends Controller
 {
+    protected function getS3BaseUrl(): string
+    {
+        return 'https://s3.us-east-1.amazonaws.com/image.bluprinter/';
+    }
+
+    /**
+     * Upload một file media (ảnh hoặc video) lên S3. Video thì tạo poster bằng FFmpeg.
+     * Trả về URL string hoặc ['type'=>'video','url'=>...,'poster'=>...].
+     */
+    protected function uploadOneProductMediaFile($file): string|array|null
+    {
+        if (!$file->isValid()) {
+            return null;
+        }
+        try {
+            $fileName = time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
+            $filePath = Storage::disk('s3')->putFileAs('products', $file, $fileName);
+            if (!$filePath) {
+                return null;
+            }
+            $fileUrl = $this->getS3BaseUrl() . $filePath;
+
+            if (VideoThumbnailService::isVideoFile($file)) {
+                $thumbnailService = app(VideoThumbnailService::class);
+                $posterUrl = null;
+                $posterPath = $thumbnailService->generatePoster($file, 1);
+                if ($posterPath) {
+                    $posterFileName = pathinfo($fileName, PATHINFO_FILENAME) . '_poster.jpg';
+                    $contents = Storage::disk('local')->get($posterPath);
+                    if ($contents) {
+                        Storage::disk('s3')->put('products/posters/' . $posterFileName, $contents);
+                        $posterUrl = $this->getS3BaseUrl() . 'products/posters/' . $posterFileName;
+                    }
+                    $thumbnailService->deleteTempPoster($posterPath);
+                }
+                // Nếu không tạo được poster thì để null để frontend fallback về ảnh khác,
+                // tránh dùng URL video (.mp4) làm src của <img>
+                return ['type' => 'video', 'url' => $fileUrl, 'poster' => $posterUrl];
+            }
+
+            return $fileUrl;
+        } catch (Exception $e) {
+            Log::error('Error uploading product media', [
+                'file' => $file->getClientOriginalName(),
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
     /**
      * Display a listing of the resource.
      */
@@ -26,12 +77,16 @@ class ProductController extends Controller
     {
         $user = auth()->user();
 
-        // Admin xem tất cả products, Seller chỉ xem products của mình
+        // Admin xem tất cả products; Seller xem products do mình tạo HOẶC thuộc shop của mình (kể cả khi admin tạo rồi gán shop)
         $productsQuery = Product::with(['template.category', 'template.user', 'user', 'shop', 'variants', 'collections']);
 
-        // Apply user filter
         if (!$user->hasRole('admin')) {
-            $productsQuery->where('user_id', $user->id);
+            $productsQuery->where(function ($q) use ($user) {
+                $q->where('user_id', $user->id)
+                    ->orWhereHas('shop', function ($shopQ) use ($user) {
+                        $shopQ->where('user_id', $user->id);
+                    });
+            });
         }
 
         // Apply filters
@@ -100,13 +155,8 @@ class ProductController extends Controller
         // Paginate
         $products = $productsQuery->paginate($perPage)->withQueryString();
 
-        // Get GMC configs for current domain (to show only available markets in modal)
-        $currentDomain = $request->getHost();
-        $currentDomain = preg_replace('/^www\./', '', $currentDomain);
-        $availableGmcConfigs = GmcConfig::where('domain', $currentDomain)
-            ->where('is_active', true)
-            ->orderBy('target_country')
-            ->get();
+        // GMC/domain config không còn dùng theo domain
+        $availableGmcConfigs = collect();
 
         return view('admin.products.index', compact('products', 'categories', 'templates', 'shops', 'collections', 'availableGmcConfigs', 'perPage'));
     }
@@ -161,16 +211,18 @@ class ProductController extends Controller
                 'name' => 'required|string|max:255',
                 'price_type' => 'required|in:template,override,add',
                 'price' => 'nullable|numeric',
+                'list_price' => 'nullable|numeric|min:0',
                 'description' => 'nullable|string',
                 'quantity' => 'required|integer|min:0',
                 'status' => 'required|in:active,inactive,draft',
                 'shop_id' => $user->hasRole('admin') ? 'nullable|exists:shops,id' : 'nullable',
-                'media.*' => 'nullable|mimes:jpeg,png,jpg,gif,mp4,mov,avi|max:10240',
+                'media.*' => 'nullable|file|mimes:jpeg,jpg,png,gif,webp,avif,mp4,mov,avi,webm,ogg|mimetypes:image/jpeg,image/pjpeg,image/png,image/gif,image/webp,image/avif,video/mp4,video/quicktime,video/x-msvideo,video/webm,video/ogg|max:10240',
                 'variants' => 'nullable|array',
                 'variants.*.variant_name' => 'nullable|string',
                 'variants.*.variant_key' => 'nullable|string',
                 'variants.*.attributes' => 'nullable|string',
                 'variants.*.price' => 'nullable|numeric|min:0',
+                'variants.*.list_price' => 'nullable|numeric|min:0',
                 'variants.*.quantity' => 'nullable|integer|min:0',
             ]);
 
@@ -209,6 +261,7 @@ class ProductController extends Controller
                 $data['price'] = $template->base_price + $addAmount;
             }
 
+            $data['list_price'] = $request->filled('list_price') ? $request->list_price : ($template->list_price ?? null);
 
             // Handle description logic
             $customDescription = trim($request->description ?? '');
@@ -233,16 +286,12 @@ class ProductController extends Controller
                 'final_description' => $data['description']
             ]);
 
-            // Handle media upload to S3
+            // Handle media upload to S3 (ảnh + video; video có poster từ FFmpeg)
             if ($request->hasFile('media')) {
                 $mediaFiles = $request->file('media');
-                $mediaUrls = [];
-
-                // Get custom order if provided
                 $mediaOrder = $request->input('media_order');
                 $orderedIndices = $mediaOrder ? explode(',', $mediaOrder) : null;
 
-                // If order is provided, reorder files accordingly
                 if ($orderedIndices && count($orderedIndices) === count($mediaFiles)) {
                     $orderedFiles = [];
                     foreach ($orderedIndices as $index) {
@@ -251,33 +300,13 @@ class ProductController extends Controller
                     $mediaFiles = $orderedFiles;
                 }
 
+                $mediaUrls = [];
                 foreach ($mediaFiles as $file) {
-                    try {
-                        // Validate file
-                        if (!$file->isValid()) {
-                            Log::error('Invalid file uploaded', ['file' => $file->getClientOriginalName()]);
-                            continue;
-                        }
-
-                        $fileName = time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
-                        $filePath = Storage::disk('s3')->putFileAs('products', $file, $fileName);
-
-                        if ($filePath) {
-                            // Create the correct S3 URL format
-                            $mediaUrls[] = 'https://s3.us-east-1.amazonaws.com/image.bluprinter/' . $filePath;
-                            Log::info('File uploaded successfully', ['file' => $fileName, 'path' => $filePath, 'url' => $mediaUrls[count($mediaUrls) - 1]]);
-                        } else {
-                            Log::error('Failed to upload file to S3', ['file' => $fileName]);
-                        }
-                    } catch (Exception $e) {
-                        Log::error('Error uploading file', [
-                            'file' => $file->getClientOriginalName(),
-                            'error' => $e->getMessage()
-                        ]);
-                        // Continue with other files instead of failing completely
+                    $item = $this->uploadOneProductMediaFile($file);
+                    if ($item !== null) {
+                        $mediaUrls[] = $item;
                     }
                 }
-
                 if (!empty($mediaUrls)) {
                     $data['media'] = $mediaUrls;
                 }
@@ -349,6 +378,7 @@ class ProductController extends Controller
                         'variant_name' => $variantName,
                         'attributes' => $attributes,
                         'price' => $variantData['price'] ?? null,
+                        'list_price' => $variantData['list_price'] ?? $templateVariant?->list_price ?? null,
                         'sku' => 'SKU-' . strtoupper(Str::random(8)),
                         'quantity' => $variantData['quantity'] ?? 0,
                         'media' => null,
@@ -403,8 +433,8 @@ class ProductController extends Controller
         try {
             $user = auth()->user();
 
-            // Check authorization
-            if (!$user->hasRole('admin') && $product->template->user_id !== $user->id) {
+            // Check authorization (admin, product owner, or shop owner)
+            if (!$product->canEdit($user)) {
                 abort(403, 'Unauthorized action.');
             }
 
@@ -474,8 +504,8 @@ class ProductController extends Controller
     {
         $user = auth()->user();
 
-        // Check authorization
-        if (!$user->hasRole('admin') && $product->template->user_id !== $user->id) {
+        // Check authorization (admin, product owner, or shop owner)
+        if (!$product->canEdit($user)) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -499,30 +529,33 @@ class ProductController extends Controller
         try {
             $user = auth()->user();
 
-            // Check authorization
-            if (!$user->hasRole('admin') && $product->template->user_id !== $user->id) {
+            // Check authorization (admin, product owner, or shop owner)
+            if (!$product->canEdit($user)) {
                 abort(403, 'Unauthorized action.');
             }
 
             $request->validate([
                 'name' => 'required|string|max:255',
                 'price' => 'nullable|numeric|min:0',
+                'list_price' => 'nullable|numeric|min:0',
                 'description' => 'nullable|string',
                 'quantity' => 'required|integer|min:0',
                 'status' => 'required|in:active,inactive,draft',
                 'shop_id' => $user->hasRole('admin') ? 'nullable|exists:shops,id' : 'nullable',
-                'media.*' => 'nullable|mimes:jpeg,png,jpg,gif,mp4,mov,avi|max:10240',
+                'media.*' => 'nullable|file|mimes:jpeg,jpg,png,gif,webp,avif,mp4,mov,avi,webm,ogg|mimetypes:image/jpeg,image/pjpeg,image/png,image/gif,image/webp,image/avif,video/mp4,video/quicktime,video/x-msvideo,video/webm,video/ogg|max:10240',
                 'current_media_order' => 'nullable|array',
                 'variants' => 'nullable|array',
                 'variants.*.id' => 'nullable|exists:product_variants,id',
                 'variants.*.variant_name' => 'nullable|string',
                 'variants.*.price' => 'nullable|numeric|min:0',
+                'variants.*.list_price' => 'nullable|numeric|min:0',
                 'variants.*.quantity' => 'nullable|integer|min:0',
             ]);
 
             $data = $request->only([
                 'name',
                 'price',
+                'list_price',
                 'description',
                 'quantity',
                 'status',
@@ -557,18 +590,12 @@ class ProductController extends Controller
                 }
             }
 
-            // Handle uploaded media
+            // Handle uploaded media (ảnh + video; video có poster từ FFmpeg)
             if ($request->hasFile('media')) {
                 foreach ($request->file('media') as $file) {
-                    if (!$file->isValid()) {
-                        continue;
-                    }
-
-                    $fileName = time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
-                    $filePath = Storage::disk('s3')->putFileAs('products', $file, $fileName);
-
-                    if ($filePath) {
-                        $orderedExistingMedia[] = 'https://s3.us-east-1.amazonaws.com/image.bluprinter/' . $filePath;
+                    $item = $this->uploadOneProductMediaFile($file);
+                    if ($item !== null) {
+                        $orderedExistingMedia[] = $item;
                     }
                 }
             }
@@ -594,6 +621,7 @@ class ProductController extends Controller
                         if ($variant) {
                             $variant->update([
                                 'price' => $variantData['price'] ?? $variant->price,
+                                'list_price' => array_key_exists('list_price', $variantData) ? $variantData['list_price'] : $variant->list_price,
                                 'quantity' => $variantData['quantity'] ?? $variant->quantity,
                             ]);
                         }
@@ -639,8 +667,8 @@ class ProductController extends Controller
     {
         $user = auth()->user();
 
-        // Check authorization
-        if (!$user->hasRole('admin') && $product->user_id !== $user->id) {
+        // Check authorization (admin, product owner, or shop owner)
+        if (!$product->canEdit($user)) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -718,8 +746,8 @@ class ProductController extends Controller
 
             foreach ($products as $product) {
                 try {
-                    // Admin can delete all, Seller can only delete their own products
-                    if ($user->hasRole('admin') || $product->user_id === $user->id) {
+                    // Admin, product owner, or shop owner can delete
+                    if ($product->canEdit($user)) {
                         // Track shop product counts
                         if ($product->shop_id) {
                             if (!isset($shopProductCounts[$product->shop_id])) {
@@ -884,9 +912,9 @@ class ProductController extends Controller
             $product = Product::with(['template.category', 'shop', 'variants'])
                 ->findOrFail($request->product_id);
 
-            // Check authorization
+            // Check authorization (admin, product owner, or shop owner)
             $user = auth()->user();
-            if (!$user->hasRole('admin') && $product->user_id !== $user->id) {
+            if (!$product->canEdit($user)) {
                 abort(403, 'Unauthorized');
             }
 
@@ -974,9 +1002,13 @@ class ProductController extends Controller
             $productsQuery = Product::with(['template.category', 'shop', 'variants'])
                 ->whereIn('id', $productIds);
 
-            // Check authorization
             if (!$user->hasRole('admin')) {
-                $productsQuery->where('user_id', $user->id);
+                $productsQuery->where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id)
+                        ->orWhereHas('shop', function ($shopQ) use ($user) {
+                            $shopQ->where('user_id', $user->id);
+                        });
+                });
             }
 
             $products = $productsQuery->get();
@@ -1203,13 +1235,10 @@ class ProductController extends Controller
 
         // Get country and language from GMC config
         $targetCountry = $gmcConfig->target_country;
-        // Get currency from DomainCurrencyConfig (respects domain currency configuration)
-        $currency = \App\Models\DomainCurrencyConfig::getCurrencyForDomain($gmcConfig->domain) ?? 'USD';
+        $currency = GmcConfig::getCurrencyForCountry($targetCountry);
         $contentLanguage = $gmcConfig->content_language;
 
         // Convert product price from USD to target currency
-        // Products are stored in USD, but need to be converted for different markets
-        // Uses currency_rate from DomainCurrencyConfig
         $productPriceUSD = (float)($product->price ?? 0);
         $productPrice = $this->convertProductPrice($productPriceUSD, $currency, $gmcConfig);
 
@@ -1298,8 +1327,7 @@ class ProductController extends Controller
         $scheme = request()->getScheme(); // http or https
         $baseUrl = $scheme . '://' . $currentDomain;
 
-        // Get currency from DomainCurrencyConfig (respects domain currency configuration)
-        $currency = \App\Models\DomainCurrencyConfig::getCurrencyForDomain($gmcConfig->domain) ?? 'USD';
+        $currency = GmcConfig::getCurrencyForCountry($gmcConfig->target_country);
         $targetCountry = $gmcConfig->target_country;
 
         $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
@@ -1358,7 +1386,6 @@ class ProductController extends Controller
             }
 
             // Convert product price from USD to target currency for XML feed
-            // Uses currency_rate from DomainCurrencyConfig
             $productPriceUSD = (float)$product->price;
             $productPrice = $this->convertProductPrice($productPriceUSD, $currency, $gmcConfig);
 
@@ -1710,29 +1737,15 @@ class ProductController extends Controller
 
     /**
      * Convert product price from USD to target currency
-     * Products are stored in USD, but need to be converted for different markets
-     * Uses currency_rate from DomainCurrencyConfig, otherwise falls back to default rates
+     * Products are stored in USD, converted using default rates per currency.
      */
     private function convertProductPrice(float $usdPrice, string $targetCurrency, ?GmcConfig $gmcConfig = null): float
     {
-        // If currency is USD, return as is
         if ($targetCurrency === 'USD') {
             return $usdPrice;
         }
 
-        // Get conversion rate from DomainCurrencyConfig if available
-        $conversionRate = null;
-        if ($gmcConfig) {
-            $conversionRate = \App\Models\DomainCurrencyConfig::getCurrencyRateForDomain($gmcConfig->domain);
-            if ($conversionRate) {
-                $conversionRate = (float)$conversionRate;
-            }
-        }
-
-        // Fallback to default rates if not set in config
-        if (!$conversionRate) {
-            $conversionRate = $this->getDefaultCurrencyConversionRate($targetCurrency);
-        }
+        $conversionRate = $this->getDefaultCurrencyConversionRate($targetCurrency);
 
         if ($conversionRate) {
             return $usdPrice * $conversionRate;
@@ -1749,8 +1762,7 @@ class ProductController extends Controller
     }
 
     /**
-     * Get default currency conversion rate from USD (fallback)
-     * Used when currency_rate is not set in DomainCurrencyConfig
+     * Get default currency conversion rate from USD
      */
     private function getDefaultCurrencyConversionRate(string $targetCurrency): ?float
     {
@@ -1768,28 +1780,14 @@ class ProductController extends Controller
 
     /**
      * Convert shipping cost from USD to target currency
-     * Uses currency_rate from DomainCurrencyConfig, otherwise falls back to default rates
      */
     private function convertShippingCurrency(float $usdAmount, string $targetCurrency, string $targetCountry, ?GmcConfig $gmcConfig = null): float
     {
-        // If currency is USD, return as is
         if ($targetCurrency === 'USD') {
             return $usdAmount;
         }
 
-        // Get conversion rate from DomainCurrencyConfig if available
-        $conversionRate = null;
-        if ($gmcConfig) {
-            $conversionRate = \App\Models\DomainCurrencyConfig::getCurrencyRateForDomain($gmcConfig->domain);
-            if ($conversionRate) {
-                $conversionRate = (float)$conversionRate;
-            }
-        }
-
-        // Fallback to default rates if not set in config
-        if (!$conversionRate) {
-            $conversionRate = $this->getDefaultCurrencyConversionRate($targetCurrency);
-        }
+        $conversionRate = $this->getDefaultCurrencyConversionRate($targetCurrency);
 
         if ($conversionRate) {
             return $usdAmount * $conversionRate;
@@ -1851,9 +1849,13 @@ class ProductController extends Controller
             $productsQuery = Product::with(['template.category', 'template.user', 'user', 'shop', 'variants', 'collections'])
                 ->whereIn('id', $productIds);
 
-            // Apply user filter (chỉ export sản phẩm của user hoặc admin có thể export tất cả)
             if (!$user->hasRole('admin')) {
-                $productsQuery->where('user_id', $user->id);
+                $productsQuery->where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id)
+                        ->orWhereHas('shop', function ($shopQ) use ($user) {
+                            $shopQ->where('user_id', $user->id);
+                        });
+                });
             }
 
             $products = $productsQuery->get();
@@ -1861,9 +1863,13 @@ class ProductController extends Controller
             // Nếu không có product_ids, export tất cả (giữ nguyên logic cũ để tương thích)
             $productsQuery = Product::with(['template.category', 'template.user', 'user', 'shop', 'variants', 'collections']);
 
-            // Apply user filter
             if (!$user->hasRole('admin')) {
-                $productsQuery->where('user_id', $user->id);
+                $productsQuery->where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id)
+                        ->orWhereHas('shop', function ($shopQ) use ($user) {
+                            $shopQ->where('user_id', $user->id);
+                        });
+                });
             }
 
             // Apply filters from request

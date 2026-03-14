@@ -14,13 +14,17 @@ class Review extends Model
         'customer_email',
         'rating',
         'review_text',
+        'image_url',
+        'title',
         'is_verified_purchase',
         'is_approved',
+        'show_on_home',
     ];
 
     protected $casts = [
         'is_verified_purchase' => 'boolean',
         'is_approved' => 'boolean',
+        'show_on_home' => 'boolean',
         'rating' => 'integer',
     ];
 
@@ -44,6 +48,18 @@ class Review extends Model
     public function scopeForProduct($query, $productId)
     {
         return $query->where('product_id', $productId);
+    }
+
+    /** Reviews có ảnh để hiển thị trên trang chủ (testimonials) */
+    public function scopeWithImage($query)
+    {
+        return $query->whereNotNull('image_url')->where('image_url', '!=', '');
+    }
+
+    /** Reviews được ghim hiển thị trên trang chủ */
+    public function scopePinnedToHome($query)
+    {
+        return $query->where('show_on_home', true);
     }
 
     // Accessors

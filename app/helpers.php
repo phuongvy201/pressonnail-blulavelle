@@ -62,6 +62,17 @@ if (!function_exists('convert_currency')) {
     }
 }
 
+if (!function_exists('content_block')) {
+    /**
+     * Lấy nội dung block (trang chủ, v.v.) đã merge với default.
+     * Dùng cho inline editing: admin chỉnh trên frontend, lưu vào DB.
+     */
+    function content_block(string $blockKey, array $default = []): array
+    {
+        return \App\Models\ContentBlock::getContent($blockKey, $default);
+    }
+}
+
 
 
 

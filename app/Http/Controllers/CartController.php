@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Cart;
 use App\Models\Product;
+use App\Models\PromoCode;
+use App\Models\RecentProductView;
 use App\Models\ShippingZone;
 use App\Services\ShippingCalculator;
 use App\Services\CurrencyService;
@@ -40,34 +42,30 @@ class CartController extends Controller
             return $item->getTotalPriceWithCustomizations();
         });
 
-        // Get current domain (needed for shipping zone filtering even if cart is empty)
+        // Get current domain and currency (for shipping and promo)
         $currentDomain = CurrencyService::getCurrentDomain();
-        
+        $currency = CurrencyService::getCurrencyForDomain() ?? 'USD';
+        $currencyRate = CurrencyService::getCurrencyRateForDomain();
+        if (!$currencyRate || $currencyRate == 1.0) {
+            $defaultRates = [
+                'USD' => 1.0,
+                'GBP' => 0.79,
+                'EUR' => 0.92,
+                'CAD' => 1.35,
+                'AUD' => 1.52,
+                'JPY' => 150.0,
+                'CNY' => 7.2,
+                'HKD' => 7.8,
+                'SGD' => 1.34,
+            ];
+            $currencyRate = $defaultRates[$currency] ?? 1.0;
+        }
+
         // Calculate shipping using ShippingCalculator
         $shipping = 0;
         $shippingDetails = null;
 
         if (!$cartItems->isEmpty()) {
-            // Get currency and rate for conversion
-            $currency = CurrencyService::getCurrencyForDomain() ?? 'USD';
-            $currencyRate = CurrencyService::getCurrencyRateForDomain();
-
-            // If no rate from domain, use default rates
-            if (!$currencyRate || $currencyRate == 1.0) {
-                $defaultRates = [
-                    'USD' => 1.0,
-                    'GBP' => 0.79,
-                    'EUR' => 0.92,
-                    'CAD' => 1.35,
-                    'AUD' => 1.52,
-                    'JPY' => 150.0,
-                    'CNY' => 7.2,
-                    'HKD' => 7.8,
-                    'SGD' => 1.34,
-                ];
-                $currencyRate = $defaultRates[$currency] ?? 1.0;
-            }
-
             // Prepare cart items for shipping calculation
             // Shipping calculator expects USD prices, so we need to convert back to USD
             $items = $cartItems->map(function ($item) use ($currency, $currencyRate) {
@@ -138,7 +136,23 @@ class CartController extends Controller
             }
         }
 
-        $total = $subtotal + $shipping;
+        // Promo code discount (session)
+        $discount = 0.0;
+        $appliedPromoCode = null;
+        $promoId = session('applied_promo_code_id');
+        if ($promoId && $subtotal > 0) {
+            $subtotalUsd = $currency !== 'USD' ? $subtotal / $currencyRate : $subtotal;
+            $promo = PromoCode::find($promoId);
+            if ($promo && $promo->isValidForSubtotal($subtotalUsd)) {
+                $discountUsd = $promo->calculateDiscountUsd($subtotalUsd);
+                $discount = $currency !== 'USD' ? $discountUsd * $currencyRate : $discountUsd;
+                $appliedPromoCode = $promo->code;
+            } else {
+                session()->forget(['applied_promo_code_id', 'applied_promo_code']);
+            }
+        }
+
+        $total = $subtotal - $discount + $shipping;
 
         // Get current domain for shipping zone filtering (already retrieved above)
         // $currentDomain is already set from shipping calculation above
@@ -172,16 +186,32 @@ class CartController extends Controller
             $defaultZone = $availableZones->first();
         }
 
+        // Recently viewed products (for fragment on cart page)
+        $recentlyViewedProducts = collect();
+        if (Auth::id()) {
+            $recentIds = RecentProductView::getRecentProductIds(Auth::id(), 10, null);
+            if ($recentIds->isNotEmpty()) {
+                $recentlyViewedProducts = Product::whereIn('id', $recentIds->all())
+                    ->availableForDisplay()
+                    ->with(['shop', 'template'])
+                    ->get()
+                    ->sortBy(fn ($p) => array_search($p->id, $recentIds->toArray()));
+            }
+        }
+
         return view('cart.index', compact(
-            'cartItems', 
-            'subtotal', 
-            'shipping', 
-            'total', 
-            'shippingDetails', 
+            'cartItems',
+            'subtotal',
+            'shipping',
+            'discount',
+            'appliedPromoCode',
+            'total',
+            'shippingDetails',
             'shippingZones',
             'availableZones',
             'currentDomain',
-            'defaultZone'
+            'defaultZone',
+            'recentlyViewedProducts'
         ));
     }
 }

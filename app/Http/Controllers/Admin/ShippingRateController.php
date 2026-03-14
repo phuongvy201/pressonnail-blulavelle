@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\ShippingRate;
 use App\Models\ShippingZone;
 use App\Models\Category;
-use App\Models\DomainCurrencyConfig;
 use Illuminate\Http\Request;
 
 class ShippingRateController extends Controller
@@ -37,23 +36,10 @@ class ShippingRateController extends Controller
             $query->where('is_active', $request->status === 'active');
         }
 
-        // Filter by domain
-        if ($request->filled('domain')) {
-            if ($request->domain === 'null') {
-                $query->whereNull('domain')
-                    ->whereNull('domains');
-            } else {
-                $query->where(function ($q) use ($request) {
-                    $q->where('domain', $request->domain)
-                        ->orWhereJsonContains('domains', $request->domain);
-                });
-            }
-        }
-
         $rates = $query->ordered()->paginate(20);
         $zones = ShippingZone::ordered()->get();
         $categories = $this->getCategoriesHierarchy();
-        $domains = DomainCurrencyConfig::where('is_active', true)->orderBy('domain')->pluck('domain')->toArray();
+        $domains = $this->getDomainsList();
 
         return view('admin.shipping-rates.index', compact('rates', 'zones', 'categories', 'domains'));
     }
@@ -65,7 +51,7 @@ class ShippingRateController extends Controller
     {
         $zones = ShippingZone::active()->ordered()->get();
         $categories = $this->getCategoriesHierarchy();
-        $domains = DomainCurrencyConfig::where('is_active', true)->orderBy('domain')->pluck('domain')->toArray();
+        $domains = $this->getDomainsList();
 
         return view('admin.shipping-rates.create', compact('zones', 'categories', 'domains'));
     }
@@ -102,6 +88,14 @@ class ShippingRateController extends Controller
     }
 
     /**
+     * Get list of domains (kept for view compatibility; no longer used)
+     */
+    protected function getDomainsList(): array
+    {
+        return [];
+    }
+
+    /**
      * Store a newly created shipping rate in storage.
      */
     public function store(Request $request)
@@ -129,20 +123,13 @@ class ShippingRateController extends Controller
             'sort_order' => 'nullable|integer|min:0',
         ]);
 
-        // Normalize domains input
-        $domains = array_values(array_filter($request->input('domains', [])));
-        $primaryDomain = $domains[0] ?? ($request->input('domain') ?: null);
-
-        $validated['domain'] = $primaryDomain ?: null;
-        $validated['domains'] = $domains ?: null;
-
         $validated['is_active'] = $request->has('is_active');
         $validated['is_default'] = $request->has('is_default');
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
 
         $rate = ShippingRate::create($validated);
         
-        // If set as default, unset other defaults for same domain/zone/category
+        // If set as default, unset other defaults for same zone/category
         if ($rate->is_default) {
             $rate->setAsDefault();
         }
@@ -168,7 +155,7 @@ class ShippingRateController extends Controller
     {
         $zones = ShippingZone::active()->ordered()->get();
         $categories = $this->getCategoriesHierarchy();
-        $domains = DomainCurrencyConfig::where('is_active', true)->orderBy('domain')->pluck('domain')->toArray();
+        $domains = $this->getDomainsList();
 
         return view('admin.shipping-rates.edit', compact('shippingRate', 'zones', 'categories', 'domains'));
     }
@@ -180,9 +167,6 @@ class ShippingRateController extends Controller
     {
         $validated = $request->validate([
             'shipping_zone_id' => 'required|exists:shipping_zones,id',
-            'domain' => 'nullable|string|max:255', // legacy single domain (optional)
-            'domains' => 'nullable|array',
-            'domains.*' => 'string|max:255',
             'category_id' => 'nullable|exists:categories,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -201,13 +185,6 @@ class ShippingRateController extends Controller
             'sort_order' => 'nullable|integer|min:0',
         ]);
 
-        // Normalize domains input
-        $domains = array_values(array_filter($request->input('domains', [])));
-        $primaryDomain = $domains[0] ?? ($request->input('domain') ?: null);
-
-        $validated['domain'] = $primaryDomain ?: null;
-        $validated['domains'] = $domains ?: null;
-
         $validated['is_active'] = $request->has('is_active');
         $wasDefault = $shippingRate->is_default;
         $validated['is_default'] = $request->has('is_default');
@@ -215,7 +192,7 @@ class ShippingRateController extends Controller
 
         $shippingRate->update($validated);
         
-        // If set as default, unset other defaults for same domain/zone/category
+        // If set as default, unset other defaults for same zone/category
         if ($shippingRate->is_default && !$wasDefault) {
             $shippingRate->setAsDefault();
         }
@@ -236,15 +213,10 @@ class ShippingRateController extends Controller
     }
 
     /**
-     * Set shipping rate as default for its domain/zone/category
+     * Set shipping rate as default for its zone/category
      */
     public function setDefault(ShippingRate $shippingRate)
     {
-        if (!$shippingRate->domain) {
-            return redirect()->route('admin.shipping-rates.index')
-                ->with('error', 'Cannot set default: Rate must have a domain assigned.');
-        }
-
         $shippingRate->setAsDefault();
 
         return redirect()->route('admin.shipping-rates.index')

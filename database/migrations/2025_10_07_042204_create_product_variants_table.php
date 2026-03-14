@@ -13,19 +13,26 @@ return new class extends Migration
     {
         Schema::create('product_variants', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('product_id');
-            $table->unsignedBigInteger('template_id');
-            $table->string('variant_name'); // "Size M - Black"
-            $table->string('size')->nullable(); // "M", "L", "XL"
-            $table->string('color')->nullable(); // "Black", "White"
-            $table->string('sku')->unique();
-            $table->decimal('price', 10, 2)->nullable(); // Override từ product/template
-            $table->integer('quantity')->default(0);
-            $table->json('media')->nullable(); // Media riêng cho variant
-            $table->timestamps();
 
-            $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
-            $table->foreign('template_id')->references('id')->on('product_templates')->onDelete('cascade');
+            $table->foreignId('product_id')
+                ->constrained('products')
+                ->onDelete('cascade');
+
+            $table->foreignId('template_id')
+                ->constrained('product_templates')
+                ->onDelete('cascade');
+
+            $table->string('variant_name'); // Example: "Size M - Black"
+
+            // Dynamic attributes (size, color, length, shape, etc.)
+            $table->json('attributes')->nullable();
+
+            $table->string('sku')->unique();
+            $table->decimal('price', 10, 2)->nullable();
+            $table->integer('quantity')->default(0);
+            $table->json('media')->nullable();
+
+            $table->timestamps();
         });
     }
 

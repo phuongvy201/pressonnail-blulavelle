@@ -7,7 +7,9 @@
     $currentCurrency = currency();
     $currencySymbol = currency_symbol();
 @endphp
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 <script>
 // Track Facebook Pixel ViewContent for shop page
 document.addEventListener('DOMContentLoaded', function() {
@@ -20,49 +22,49 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<main class="pb-20">
+<main class="shop-page bg-background-light flex flex-col flex-1 px-4 md:px-20 lg:px-40 py-8 max-w-[1440px] mx-auto w-full pb-20">
     <!-- Shop Cover Banner -->
-    <div class="relative w-full h-[300px] overflow-hidden">
+    <div class="relative w-full aspect-[21/9] min-h-[200px] max-h-[380px] overflow-hidden rounded-xl -mx-4 md:-mx-20 lg:-mx-40 mt-0">
         @if($shop->shop_banner)
-            <img alt="Shop Cover Banner" class="w-full h-full object-cover" src="{{ $shop->shop_banner }}">
+            <img alt="Shop Cover Banner" class="absolute inset-0 w-full h-full object-cover object-center" src="{{ $shop->shop_banner }}">
         @else
-            <div class="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200"></div>
+            <div class="absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5"></div>
         @endif
-        <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none"></div>
     </div>
 
     <!-- Shop Profile Card -->
-    <div class="max-w-7xl mx-auto px-4 -mt-16 relative z-10">
-        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 md:p-8">
+    <div class="-mt-10 relative z-10">
+        <div class="bg-white rounded-xl shadow-lg border border-primary/5 p-6 md:p-8">
             <div class="flex flex-col md:flex-row items-center md:items-end gap-6">
                 <!-- Shop Avatar -->
                 <div class="relative">
-                    <div class="w-32 h-32 rounded-full border-4 border-white dark:border-slate-800 overflow-hidden shadow-lg bg-white">
+                    <div class="w-28 h-28 rounded-full border-4 border-white overflow-hidden shadow-lg bg-white">
                         @if($shop->shop_logo)
                             <img alt="{{ $shop->shop_name }} Profile" class="w-full h-full object-cover" src="{{ $shop->shop_logo }}">
                         @else
-                            <div class="w-full h-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
-                                <span class="text-4xl font-bold text-slate-400">{{ substr($shop->shop_name, 0, 1) }}</span>
+                            <div class="w-full h-full bg-slate-200 flex items-center justify-center">
+                                <span class="text-3xl font-bold text-slate-400">{{ substr($shop->shop_name, 0, 1) }}</span>
                             </div>
                         @endif
                     </div>
                     @if($shop->verified)
-                        <div class="absolute -bottom-1 -right-1 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center border-2 border-white">
-                            <span class="material-icons-outlined text-white text-sm">check</span>
+                        <div class="absolute -bottom-1 -right-1 w-7 h-7 bg-primary rounded-full flex items-center justify-center border-2 border-white">
+                            <span class="material-symbols-outlined text-white text-sm">check</span>
                         </div>
                     @endif
                 </div>
 
                 <!-- Shop Info -->
                 <div class="flex-1 text-center md:text-left">
-                    <h2 class="text-3xl font-bold mb-2">{{ $shop->shop_name }}</h2>
-                    <div class="flex items-center justify-center md:justify-start gap-4 text-slate-500 dark:text-slate-400">
-                        <span class="flex items-center gap-1.5 text-sm">
-                            <span class="material-icons-outlined text-sm">people</span> 
+                    <h2 class="text-2xl font-bold text-slate-900 mb-2">{{ $shop->shop_name }}</h2>
+                    <div class="flex items-center justify-center md:justify-start gap-6 text-slate-500 text-sm font-medium">
+                        <span class="flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-lg">group</span>
                             <span data-followers>{{ number_format($stats['followers']) }}</span> Followers
                         </span>
-                        <span class="flex items-center gap-1.5 text-sm">
-                            <span class="material-icons-outlined text-sm">favorite</span> 
+                        <span class="flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-lg">favorite</span>
                             {{ number_format($stats['favorited']) }} Favorited
                         </span>
                     </div>
@@ -70,16 +72,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 <!-- Action Buttons -->
                 <div class="flex items-center gap-3 w-full md:w-auto">
-                    <button id="followBtn" 
+                    <button id="followBtn"
                             onclick="toggleFollow()"
-                            class="flex-1 md:flex-none bg-primary hover:bg-rose-700 text-white font-semibold py-3 px-8 rounded-full flex items-center justify-center gap-2 transition-all {{ $isFollowing ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : '' }}"
-                            style="{{ !$isFollowing ? 'background-color: #e11d48;' : '' }}">
-                        <span class="material-icons-outlined text-sm">favorite</span>
+                            class="flex-1 md:flex-none bg-primary hover:opacity-90 text-white font-semibold py-3 px-8 rounded-lg flex items-center justify-center gap-2 transition-all shadow-md shadow-primary/20 {{ $isFollowing ? '!bg-slate-200 !text-slate-700 hover:!bg-slate-300 !shadow-none' : '' }}"
+                            style="{{ !$isFollowing ? 'background-color: var(--primary);' : '' }}">
+                        <span class="material-symbols-outlined text-lg">favorite</span>
                         <span id="followText">{{ $isFollowing ? 'Unfollow' : 'Follow' }}</span>
                     </button>
                     <button onclick="openContactModal()"
-                            class="flex-1 md:flex-none border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 font-semibold py-3 px-8 rounded-full flex items-center justify-center gap-2 transition-all">
-                        <span class="material-icons-outlined text-sm">mail</span>
+                            class="flex-1 md:flex-none border border-primary/20 hover:bg-primary/10 text-slate-700 font-semibold py-3 px-8 rounded-lg flex items-center justify-center gap-2 transition-all">
+                        <span class="material-symbols-outlined text-lg">mail</span>
                         <span>Contact</span>
                     </button>
                 </div>
@@ -88,65 +90,53 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 
     <!-- Shop Categories Section -->
-    <section class="max-w-7xl mx-auto px-4 mt-12">
-        @if($categories->count() > 0)
-        <div class="flex items-center justify-between mb-6">
-            <h3 class="text-xl font-bold flex items-center gap-2">
-                <span class="w-1.5 h-6 bg-primary rounded-full"></span>
-                Shop Categories
-            </h3>
-        </div>
-        <div class="flex gap-4 overflow-x-auto pb-4 hide-scrollbar">
+    @if($categories->count() > 0)
+    <section class="mt-10">
+        <h3 class="text-xl font-bold text-slate-900 mb-4">Shop Categories</h3>
+        <div id="categoriesContainer" class="flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
             @foreach($categories as $category)
-            <div class="flex-shrink-0 group cursor-pointer" onclick="filterByCategory('{{ $category->id }}')">
-                <div class="w-48 bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 transition-all hover:shadow-md">
-                    <div class="relative h-32 w-full bg-slate-50 dark:bg-slate-900 rounded-xl overflow-hidden mb-3">
-                        @php
-                            $firstProduct = null;
-                            if ($category->templates->isNotEmpty()) {
-                                foreach ($category->templates as $template) {
-                                    if ($template->products->isNotEmpty()) {
-                                        $firstProduct = $template->products->first();
-                                        break;
-                                    }
-                                }
-                            }
-                            $imageUrl = null;
-                            if ($firstProduct && count($firstProduct->getEffectiveMedia()) > 0) {
-                                $media = $firstProduct->getEffectiveMedia();
-                                $imageUrl = is_array($media) && isset($media[0]) ? $media[0] : (is_string($media) ? $media : '');
-                            }
-                        @endphp
-                        @if($imageUrl)
-                            <img alt="{{ $category->name }}" class="w-full h-full object-contain p-4 group-hover:scale-110 transition-transform" src="{{ $imageUrl }}">
-                        @else
-                            <div class="w-full h-full flex items-center justify-center">
-                                <span class="material-icons-outlined text-slate-400 text-4xl">category</span>
-                            </div>
-                        @endif
-                        <span class="absolute top-2 right-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                            {{ $category->templates->count() }}
+            @php
+                $firstProduct = null;
+                if ($category->templates->isNotEmpty()) {
+                    foreach ($category->templates as $template) {
+                        if ($template->products->isNotEmpty()) {
+                            $firstProduct = $template->products->first();
+                            break;
+                        }
+                    }
+                }
+                $imageUrl = null;
+                if ($firstProduct && count($firstProduct->getEffectiveMedia()) > 0) {
+                    $media = $firstProduct->getEffectiveMedia();
+                    $imageUrl = is_array($media) && isset($media[0]) ? $media[0] : (is_string($media) ? $media : '');
+                }
+            @endphp
+            <button type="button" onclick="filterByCategory('{{ $category->id }}')" class="shop-category-pill flex-shrink-0 flex items-center gap-3 rounded-full pl-1 pr-5 py-1.5 bg-white border border-slate-200/80 shadow-sm hover:border-primary/30 hover:shadow-md hover:bg-primary/5 transition-all duration-200 text-left group">
+                <span class="w-12 h-12 rounded-full overflow-hidden bg-slate-100 flex-shrink-0 ring-2 ring-white shadow-sm">
+                    @if($imageUrl)
+                        <img alt="{{ $category->name }}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" src="{{ $imageUrl }}">
+                    @else
+                        <span class="w-full h-full flex items-center justify-center text-slate-400">
+                            <span class="material-symbols-outlined text-2xl">category</span>
                         </span>
-                    </div>
-                    <p class="font-semibold text-center group-hover:text-primary transition-colors">{{ $category->name }}</p>
-                    <p class="text-xs text-slate-500 text-center">{{ $category->templates->count() }} Items</p>
-                </div>
-            </div>
+                    @endif
+                </span>
+                <span class="flex flex-col min-w-0">
+                    <span class="font-semibold text-slate-800 group-hover:text-primary transition-colors text-sm truncate">{{ $category->name }}</span>
+                    <span class="text-xs text-slate-500">{{ $category->templates->count() }} items</span>
+                </span>
+            </button>
             @endforeach
         </div>
-        @endif
-        
     </section>
+    @endif
 
     <!-- All Products Section -->
-    <section class="max-w-7xl mx-auto px-4 mt-12">
-        <div class="flex items-center justify-between mb-8">
-            <h3 class="text-xl font-bold flex items-center gap-2">
-                <span class="w-1.5 h-6 bg-primary rounded-full"></span>
-                All Products
-            </h3>
+    <section id="productsContent" class="mt-10">
+        <div class="flex items-baseline justify-between mb-6 border-b border-primary/5 pb-4">
+            <h3 class="text-2xl font-bold text-slate-900">All Products</h3>
             <div class="flex gap-2">
-                <select class="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-full px-4 py-2 text-sm focus:ring-primary focus:border-primary">
+                <select class="bg-white border border-primary/10 rounded-lg px-4 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
                     <option>Newest first</option>
                     <option>Price: Low to High</option>
                     <option>Price: High to Low</option>
@@ -154,101 +144,118 @@ document.addEventListener('DOMContentLoaded', function() {
                 </select>
             </div>
         </div>
+
         @if($allProducts->count() > 0)
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
             @foreach($allProducts as $product)
-            <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
+            @php
+                $media = $product->getEffectiveMedia();
+                $imageUrl = null;
+                if ($media && count($media) > 0) {
+                    if (is_string($media[0])) {
+                        $imageUrl = $media[0];
+                    } elseif (is_array($media[0])) {
+                        $imageUrl = $media[0]['url'] ?? $media[0]['path'] ?? reset($media[0]) ?? null;
+                    }
+                }
+                $avgRating = $product->getAverageRating();
+                $reviewsCount = $product->getTotalReviews();
+                $variants = $product->variants ?? collect();
+                $colorSwatches = $variants->take(8)->map(function ($v) {
+                    $attrs = $v->attributes ?? [];
+                    $color = $attrs['color'] ?? $attrs['Color'] ?? null;
+                    return $color && (preg_match('/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/', $color) || preg_match('/^rgb|^hsl/', $color)) ? $color : null;
+                })->filter()->unique()->take(4)->values();
+            @endphp
+            <div class="group flex flex-col bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-primary/5">
                 <!-- Product Image -->
-                <div class="relative aspect-square bg-slate-50 dark:bg-slate-900 p-6">
-                    @php
-                        $media = $product->getEffectiveMedia();
-                        $imageUrl = null;
-                        if ($media && count($media) > 0) {
-                            if (is_string($media[0])) {
-                                $imageUrl = $media[0];
-                            } elseif (is_array($media[0])) {
-                                $imageUrl = $media[0]['url'] ?? $media[0]['path'] ?? reset($media[0]) ?? null;
-                            }
-                        }
-                    @endphp
+                <div class="relative aspect-[4/5] overflow-hidden bg-slate-100">
                     @if($imageUrl)
-                        <img alt="{{ $product->name }}" class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" src="{{ $imageUrl }}">
+                        <img alt="{{ $product->name }}" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" src="{{ $imageUrl }}">
                     @else
                         <div class="w-full h-full flex items-center justify-center">
-                            <span class="material-icons-outlined text-slate-400 text-6xl">image</span>
+                            <span class="material-symbols-outlined text-slate-400 text-6xl">image</span>
                         </div>
                     @endif
-                    <button class="absolute top-3 right-3 w-8 h-8 bg-white/80 dark:bg-slate-700/80 backdrop-blur rounded-full flex items-center justify-center text-slate-400 hover:text-primary transition-colors">
-                        <span class="material-icons-outlined text-sm">favorite_border</span>
+                    <button type="button" class="absolute top-3 right-3 z-10 size-8 flex items-center justify-center bg-white/80 backdrop-blur rounded-full text-primary hover:bg-primary hover:text-white transition-all shadow-sm">
+                        <span class="material-symbols-outlined text-xl">favorite</span>
                     </button>
                 </div>
                 <!-- Product Info -->
-                <div class="p-4">
-                    <h4 class="font-medium text-slate-800 dark:text-slate-200 truncate mb-2">
-                        <a href="{{ route('products.show', $product->slug) }}" class="hover:text-primary transition-colors">
-                            {{ Str::limit($product->name, 50) }}
-                        </a>
-                    </h4>
-                    <div class="flex items-center justify-between">
-                        <p class="text-lg font-bold text-primary">
-                            {{ format_price_usd((float) $product->base_price) }}
-                        </p>
-                        <span class="text-[10px] text-slate-400 font-semibold uppercase">
-                            @if($product->template)
-                                {{ $product->template->name ?? 'Premium' }}
-                            @else
-                                Premium
-                            @endif
-                        </span>
+                <div class="p-4 flex flex-col gap-2">
+                    <div class="flex justify-between items-start">
+                        <h4 class="font-bold text-slate-900 line-clamp-1 group-hover:text-primary transition-colors">
+                            <a href="{{ route('products.show', $product->slug) }}">{{ Str::limit($product->name, 45) }}</a>
+                        </h4>
+                        <span class="font-bold text-primary shrink-0">{{ format_price_usd((float) $product->base_price) }}</span>
                     </div>
+                    @if($reviewsCount > 0)
+                    <div class="flex items-center gap-1 text-yellow-500">
+                        <span class="material-symbols-outlined text-sm fill-1">star</span>
+                        <span class="text-xs font-semibold text-slate-600">{{ number_format($avgRating, 1) }} ({{ $reviewsCount }})</span>
+                    </div>
+                    @endif
+                    @if($colorSwatches->isNotEmpty())
+                    <div class="flex gap-1.5 mt-1">
+                        @foreach($colorSwatches as $color)
+                        <span class="size-4 rounded-full border border-slate-200 shrink-0" style="background-color: {{ $color }};" title="{{ $color }}"></span>
+                        @endforeach
+                    </div>
+                    @endif
+                    <a href="{{ route('products.show', $product->slug) }}" class="mt-2 w-full py-2 bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white rounded-lg text-sm font-bold transition-all text-center">
+                        Add to Cart
+                    </a>
                 </div>
             </div>
             @endforeach
         </div>
-        
+
         <!-- Pagination -->
-        <div class="mt-12 text-center">
+        <div class="mt-8 text-center">
             {{ $allProducts->links() }}
         </div>
         @else
-        <div class="text-center py-12">
-            <span class="material-icons-outlined text-slate-300 text-6xl mb-4 block">inventory_2</span>
-            <p class="text-slate-500 text-lg">This shop has no products yet</p>
+        <div class="flex flex-col items-center justify-center py-20 text-center">
+            <div class="size-24 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-6">
+                <span class="material-symbols-outlined text-5xl">inventory_2</span>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-900 mb-2">No products yet</h2>
+            <p class="text-slate-500 mb-8 max-w-md">This shop has no products yet. Check back later.</p>
         </div>
         @endif
     </section>
 </main>
 
 <!-- Contact Modal -->
-<div id="contactModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center p-4">
-    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6">
+<div id="contactModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/50">
+    <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-xl border border-primary/5">
         <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-slate-100">Contact Shop</h3>
-            <button onclick="closeContactModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-slate-300">
-                <span class="material-icons-outlined">close</span>
+            <h3 class="text-lg font-bold text-slate-900">Contact Shop</h3>
+            <button type="button" onclick="closeContactModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100">
+                <span class="material-symbols-outlined">close</span>
             </button>
         </div>
-        
+
         <form id="contactForm">
             <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Subject</label>
-                <input type="text" id="subject" name="subject" required 
-                       class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Subject</label>
+                <input type="text" id="subject" name="subject" required
+                       class="w-full px-3 py-2 border border-primary/10 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
             </div>
-            
+
             <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Message</label>
-                <textarea id="message" name="message" rows="4" required 
-                          class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"></textarea>
+                <label class="block text-sm font-medium text-slate-700 mb-2">Message</label>
+                <textarea id="message" name="message" rows="4" required
+                          class="w-full px-3 py-2 border border-primary/10 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"></textarea>
             </div>
-            
-            <div class="flex space-x-3">
-                <button type="button" onclick="closeContactModal()" 
-                        class="flex-1 px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+
+            <div class="flex gap-3">
+                <button type="button" onclick="closeContactModal()"
+                        class="flex-1 px-4 py-2 border border-primary/20 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-semibold">
                     Cancel
                 </button>
-                <button type="submit" 
-                        class="flex-1 px-4 py-2 bg-primary hover:bg-rose-700 text-white rounded-lg transition-colors">
+                <button type="submit"
+                        class="flex-1 px-4 py-2 bg-primary hover:opacity-90 text-white rounded-lg transition-colors font-bold shadow-md shadow-primary/20">
                     Send Message
                 </button>
             </div>
@@ -257,30 +264,20 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <style>
+    .shop-page {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    }
     :root {
-        --primary: #e11d48;
+        --primary: #f0427c;
+        --background-light: #f8f6f6;
     }
-    
-    .bg-primary {
-        background-color: var(--primary);
-    }
-    
-    .text-primary {
-        color: var(--primary);
-    }
-    
-    .border-primary {
-        border-color: var(--primary);
-    }
-    
-    .hide-scrollbar::-webkit-scrollbar {
-        display: none;
-    }
-    
-    .hide-scrollbar {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-    }
+    .bg-primary { background-color: var(--primary); }
+    .text-primary { color: var(--primary); }
+    .border-primary { border-color: var(--primary); }
+    .bg-background-light { background-color: var(--background-light); }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    #contactModal.flex { display: flex !important; }
 </style>
 
 <script>
@@ -290,16 +287,14 @@ function toggleFollow() {
         window.location.href = '{{ route("login") }}';
         return;
     @endguest
-    
+
     const followBtn = document.getElementById('followBtn');
     const followText = document.getElementById('followText');
-    const isCurrentlyFollowing = followBtn.classList.contains('bg-gray-200');
-    
+    const isCurrentlyFollowing = followBtn.classList.contains('!bg-slate-200');
+
     const action = isCurrentlyFollowing ? 'unfollow' : 'follow';
-    
-    // Use route helper with shop_slug (Shop model uses shop_slug for route binding)
     const followUrl = '{{ route("shops.follow", $shop->shop_slug ?? $shop->id) }}';
-    
+
     fetch(followUrl, {
         method: 'POST',
         headers: {
@@ -310,38 +305,32 @@ function toggleFollow() {
         body: JSON.stringify({ action: action })
     })
     .then(response => {
-        // Check if response is ok
         if (!response.ok) {
-            // If not ok, try to parse error response
             return response.json().then(err => {
                 throw new Error(err.message || 'Request failed');
             }).catch(() => {
-                throw new Error(`Server error: ${response.status}`);
+                throw new Error('Server error: ' + response.status);
             });
         }
         return response.json();
     })
     .then(data => {
-         if (data.success) {
-             if (action === 'follow') {
-                 followBtn.classList.remove('bg-gray-200', 'text-gray-700');
-                 followBtn.classList.add('text-white');
-                 followBtn.style.backgroundColor = '#e11d48';
-                 followText.textContent = 'Unfollow';
-             } else {
-                 followBtn.classList.remove('text-white');
-                 followBtn.classList.add('bg-gray-200', 'text-gray-700');
-                 followBtn.style.backgroundColor = '';
-                 followText.textContent = 'Follow';
-             }
-            
-            // Update followers count
+        if (data.success) {
+            if (action === 'follow') {
+                followBtn.classList.remove('!bg-slate-200', '!text-slate-700');
+                followBtn.classList.add('text-white');
+                followBtn.style.backgroundColor = 'var(--primary)';
+                followText.textContent = 'Unfollow';
+            } else {
+                followBtn.classList.remove('text-white');
+                followBtn.classList.add('!bg-slate-200', '!text-slate-700');
+                followBtn.style.backgroundColor = '';
+                followText.textContent = 'Follow';
+            }
             const followersElement = document.querySelector('[data-followers]');
             if (followersElement) {
-                followersElement.textContent = data.followers_count + ' Followers';
+                followersElement.textContent = data.followers_count;
             }
-            
-            // Show success message
             if (typeof showNotification === 'function') {
                 showNotification(data.message, 'success');
             } else {
@@ -357,34 +346,36 @@ function toggleFollow() {
     })
     .catch(error => {
         console.error('Follow shop error:', error);
-        const errorMessage = error.message || 'An error occurred. Please try again.';
+        const msg = error.message || 'An error occurred. Please try again.';
         if (typeof showNotification === 'function') {
-            showNotification(errorMessage, 'error');
+            showNotification(msg, 'error');
         } else {
-            alert(errorMessage);
+            alert(msg);
         }
     });
 }
 
-// Contact modal
 function openContactModal() {
-    document.getElementById('contactModal').classList.remove('hidden');
+    var modal = document.getElementById('contactModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    modal.style.display = 'flex';
 }
 
 function closeContactModal() {
-    document.getElementById('contactModal').classList.add('hidden');
+    var modal = document.getElementById('contactModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    modal.style.display = 'none';
 }
 
-// Contact form submission
 document.getElementById('contactForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    
-    const formData = new FormData(this);
-    const data = {
-        subject: formData.get('subject'),
-        message: formData.get('message')
+    var form = this;
+    var data = {
+        subject: form.subject.value,
+        message: form.message.value
     };
-    
     fetch('{{ route("shops.contact", $shop) }}', {
         method: 'POST',
         headers: {
@@ -394,54 +385,38 @@ document.getElementById('contactForm').addEventListener('submit', function(e) {
         body: JSON.stringify(data)
     })
     .then(response => response.json())
-    .then(data => {
+    .then(function(data) {
         if (data.success) {
             showNotification(data.message, 'success');
             closeContactModal();
-            this.reset();
+            form.reset();
         } else {
-            showNotification(data.message, 'error');
+            showNotification(data.message || 'Error', 'error');
         }
     })
-    .catch(error => {
+    .catch(function(error) {
         console.error('Error:', error);
         showNotification('An error occurred. Please try again.', 'error');
     });
 });
 
-// Category scrolling functionality
 function scrollCategories(direction) {
-    const container = document.getElementById('categoriesContainer');
-    const scrollAmount = 200;
-    
-    if (direction === 'left') {
-        container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-    } else {
-        container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    }
+    var container = document.getElementById('categoriesContainer');
+    if (!container) return;
+    var scrollAmount = 200;
+    container.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
 }
 
-// Category filtering functionality
 function filterByCategory(categoryId) {
-    // Add loading state
-    const productsGrid = document.querySelector('.grid');
+    var productsGrid = document.querySelector('#productsContent .grid');
     if (productsGrid) {
         productsGrid.style.opacity = '0.5';
         productsGrid.style.pointerEvents = 'none';
     }
-    
-    // Show loading spinner
     showNotification('Loading products...', 'info');
-    
-    // Here you can add AJAX call to filter products by category
-    // For now, we'll just scroll to products section
-    document.getElementById('productsContent').scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'start'
-    });
-    
-    // Reset loading state
-    setTimeout(() => {
+    var el = document.getElementById('productsContent');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(function() {
         if (productsGrid) {
             productsGrid.style.opacity = '1';
             productsGrid.style.pointerEvents = 'auto';
@@ -449,16 +424,13 @@ function filterByCategory(categoryId) {
     }, 1000);
 }
 
-// Show/hide navigation arrows based on scroll position
 document.addEventListener('DOMContentLoaded', function() {
-    const container = document.getElementById('categoriesContainer');
+    var container = document.getElementById('categoriesContainer');
     if (container) {
         container.addEventListener('scroll', function() {
-            const leftArrow = document.querySelector('button[onclick="scrollCategories(\'left\')"]');
-            const rightArrow = document.querySelector('button[onclick="scrollCategories(\'right\')"]');
-            
+            var leftArrow = document.querySelector('button[onclick="scrollCategories(\'left\')"]');
+            var rightArrow = document.querySelector('button[onclick="scrollCategories(\'right\')"]');
             if (leftArrow && rightArrow) {
-                // Show/hide arrows based on scroll position
                 leftArrow.style.opacity = this.scrollLeft > 0 ? '1' : '0';
                 rightArrow.style.opacity = this.scrollLeft < (this.scrollWidth - this.clientWidth) ? '1' : '0';
             }
@@ -466,21 +438,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Notification function
 function showNotification(message, type) {
-    const notification = document.createElement('div');
-    const bgColor = type === 'success' ? 'bg-green-500' : 
-                   type === 'error' ? 'bg-red-500' : 
-                   type === 'info' ? 'bg-blue-500' : 'bg-gray-500';
-    
-    notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 text-white ${bgColor}`;
+    var notification = document.createElement('div');
+    var bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : type === 'info' ? 'bg-blue-500' : 'bg-slate-500';
+    notification.className = 'fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-[60] text-white ' + bgColor;
     notification.textContent = message;
-    
     document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.remove();
-    }, 3000);
+    setTimeout(function() { notification.remove(); }, 3000);
 }
 </script>
 @endsection

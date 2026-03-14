@@ -42,6 +42,22 @@
         .sidebar-scroll::-webkit-scrollbar-thumb:hover {
             background: linear-gradient(to bottom, #2563eb, #7c3aed);
         }
+        /* Rung icon Live Chat khi có tin nhắn mới (như điện thoại đổ chuông) */
+        @keyframes adminLiveChatRing {
+            0%, 100% { transform: translateX(0) rotate(0deg); }
+            10% { transform: translateX(-2px) rotate(-8deg); }
+            20% { transform: translateX(2px) rotate(8deg); }
+            30% { transform: translateX(-2px) rotate(-6deg); }
+            40% { transform: translateX(2px) rotate(6deg); }
+            50% { transform: translateX(-1px) rotate(-4deg); }
+            60% { transform: translateX(1px) rotate(4deg); }
+            70% { transform: translateX(-1px) rotate(-2deg); }
+            80% { transform: translateX(1px) rotate(2deg); }
+            90% { transform: translateX(0) rotate(0deg); }
+        }
+        #admin-live-chat-toggle-wrap.admin-live-chat-ring .admin-live-chat-ring-target {
+            animation: adminLiveChatRing 0.5s ease-in-out 6 forwards;
+        }
     </style>
 </head>
 <body class="font-sans antialiased bg-gray-50 overflow-x-hidden" style="font-family: 'Inter', sans-serif;" x-data="{ sidebarOpen: false }">
@@ -152,21 +168,6 @@
                             Analytics Settings
                         </a>
 
-                        <a href="{{ route('admin.settings.gmc-config.index') }}" 
-                           class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 {{ request()->routeIs('admin.settings.gmc-config.*') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
-                            <svg class="w-5 h-5 mr-3 flex-shrink-0 {{ request()->routeIs('admin.settings.gmc-config.*') ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
-                            GMC Config
-                        </a>
-
-                        <a href="{{ route('admin.settings.domain-config.index') }}" 
-                           class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 {{ request()->routeIs('admin.settings.domain-config.*') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
-                            <svg class="w-5 h-5 mr-3 flex-shrink-0 {{ request()->routeIs('admin.settings.domain-config.*') ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            Domain Config
-                        </a>
                     @endif
                     
                     <!-- Product Management Section - Admin and Seller Only -->
@@ -217,11 +218,27 @@
                         
                         {{-- Products - Both Admin and Seller --}}
                         <a href="{{ route('admin.products.index') }}" 
-                           class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 {{ request()->routeIs('admin.products.*') && !request()->routeIs('admin.products.show-delete-from-gmc') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
-                            <svg class="w-5 h-5 mr-3 flex-shrink-0 {{ request()->routeIs('admin.products.*') && !request()->routeIs('admin.products.show-delete-from-gmc') ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 {{ request()->routeIs('admin.products.*') && !request()->routeIs('admin.products.show-delete-from-gmc') && !request()->routeIs('admin.reviews.*') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                            <svg class="w-5 h-5 mr-3 flex-shrink-0 {{ request()->routeIs('admin.products.*') && !request()->routeIs('admin.products.show-delete-from-gmc') && !request()->routeIs('admin.reviews.*') ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
                             </svg>
                             {{ auth()->user()->hasRole('admin') ? 'Products' : 'My Products' }}
+                        </a>
+                        {{-- Reviews (danh sách) - Admin + Seller --}}
+                        <a href="{{ route('admin.reviews.index') }}" 
+                           class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 {{ request()->routeIs('admin.reviews.*') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                            <svg class="w-5 h-5 mr-3 flex-shrink-0 {{ request()->routeIs('admin.reviews.*') ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+                            </svg>
+                            Reviews
+                        </a>
+                        {{-- Import Reviews - Admin + Seller --}}
+                        <a href="{{ route('admin.reviews.import') }}" 
+                           class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 {{ request()->routeIs('admin.reviews.import*') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                            <svg class="w-5 h-5 mr-3 flex-shrink-0 {{ request()->routeIs('admin.reviews.import*') ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                            </svg>
+                            Import Reviews
                         </a>
                         
                         {{-- Delete from GMC - Admin Only --}}
@@ -321,6 +338,27 @@
                             </svg>
                             Shipping Rates
                         </a>
+
+                        <a href="{{ route('admin.promo-codes.index') }}" 
+                           class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 {{ request()->routeIs('admin.promo-codes.*') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                            <svg class="w-5 h-5 mr-3 flex-shrink-0 {{ request()->routeIs('admin.promo-codes.*') ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                            </svg>
+                            Promo Codes
+                        </a>
+
+                        <a href="{{ route('admin.live-chat.index') }}" 
+                           class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 {{ request()->routeIs('admin.live-chat.*') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                            <span class="relative flex-shrink-0">
+                                <svg class="w-5 h-5 mr-3 {{ request()->routeIs('admin.live-chat.*') ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                </svg>
+                                @if(($liveChatUnreadCount ?? 0) > 0)
+                                    <span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold">{{ $liveChatUnreadCount > 99 ? '99+' : $liveChatUnreadCount }}</span>
+                                @endif
+                            </span>
+                            Live Chat
+                        </a>
                     </div>
                     @endif
 
@@ -334,11 +372,20 @@
                         {{-- Pages - Admin Only --}}
                         @if(auth()->user()->hasRole('admin'))
                             <a href="{{ route('admin.pages.index') }}" 
-                               class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 {{ request()->routeIs('admin.pages.*') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
-                                <svg class="w-5 h-5 mr-3 flex-shrink-0 {{ request()->routeIs('admin.pages.*') ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 {{ request()->routeIs('admin.pages.*') && !request()->routeIs('admin.site.home-preview') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                                <svg class="w-5 h-5 mr-3 flex-shrink-0 {{ request()->routeIs('admin.pages.*') && !request()->routeIs('admin.site.home-preview') ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                                 </svg>
                                 Pages
+                            </a>
+                            <a href="{{ route('admin.site.home-preview') }}" 
+                               class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 {{ request()->routeIs('admin.site.home-preview') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}"
+                               target="_blank" rel="noopener">
+                                <svg class="w-5 h-5 mr-3 flex-shrink-0 {{ request()->routeIs('admin.site.home-preview') ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                                Trang chủ (Preview & Chỉnh sửa)
                             </a>
 
                             <a href="{{ route('admin.api-token') }}" 
@@ -502,6 +549,15 @@
                             Xóa khỏi GMC
                         </a>
                     @endif
+
+                    <a href="{{ route('admin.collections.index') }}" 
+                       class="group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 {{ request()->routeIs('admin.collections.*') ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                       @click="sidebarOpen = false">
+                        <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                        Collections
+                    </a>
                     
                     <a href="{{ route('admin.shops.index') }}" 
                        class="group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 {{ request()->routeIs('admin.shops.*') ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
@@ -513,12 +569,21 @@
                     </a>
                     
                     <a href="{{ route('admin.pages.index') }}" 
-                       class="group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 {{ request()->routeIs('admin.pages.*') ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                       class="group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 {{ request()->routeIs('admin.pages.*') && !request()->routeIs('admin.site.home-preview') ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                        @click="sidebarOpen = false">
                         <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                         </svg>
                         Pages
+                    </a>
+                    <a href="{{ route('admin.site.home-preview') }}" 
+                       class="group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 {{ request()->routeIs('admin.site.home-preview') ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                       target="_blank" rel="noopener" @click="sidebarOpen = false">
+                        <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                        Trang chủ (Preview & Chỉnh sửa)
                     </a>
 
                     <a href="{{ route('admin.api-token') }}" 
@@ -575,6 +640,29 @@
                         </svg>
                         Shipping Rates
                     </a>
+
+                    <a href="{{ route('admin.promo-codes.index') }}" 
+                       class="group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 {{ request()->routeIs('admin.promo-codes.*') ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                       @click="sidebarOpen = false">
+                        <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                        </svg>
+                        Promo Codes
+                    </a>
+
+                    <a href="{{ route('admin.live-chat.index') }}" 
+                       class="group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 {{ request()->routeIs('admin.live-chat.*') ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                       @click="sidebarOpen = false">
+                        <span class="relative flex-shrink-0">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                            </svg>
+                            @if(($liveChatUnreadCount ?? 0) > 0)
+                                <span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold">{{ $liveChatUnreadCount > 99 ? '99+' : $liveChatUnreadCount }}</span>
+                            @endif
+                        </span>
+                        Live Chat
+                    </a>
                 @endif
                 
                 {{-- Seller Only Menu Items --}}
@@ -604,6 +692,15 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
                         </svg>
                         My Products
+                    </a>
+
+                    <a href="{{ route('admin.collections.index') }}" 
+                       class="group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 {{ request()->routeIs('admin.collections.*') ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                       @click="sidebarOpen = false">
+                        <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                        My Collections
                     </a>
                     
                     <a href="{{ route('admin.posts.index') }}" 
@@ -835,8 +932,248 @@
             </main>
         </div>
     </div>
+
+    @if(auth()->check() && (auth()->user()->hasRole('admin') || auth()->user()->hasRole('seller')))
+    {{-- Floating Live Chat widget (giống khách hàng) --}}
+    <div id="admin-live-chat-widget" class="fixed bottom-6 right-6 z-[55]">
+        <div id="admin-live-chat-toggle-wrap" class="relative inline-block">
+            <button type="button" id="admin-live-chat-toggle" class="admin-live-chat-ring-target w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white hover:opacity-90 transition-opacity bg-blue-600" aria-label="Live Chat">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+            </button>
+            <span id="admin-live-chat-badge" class="absolute -top-0.5 -right-0.5 min-w-[20px] h-5 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold hidden" aria-hidden="true">0</span>
+        </div>
+        <div id="admin-live-chat-panel" class="hidden absolute bottom-16 right-0 w-[380px] h-[520px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-blue-600">
+                <span class="font-bold text-white">Live Chat</span>
+                <button type="button" id="admin-live-chat-close" class="p-1 rounded-lg text-white/90 hover:bg-white/20">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div id="admin-live-chat-list-wrap" class="flex-1 overflow-y-auto p-2">
+                <div id="admin-live-chat-list" class="space-y-1"></div>
+                <p id="admin-live-chat-list-empty" class="text-sm text-gray-500 text-center py-6 hidden">No conversations yet.</p>
+            </div>
+            <div id="admin-live-chat-thread-wrap" class="hidden flex-1 flex flex-col min-h-0">
+                <div class="px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                    <button type="button" id="admin-live-chat-back" class="p-1 rounded hover:bg-gray-100 text-gray-600">←</button>
+                    <span id="admin-live-chat-thread-title" class="font-semibold text-gray-900 text-sm truncate"></span>
+                </div>
+                <div id="admin-live-chat-messages" class="flex-1 overflow-y-auto p-3 space-y-2"></div>
+                <div class="p-3 border-t border-gray-200">
+                    <form id="admin-live-chat-reply-form" class="flex gap-2">
+                        <input type="text" id="admin-live-chat-input" placeholder="Enter message..." class="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-sm">
+                        <button type="submit" id="admin-live-chat-send" class="px-4 py-2 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700">Send</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <x-realtime-analytics />
     <!-- Scripts Stack -->
     @stack('scripts')
+
+    @if(auth()->check() && (auth()->user()->hasRole('admin') || auth()->user()->hasRole('seller')))
+    <script>
+    (function() {
+        var widget = document.getElementById('admin-live-chat-widget');
+        if (!widget) return;
+        var baseUrl = '{{ url("/admin/live-chat") }}';
+        var csrf = document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').content;
+        var panel = document.getElementById('admin-live-chat-panel');
+        var listWrap = document.getElementById('admin-live-chat-list-wrap');
+        var listEl = document.getElementById('admin-live-chat-list');
+        var listEmpty = document.getElementById('admin-live-chat-list-empty');
+        var threadWrap = document.getElementById('admin-live-chat-thread-wrap');
+        var threadTitle = document.getElementById('admin-live-chat-thread-title');
+        var messagesEl = document.getElementById('admin-live-chat-messages');
+        var badgeEl = document.getElementById('admin-live-chat-badge');
+        var currentConversationId = null;
+        var currentCustomerName = '';
+        var lastSeenMessageId = 0;
+        var pollConvTimer = null;
+        var pollMsgTimer = null;
+        var prevTotalUnread = -1;
+
+        function triggerChatRing() {
+            var wrap = document.getElementById('admin-live-chat-toggle-wrap');
+            if (!wrap) return;
+            wrap.classList.remove('admin-live-chat-ring');
+            wrap.offsetHeight;
+            wrap.classList.add('admin-live-chat-ring');
+            setTimeout(function() { wrap.classList.remove('admin-live-chat-ring'); }, 3200);
+        }
+        function playNewMessageSound() {
+            try {
+                var C = window.AudioContext || window.webkitAudioContext;
+                if (!C) return;
+                var ctx = new C();
+                var osc = ctx.createOscillator();
+                var gain = ctx.createGain();
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.frequency.value = 600; osc.type = 'sine';
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+                osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.12);
+            } catch (e) {}
+        }
+        function updateBadge(totalUnread) {
+            if (!badgeEl) return;
+            badgeEl.textContent = totalUnread > 99 ? '99+' : totalUnread;
+            badgeEl.classList.toggle('hidden', totalUnread <= 0);
+            badgeEl.setAttribute('aria-hidden', totalUnread <= 0);
+        }
+        function fetchConversations(cb) {
+            fetch(baseUrl + '/api/conversations', { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success && data.conversations) {
+                        var total = data.conversations.reduce(function(s, c) { return s + (c.unread_count || 0); }, 0);
+                        if (panel.classList.contains('hidden') && prevTotalUnread >= 0 && total > prevTotalUnread) {
+                            triggerChatRing();
+                            playNewMessageSound();
+                        }
+                        prevTotalUnread = total;
+                        updateBadge(total);
+                        if (typeof cb === 'function') cb(data.conversations);
+                    }
+                })
+                .catch(function() {});
+        }
+        function renderList(conversations) {
+            if (!conversations || !conversations.length) {
+                listEl.innerHTML = '';
+                listEmpty.classList.remove('hidden');
+                return;
+            }
+            listEmpty.classList.add('hidden');
+            listEl.innerHTML = conversations.map(function(c) {
+                var last = c.last_message ? (c.last_message.body || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '—';
+                var time = c.last_message && c.last_message.created_at ? new Date(c.last_message.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
+                var unread = (c.unread_count || 0) > 0 ? '<span class="ml-2 w-2 h-2 rounded-full bg-red-500 inline-block"></span>' : '';
+                return '<button type="button" class="admin-live-chat-conv w-full text-left px-3 py-3 rounded-xl hover:bg-gray-100 border border-transparent hover:border-gray-200 flex items-center justify-between gap-2" data-id="' + c.id + '" data-name="' + (c.customer_name || 'Customer').replace(/"/g, '&quot;') + '">' +
+                    '<div class="min-w-0 flex-1"><p class="font-medium text-gray-900 truncate">' + (c.customer_name || 'Customer').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p><p class="text-xs text-gray-500 truncate">' + last + '</p></div>' + unread + '<span class="text-xs text-gray-400 flex-shrink-0">' + time + '</span></button>';
+            }).join('');
+        }
+        function showList() {
+            threadWrap.classList.add('hidden');
+            listWrap.classList.remove('hidden');
+            currentConversationId = null;
+            stopPollMessages();
+        }
+        function showThread(id, name) {
+            currentConversationId = id;
+            currentCustomerName = name || 'Customer';
+            threadTitle.textContent = currentCustomerName;
+            listWrap.classList.add('hidden');
+            threadWrap.classList.remove('hidden');
+            lastSeenMessageId = 0;
+            fetch(baseUrl + '/' + id + '/mark-read', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } }).catch(function() {});
+            fetchMessages();
+            startPollMessages();
+        }
+        function renderMessages(messages) {
+            if (!messages || !messages.length) {
+                messagesEl.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">No messages yet.</p>';
+                return;
+            }
+            messagesEl.innerHTML = messages.map(function(m) {
+                var isCustomer = m.is_from_customer;
+                var align = isCustomer ? 'justify-start' : 'justify-end';
+                var bg = isCustomer ? 'bg-gray-100 text-gray-900' : 'text-white';
+                var style = !isCustomer ? 'background:#2563eb' : '';
+                var sender = isCustomer ? currentCustomerName : 'You';
+                var time = new Date(m.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                return '<div class="flex ' + align + '"><div class="max-w-[85%] rounded-xl px-3 py-2 text-sm ' + bg + '" style="' + style + '"><p class="text-xs font-semibold opacity-90 mb-1">' + sender + '</p><p class="whitespace-pre-wrap">' + (m.body || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p><p class="text-xs mt-1 opacity-80">' + time + '</p></div></div>';
+            }).join('');
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+        function fetchMessages() {
+            if (!currentConversationId) return;
+            fetch(baseUrl + '/' + currentConversationId + '/messages', { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (!data.success || !data.messages) return;
+                    var prevId = lastSeenMessageId;
+                    var maxId = Math.max(0, ...data.messages.map(function(m) { return m.id; }));
+                    var last = data.messages[data.messages.length - 1];
+                    if (last && last.is_from_customer && last.id > prevId && prevId > 0) playNewMessageSound();
+                    lastSeenMessageId = maxId;
+                    renderMessages(data.messages);
+                })
+                .catch(function() {});
+        }
+        function startPollMessages() {
+            if (pollMsgTimer) clearInterval(pollMsgTimer);
+            pollMsgTimer = setInterval(fetchMessages, 3000);
+        }
+        function stopPollMessages() {
+            if (pollMsgTimer) { clearInterval(pollMsgTimer); pollMsgTimer = null; }
+        }
+        function fetchConversationsAndMaybeRender(cb) {
+            fetchConversations(function(convs) {
+                if (!panel.classList.contains('hidden') && typeof cb === 'function') cb(convs);
+            });
+        }
+        function startPollConversations() {
+            if (pollConvTimer) clearInterval(pollConvTimer);
+            pollConvTimer = setInterval(function() { fetchConversationsAndMaybeRender(renderList); }, 5000);
+        }
+        function stopPollMessages() {
+            if (pollMsgTimer) { clearInterval(pollMsgTimer); pollMsgTimer = null; }
+        }
+        document.getElementById('admin-live-chat-toggle').addEventListener('click', function() {
+            panel.classList.toggle('hidden');
+            if (!panel.classList.contains('hidden')) {
+                fetchConversations(function(convs) { renderList(convs); });
+                if (currentConversationId) fetchMessages();
+            } else {
+                stopPollMessages();
+                var t = parseInt(badgeEl.textContent, 10) || 0;
+                prevTotalUnread = t;
+            }
+            startPollConversations();
+        });
+        document.getElementById('admin-live-chat-close').addEventListener('click', function() {
+            panel.classList.add('hidden');
+            stopPollMessages();
+            var t = parseInt(badgeEl.textContent, 10) || 0;
+            prevTotalUnread = t;
+        });
+        listEl.addEventListener('click', function(e) {
+            var btn = e.target.closest('.admin-live-chat-conv');
+            if (!btn) return;
+            var id = parseInt(btn.getAttribute('data-id'), 10);
+            var name = btn.getAttribute('data-name') || 'Customer';
+            showThread(id, name);
+        });
+        document.getElementById('admin-live-chat-back').addEventListener('click', function() {
+            showList();
+            fetchConversations(function(convs) { renderList(convs); });
+        });
+        document.getElementById('admin-live-chat-reply-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var input = document.getElementById('admin-live-chat-input');
+            var body = (input && input.value) ? input.value.trim() : '';
+            if (!body || !currentConversationId) return;
+            var sendBtn = document.getElementById('admin-live-chat-send');
+            sendBtn.disabled = true;
+            fetch(baseUrl + '/' + currentConversationId + '/reply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify({ body: body })
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.success && data.message) {
+                    input.value = '';
+                    fetchMessages();
+                }
+            }).catch(function() {}).finally(function() { sendBtn.disabled = false; });
+        });
+        fetchConversations();
+        startPollConversations();
+    })();
+    </script>
+    @endif
 </body>
 </html>

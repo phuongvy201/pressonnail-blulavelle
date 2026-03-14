@@ -88,6 +88,25 @@
                     @enderror
                 </div>
 
+                <!-- List Price -->
+                <div>
+                    <label for="list_price" class="block text-sm font-medium text-gray-700 mb-2">List Price (giá niêm yết)</label>
+                    <input type="number" 
+                           id="list_price" 
+                           name="list_price" 
+                           value="{{ old('list_price', $productTemplate->list_price) }}"
+                           step="0.01" 
+                           min="0"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent @error('list_price') border-red-500 @enderror"
+                           placeholder="0.00 (để trống = không hiển thị gạch ngang)"
+                           onchange="applyListPriceToAllVariants()"
+                           oninput="applyListPriceToAllVariants()">
+                    @error('list_price')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    <p class="mt-1 text-xs text-gray-500">Giá niêm yết; hiển thị gạch ngang khi giảm giá.</p>
+                </div>
+
                 <!-- Description -->
                 <div>
                     <label for="description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
@@ -585,6 +604,22 @@
                                placeholder="0.00">
                     </div>
                     
+                    <!-- List Price Input -->
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-2 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                            </svg>
+                            List Price
+                        </label>
+                        <input type="number" 
+                               id="bulk-list-price-input" 
+                               step="0.01" 
+                               min="0"
+                               class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors font-medium"
+                               placeholder="0.00">
+                    </div>
+                    
                     <!-- Quantity Input -->
                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
@@ -884,6 +919,14 @@ function displayVariants(combinations) {
                             </th>
                             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                 <div class="flex items-center">
+                                    <svg class="w-4 h-4 mr-2 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                                    </svg>
+                                    List Price
+                                </div>
+                            </th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                <div class="flex items-center">
                                     <svg class="w-4 h-4 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
                                     </svg>
@@ -902,6 +945,9 @@ function displayVariants(combinations) {
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
     `;
+    
+    const listPriceInput = document.getElementById('list_price');
+    const baseListPrice = listPriceInput ? listPriceInput.value : '';
     
     combinations.forEach((combination, index) => {
         const variantName = combination.map(c => c.value).join('/');
@@ -941,6 +987,16 @@ function displayVariants(combinations) {
                            step="0.01" 
                            min="0" 
                            class="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors font-medium"
+                           placeholder="0.00"
+                           onchange="highlightVariant(this)">
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <input type="number" 
+                           name="variants[${index}][list_price]" 
+                           step="0.01" 
+                           min="0" 
+                           value="${baseListPrice}"
+                           class="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors font-medium"
                            placeholder="0.00"
                            onchange="highlightVariant(this)">
                 </td>
@@ -1001,6 +1057,21 @@ function highlightVariant(input) {
     }, 2000);
 }
 
+function applyListPriceToAllVariants() {
+    const listPriceInput = document.getElementById('list_price');
+    if (!listPriceInput) return;
+    
+    const listPrice = listPriceInput.value;
+    const variantListPriceInputs = document.querySelectorAll('input[name*="variants"][name*="[list_price]"]');
+    
+    if (variantListPriceInputs.length === 0) return;
+    
+    variantListPriceInputs.forEach(input => {
+        input.value = listPrice;
+        highlightVariant(input);
+    });
+}
+
 function restoreVariantData() {
     const existingVariants = @json($productTemplate->variants ?? []);
     
@@ -1027,6 +1098,15 @@ function restoreVariantData() {
                     if (priceInput) {
                         priceInput.value = variant.price;
                         console.log(`- Price: ${variant.price}`);
+                    }
+                }
+                
+                // Restore list_price
+                if (variant.list_price != null && variant.list_price !== '') {
+                    const listPriceInput = row.querySelector('input[name*="[list_price]"]');
+                    if (listPriceInput) {
+                        listPriceInput.value = variant.list_price;
+                        console.log(`- List Price: ${variant.list_price}`);
                     }
                 }
                 
@@ -1446,14 +1526,16 @@ function updateLogicDescription() {
 
 function applyBulkValue() {
     const priceInput = document.getElementById('bulk-price-input');
+    const listPriceInput = document.getElementById('bulk-list-price-input');
     const quantityInput = document.getElementById('bulk-quantity-input');
     
-    const price = priceInput.value;
-    const quantity = quantityInput.value;
+    const price = priceInput ? priceInput.value : '';
+    const listPrice = listPriceInput ? listPriceInput.value : '';
+    const quantity = quantityInput ? quantityInput.value : '';
     const mediaFiles = selectedMediaFiles;
     
-    if (!price && !quantity && mediaFiles.length === 0) {
-        alert('Please enter at least one value (price, quantity, or media)');
+    if (!price && !listPrice && !quantity && mediaFiles.length === 0) {
+        alert('Please enter at least one value (price, list price, quantity, or media)');
         return;
     }
     
@@ -1538,6 +1620,14 @@ function applyBulkValue() {
                     }
                 }
                 
+                if (listPrice) {
+                    const listPriceTargetInput = row.querySelector('input[name*="[list_price]"]');
+                    if (listPriceTargetInput) {
+                        listPriceTargetInput.value = listPrice;
+                        applied = true;
+                    }
+                }
+                
                 if (quantity) {
                     const quantityTargetInput = row.querySelector('input[name*="[quantity]"]');
                     if (quantityTargetInput) {
@@ -1566,6 +1656,7 @@ function applyBulkValue() {
     
     let appliedFields = [];
     if (price) appliedFields.push('price');
+    if (listPrice) appliedFields.push('list price');
     if (quantity) appliedFields.push('quantity');
     if (mediaFiles.length > 0) appliedFields.push(`${mediaFiles.length} media files`);
     
@@ -1593,6 +1684,9 @@ function clearPreviousBulkValues() {
     rows.forEach(row => {
         const priceInput = row.querySelector('input[name*="[price]"]');
         if (priceInput) priceInput.value = '';
+        
+        const listPriceInput = row.querySelector('input[name*="[list_price]"]');
+        if (listPriceInput) listPriceInput.value = '';
         
         const quantityInput = row.querySelector('input[name*="[quantity]"]');
         if (quantityInput) quantityInput.value = '';
@@ -1659,6 +1753,9 @@ function clearSelectedVariantsOnly(selectedValues) {
             if (shouldClear) {
                 const priceInput = row.querySelector('input[name*="[price]"]');
                 if (priceInput) priceInput.value = '';
+                
+                const listPriceInput = row.querySelector('input[name*="[list_price]"]');
+                if (listPriceInput) listPriceInput.value = '';
                 
                 const quantityInput = row.querySelector('input[name*="[quantity]"]');
                 if (quantityInput) quantityInput.value = '';

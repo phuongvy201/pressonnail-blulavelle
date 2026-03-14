@@ -7,14 +7,12 @@
     $currentCurrency = currency();
     $currencySymbol = currency_symbol();
     $currentCurrencyRate = currency_rate() ?? 1.0;
-    
-    // Get current domain
-    $currentDomain = \App\Services\CurrencyService::getCurrentDomain();
-    
-    // Get all shipping rates for all domains (apply to all domains)
+    $discount = $discount ?? 0;
+    $appliedPromoCode = $appliedPromoCode ?? null;
+
+    // Get all active shipping rates (domain column removed)
     $shippingRates = \App\Models\ShippingRate::where('is_active', true)
         ->with('shippingZone')
-        ->orderByRaw("CASE WHEN domain = ? THEN 0 ELSE 1 END", [$currentDomain]) // Prioritize current domain rates
         ->orderBy('is_default', 'desc')
         ->orderBy('sort_order')
         ->get();
@@ -350,50 +348,34 @@
         }
     }
     
-    // Calculate base subtotal in USD for shipping calculation
+    // Calculate base subtotal in USD for shipping (price đã gồm customization)
     $baseSubtotal = 0;
     foreach ($cartItems as $item) {
         $itemPrice = (float) $item->price;
-        // Convert to USD if needed
-        $basePrice = $currentCurrency !== 'USD' && $currentCurrencyRate > 0 
-            ? $itemPrice / $currentCurrencyRate 
+        $basePrice = $currentCurrency !== 'USD' && $currentCurrencyRate > 0
+            ? $itemPrice / $currentCurrencyRate
             : $itemPrice;
-        
-        // Add customization prices
-        $customizationTotal = 0;
-        if ($item->customizations) {
-            foreach ($item->customizations as $customization) {
-                if (isset($customization['price']) && $customization['price'] > 0) {
-                    $customPrice = (float) $customization['price'];
-                    $baseCustomPrice = $currentCurrency !== 'USD' && $currentCurrencyRate > 0
-                        ? $customPrice / $currentCurrencyRate
-                        : $customPrice;
-                    $customizationTotal += $baseCustomPrice;
-                }
-            }
-        }
-        
-        $baseSubtotal += ($basePrice + $customizationTotal) * $item->quantity;
+        $baseSubtotal += $basePrice * $item->quantity;
     }
+    $freeShippingThreshold = 100;
+    $freeShippingProgress = $baseSubtotal >= $freeShippingThreshold ? 100 : ($baseSubtotal / $freeShippingThreshold) * 100;
+    $amountLeftForFreeShipping = max(0, $freeShippingThreshold - $baseSubtotal);
 @endphp
-<div class="bg-gray-50 min-h-screen py-8">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- Header -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-900">Shopping Cart</h1>
-            <p class="text-gray-600 mt-2">Review your items and proceed to checkout</p>
-        </div>
-
+<div class="bg-background-light min-h-screen font-display text-slate-900 py-8 lg:py-12">
+    <div class="max-w-7xl mx-auto px-4 lg:px-20">
         @if($cartItems->isEmpty())
+            <div class="mb-10">
+                <h2 class="text-3xl lg:text-4xl font-extrabold text-slate-900 mb-6">Your Shopping Bag</h2>
+            </div>
             <!-- Empty Cart -->
-            <div class="bg-white rounded-2xl shadow-sm p-12 text-center">
+            <div class="bg-white rounded-2xl border border-primary/10 shadow-sm p-12 text-center">
                 <div class="max-w-md mx-auto">
                     <svg class="w-32 h-32 mx-auto text-gray-300 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 11-4 0v-6m4 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01"></path>
                     </svg>
-                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
-                    <p class="text-gray-600 mb-8">Looks like you haven't added anything to your cart yet.</p>
-                    <a href="{{ route('products.index') }}" class="inline-flex items-center space-x-2 bg-[#005366] text-white px-8 py-3 rounded-xl hover:bg-[#003d4d] transition-colors">
+                    <h2 class="text-2xl font-bold text-slate-900 mb-2">Your cart is empty</h2>
+                    <p class="text-slate-600 mb-8">Looks like you haven't added anything to your cart yet.</p>
+                    <a href="{{ route('products.index') }}" class="inline-flex items-center space-x-2 bg-primary text-white px-8 py-3 rounded-xl hover:brightness-110 transition-colors font-semibold">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                         </svg>
@@ -402,251 +384,197 @@
                 </div>
             </div>
         @else
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Cart Items -->
-                <div class="lg:col-span-2 space-y-4">
-                    @foreach($cartItems as $item)
-                        <div class="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-shadow" data-cart-item-id="{{ $item->id }}">
-                            <div class="flex flex-col sm:flex-row gap-6">
-                                <!-- Product Image -->
-                                <div class="flex-shrink-0">
-                                    @php
-                                        $media = $item->product->getEffectiveMedia();
-                                        $imageUrl = '/images/placeholder.jpg';
-                                        if ($media && count($media) > 0) {
-                                            if (is_string($media[0])) {
-                                                $imageUrl = $media[0];
-                                            } elseif (is_array($media[0])) {
-                                                $imageUrl = $media[0]['url'] ?? $media[0]['path'] ?? reset($media[0]) ?? '/images/placeholder.jpg';
-                                            }
-                                        }
-                                    @endphp
-                                    <img src="{{ $imageUrl }}" 
-                                         alt="{{ $item->product->name }}" 
-                                         class="w-full sm:w-32 h-32 object-cover rounded-xl">
-                                </div>
+            <!-- Free Shipping Progress -->
+            <div class="mb-10">
+                <h2 class="text-3xl lg:text-4xl font-extrabold text-slate-900 mb-6">Your Shopping Bag</h2>
+                @php
+                    $freeShippingThreshold = 100;
+                    $freeShippingProgress = $baseSubtotal >= $freeShippingThreshold ? 100 : ($baseSubtotal / $freeShippingThreshold) * 100;
+                    $amountLeftForFreeShipping = max(0, $freeShippingThreshold - $baseSubtotal);
+                @endphp
+                <div class="bg-white p-4 rounded-xl border border-primary/10 shadow-sm max-w-2xl">
+                    <div class="flex justify-between items-center mb-2">
+                        <p class="text-sm font-semibold text-slate-700">Free Shipping Progress</p>
+                        <p class="text-sm font-bold text-primary">{{ $currencySymbol }}{{ number_format($baseSubtotal >= $freeShippingThreshold ? $freeShippingThreshold : $baseSubtotal, 2) }} / {{ $currencySymbol }}{{ number_format($freeShippingThreshold, 2) }}</p>
+                    </div>
+                    <div class="h-2.5 w-full bg-primary/10 rounded-full overflow-hidden">
+                        <div class="h-full bg-primary rounded-full transition-all duration-500" style="width: {{ min(100, $freeShippingProgress) }}%;"></div>
+                    </div>
+                    @if($amountLeftForFreeShipping > 0)
+                        <p class="mt-2 text-xs font-medium text-slate-500">Add <span class="text-primary font-bold">{{ $currencySymbol }}{{ number_format($amountLeftForFreeShipping * $currentCurrencyRate, 2) }}</span> more to unlock free shipping!</p>
+                    @else
+                        <p class="mt-2 text-xs font-semibold text-primary">You've unlocked free shipping!</p>
+                    @endif
+                </div>
+            </div>
 
-                                <!-- Product Info -->
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex justify-between items-start mb-2">
-                                        <div class="flex-1">
-                                            <h3 class="text-lg font-semibold text-gray-900 mb-1">
-                                                <a href="{{ route('products.show', $item->product->slug) }}" class="hover:text-[#005366]">
-                                                    {{ $item->product->name }}
-                                                </a>
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                <!-- Left: Cart Items -->
+                <div class="lg:col-span-8 space-y-8">
+                    <div class="divide-y divide-primary/10">
+                        @foreach($cartItems as $item)
+                            @php
+                                $media = $item->product->getEffectiveMedia();
+                                $imageUrl = '/images/placeholder.jpg';
+                                if ($media && count($media) > 0) {
+                                    if (is_string($media[0])) { $imageUrl = $media[0]; }
+                                    elseif (is_array($media[0])) { $imageUrl = $media[0]['url'] ?? $media[0]['path'] ?? reset($media[0]) ?? '/images/placeholder.jpg'; }
+                                }
+                                $variantLine = '';
+                                if ($item->selected_variant && isset($item->selected_variant['attributes']) && is_array($item->selected_variant['attributes'])) {
+                                    $variantLine = implode(' | ', array_map(fn($k, $v) => ucfirst($k) . ': ' . $v, array_keys($item->selected_variant['attributes']), $item->selected_variant['attributes']));
+                                } elseif ($item->selected_variant && is_array($item->selected_variant)) {
+                                    $parts = [];
+                                    if (!empty($item->selected_variant['colour'])) $parts[] = 'Colour: ' . $item->selected_variant['colour'];
+                                    if (!empty($item->selected_variant['size'])) $parts[] = 'Size: ' . $item->selected_variant['size'];
+                                    $variantLine = implode(' | ', $parts);
+                                }
+                            @endphp
+                            <div class="py-6 first:pt-0 flex flex-col sm:flex-row gap-6" data-cart-item-id="{{ $item->id }}">
+                                <div class="w-32 h-40 bg-slate-100 rounded-xl overflow-hidden shrink-0 border border-primary/5">
+                                    <img src="{{ $imageUrl }}" alt="{{ $item->product->name }}" class="w-full h-full object-cover">
+                                </div>
+                                <div class="flex-1 flex flex-col justify-between py-1">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <h3 class="text-lg font-bold text-slate-900 leading-tight">
+                                                <a href="{{ route('products.show', $item->product->slug) }}" class="hover:text-primary transition-colors">{{ $item->product->name }}</a>
                                             </h3>
-                                            @if($item->product->shop)
-                                                <p class="text-sm text-gray-500">
-                                                    Sold by: <span class="text-[#005366] font-medium">{{ $item->product->shop->name }}</span>
+                                            @if($variantLine)
+                                                <p class="text-sm text-slate-500 mt-1">{{ $variantLine }}</p>
+                                            @endif
+                                            @if($item->customizations && count($item->customizations) > 0)
+                                                <p class="text-sm text-slate-500 mt-0.5">
+                                                    @foreach($item->customizations as $key => $c)
+                                                        {{ $key }}: {{ $c['value'] ?? $c }}{{ isset($c['price']) && $c['price'] > 0 ? ' (+' . format_price((float)$c['price']) . ')' : '' }}{{ $loop->last ? '' : ' · ' }}
+                                                    @endforeach
                                                 </p>
                                             @endif
                                         </div>
-                                        <div class="flex gap-2">
-                                            <button onclick="openEditCartModal({{ $item->id }})" class="p-2 text-gray-400 hover:text-[#005366] transition-colors" title="Edit">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                                </svg>
+                                        <div class="flex items-center gap-2">
+                                            <button onclick="openEditCartModal({{ $item->id }})" class="p-2 text-slate-400 hover:text-primary transition-colors" title="Edit">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                             </button>
-                                            <button onclick="removeFromCart({{ $item->id }})" class="p-2 text-gray-400 hover:text-red-500 transition-colors" title="Remove">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                                </svg>
-                                            </button>
+                                            <p class="text-lg font-bold text-slate-900">{{ format_price((float) $item->getTotalPriceWithCustomizations()) }}</p>
                                         </div>
                                     </div>
-
-                                    <!-- Variant Info -->
-                                    @if($item->selected_variant && isset($item->selected_variant['attributes']) && is_array($item->selected_variant['attributes']))
-                                        <div class="flex flex-wrap gap-2 mb-3">
-                                            @foreach($item->selected_variant['attributes'] as $key => $value)
-                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                                                    {{ $key }}: {{ $value }}
-                                                </span>
-                                            @endforeach
-                                        </div>
-                                    @elseif($item->selected_variant && is_array($item->selected_variant))
-                                        {{-- Handle legacy data structure --}}
-                                        <div class="flex flex-wrap gap-2 mb-3">
-                                            @if(isset($item->selected_variant['colour']) && !empty($item->selected_variant['colour']))
-                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                                                    Colour: {{ $item->selected_variant['colour'] }}
-                                                </span>
-                                            @endif
-                                            @if(isset($item->selected_variant['size']) && !empty($item->selected_variant['size']))
-                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                                                    Size: {{ $item->selected_variant['size'] }}
-                                                </span>
-                                            @endif
-                                        </div>
-                                    @endif
-
-                                    <!-- Customizations -->
-                                    @if($item->customizations && count($item->customizations) > 0)
-                                        <div class="mb-3">
-                                            <p class="text-xs text-gray-500 mb-1">Customizations:</p>
-                                            @foreach($item->customizations as $key => $customization)
-                                                <p class="text-sm text-gray-700">
-                                                    <span class="font-medium">{{ $key }}:</span> {{ $customization['value'] }}
-                                                    @if(isset($customization['price']) && $customization['price'] > 0)
-                                                        <span class="text-[#005366]">(+{{ format_price((float) $customization['price']) }})</span>
-                                                    @endif
-                                                </p>
-                                            @endforeach
-                                        </div>
-                                    @endif
-
-                                    <!-- Price and Quantity -->
                                     <div class="flex items-center justify-between mt-4">
-                                        <div class="flex items-center space-x-3">
-                                            <button onclick="updateQuantity({{ $item->id }}, {{ $item->quantity - 1 }})" 
-                                                    class="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                    {{ $item->quantity <= 1 ? 'disabled' : '' }}>
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
-                                                </svg>
+                                        <div class="flex items-center gap-4 bg-slate-50 px-3 py-1.5 rounded-lg border border-primary/5">
+                                            <button onclick="updateQuantity({{ $item->id }}, {{ $item->quantity - 1 }})" class="text-slate-400 hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed" {{ $item->quantity <= 1 ? 'disabled' : '' }}>
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
                                             </button>
-                                            <span class="text-lg font-semibold min-w-[2rem] text-center">{{ $item->quantity }}</span>
-                                            <button onclick="updateQuantity({{ $item->id }}, {{ $item->quantity + 1 }})" 
-                                                    class="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                                                </svg>
+                                            <span class="text-sm font-bold w-4 text-center">{{ $item->quantity }}</span>
+                                            <button onclick="updateQuantity({{ $item->id }}, {{ $item->quantity + 1 }})" class="text-slate-400 hover:text-primary transition-colors">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                                             </button>
                                         </div>
-                                        <div class="text-right">
-                                            <p class="text-2xl font-bold text-[#005366]">{{ format_price((float) $item->getTotalPriceWithCustomizations()) }}</p>
-                                            @if($item->quantity > 1)
-                                                <p class="text-sm text-gray-500">{{ format_price((float) ($item->getTotalPriceWithCustomizations() / $item->quantity)) }} each</p>
-                                            @endif
-                                        </div>
+                                        <button onclick="removeFromCart({{ $item->id }})" class="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-red-500 transition-colors">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                            Remove
+                                        </button>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    @endforeach
+                        @endforeach
+                    </div>
+
+                    <!-- Order Note -->
+                    <div class="bg-white rounded-xl border border-primary/10 p-6 shadow-sm">
+                        <label class="block text-sm font-bold text-slate-900 mb-3" for="order-note">Add an Order Note</label>
+                        <textarea class="w-full rounded-xl border border-primary/20 bg-transparent focus:border-primary focus:ring-primary placeholder-slate-400 text-sm px-4 py-3" id="order-note" name="order_note" placeholder="Special instructions for your order..." rows="3"></textarea>
+                    </div>
                 </div>
 
-                <!-- Order Summary -->
-                <div class="lg:col-span-1">
-                    <div class="bg-white rounded-2xl shadow-sm p-6 sticky top-24">
-                        <h2 class="text-xl font-bold text-gray-900 mb-6">Order Summary</h2>
-                        
-                        <div class="space-y-3 mb-6">
-                            <div class="flex justify-between text-gray-600">
-                                <span>Subtotal ({{ $cartItems->sum('quantity') }} items)</span>
-                                <span class="font-semibold" id="cart-subtotal">{{ format_price((float) $subtotal) }}</span>
+                <!-- Right: Order Summary -->
+                <div class="lg:col-span-4">
+                    <div class="sticky top-28 space-y-6">
+                        <div class="bg-white p-8 rounded-xl border border-primary/20 shadow-xl shadow-primary/5">
+                            <h3 class="text-xl font-extrabold text-slate-900 mb-6">Order Summary</h3>
+                            <div class="space-y-4 mb-6">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-slate-500">Subtotal</span>
+                                    <span class="font-bold text-slate-900" id="cart-subtotal">{{ format_price((float) $subtotal) }}</span>
+                                </div>
+                                @if((count($zonesData) > 0) || (count($zonesWithCountries) > 0))
+                                    <div class="mb-2">
+                                        <label for="shipping-zone-select" class="block text-xs font-bold text-slate-400 mb-1 uppercase">Shipping to</label>
+                                        <select id="shipping-zone-select" onchange="updateShippingZone(this.value)" class="w-full rounded-lg border border-primary/20 bg-slate-50 text-sm focus:ring-primary focus:border-primary px-3 py-2">
+                                            @if(count($zonesWithCountries) > 0)
+                                                @foreach($zonesWithCountries as $zone)
+                                                    <optgroup label="{{ $zone['name'] }}">
+                                                        @foreach($zone['country_options'] as $country)
+                                                            <option value="{{ $country['value'] }}" @if($selectedZoneValue == $country['value']) selected @endif>{{ $country['label'] }}</option>
+                                                        @endforeach
+                                                    </optgroup>
+                                                @endforeach
+                                            @endif
+                                            @if(count($zonesData) > 0)
+                                                @foreach($zonesData as $zone)
+                                                    <option value="{{ $zone['id'] }}" @if($selectedZoneValue == $zone['id']) selected @endif>{{ $zone['display_name'] ?? $zone['name'] }}</option>
+                                                @endforeach
+                                            @endif
+                                        </select>
+                                    </div>
+                                @endif
+                                @if($discount > 0)
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-slate-500">Discount</span>
+                                    <span class="font-semibold text-emerald-600" id="cart-discount">-{{ format_price((float) $discount) }}</span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs text-slate-600 mt-1">
+                                    <span>Code: <strong class="text-primary">{{ $appliedPromoCode }}</strong></span>
+                                    <button type="button" id="promo-remove" class="text-primary hover:underline font-semibold">Remove</button>
+                                </div>
+                                @endif
+                                <div class="flex justify-between text-sm" id="shipping-cost-row">
+                                    <span class="text-slate-500" id="shipping-label">Shipping</span>
+                                    <span class="font-semibold text-slate-500" id="shipping-cost">{{ format_price(0) }}</span>
+                                </div>
                             </div>
-                            
-                            <!-- Shipping Zone Selector -->
-                            @if((count($zonesData) > 0) || (count($zonesWithCountries) > 0))
-                                <div class="mb-2">
-                                    <label for="shipping-zone-select" class="block text-sm font-medium text-gray-600 mb-1">Shipping Zone:</label>
-                                    <select id="shipping-zone-select" 
-                                            onchange="updateShippingZone(this.value)" 
-                                            class="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#005366] focus:border-transparent">
-                                        @if(count($zonesWithCountries) > 0)
-                                            @foreach($zonesWithCountries as $zone)
-                                                <optgroup label="{{ $zone['name'] }}">
-                                                    @foreach($zone['country_options'] as $country)
-                                                        <option value="{{ $country['value'] }}" 
-                                                                @if($selectedZoneValue == $country['value']) selected @endif>
-                                                            {{ $country['label'] }}
-                                                        </option>
-                                                    @endforeach
-                                                </optgroup>
-                                            @endforeach
-                                        @endif
-                                        @if(count($zonesData) > 0)
-                                            @foreach($zonesData as $zone)
-                                                <option value="{{ $zone['id'] }}" 
-                                                        @if($selectedZoneValue == $zone['id']) selected @endif>
-                                                    {{ $zone['display_name'] ?? $zone['name'] }}
-                                                </option>
-                                            @endforeach
-                                        @endif
-                                    </select>
+                            <div class="pt-6 border-t border-primary/10 mb-6">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-lg font-extrabold text-slate-900 uppercase tracking-tighter">Total</span>
+                                    <span class="text-2xl font-extrabold text-primary" id="cart-total">{{ format_price((float) $total) }}</span>
                                 </div>
-                            @endif
-                            
-                            <div class="flex justify-between text-gray-600" id="shipping-cost-row">
-                                <span id="shipping-label">Shipping</span>
-                                <span class="font-semibold" id="shipping-cost">{{ format_price(0) }}</span>
                             </div>
-                            
-                            <div class="border-t pt-3 flex justify-between text-lg font-bold text-gray-900">
-                                <span>Total</span>
-                                <span class="text-[#005366]" id="cart-total">{{ format_price((float) $subtotal) }}</span>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-400 mb-2 uppercase" for="promo">Promo Code</label>
+                                    <div class="flex gap-2">
+                                        <input class="flex-1 rounded-lg border border-primary/20 bg-slate-50 text-sm focus:ring-primary focus:border-primary px-3 py-2" id="promo" placeholder="Enter code" type="text" value="{{ $appliedPromoCode ? '' : '' }}" autocomplete="off">
+                                        <button type="button" id="promo-apply" class="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-primary transition-colors">Apply</button>
+                                    </div>
+                                    <p id="promo-message" class="mt-1.5 text-xs hidden"></p>
+                                </div>
+                                <a href="{{ route('checkout.index') }}" onclick="trackInitiateCheckout(event)" class="block w-full bg-primary text-white py-4 rounded-xl font-extrabold uppercase tracking-widest text-sm shadow-lg shadow-primary/30 hover:brightness-110 active:scale-[0.98] transition-all text-center">
+                                    Checkout Now
+                                </a>
                             </div>
-                        </div>
-
-                        <!-- Main Checkout Button -->
-                        <a href="{{ route('checkout.index') }}" 
-                           onclick="trackInitiateCheckout(event)"
-                           class="block w-full bg-[#E2150C] hover:bg-[#c4120a] text-white font-bold py-4 rounded-xl transition-colors duration-200 mb-4 flex items-center justify-center space-x-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-                            </svg>
-                            <span>CHECKOUT</span>
-                        </a>
-
-                        <!-- Express Checkout Section -->
-                        <div class="text-center mb-4">
-                            <p class="text-sm text-gray-500 mb-3">Express checkout</p>
-                            <div class="flex flex-wrap justify-center gap-2 mb-4">
-                                <!-- Payment Method Icons -->
-                                <div class="flex items-center justify-center w-12 h-8 bg-gray-100 rounded border">
-                                    <span class="text-xs font-bold text-blue-600">AMEX</span>
-                                </div>
-                                <div class="flex items-center justify-center w-12 h-8 bg-gray-100 rounded border">
-                                    <span class="text-xs font-bold text-blue-600">VISA</span>
-                                </div>
-                                <div class="flex items-center justify-center w-12 h-8 bg-gray-100 rounded border">
-                                    <span class="text-xs font-bold text-red-600">MC</span>
-                                </div>
-                               
-                                <div class="flex items-center justify-center w-12 h-8 bg-gray-100 rounded border">
-                                    <span class="text-xs font-bold text-blue-600">PayPal</span>
-                                </div>
-                               
+                            <div class="mt-8 flex flex-wrap justify-center gap-4 grayscale opacity-60">
+                                <span class="text-xs font-bold text-slate-500">VISA</span>
+                                <span class="text-xs font-bold text-slate-500">MC</span>
+                                <span class="text-xs font-bold text-slate-500">AMEX</span>
+                                <span class="text-xs font-bold text-slate-500">PayPal</span>
                             </div>
                         </div>
-
-
-                        <a href="{{ route('products.index') }}" class="block w-full text-center text-[#005366] hover:text-[#003d4d] font-medium py-3 border-2 border-[#005366] rounded-xl hover:bg-[#005366] hover:text-white transition-all duration-200 mb-6">
+                        <a href="{{ route('products.index') }}" class="block w-full text-center text-primary hover:brightness-110 font-semibold py-3 border-2 border-primary/30 rounded-xl hover:bg-primary/10 transition-all">
                             Continue Shopping
                         </a>
-
-                        {{-- Customer Reviews Section - Disabled --}}
-
-                        <!-- Guarantee Section -->
-                        <div class="mt-6 pt-6 border-t">
-                            <div class="flex items-center space-x-4">
-                                <div class="flex-shrink-0">
-                                    <div class="w-16 h-16 border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center">
-                                        <div class="text-center">
-                                            <div class="text-xs font-bold text-gray-700">GUARANTEE</div>
-                                            <div class="text-xs font-bold text-gray-700">PERFECT FIT</div>
-                                            <div class="flex justify-center mt-1">
-                                                <svg class="w-3 h-3 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                                                </svg>
-                                                <svg class="w-3 h-3 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                                                </svg>
-                                                <svg class="w-3 h-3 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                                                </svg>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flex-1">
-                                    <p class="text-sm font-medium text-gray-900 mb-1">Don't love it? We'll fix it. For free.</p>
-                                    <a href="#" class="text-sm text-[#005366] hover:text-[#003d4d] font-medium">
-                                        Bluprinter Guarantee »
-                                    </a>
-                                </div>
+                        <div class="bg-primary/5 rounded-xl p-6 border border-primary/10">
+                            <div class="flex items-center gap-3 mb-4">
+                                <svg class="w-6 h-6 text-primary" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                                <p class="text-sm font-bold text-slate-900">Guarantee</p>
                             </div>
+                            <ul class="space-y-3">
+                                <li class="flex items-start gap-2 text-xs text-slate-600">
+                                    <svg class="w-4 h-4 text-primary shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                                    <span>30-day money back guarantee if you're not satisfied.</span>
+                                </li>
+                                <li class="flex items-start gap-2 text-xs text-slate-600">
+                                    <svg class="w-4 h-4 text-primary shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                                    <span>Don't love it? We'll fix it. For free.</span>
+                                </li>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -671,61 +599,12 @@
         </div>
 
 
-        <!-- Recently Viewed Products -->
-        <div id="recentlyViewedSection" class="mt-12" style="display: none;">
-            <div class="mb-6 flex items-center justify-between">
-                <div>
-                    <h2 class="text-2xl font-bold text-gray-900">Recently Viewed Products</h2>
-                    <p class="text-gray-600 mt-1">Continue shopping from where you left off</p>
-                </div>
-                <!-- Mobile Navigation Buttons -->
-                <div class="flex gap-2 lg:hidden">
-                    <button id="recentlyViewedPrevBtnMobile" class="p-2 bg-white rounded-full shadow-md hover:bg-gray-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
-                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                        </svg>
-                    </button>
-                    <button id="recentlyViewedNextBtnMobile" class="p-2 bg-white rounded-full shadow-md hover:bg-gray-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
-                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Products Container -->
-            <div class="relative group">
-                <!-- Desktop Navigation Buttons -->
-                <button id="recentlyViewedPrevBtnDesktop" class="hidden lg:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-12 h-12 bg-white rounded-full shadow-lg items-center justify-center hover:bg-gray-50 transition-all disabled:opacity-0 disabled:cursor-not-allowed opacity-0 group-hover:opacity-100">
-                    <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                    </svg>
-                </button>
-                <button id="recentlyViewedNextBtnDesktop" class="hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-12 h-12 bg-white rounded-full shadow-lg items-center justify-center hover:bg-gray-50 transition-all disabled:opacity-0 disabled:cursor-not-allowed opacity-0 group-hover:opacity-100">
-                    <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
-                </button>
-                
-                <div id="recentlyViewedContainer" class="overflow-x-auto hide-scrollbar" style="scroll-behavior: smooth;">
-                    <div id="recentlyViewedGrid" class="flex gap-4"></div>
-                </div>
-            </div>
-        </div>
+        <!-- Phần dưới: Recently Viewed (cùng component với home / products index; load AJAX nếu chưa có data) -->
+        <section class="mt-12 pt-10">
+            <x-recently-viewed :products="$recentlyViewedProducts ?? null" :limit="5" wrapperClass="" />
+        </section>
     </div>
 </div>
-
-<!-- Styles for Recently Viewed -->
-<style>
-.hide-scrollbar::-webkit-scrollbar {
-    display: none;
-}
-
-.hide-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-</style>
 
 <!-- JavaScript for Cart Operations -->
 <script>
@@ -743,7 +622,53 @@ const DEFAULT_SHIPPING_RATE = @json($defaultShippingRateData);
 const DEFAULT_SHIPPING_ZONE_ID = @json($defaultShippingRate ? $defaultShippingRate->shipping_zone_id : null);
 const SELECTED_ZONE_VALUE = @json($selectedZoneValue);
 const BASE_SUBTOTAL = {{ $baseSubtotal }};
+const APPLY_PROMO_URL = '{{ route("api.cart.apply-promo") }}';
+const REMOVE_PROMO_URL = '{{ route("api.cart.remove-promo") }}';
 
+function showPromoMessage(text, isError) {
+    const el = document.getElementById('promo-message');
+    if (!el) return;
+    el.textContent = text;
+    el.className = 'mt-1.5 text-xs ' + (isError ? 'text-red-600' : 'text-emerald-600');
+    el.classList.remove('hidden');
+}
+
+document.getElementById('promo-apply') && document.getElementById('promo-apply').addEventListener('click', function() {
+    const input = document.getElementById('promo');
+    const code = (input && input.value) ? input.value.trim() : '';
+    if (!code) {
+        showPromoMessage('Please enter a promo code.', true);
+        return;
+    }
+    this.disabled = true;
+    const btn = this;
+    fetch(APPLY_PROMO_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+        body: JSON.stringify({ code: code })
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        if (data.success) {
+            location.reload();
+        } else {
+            showPromoMessage(data.message || 'Invalid or expired promo code.', true);
+        }
+    })
+    .catch(() => { btn.disabled = false; showPromoMessage('Something went wrong. Try again.', true); });
+});
+
+document.getElementById('promo-remove') && document.getElementById('promo-remove').addEventListener('click', function() {
+    this.disabled = true;
+    fetch(REMOVE_PROMO_URL, {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(data => { if (data.success) location.reload(); })
+    .catch(() => location.reload());
+});
 
 function updateQuantity(cartItemId, newQuantity) {
     if (newQuantity < 1) return;
@@ -1116,115 +1041,6 @@ function saveCartChanges(cartItemId) {
         alert('An error occurred');
     });
 }
-
-// Recently Viewed Products Functionality
-function loadRecentlyViewed() {
-    const recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
-    
-    if (recentlyViewed.length === 0) {
-        document.getElementById('recentlyViewedSection').style.display = 'none';
-        return;
-    }
-
-    // Show section
-    document.getElementById('recentlyViewedSection').style.display = 'block';
-
-    // Limit to 12 products
-    const productsToShow = recentlyViewed.slice(0, 12);
-    const container = document.getElementById('recentlyViewedGrid');
-    
-    container.innerHTML = productsToShow.map(product => `
-        <div class="flex-shrink-0 w-48 bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow group">
-            <a href="/products/${product.slug}" class="block">
-                <div class="relative aspect-square overflow-hidden bg-gray-100">
-                    <img src="${product.image}" 
-                         alt="${product.name}" 
-                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300">
-                </div>
-                <div class="p-3">
-                    <h3 class="text-sm font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-[#005366] transition-colors">${product.name}</h3>
-                    <div class="flex items-center gap-1 mb-2">
-                        <div class="flex">
-                            ${Array(5).fill(0).map((_, i) => `
-                                <svg class="w-3 h-3 ${i < 4 ? 'text-yellow-400' : 'text-gray-300'}" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                                </svg>
-                            `).join('')}
-                        </div>
-                        <span class="text-xs text-gray-500">4.5</span>
-                    </div>
-                    <p class="text-base font-bold text-[#005366]">${CURRENCY_SYMBOL}${parseFloat(product.price).toFixed(2)}</p>
-                </div>
-            </a>
-        </div>
-    `).join('');
-
-    // Setup navigation
-    setupNavigation();
-}
-
-function setupNavigation() {
-    const container = document.getElementById('recentlyViewedContainer');
-    const prevBtnMobile = document.getElementById('recentlyViewedPrevBtnMobile');
-    const nextBtnMobile = document.getElementById('recentlyViewedNextBtnMobile');
-    const prevBtnDesktop = document.getElementById('recentlyViewedPrevBtnDesktop');
-    const nextBtnDesktop = document.getElementById('recentlyViewedNextBtnDesktop');
-    
-    if (!container) return;
-
-    // Update button states on scroll
-    function updateButtonStates() {
-        const scrollLeft = container.scrollLeft;
-        const maxScroll = container.scrollWidth - container.clientWidth;
-        
-        const isAtStart = scrollLeft <= 0;
-        const isAtEnd = scrollLeft >= maxScroll - 1;
-        
-        // Update mobile buttons
-        if (prevBtnMobile && nextBtnMobile) {
-            prevBtnMobile.disabled = isAtStart;
-            nextBtnMobile.disabled = isAtEnd;
-        }
-        
-        // Update desktop buttons
-        if (prevBtnDesktop && nextBtnDesktop) {
-            prevBtnDesktop.disabled = isAtStart;
-            nextBtnDesktop.disabled = isAtEnd;
-        }
-    }
-
-    // Scroll by one item width (192px + 16px gap)
-    const scrollAmount = 208;
-
-    function scrollPrev() {
-        container.scrollBy({
-            left: -scrollAmount,
-            behavior: 'smooth'
-        });
-        setTimeout(updateButtonStates, 300);
-    }
-
-    function scrollNext() {
-        container.scrollBy({
-            left: scrollAmount,
-            behavior: 'smooth'
-        });
-        setTimeout(updateButtonStates, 300);
-    }
-
-    // Attach event handlers
-    if (prevBtnMobile) prevBtnMobile.onclick = scrollPrev;
-    if (nextBtnMobile) nextBtnMobile.onclick = scrollNext;
-    if (prevBtnDesktop) prevBtnDesktop.onclick = scrollPrev;
-    if (nextBtnDesktop) nextBtnDesktop.onclick = scrollNext;
-
-    // Update on scroll
-    container.addEventListener('scroll', updateButtonStates);
-    
-    // Initial state
-    updateButtonStates();
-}
-
 
 // Track InitiateCheckout when clicking Proceed to Checkout
 function trackInitiateCheckout(event) {
@@ -1684,31 +1500,13 @@ function formatPrice(amount) {
  */
 function calculateBaseSubtotal(cartItems) {
     let baseSubtotal = 0;
-    
     cartItems.forEach(item => {
         const itemPrice = parseFloat(item.price) || 0;
-        // Convert to USD if needed
-        let basePrice = CURRENT_CURRENCY !== 'USD' && CURRENT_CURRENCY_RATE > 0 
-            ? itemPrice / CURRENT_CURRENCY_RATE 
+        let basePrice = CURRENT_CURRENCY !== 'USD' && CURRENT_CURRENCY_RATE > 0
+            ? itemPrice / CURRENT_CURRENCY_RATE
             : itemPrice;
-        
-        // Add customization prices
-        let customizationTotal = 0;
-        if (item.customizations) {
-            Object.values(item.customizations).forEach(customization => {
-                if (customization && customization.price) {
-                    const customPrice = parseFloat(customization.price) || 0;
-                    let baseCustomPrice = CURRENT_CURRENCY !== 'USD' && CURRENT_CURRENCY_RATE > 0
-                        ? customPrice / CURRENT_CURRENCY_RATE
-                        : customPrice;
-                    customizationTotal += baseCustomPrice;
-                }
-            });
-        }
-        
-        baseSubtotal += (basePrice + customizationTotal) * item.quantity;
+        baseSubtotal += basePrice * item.quantity;
     });
-    
     return baseSubtotal;
 }
 
@@ -1774,7 +1572,6 @@ function initializeShippingCost() {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    loadRecentlyViewed();
     initializeShippingCost();
 });
 </script>

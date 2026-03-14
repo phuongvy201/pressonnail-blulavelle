@@ -44,43 +44,25 @@ class Cart extends Model
     // Helper methods
     public function getTotalPrice(): float
     {
-        // Price already includes variant and customization prices from frontend
-        // So we just multiply by quantity
-        return $this->price * $this->quantity;
+        // price = đơn giá đã gồm variant + customization (frontend gửi lên)
+        return (float) $this->price * $this->quantity;
     }
 
+    /**
+     * Tổng tiền dòng (đơn giá × số lượng).
+     * Đơn giá trong DB đã bao gồm customization, không cộng thêm.
+     */
     public function getTotalPriceWithCustomizations(): float
     {
-        $basePrice = $this->price * $this->quantity;
-        $customizationTotal = 0;
-
-        // Add customization prices if they exist
-        if ($this->customizations && is_array($this->customizations)) {
-            foreach ($this->customizations as $customization) {
-                if (isset($customization['price']) && is_numeric($customization['price'])) {
-                    $customizationTotal += floatval($customization['price']);
-                }
-            }
-        }
-
-        return $basePrice + ($customizationTotal * $this->quantity);
+        return (float) $this->price * $this->quantity;
     }
 
+    /**
+     * Đơn giá 1 sản phẩm (đã gồm customization).
+     */
     public function getUnitPriceWithCustomizations(): float
     {
-        $basePrice = $this->price;
-        $customizationTotal = 0;
-
-        // Add customization prices if they exist
-        if ($this->customizations && is_array($this->customizations)) {
-            foreach ($this->customizations as $customization) {
-                if (isset($customization['price']) && is_numeric($customization['price'])) {
-                    $customizationTotal += floatval($customization['price']);
-                }
-            }
-        }
-
-        return $basePrice + $customizationTotal;
+        return (float) $this->price;
     }
 
     public function getDisplayName(): string

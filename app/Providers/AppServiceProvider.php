@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Services\CurrencyService;
+use App\Models\ChatMessage;
 use App\Models\Order;
 use App\Models\ReturnRequest;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -58,6 +59,14 @@ class AppServiceProvider extends ServiceProvider
                     })
                     ->count();
             }
+
+            $liveChatUnreadCount = 0;
+            if ($user && ($user->hasRole('admin') || $user->hasRole('seller'))) {
+                $liveChatUnreadCount = ChatMessage::where('is_from_customer', true)
+                    ->whereNull('read_at')
+                    ->whereHas('conversation', fn ($q) => $q->where('seller_id', $user->id))
+                    ->count();
+            }
             
             $view->with([
                 'currentCurrency' => $currency,
@@ -65,6 +74,7 @@ class AppServiceProvider extends ServiceProvider
                 'currentCurrencySymbol' => $currencySymbol,
                 'sidebarPendingOrders' => $sidebarPendingOrders,
                 'sidebarPendingReturns' => $sidebarPendingReturns,
+                'liveChatUnreadCount' => $liveChatUnreadCount,
             ]);
         });
     }

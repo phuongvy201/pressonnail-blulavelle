@@ -14,12 +14,38 @@ export default {
         "./resources/js/**/*.tsx",
     ],
 
+    // Safelist các class dùng cho layout sticky sidebar (đã có sẵn, giữ nguyên)
+    safelist: [
+        'flex-1',
+        'min-h-0',
+        'overflow-y-auto',
+        'shrink-0',
+        'h-full',
+        'lg:items-stretch',
+        'lg:sticky',
+        'lg:top-4',
+        'lg:top-10',
+        'lg:self-start',
+        // Nếu bạn dùng thêm class nào khác cho sticky, có thể bổ sung ở đây
+    ],
+
     theme: {
         extend: {
             fontFamily: {
                 sans: ["Figtree", ...defaultTheme.fontFamily.sans],
+                display: ["Plus Jakarta Sans", ...defaultTheme.fontFamily.sans],
             },
-            colors: { primary: '#f7951d' }
+            colors: {
+                primary: "#f0427c",
+                "background-light": "#f8f6f6",
+                "background-dark": "#221016",
+            },
+            borderRadius: {
+                DEFAULT: "0.25rem",
+                lg: "0.5rem",
+                xl: "0.75rem",
+                full: "9999px",
+            },
         },
     },
 

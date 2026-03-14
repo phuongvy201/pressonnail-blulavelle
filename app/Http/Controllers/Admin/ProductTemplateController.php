@@ -7,6 +7,7 @@ use App\Models\ProductTemplate;
 use App\Models\Category;
 use App\Models\TemplateAttribute;
 use App\Models\TemplateVariant;
+use App\Services\VideoThumbnailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -14,6 +15,50 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductTemplateController extends Controller
 {
+    protected function getS3BaseUrl(): string
+    {
+        return 'https://s3.us-east-1.amazonaws.com/image.bluprinter/';
+    }
+
+    /**
+     * Upload media files (images + videos) to S3. Với video thì tạo poster bằng FFmpeg và lưu dạng ['type'=>'video','url'=>...,'poster'=>...].
+     */
+    protected function uploadTemplateMedia(Request $request): array
+    {
+        $mediaItems = [];
+        $thumbnailService = app(VideoThumbnailService::class);
+        $baseUrl = $this->getS3BaseUrl();
+
+        foreach ($request->file('media') as $file) {
+            if (!$file->isValid()) {
+                continue;
+            }
+            $fileName = time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
+            Storage::disk('s3')->putFileAs('templates', $file, $fileName);
+            $fileUrl = $baseUrl . 'templates/' . $fileName;
+
+            if (VideoThumbnailService::isVideoFile($file)) {
+                $posterUrl = null;
+                $posterPath = $thumbnailService->generatePoster($file, 1);
+                if ($posterPath) {
+                    $posterFileName = pathinfo($fileName, PATHINFO_FILENAME) . '_poster.jpg';
+                    $contents = Storage::disk('local')->get($posterPath);
+                    if ($contents) {
+                        Storage::disk('s3')->put('templates/posters/' . $posterFileName, $contents);
+                        $posterUrl = $baseUrl . 'templates/posters/' . $posterFileName;
+                    }
+                    $thumbnailService->deleteTempPoster($posterPath);
+                }
+                // Nếu không tạo được poster thì để null để frontend fallback về ảnh khác,
+                // tránh dùng URL video (.mp4) làm src của <img>
+                $mediaItems[] = ['type' => 'video', 'url' => $fileUrl, 'poster' => $posterUrl];
+            } else {
+                $mediaItems[] = $fileUrl;
+            }
+        }
+
+        return $mediaItems;
+    }
     /**
      * Display a listing of the resource.
      */
@@ -62,8 +107,9 @@ class ProductTemplateController extends Controller
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
             'base_price' => 'required|numeric|min:0',
+            'list_price' => 'nullable|numeric|min:0',
             'description' => 'nullable|string',
-            'media.*' => 'nullable|mimes:jpeg,png,jpg,gif,mp4,mov,avi|max:10240',
+            'media.*' => 'nullable|mimes:jpeg,png,jpg,gif,webp,avif,mp4,mov,avi,webm,ogg|max:10240',
             'allow_customization' => 'nullable|boolean',
             'customizations' => 'nullable|array',
             'customizations.*.type' => 'required_with:customizations|string|in:text,number,textarea,select,checkbox,file',
@@ -80,8 +126,9 @@ class ProductTemplateController extends Controller
             'variants.*.variant_key' => 'nullable|string|max:255',
             'variants.*.attributes' => 'nullable|string',
             'variants.*.price' => 'nullable|numeric|min:0',
+            'variants.*.list_price' => 'nullable|numeric|min:0',
             'variants.*.quantity' => 'nullable|integer|min:0',
-            'variants.*.media' => 'nullable|mimes:jpeg,png,jpg,gif,mp4,mov,avi|max:10240',
+            'variants.*.media' => 'nullable|mimes:jpeg,png,jpg,gif,webp,avif,mp4,mov,avi,webm,ogg|max:10240',
         ]);
 
         $data = $request->all();
@@ -100,15 +147,9 @@ class ProductTemplateController extends Controller
             $data['customizations'] = null;
         }
 
-        // Handle media upload to S3
+        // Handle media upload to S3 (ảnh + video; video có poster từ FFmpeg)
         if ($request->hasFile('media')) {
-            $mediaUrls = [];
-            foreach ($request->file('media') as $file) {
-                $fileName = time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
-                $filePath = Storage::disk('s3')->putFileAs('templates', $file, $fileName);
-                $mediaUrls[] = 'https://s3.us-east-1.amazonaws.com/image.bluprinter/templates/' . $fileName;
-            }
-            $data['media'] = $mediaUrls;
+            $data['media'] = $this->uploadTemplateMedia($request);
         }
 
         $template = ProductTemplate::create($data);
@@ -225,8 +266,9 @@ class ProductTemplateController extends Controller
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
             'base_price' => 'required|numeric|min:0',
+            'list_price' => 'nullable|numeric|min:0',
             'description' => 'nullable|string',
-            'media.*' => 'nullable|mimes:jpeg,png,jpg,gif,mp4,mov,avi|max:10240',
+            'media.*' => 'nullable|mimes:jpeg,png,jpg,gif,webp,avif,mp4,mov,avi,webm,ogg|max:10240',
             'allow_customization' => 'nullable|boolean',
             'customizations' => 'nullable|array',
             'customizations.*.type' => 'required_with:customizations|string|in:text,number,textarea,select,checkbox,file',
@@ -243,8 +285,9 @@ class ProductTemplateController extends Controller
             'variants.*.variant_key' => 'nullable|string|max:255',
             'variants.*.attributes' => 'nullable|string',
             'variants.*.price' => 'nullable|numeric|min:0',
+            'variants.*.list_price' => 'nullable|numeric|min:0',
             'variants.*.quantity' => 'nullable|integer|min:0',
-            'variants.*.media' => 'nullable|mimes:jpeg,png,jpg,gif,mp4,mov,avi|max:10240',
+            'variants.*.media' => 'nullable|mimes:jpeg,png,jpg,gif,webp,avif,mp4,mov,avi,webm,ogg|max:10240',
         ]);
 
         $data = $request->all();
@@ -260,15 +303,9 @@ class ProductTemplateController extends Controller
             $data['customizations'] = null;
         }
 
-        // Handle media upload to S3
+        // Handle media upload to S3 (ảnh + video; video có poster từ FFmpeg)
         if ($request->hasFile('media')) {
-            $mediaUrls = [];
-            foreach ($request->file('media') as $file) {
-                $fileName = time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
-                $filePath = Storage::disk('s3')->putFileAs('templates', $file, $fileName);
-                $mediaUrls[] = 'https://s3.us-east-1.amazonaws.com/image.bluprinter/templates/' . $fileName;
-            }
-            $data['media'] = $mediaUrls;
+            $data['media'] = $this->uploadTemplateMedia($request);
         }
 
         $productTemplate->update($data);

@@ -51,18 +51,6 @@ class CurrencyService
         $cacheKey = "currency_for_domain_{$domain}";
 
         return Cache::remember($cacheKey, 3600, function () use ($domain) {
-            // Lấy từ DomainCurrencyConfig
-            $domainCurrencyConfig = \App\Models\DomainCurrencyConfig::getForDomain($domain);
-            if ($domainCurrencyConfig && $domainCurrencyConfig->currency) {
-                return $domainCurrencyConfig->currency;
-            }
-
-            // Fallback: thử lấy từ country mapping nếu không có config
-            // Tạm thời return USD, có thể mở rộng sau
-            Log::warning('Currency not found for domain, using default USD', [
-                'domain' => $domain
-            ]);
-
             return 'USD';
         });
     }
@@ -82,18 +70,7 @@ class CurrencyService
         $cacheKey = "currency_rate_for_domain_{$domain}";
 
         return Cache::remember($cacheKey, 3600, function () use ($domain) {
-            // Lấy từ DomainCurrencyConfig
-            $domainCurrencyConfig = \App\Models\DomainCurrencyConfig::getForDomain($domain);
-            if ($domainCurrencyConfig) {
-                if ($domainCurrencyConfig->currency_rate) {
-                    return (float) $domainCurrencyConfig->currency_rate;
-                }
-                if ($domainCurrencyConfig->currency === 'USD') {
-                    return 1.0;
-                }
-            }
-
-            return null; // Không có rate, sẽ dùng fallback
+            return 1.0; // USD
         });
     }
 

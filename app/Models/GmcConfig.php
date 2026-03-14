@@ -97,27 +97,27 @@ class GmcConfig extends Model
     }
 
     /**
-     * Lấy currency cho domain từ DomainCurrencyConfig
+     * Lấy currency cho domain (fallback: theo target_country)
      */
     public static function getCurrencyForDomain(string $domain): ?string
     {
-        return DomainCurrencyConfig::getCurrencyForDomain($domain);
+        return 'USD';
     }
 
     /**
-     * Lấy currency rate cho domain từ DomainCurrencyConfig
+     * Lấy currency rate cho domain
      */
     public static function getCurrencyRateForDomain(string $domain): ?float
     {
-        return DomainCurrencyConfig::getCurrencyRateForDomain($domain);
+        return null;
     }
 
     /**
-     * Get currency for this config's domain
+     * Get currency for this config (theo target_country)
      */
     public function getCurrencyAttribute(): ?string
     {
-        return DomainCurrencyConfig::getCurrencyForDomain($this->domain);
+        return self::getCurrencyForCountry($this->target_country);
     }
 
     /**
@@ -125,6 +125,6 @@ class GmcConfig extends Model
      */
     public function getCurrencyRateAttribute(): ?float
     {
-        return DomainCurrencyConfig::getCurrencyRateForDomain($this->domain);
+        return null;
     }
 }

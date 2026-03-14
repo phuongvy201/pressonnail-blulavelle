@@ -10,12 +10,12 @@ use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\Admin\ProductImportController;
+use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
+use App\Http\Controllers\Admin\ReviewImportController;
 use App\Http\Controllers\Admin\CollectionController as AdminCollectionController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\Admin\AnalyticsSettingsController;
-use App\Http\Controllers\Admin\DomainConfigController;
-use App\Http\Controllers\Admin\GmcConfigController;
 use App\Http\Controllers\Admin\ShopController as AdminShopController;
 use App\Http\Controllers\Admin\PageController as AdminPageController;
 use App\Http\Controllers\Seller\SellerDashboardController;
@@ -56,6 +56,7 @@ use App\Http\Controllers\Admin\ReturnRequestController as AdminReturnRequestCont
 // Public routes
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+Route::get('/products/recently-viewed', [ProductController::class, 'recentlyViewedFragment'])->name('products.recently-viewed');
 Route::get('/products/{slug}', [ProductController::class, 'show'])->name('products.show');
 Route::post('/products/calculate-shipping', [ProductController::class, 'calculateShippingCost'])->name('products.calculate-shipping');
 Route::get('/shops/{shop}', [App\Http\Controllers\ShopController::class, 'show'])->name('shops.show');
@@ -81,6 +82,7 @@ Route::post('/checkout/calculate-shipping', [App\Http\Controllers\CheckoutContro
 Route::post('/checkout/get-shipping-rates', [App\Http\Controllers\CheckoutController::class, 'getShippingRates'])->name('checkout.get-shipping-rates');
 Route::get('/checkout/success/{orderNumber}', [App\Http\Controllers\CheckoutController::class, 'success'])->name('checkout.success');
 Route::get('/checkout/receipt/{orderNumber}', [App\Http\Controllers\CheckoutController::class, 'downloadReceipt'])->name('checkout.receipt');
+Route::get('/checkout/receipt/{orderNumber}/view', [App\Http\Controllers\CheckoutController::class, 'showReceipt'])->name('checkout.receipt.view');
 
 // LianLian Pay callback routes
 Route::get('/checkout/lianlian/success', [App\Http\Controllers\CheckoutController::class, 'lianlianSuccess'])->name('checkout.lianlian.success');
@@ -145,6 +147,9 @@ Route::get('/blog/tag/{slug}', [BlogController::class, 'tag'])->name('blog.tag')
 // Shipping & Delivery route (before pages to avoid conflicts)
 Route::get('/shipping-delivery', [App\Http\Controllers\ShippingDeliveryController::class, 'index'])->name('shipping-delivery.index');
 
+// Sizing Kit (how to measure nail size, size chart)
+Route::get('/sizing-kit', [App\Http\Controllers\SizingKitController::class, 'index'])->name('sizing-kit.index');
+
 // Pages routes (must be last to avoid conflicts)
 Route::get('/page/{slug}', [PageController::class, 'show'])->name('page.show');
 
@@ -163,6 +168,15 @@ Route::post('/bulk-order', [BulkOrderController::class, 'store'])->name('bulk.or
 // Promo Code routes
 Route::get('/promo-code', [PromoCodeController::class, 'create'])->name('promo.code.create');
 Route::post('/promo-code', [PromoCodeController::class, 'store'])->name('promo.code.store');
+
+// Promo popup (sau Add to Cart / Wishlist): offer text + claim by email
+Route::get('/promo-offer', [App\Http\Controllers\PromoPopupController::class, 'offer'])->name('promo.offer');
+Route::post('/promo-claim', [App\Http\Controllers\PromoPopupController::class, 'claim'])->name('promo.claim');
+
+// Live Chat (khách hàng): bắt đầu, lấy tin nhắn, gửi tin
+Route::post('/live-chat/start', [App\Http\Controllers\LiveChatController::class, 'startOrGet'])->name('live-chat.start');
+Route::get('/live-chat/conversations/{conversationId}/messages', [App\Http\Controllers\LiveChatController::class, 'messages'])->name('live-chat.messages');
+Route::post('/live-chat/send', [App\Http\Controllers\LiveChatController::class, 'send'])->name('live-chat.send');
 
 // Seller Application routes
 Route::get('/become-a-seller', [SellerApplicationController::class, 'create'])->name('seller.apply');
@@ -462,6 +476,8 @@ Route::prefix('api/cart')->middleware('web')->group(function () {
     Route::delete('/remove/{id}', [ApiCartController::class, 'remove'])->name('api.cart.remove');
     Route::delete('/clear', [ApiCartController::class, 'clear'])->name('api.cart.clear');
     Route::post('/sync', [ApiCartController::class, 'sync'])->name('api.cart.sync');
+    Route::post('/apply-promo', [ApiCartController::class, 'applyPromo'])->name('api.cart.apply-promo');
+    Route::post('/remove-promo', [ApiCartController::class, 'removePromo'])->name('api.cart.remove-promo');
 });
 
 // Analytics API routes
@@ -560,35 +576,11 @@ Route::middleware('auth')->group(function () {
         Route::post('shipping-rates/{shippingRate}/set-default', [ShippingRateController::class, 'setDefault'])->name('shipping-rates.set-default');
         Route::post('shipping-rates/{shippingRate}/unset-default', [ShippingRateController::class, 'unsetDefault'])->name('shipping-rates.unset-default');
 
+        Route::resource('promo-codes', App\Http\Controllers\Admin\PromoCodeController::class);
+
         // Analytics settings
         Route::get('settings/analytics', [AnalyticsSettingsController::class, 'edit'])->name('settings.analytics.edit');
         Route::put('settings/analytics', [AnalyticsSettingsController::class, 'update'])->name('settings.analytics.update');
-
-        // Domain Configs (Currency + Analytics)
-        Route::get('settings/domain-config', [DomainConfigController::class, 'index'])->name('settings.domain-config.index');
-        Route::get('settings/domain-config/create', [DomainConfigController::class, 'create'])->name('settings.domain-config.create');
-
-        // Currency routes
-        Route::post('settings/domain-config/currency', [DomainConfigController::class, 'storeCurrency'])->name('settings.domain-config.store-currency');
-        Route::get('settings/domain-config/currency/{id}/edit', [DomainConfigController::class, 'editCurrency'])->name('settings.domain-config.edit-currency');
-        Route::put('settings/domain-config/currency/{id}', [DomainConfigController::class, 'updateCurrency'])->name('settings.domain-config.update-currency');
-        Route::delete('settings/domain-config/currency/{id}', [DomainConfigController::class, 'destroyCurrency'])->name('settings.domain-config.destroy-currency');
-
-        // Analytics routes
-        Route::post('settings/domain-config/analytics', [DomainConfigController::class, 'storeAnalytics'])->name('settings.domain-config.store-analytics');
-        Route::get('settings/domain-config/analytics/{id}/edit', [DomainConfigController::class, 'editAnalytics'])->name('settings.domain-config.edit-analytics');
-        Route::put('settings/domain-config/analytics/{id}', [DomainConfigController::class, 'updateAnalytics'])->name('settings.domain-config.update-analytics');
-        Route::delete('settings/domain-config/analytics/{id}', [DomainConfigController::class, 'destroyAnalytics'])->name('settings.domain-config.destroy-analytics');
-
-        // GMC Configs
-        Route::resource('settings/gmc-config', GmcConfigController::class)->names([
-            'index' => 'settings.gmc-config.index',
-            'create' => 'settings.gmc-config.create',
-            'store' => 'settings.gmc-config.store',
-            'edit' => 'settings.gmc-config.edit',
-            'update' => 'settings.gmc-config.update',
-            'destroy' => 'settings.gmc-config.destroy',
-        ]);
 
         // Return Requests (Refund/Exchange)
         Route::get('returns', [AdminReturnRequestController::class, 'index'])->name('returns.index');
@@ -606,6 +598,25 @@ Route::middleware('auth')->group(function () {
         Route::get('seller-applications/{sellerApplication}', [SellerApplicationAdminController::class, 'show'])->name('seller-applications.show');
         Route::post('seller-applications/{sellerApplication}/approve', [SellerApplicationAdminController::class, 'approve'])->name('seller-applications.approve');
         Route::post('seller-applications/{sellerApplication}/reject', [SellerApplicationAdminController::class, 'reject'])->name('seller-applications.reject');
+
+        // Content blocks API (inline edit trang chủ / trang tĩnh)
+        Route::get('api/content-blocks', [App\Http\Controllers\Admin\ContentBlockController::class, 'index'])->name('api.content-blocks.index');
+        Route::put('api/content-blocks', [App\Http\Controllers\Admin\ContentBlockController::class, 'update'])->name('api.content-blocks.update');
+        Route::post('api/content-blocks/upload-image', [App\Http\Controllers\Admin\ContentBlockController::class, 'uploadImage'])->name('api.content-blocks.upload-image');
+        Route::post('api/content-blocks/upload-video', [App\Http\Controllers\Admin\ContentBlockController::class, 'uploadVideo'])->name('api.content-blocks.upload-video');
+
+        // Preview & edit trang chủ (view home với chế độ chỉnh sửa)
+        Route::get('site/home-preview', [HomeController::class, 'preview'])->name('site.home-preview');
+    });
+
+    // Live Chat (Admin/Seller) - xem danh sách hội thoại và trả lời
+    Route::prefix('admin')->name('admin.')->middleware('role:admin|seller')->group(function () {
+        Route::get('live-chat', [App\Http\Controllers\Admin\LiveChatController::class, 'index'])->name('live-chat.index');
+        Route::get('live-chat/api/conversations', [App\Http\Controllers\Admin\LiveChatController::class, 'apiConversations'])->name('live-chat.api.conversations');
+        Route::post('live-chat/{conversation}/mark-read', [App\Http\Controllers\Admin\LiveChatController::class, 'markRead'])->name('live-chat.mark-read');
+        Route::get('live-chat/{conversation}', [App\Http\Controllers\Admin\LiveChatController::class, 'show'])->name('live-chat.show');
+        Route::get('live-chat/{conversation}/messages', [App\Http\Controllers\Admin\LiveChatController::class, 'messages'])->name('live-chat.messages');
+        Route::post('live-chat/{conversation}/reply', [App\Http\Controllers\Admin\LiveChatController::class, 'reply'])->name('live-chat.reply');
     });
 
     // Orders management (Admin + Ad-Partner) - using controller middleware
@@ -627,6 +638,17 @@ Route::middleware('auth')->group(function () {
         Route::post('products/import', [ProductImportController::class, 'import'])->name('products.import.process');
         Route::get('products/import/template', [ProductImportController::class, 'downloadTemplate'])->name('products.import.template');
         Route::get('products/import/progress', [ProductImportController::class, 'getProgress'])->name('products.import.progress');
+
+        // Reviews (Admin + Seller): list + import + delete + pin
+        Route::get('reviews', [AdminReviewController::class, 'index'])->name('reviews.index');
+        Route::delete('reviews/{review}', [AdminReviewController::class, 'destroy'])->name('reviews.destroy');
+        Route::post('reviews/bulk-destroy', [AdminReviewController::class, 'bulkDestroy'])->name('reviews.bulk-destroy');
+        Route::post('reviews/{review}/toggle-pin', [AdminReviewController::class, 'togglePin'])->name('reviews.toggle-pin');
+        Route::post('reviews/bulk-pin', [AdminReviewController::class, 'bulkPin'])->name('reviews.bulk-pin');
+        Route::post('reviews/bulk-unpin', [AdminReviewController::class, 'bulkUnpin'])->name('reviews.bulk-unpin');
+        Route::get('reviews/import', [ReviewImportController::class, 'showImportForm'])->name('reviews.import');
+        Route::post('reviews/import', [ReviewImportController::class, 'import'])->name('reviews.import.process');
+        Route::get('reviews/import/template', [ReviewImportController::class, 'downloadTemplate'])->name('reviews.import.template');
 
         // Products - Custom routes must be defined BEFORE resource route to avoid conflicts
         Route::get('products/delete-from-gmc', [AdminProductController::class, 'showDeleteFromGMCForm'])->name('products.show-delete-from-gmc');

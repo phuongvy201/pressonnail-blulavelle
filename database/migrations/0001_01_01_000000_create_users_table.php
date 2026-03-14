@@ -13,10 +13,27 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+
             $table->string('name');
             $table->string('email')->unique();
+
+            // Social login
+            $table->string('google_id')->nullable();
+            $table->string('facebook_id')->nullable();
+            $table->index('google_id');
+            $table->index('facebook_id');
+
+            // Profile
+            $table->string('phone', 20)->nullable();
+            $table->string('avatar')->nullable();
+            $table->string('address', 500)->nullable();
+            $table->string('city', 100)->nullable();
+            $table->string('state', 100)->nullable();
+            $table->string('postal_code', 20)->nullable();
+            $table->string('country', 100)->nullable();
+
             $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
+            $table->string('password')->nullable(); // nullable để hỗ trợ social login only
             $table->rememberToken();
             $table->timestamps();
         });
@@ -42,8 +59,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('users');
-        Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');
+        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('users');
     }
 };

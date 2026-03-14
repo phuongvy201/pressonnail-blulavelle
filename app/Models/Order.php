@@ -22,6 +22,8 @@ class Order extends Model
         'country',
         'subtotal',
         'tax_amount',
+        'discount_amount',
+        'promo_code',
         'shipping_cost',
         'tip_amount',
         'total_amount',
@@ -37,17 +39,20 @@ class Order extends Model
         'refund_reason',
         'refund_status',
         'notes',
-        'tracking_number'
+        'tracking_number',
+        'promo_email_sent_at',
     ];
 
     protected $casts = [
         'subtotal' => 'decimal:2',
         'tax_amount' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
         'shipping_cost' => 'decimal:2',
         'tip_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
         'refund_amount' => 'decimal:2',
         'paid_at' => 'datetime',
+        'promo_email_sent_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

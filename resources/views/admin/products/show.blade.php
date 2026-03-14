@@ -58,7 +58,15 @@
                         </div>
                         <div>
                             <label class="text-sm font-medium text-gray-600">Price</label>
-                            <p class="mt-1 text-2xl font-bold text-green-600">${{ number_format($product->price ?? $product->template->base_price, 2) }}</p>
+                            @php
+                                $displayPrice = (float) ($product->price ?? $product->template->base_price);
+                                $displayListPrice = (float) ($product->list_price ?? $product->template->list_price ?? 0);
+                                $showListPrice = $displayListPrice > 0 && $displayListPrice > $displayPrice;
+                            @endphp
+                            <p class="mt-1 text-2xl font-bold text-green-600">${{ number_format($displayPrice, 2) }}</p>
+                            @if($showListPrice)
+                                <p class="mt-0.5 text-sm text-gray-500 line-through">${{ number_format($displayListPrice, 2) }}</p>
+                            @endif
                         </div>
                         <div>
                             <label class="text-sm font-medium text-gray-600">Quantity</label>

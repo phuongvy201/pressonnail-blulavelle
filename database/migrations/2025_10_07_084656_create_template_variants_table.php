@@ -13,17 +13,31 @@ return new class extends Migration
     {
         Schema::create('template_variants', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('template_id');
-            $table->string('variant_name'); // "Army Green, S"
-            $table->string('size')->nullable(); // "S", "M", "L"
-            $table->string('color')->nullable(); // "Army Green", "Black"
-            $table->string('sku')->unique();
-            $table->decimal('price', 10, 2)->nullable(); // Override từ template base_price
-            $table->integer('quantity')->default(0);
-            $table->json('media')->nullable(); // Media riêng cho variant
-            $table->timestamps();
 
-            $table->foreign('template_id')->references('id')->on('product_templates')->onDelete('cascade');
+            $table->foreignId('template_id')
+                ->constrained('product_templates')
+                ->onDelete('cascade');
+
+            $table->string('variant_name');
+            // Example: "Army Green - S"
+
+            // Dynamic attributes
+            $table->json('attributes')->nullable();
+            /*
+                Example:
+                {
+                    "size": "S",
+                    "color": "Army Green",
+                    "material": "Cotton",
+                    "finish": "Glossy"
+                }
+            */
+
+            $table->decimal('price', 10, 2)->nullable();
+            $table->integer('quantity')->default(0);
+            $table->json('media')->nullable();
+
+            $table->timestamps();
         });
     }
 

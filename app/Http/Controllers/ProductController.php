@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Shop;
 use App\Models\ShippingRate;
 use App\Models\ShippingZone;
+use App\Models\RecentProductView;
 use App\Services\TikTokEventsService;
 use App\Services\CurrencyService;
 use Illuminate\Support\Facades\Auth;
@@ -109,7 +110,19 @@ class ProductController extends Controller
             }
         }
 
-        return view('products.index', compact('products', 'categories', 'shops', 'breadcrumbs'));
+        $recentlyViewedProducts = collect();
+        if (Auth::check()) {
+            $recentIds = RecentProductView::getRecentProductIds(Auth::id(), 10, null);
+            if ($recentIds->isNotEmpty()) {
+                $recentlyViewedProducts = Product::whereIn('id', $recentIds)
+                    ->availableForDisplay()
+                    ->with(['shop', 'template'])
+                    ->get()
+                    ->sortBy(fn($p) => array_search($p->id, $recentIds->toArray()));
+            }
+        }
+
+        return view('products.index', compact('products', 'categories', 'shops', 'breadcrumbs', 'recentlyViewedProducts'));
     }
 
     /**
@@ -123,15 +136,31 @@ class ProductController extends Controller
         // Get product and require all display conditions
         $product = Product::where('slug', $slug)
             ->availableForDisplay()
-            ->with(['shop', 'template.category', 'variants', 'approvedReviews' => function ($query) {
+            ->with(['shop', 'template.category', 'template.variants', 'variants', 'collections', 'approvedReviews' => function ($query) {
                 $query->orderBy('created_at', 'desc')->limit(10);
             }])
             ->firstOrFail();
 
+        if (Auth::check()) {
+            RecentProductView::recordView(Auth::id(), $product->id);
+        }
+
         // Shop is available and active if we reach here
         $shopAvailable = true;
 
-        // Get related products from the same category (chỉ lấy đủ điều kiện hiển thị)
+        $recentlyViewedProducts = collect();
+        if (Auth::check()) {
+            $recentIds = RecentProductView::getRecentProductIds(Auth::id(), 10, $product->id);
+            if ($recentIds->isNotEmpty()) {
+                $recentlyViewedProducts = Product::whereIn('id', $recentIds)
+                    ->availableForDisplay()
+                    ->with(['shop', 'template'])
+                    ->get()
+                    ->sortBy(fn($p) => array_search($p->id, $recentIds->toArray()));
+            }
+        }
+
+        // Related products from the same category (for "You may also like" fallback / other sections)
         $relatedProducts = Product::whereHas('template', function ($q) use ($product) {
             $q->where('category_id', $product->template->category_id);
         })
@@ -140,6 +169,30 @@ class ProductController extends Controller
             ->with(['shop', 'template'])
             ->limit(8)
             ->get();
+
+        // You may also: ưu tiên sản phẩm cùng collection; không có collection thì cùng category
+        $collectionIds = $product->collections->pluck('id')->toArray();
+        $youMayAlsoProducts = collect();
+        if (!empty($collectionIds)) {
+            $youMayAlsoProducts = Product::whereHas('collections', function ($q) use ($collectionIds) {
+                $q->whereIn('collections.id', $collectionIds);
+            })
+                ->where('id', '!=', $product->id)
+                ->availableForDisplay()
+                ->with(['shop', 'template'])
+                ->limit(8)
+                ->get();
+        }
+        if ($youMayAlsoProducts->isEmpty() && $product->template && $product->template->category_id) {
+            $youMayAlsoProducts = Product::whereHas('template', function ($q) use ($product) {
+                $q->where('category_id', $product->template->category_id);
+            })
+                ->where('id', '!=', $product->id)
+                ->availableForDisplay()
+                ->with(['shop', 'template'])
+                ->limit(8)
+                ->get();
+        }
 
         // Get breadcrumb data
         $breadcrumbs = [
@@ -152,61 +205,16 @@ class ProductController extends Controller
         }
         $breadcrumbs[] = ['name' => $product->name, 'url' => ''];
 
-        // Get current domain first
-        $currentDomain = CurrencyService::getCurrentDomain();
-
         // Get shipping zones that have rates for this product's category
-        // PRIORITY: Pass domain to prioritize zones for current domain
         $categoryId = $product->template->category_id ?? null;
-        $shippingZones = ShippingRate::getZonesForCategory($categoryId, $currentDomain);
+        $shippingZones = ShippingRate::getZonesForCategory($categoryId);
 
-        // Get default zone for current domain (PRIORITY: zone matching current domain)
-        $defaultZone = null;
-        if ($currentDomain) {
-            // First, try to find zone matching current domain from shippingZones
-            $defaultZone = $shippingZones->first(function ($zone) use ($currentDomain) {
-                return $zone->domain === $currentDomain;
-            });
-
-            // If not found in shippingZones, try to get any zone for this domain
-            if (!$defaultZone) {
-                $defaultZone = ShippingZone::active()
-                    ->where('domain', $currentDomain)
-                    ->ordered()
-                    ->first();
-            }
-        }
-
-        // If no zone found for domain, try to get first zone from shippingZones
-        if (!$defaultZone && $shippingZones->isNotEmpty()) {
-            $defaultZone = $shippingZones->first();
-        }
-
-        // Get all available zones for selector (zones that have rates for this category)
-        // PRIORITY: Sort zones to put current domain's zones first
+        $defaultZone = $shippingZones->first();
         $availableZones = $shippingZones;
-        if ($currentDomain && $availableZones->isNotEmpty()) {
-            $availableZones = $availableZones->sortBy(function ($zone) use ($currentDomain) {
-                // Zones matching current domain come first (return 0), others come after (return 1)
-                return $zone->domain === $currentDomain ? 0 : 1;
-            })->values();
-        }
 
-        // If no zones found for category, get all active zones
         if ($availableZones->isEmpty()) {
-            $allZones = ShippingZone::active()->ordered()->get();
-
-            // PRIORITY: Sort zones to put current domain's zones first
-            if ($currentDomain) {
-                $allZones = $allZones->sortBy(function ($zone) use ($currentDomain) {
-                    return $zone->domain === $currentDomain ? 0 : 1;
-                })->values();
-            }
-
-            $availableZones = $allZones;
-
-            // Set default zone to first available if not set
-            if (!$defaultZone && $availableZones->isNotEmpty()) {
+            $availableZones = ShippingZone::active()->ordered()->get();
+            if ($availableZones->isNotEmpty() && !$defaultZone) {
                 $defaultZone = $availableZones->first();
             }
         }
@@ -216,12 +224,13 @@ class ProductController extends Controller
         return view('products.show', compact(
             'product',
             'relatedProducts',
+            'recentlyViewedProducts',
+            'youMayAlsoProducts',
             'breadcrumbs',
             'shopAvailable',
             'shippingZones',
             'defaultZone',
             'availableZones',
-            'currentDomain',
             'categoryId'
         ));
     }
@@ -246,52 +255,14 @@ class ProductController extends Controller
         $quantity = $request->input('quantity', 1);
         $productPrice = $request->input('product_price', 0);
 
-        // Get current domain
-        $currentDomain = CurrencyService::getCurrentDomain();
-
-        // PRIORITY: Find shipping rate matching current domain first
-        $shippingRate = null;
-
-        if ($currentDomain) {
-            // First priority: Rate matching zone, domain, and category
-            $shippingRate = ShippingRate::active()
-                ->forZone($zoneId)
-                ->forDomain($currentDomain)
-                ->forCategory($categoryId)
-                ->ordered()
-                ->get()
-                ->first(function ($rate) use ($quantity, $productPrice) {
-                    return $rate->isApplicable($quantity, $productPrice);
-                });
-        }
-
-        if (!$shippingRate) {
-            // Second priority: Rate matching zone and category (without domain filter)
-            $shippingRate = ShippingRate::active()
-                ->forZone($zoneId)
-                ->forCategory($categoryId)
-                ->ordered()
-                ->get()
-                ->first(function ($rate) use ($quantity, $productPrice, $currentDomain) {
-                    // If we have current domain, prioritize rates matching that domain
-                    if ($currentDomain && $rate->matchesDomain($currentDomain)) {
-                        return $rate->isApplicable($quantity, $productPrice);
-                    }
-                    return false;
-                });
-        }
-
-        if (!$shippingRate) {
-            // Third priority: Any rate for this zone and category
-            $shippingRate = ShippingRate::active()
-                ->forZone($zoneId)
-                ->forCategory($categoryId)
-                ->ordered()
-                ->get()
-                ->first(function ($rate) use ($quantity, $productPrice) {
-                    return $rate->isApplicable($quantity, $productPrice);
-                });
-        }
+        $shippingRate = ShippingRate::active()
+            ->forZone($zoneId)
+            ->forCategory($categoryId)
+            ->ordered()
+            ->get()
+            ->first(function ($rate) use ($quantity, $productPrice) {
+                return $rate->isApplicable($quantity, $productPrice);
+            });
 
         if (!$shippingRate) {
             return response()->json([
@@ -326,6 +297,50 @@ class ProductController extends Controller
             'first_item_cost' => $shippingRate->first_item_cost,
             'additional_item_cost' => $shippingRate->additional_item_cost,
         ]);
+    }
+
+    /**
+     * Trả HTML fragment cho block "Recently Viewed". Guest gửi ids=1,2,3; user đăng nhập lấy từ DB.
+     */
+    public function recentlyViewedFragment(Request $request)
+    {
+        $limit = min(10, (int) $request->get('limit', 12));
+        $products = collect();
+
+        if (Auth::check()) {
+            $recentIds = RecentProductView::getRecentProductIds(Auth::id(), $limit, (int) $request->get('exclude_id', 0) ?: null);
+            if ($recentIds->isNotEmpty()) {
+                $products = Product::whereIn('id', $recentIds)
+                    ->availableForDisplay()
+                    ->with(['shop', 'template'])
+                    ->get()
+                    ->sortBy(fn($p) => array_search($p->id, $recentIds->toArray()));
+            }
+        } else {
+            $ids = $request->get('ids');
+            $excludeId = (int) $request->get('exclude_id', 0);
+            if ($ids) {
+                $ids = is_array($ids) ? $ids : array_map('intval', array_filter(explode(',', $ids)));
+                if ($excludeId > 0) {
+                    $ids = array_values(array_filter($ids, fn($id) => $id !== $excludeId));
+                }
+                $ids = array_slice(array_unique($ids), 0, $limit);
+                if (!empty($ids)) {
+                    $products = Product::whereIn('id', $ids)
+                        ->availableForDisplay()
+                        ->with(['shop', 'template'])
+                        ->get()
+                        ->sortBy(fn($p) => array_search($p->id, $ids));
+                }
+            }
+        }
+
+        $html = view('products.partials.recently-viewed-fragment', [
+            'products' => $products,
+            'limit' => $limit,
+        ])->render();
+
+        return response($html)->header('Content-Type', 'text/html; charset=UTF-8');
     }
 
     private function trackTikTokViewContent(Request $request, Product $product): void

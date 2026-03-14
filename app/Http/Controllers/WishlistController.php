@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Wishlist;
 use App\Models\Product;
+use App\Models\RecentProductView;
+use App\Services\PromoCodeSendService;
 use App\Services\TikTokEventsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -22,7 +24,20 @@ class WishlistController extends Controller
 
         $wishlistItems = Wishlist::getWishlistItems($userId, $sessionId, 12);
 
-        return view('wishlist.index', compact('wishlistItems'));
+        // Recently viewed (component có thể load AJAX nếu guest hoặc rỗng)
+        $recentlyViewedProducts = collect();
+        if (Auth::id()) {
+            $recentIds = RecentProductView::getRecentProductIds(Auth::id(), 10, null);
+            if ($recentIds->isNotEmpty()) {
+                $recentlyViewedProducts = Product::whereIn('id', $recentIds->all())
+                    ->availableForDisplay()
+                    ->with(['shop', 'template'])
+                    ->get()
+                    ->sortBy(fn ($p) => array_search($p->id, $recentIds->toArray()));
+            }
+        }
+
+        return view('wishlist.index', compact('wishlistItems', 'recentlyViewedProducts'));
     }
 
     /**
@@ -63,6 +78,19 @@ class WishlistController extends Controller
 
         if ($wishlist) {
             $this->trackTikTokWishlistAdd($request, $product);
+
+            // Gửi email promo cho user đã đăng nhập (throttle 24h)
+            if ($userId) {
+                $user = Auth::user();
+                if ($user && $user->email) {
+                    app(PromoCodeSendService::class)->sendForTrigger(
+                        $user->email,
+                        PromoCodeSendService::TRIGGER_WISHLIST,
+                        $userId,
+                        true
+                    );
+                }
+            }
 
             return response()->json([
                 'success' => true,

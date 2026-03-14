@@ -6,23 +6,23 @@
     <title>Order Confirmation - {{ $order->order_number }}</title>
     <style>
         body {
-            font-family: 'Arial', 'Helvetica', sans-serif;
+            font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
             line-height: 1.6;
             color: #333;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f4;
+            background-color: #f8f6f6;
         }
         .container {
             max-width: 600px;
             margin: 20px auto;
             background: #ffffff;
-            border-radius: 10px;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 20px rgba(240, 66, 124, 0.12);
         }
         .header {
-            background: linear-gradient(135deg, #005366 0%, #E2150C 100%);
+            background: linear-gradient(135deg, #f0427c 0%, #e03a70 100%);
             color: white;
             padding: 30px;
             text-align: center;
@@ -46,31 +46,31 @@
             padding: 30px;
         }
         .order-info {
-            background: #f8f9fa;
-            border-left: 4px solid #005366;
+            background: #fdf2f7;
+            border-left: 4px solid #f0427c;
             padding: 20px;
             margin: 20px 0;
-            border-radius: 5px;
+            border-radius: 8px;
         }
         .order-info h2 {
             margin: 0 0 10px 0;
-            color: #005366;
+            color: #f0427c;
             font-size: 20px;
         }
         .order-number {
             font-size: 24px;
             font-weight: bold;
-            color: #E2150C;
+            color: #e03a70;
             margin: 10px 0;
         }
         .section {
             margin: 25px 0;
         }
         .section h3 {
-            color: #005366;
+            color: #f0427c;
             margin-bottom: 15px;
             font-size: 18px;
-            border-bottom: 2px solid #E2150C;
+            border-bottom: 2px solid #e03a70;
             padding-bottom: 8px;
         }
         .info-row {
@@ -90,7 +90,7 @@
             display: flex;
             align-items: center;
             padding: 15px;
-            background: #f8f9fa;
+            background: #fdf2f7;
             margin: 10px 0;
             border-radius: 8px;
         }
@@ -115,11 +115,11 @@
         }
         .product-price {
             font-weight: bold;
-            color: #E2150C;
+            color: #e03a70;
             text-align: right;
         }
         .totals {
-            background: #f8f9fa;
+            background: #fdf2f7;
             padding: 20px;
             border-radius: 8px;
             margin: 20px 0;
@@ -130,17 +130,17 @@
             padding: 8px 0;
         }
         .total-row.final {
-            border-top: 2px solid #005366;
+            border-top: 2px solid #f0427c;
             padding-top: 15px;
             margin-top: 10px;
             font-size: 18px;
             font-weight: bold;
-            color: #005366;
+            color: #f0427c;
         }
         .button {
             display: inline-block;
             padding: 15px 30px;
-            background: linear-gradient(135deg, #005366 0%, #E2150C 100%);
+            background: linear-gradient(135deg, #f0427c 0%, #e03a70 100%);
             color: white;
             text-decoration: none;
             border-radius: 8px;
@@ -152,11 +152,12 @@
             opacity: 0.9;
         }
         .footer {
-            background: #f8f9fa;
+            background: #f8f6f6;
             padding: 20px;
             text-align: center;
-            color: #666;
+            color: #64748b;
             font-size: 14px;
+            border-top: 1px solid #fce7ef;
         }
         .status-badge {
             display: inline-block;
@@ -334,7 +335,7 @@
                 <p style="margin: 0; color: #856404; font-size: 14px;">
                     <strong>Need Help?</strong><br>
                     If you have any questions about your order, please contact our support team at 
-                    <a href="mailto:{{ config('mail.from.address') }}" style="color: #E2150C;">{{ config('mail.from.address') }}</a>
+                    <a href="mailto:{{ config('mail.from.address') }}" style="color: #f0427c;">{{ config('mail.from.address') }}</a>
                 </p>
             </div>
         </div>

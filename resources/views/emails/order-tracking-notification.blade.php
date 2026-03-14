@@ -6,22 +6,22 @@
     <title>Order Update - {{ $order->order_number }}</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Plus Jakarta Sans', 'Segoe UI', Tahoma, sans-serif;
             line-height: 1.6;
             color: #333;
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f8fafc;
+            background-color: #f8f6f6;
         }
         .container {
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(240, 66, 124, 0.12);
             overflow: hidden;
         }
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #f0427c 0%, #e03a70 100%);
             color: white;
             padding: 30px;
             text-align: center;
@@ -47,7 +47,7 @@
         }
         .order-info h3 {
             margin: 0 0 15px 0;
-            color: #1e40af;
+            color: #f0427c;
             font-size: 18px;
         }
         .info-row {
@@ -118,23 +118,24 @@
         }
         .button {
             display: inline-block;
-            background: #3b82f6;
+            background: linear-gradient(135deg, #f0427c 0%, #e03a70 100%);
             color: white;
             padding: 12px 24px;
             text-decoration: none;
-            border-radius: 6px;
+            border-radius: 10px;
             font-weight: 600;
             margin: 20px 0;
         }
         .button:hover {
-            background: #2563eb;
+            opacity: 0.95;
         }
         .footer {
-            background: #f8fafc;
+            background: #f8f6f6;
             padding: 20px;
             text-align: center;
             color: #64748b;
             font-size: 14px;
+            border-top: 1px solid #fce7ef;
         }
         .items-list {
             margin: 20px 0;
@@ -228,7 +229,7 @@
 
             <!-- Order Items -->
             <div class="items-list">
-                <h3 style="color: #1e40af; margin-bottom: 15px;">Order Items</h3>
+                <h3 style="color: #f0427c; margin-bottom: 15px;">Order Items</h3>
                 @foreach($order->items as $item)
                     <div class="item">
                         @php

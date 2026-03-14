@@ -18,12 +18,8 @@
     // Get currency and rate using helper functions
     $currentCurrency = currency();
     $currentCurrencyRate = currency_rate() ?? 1.0;
-    $currentDomain = $currentDomain ?? \App\Services\CurrencyService::getCurrentDomain();
-    
-    // Get all shipping rates for all domains (apply to all domains)
     $shippingRates = \App\Models\ShippingRate::where('is_active', true)
         ->with('shippingZone')
-        ->orderByRaw("CASE WHEN domain = ? THEN 0 ELSE 1 END", [$currentDomain]) // Prioritize current domain rates
         ->orderBy('is_default', 'desc')
         ->orderBy('sort_order')
         ->get();
@@ -118,7 +114,6 @@
             'zone_name' => $rate->shippingZone ? $rate->shippingZone->name : null,
             'category_id' => $rate->category_id,
             'name' => $rate->name,
-            'domain' => $rate->domain, // Add domain info to distinguish domain-specific vs general domain rates
             'first_item_cost' => (float) $rate->first_item_cost,
             'additional_item_cost' => (float) $rate->additional_item_cost,
             'is_default' => (bool) $rate->is_default,
@@ -281,8 +276,8 @@ const CHECKOUT_CURRENCY_RATE = {{ $currencyRate ?? 1.0 }};
 const CHECKOUT_BASE_TOTAL = {{ $total }};
 const CHECKOUT_CONVERTED_SUBTOTAL = {{ $convertedSubtotal ?? $subtotal }};
 const CHECKOUT_CONVERTED_TOTAL = {{ $convertedTotal ?? $total }};
+const CHECKOUT_DISCOUNT = {{ $discount ?? 0 }};
 const CHECKOUT_CURRENCY_SYMBOL = @json(\App\Services\CurrencyService::getCurrencySymbol($currency ?? 'USD'));
-const CHECKOUT_CURRENT_DOMAIN = @json($currentDomain ?? null);
 const SHIPPING_RATES = @json($shippingRatesData);
 const SHIPPING_RATES_BY_ZONE = @json($shippingRatesByZone);
 const SHIPPING_ZONES = @json($zonesData);
@@ -323,11 +318,12 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     
-    * {
-        font-family: 'Inter', sans-serif;
+    .checkout-page {
+        font-family: 'Plus Jakarta Sans', sans-serif;
     }
+    /* Theme match cart: primary = pink #f0427c, background-light = #f8f6f6 */
 
 function buildCheckoutCustomizationInputs(customizations) {
     var html = '';
@@ -336,9 +332,9 @@ function buildCheckoutCustomizationInputs(customizations) {
         var v = customizations[k] || {};
         var value = v && v.value ? String(v.value).replace(/"/g, '&quot;') : '';
         html += '<div class="grid grid-cols-1 sm:grid-cols-5 gap-3 items-center">'
-             + '<div class="sm:col-span-2"><span class="text-sm text-gray-600">' + k + '</span></div>'
+             + '<div class="sm:col-span-2"><span class="text-sm text-slate-600">' + k + '</span></div>'
              + '<div class="sm:col-span-3">'
-             + '<input type="text" class="w-full border-2 border-gray-200 rounded-lg px-3 py-2 checkout-customization-input" data-label="' + k + '" value="' + value + '" oninput="updateCheckoutModalTotal()" title="' + value + '" />'
+             + '<input type="text" class="w-full border-2 border-primary/20 rounded-lg px-3 py-2 checkout-customization-input" data-label="' + k + '" value="' + value + '" oninput="updateCheckoutModalTotal()" title="' + value + '" />'
              + '</div>'
              + '</div>';
     });
@@ -400,44 +396,40 @@ function buildCheckoutCustomizationInputs(customizations) {
     }
 
     .gradient-bg {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #f0427c 0%, #e91e6e 100%);
     }
 
     .gradient-text {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #f0427c 0%, #c71e54 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
     }
 
 
-    /* Payment option styling for new radio button interface */
+    /* Payment option styling - match cart (primary pink) */
     .payment-option {
         transition: all 0.3s ease;
     }
 
     .payment-option:hover {
-        @apply border-blue-500 shadow-lg;
+        @apply border-primary shadow-lg;
     }
 
-    /* Radio button checked state styling - using sibling selector */
     input[type="radio"]:checked + * {
-        @apply border-blue-500 bg-blue-50;
+        @apply border-primary bg-primary/10;
     }
 
-    /* Style the label when radio is checked */
     label.payment-option:has(input[type="radio"]:checked) {
-        @apply border-blue-500 bg-blue-50;
+        @apply border-primary bg-primary/10;
     }
 
-    /* Fallback for browsers that don't support :has() */
     .payment-option input[type="radio"]:checked {
-        @apply text-blue-600 border-blue-600;
+        @apply text-primary border-primary;
     }
-    
-    /* Alternative approach using JavaScript classes */
+
     .payment-option.selected {
-        @apply border-blue-500 bg-blue-50;
+        @apply border-primary bg-primary/10;
     }
 
 
@@ -446,15 +438,15 @@ function buildCheckoutCustomizationInputs(customizations) {
     }
 
     .step-indicator {
-        @apply flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 text-white font-semibold text-sm shadow-md;
+        @apply flex items-center justify-center w-10 h-10 rounded-full bg-primary text-white font-semibold text-sm shadow-md;
     }
 
     .step-indicator.active {
-        @apply bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg;
+        @apply bg-primary shadow-lg;
     }
 
     .step-indicator.completed {
-        @apply bg-green-500 shadow-lg;
+        @apply bg-primary shadow-lg;
     }
 
 
@@ -464,11 +456,11 @@ function buildCheckoutCustomizationInputs(customizations) {
 
     .floating-label input:focus + label,
     .floating-label input:not(:placeholder-shown) + label {
-        @apply -translate-y-5 scale-90 text-blue-600;
+        @apply -translate-y-5 scale-90 text-primary;
     }
 
     .floating-label label {
-        @apply absolute left-3 top-3 transition-all duration-200 pointer-events-none text-gray-500;
+        @apply absolute left-3 top-3 transition-all duration-200 pointer-events-none text-slate-500;
     }
 
     /* Main containers */
@@ -478,19 +470,6 @@ function buildCheckoutCustomizationInputs(customizations) {
 
     .order-summary-container {
         @apply rounded-2xl;
-    }
-
-    /* LianLian Pay iframe styles */
-    #llpay-card-element {
-        @apply min-h-[280px] border-2 border-gray-200 rounded-xl bg-white relative overflow-hidden shadow-sm;
-    }
-
-    #llpay-card-element iframe {
-        @apply w-full h-[280px] border-0 block visible opacity-100 absolute top-0 left-0 z-[1000] bg-white;
-    }
-
-    #lianlian-loading-placeholder {
-        @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center z-[999];
     }
 
     /* PayPal button styles */
@@ -516,11 +495,11 @@ function buildCheckoutCustomizationInputs(customizations) {
     }
     
     .StripeElement {
-        @apply bg-white p-4 rounded-lg border border-gray-200 shadow-sm;
+        @apply bg-white p-4 rounded-lg border border-primary/20 shadow-sm;
     }
     
     .StripeElement--focus {
-        @apply border-blue-500 shadow-lg ring-2 ring-blue-200;
+        @apply border-primary shadow-lg ring-2 ring-primary/20;
     }
     
     .StripeElement--invalid {
@@ -557,22 +536,21 @@ function buildCheckoutCustomizationInputs(customizations) {
     }
 
     .tip-option.selected {
-        border: 3px solid #10b981 !important;
-        background-color: #f0fdf4 !important;
-        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.4) !important;
+        border: 3px solid #f0427c !important;
+        background-color: #fce7ef !important;
+        box-shadow: 0 0 0 4px rgba(240, 66, 124, 0.3) !important;
         transform: translateY(-2px) !important;
     }
 
     .tip-option.selected span {
-        color: #059669 !important;
+        color: #c71e54 !important;
         font-weight: 700 !important;
     }
 
-    /* Force override Tailwind */
     button.tip-option.selected {
-        border: 3px solid #10b981 !important;
-        background-color: #f0fdf4 !important;
-        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.4) !important;
+        border: 3px solid #f0427c !important;
+        background-color: #fce7ef !important;
+        box-shadow: 0 0 0 4px rgba(240, 66, 124, 0.3) !important;
     }
 
     .tip-option.selected::before {
@@ -580,7 +558,7 @@ function buildCheckoutCustomizationInputs(customizations) {
         position: absolute;
         top: -3px;
         right: -3px;
-        background: #10b981;
+        background: #f0427c;
         color: white;
         border-radius: 50%;
         width: 20px;
@@ -609,10 +587,6 @@ function buildCheckoutCustomizationInputs(customizations) {
         label.payment-option .text-xl { font-size: 1rem; }
         label.payment-option .w-10.h-10 { width: 1.75rem; height: 1.75rem; }
 
-        /* LianLian iframe height */
-        #llpay-card-element { min-height: 220px; }
-        #llpay-card-element iframe { height: 220px; }
-
         /* PayPal/Stripe containers */
         #paypal-button-container, #stripe-card-container { padding: 1rem /* 16px */; }
 
@@ -628,31 +602,25 @@ function buildCheckoutCustomizationInputs(customizations) {
     @media (min-width: 641px) and (max-width: 1024px) {
         .checkout-container .p-8 { padding: 1.5rem /* 24px */; }
         label.payment-option { padding: 1.25rem /* 20px */ !important; }
-        #llpay-card-element { min-height: 250px; }
-        #llpay-card-element iframe { height: 250px; }
     }
 </style>
 
-<div class="min-h-screen bg-gray-50 py-8">
+<div class="min-h-screen bg-background-light font-display text-slate-900 py-8">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-
-        <!-- Header -->
-
         <!-- Breadcrumb -->
         <div class="mb-6 sm:mb-8">
             <nav class="text-xs sm:text-sm" aria-label="Breadcrumb">
                 <ol class="flex items-center space-x-2 overflow-x-auto whitespace-nowrap">
                     <li>
-                        <a href="{{ route('cart.index') }}" class="text-[#005366] hover:underline font-medium">Cart</a>
+                        <a href="{{ route('cart.index') }}" class="text-primary hover:underline font-medium">Cart</a>
                     </li>
-                    <li class="text-gray-300">/</li>
+                    <li class="text-slate-300">/</li>
                     <li>
-                        <span class="text-gray-900 font-semibold">Order Information</span>
+                        <span class="text-slate-900 font-semibold">Order Information</span>
                     </li>
-                    <li class="text-gray-300 hidden xs:inline sm:inline">/</li>
+                    <li class="text-slate-300 hidden xs:inline sm:inline">/</li>
                     <li class="hidden xs:inline sm:inline">
-                        <span class="text-gray-500">Complete</span>
+                        <span class="text-slate-500">Complete</span>
                     </li>
                 </ol>
             </nav>
@@ -662,17 +630,17 @@ function buildCheckoutCustomizationInputs(customizations) {
             <!-- Checkout Form -->
             <div class="order-2 lg:order-1 lg:col-span-2 animate-slideInLeft">
                 <div class="bg-white rounded-2xl shadow-lg overflow-hidden checkout-container">
-                    <!-- Modern Header with Gradient -->
-                    <div class="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 p-6">
+                    <!-- Header - match cart primary (pink) -->
+                    <div class="bg-primary p-6">
                         <div class="flex items-center text-white">
-                            <div class="w-12 h-12 rounded-xl bg-white bg-opacity-20 backdrop-blur-sm flex items-center justify-center mr-4">
+                            <div class="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center mr-4">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                                 </svg>
                             </div>
                             <div>
                                 <h2 class="text-2xl font-bold">Shipping Information</h2>
-                                <p class="text-blue-100 text-sm">Please provide your delivery details</p>
+                                <p class="text-white/90 text-sm">Please provide your delivery details</p>
                             </div>
                         </div>
                     </div>
@@ -688,26 +656,26 @@ function buildCheckoutCustomizationInputs(customizations) {
                         
                         <!-- Contact Information -->
                         <div class="space-y-5">
-                            <div class="flex items-center space-x-3 pb-3 border-b-2 border-gray-100">
-                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                            <div class="flex items-center space-x-3 pb-3 border-b-2 border-primary/10">
+                                <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                                     </svg>
                                 </div>
-                                <h3 class="text-lg font-bold text-gray-800">Contact Details</h3>
+                                <h3 class="text-lg font-bold text-slate-900">Contact Details</h3>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div class="relative">
-                                    <label for="customer_name" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <label for="customer_name" class="block text-sm font-semibold text-slate-700 mb-2">
                                         <span class="flex items-center">
-                                            <svg class="w-4 h-4 mr-1.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg class="w-4 h-4 mr-1.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                                             </svg>
                                             Full Name *
                                         </span>
                                     </label>
                                     <input type="text" id="customer_name" name="customer_name" 
-                                           class="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5" required
+                                           class="w-full px-4 py-3 bg-white border-2 border-primary/20 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5" required
                                            value="{{ auth()->user() ? auth()->user()->name : '' }}"
                                            placeholder="John Doe">
                                     @error('customer_name')
@@ -721,16 +689,16 @@ function buildCheckoutCustomizationInputs(customizations) {
                                 </div>
                                 
                                 <div class="relative">
-                                    <label for="customer_email" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <label for="customer_email" class="block text-sm font-semibold text-slate-700 mb-2">
                                         <span class="flex items-center">
-                                            <svg class="w-4 h-4 mr-1.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg class="w-4 h-4 mr-1.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                             </svg>
                                             Email Address *
                                         </span>
                                     </label>
                                     <input type="email" id="customer_email" name="customer_email" 
-                                           class="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5" required
+                                           class="w-full px-4 py-3 bg-white border-2 border-primary/20 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5" required
                                            value="{{ auth()->user() ? auth()->user()->email : '' }}"
                                            placeholder="john@example.com">
                                     @error('customer_email')
@@ -745,16 +713,16 @@ function buildCheckoutCustomizationInputs(customizations) {
                             </div>
 
                             <div class="relative">
-                                <label for="customer_phone" class="block text-sm font-semibold text-gray-700 mb-2">
+                                <label for="customer_phone" class="block text-sm font-semibold text-slate-700 mb-2">
                                     <span class="flex items-center">
-                                        <svg class="w-4 h-4 mr-1.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-4 h-4 mr-1.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
                                         </svg>
                                         Phone Number
                                     </span>
                                 </label>
                                 <input type="tel" id="customer_phone" name="customer_phone" 
-                                       class="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5"
+                                       class="w-full px-4 py-3 bg-white border-2 border-primary/20 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5"
                                        placeholder="+1 (555) 123-4567">
                                 @error('customer_phone')
                                     <p class="text-red-500 text-xs mt-1.5 flex items-center">
@@ -769,27 +737,27 @@ function buildCheckoutCustomizationInputs(customizations) {
 
                         <!-- Shipping Address -->
                         <div class="space-y-5">
-                            <div class="flex items-center space-x-3 pb-3 border-b-2 border-gray-100">
-                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
+                            <div class="flex items-center space-x-3 pb-3 border-b-2 border-primary/10">
+                                <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                     </svg>
                                 </div>
-                                <h3 class="text-lg font-bold text-gray-800">Delivery Address</h3>
+                                <h3 class="text-lg font-bold text-slate-900">Delivery Address</h3>
                             </div>
                             
                             <div class="relative">
-                                <label for="shipping_address" class="block text-sm font-semibold text-gray-700 mb-2">
+                                <label for="shipping_address" class="block text-sm font-semibold text-slate-700 mb-2">
                                     <span class="flex items-center">
-                                        <svg class="w-4 h-4 mr-1.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-4 h-4 mr-1.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                                         </svg>
                                         Street Address *
                                     </span>
                                 </label>
                                 <textarea id="shipping_address" name="shipping_address" 
-                                          class="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5 resize-vertical min-h-[100px]" rows="3" required
+                                          class="w-full px-4 py-3 bg-white border-2 border-primary/20 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5 resize-vertical min-h-[100px]" rows="3" required
                                           placeholder="Street address, apartment, suite, unit, etc."></textarea>
                                 @error('shipping_address')
                                     <p class="text-red-500 text-xs mt-1.5 flex items-center">
@@ -803,16 +771,16 @@ function buildCheckoutCustomizationInputs(customizations) {
 
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                                 <div class="relative">
-                                    <label for="city" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <label for="city" class="block text-sm font-semibold text-slate-700 mb-2">
                                         <span class="flex items-center">
-                                            <svg class="w-4 h-4 mr-1.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg class="w-4 h-4 mr-1.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                                             </svg>
                                             City *
                                         </span>
                                     </label>
                                     <input type="text" id="city" name="city" 
-                                           class="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5" required
+                                           class="w-full px-4 py-3 bg-white border-2 border-primary/20 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5" required
                                            placeholder="New York">
                                     @error('city')
                                         <p class="text-red-500 text-xs mt-1.5 flex items-center">
@@ -825,16 +793,16 @@ function buildCheckoutCustomizationInputs(customizations) {
                                 </div>
                                 
                                 <div class="relative">
-                                    <label for="state" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <label for="state" class="block text-sm font-semibold text-slate-700 mb-2">
                                         <span class="flex items-center">
-                                            <svg class="w-4 h-4 mr-1.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg class="w-4 h-4 mr-1.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
                                             </svg>
                                             State/Province
                                         </span>
                                     </label>
                                     <input type="text" id="state" name="state" 
-                                           class="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5"
+                                           class="w-full px-4 py-3 bg-white border-2 border-primary/20 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5"
                                            placeholder="NY">
                                     @error('state')
                                         <p class="text-red-500 text-xs mt-1.5 flex items-center">
@@ -847,16 +815,16 @@ function buildCheckoutCustomizationInputs(customizations) {
                                 </div>
                                 
                                 <div class="relative">
-                                    <label for="postal_code" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <label for="postal_code" class="block text-sm font-semibold text-slate-700 mb-2">
                                         <span class="flex items-center">
-                                            <svg class="w-4 h-4 mr-1.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg class="w-4 h-4 mr-1.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                             </svg>
                                             Postal Code *
                                         </span>
                                     </label>
                                     <input type="text" id="postal_code" name="postal_code" 
-                                           class="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5" required
+                                           class="w-full px-4 py-3 bg-white border-2 border-primary/20 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5" required
                                            placeholder="10001">
                                     @error('postal_code')
                                         <p class="text-red-500 text-xs mt-1.5 flex items-center">
@@ -870,15 +838,15 @@ function buildCheckoutCustomizationInputs(customizations) {
                             </div>
 
                             <div class="relative">
-                                <label for="country" class="block text-sm font-semibold text-gray-700 mb-2">
+                                <label for="country" class="block text-sm font-semibold text-slate-700 mb-2">
                                     <span class="flex items-center">
-                                        <svg class="w-4 h-4 mr-1.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-4 h-4 mr-1.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                         </svg>
                                         Country *
                                     </span>
                                 </label>
-                                <select id="country" name="country" class="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5 cursor-pointer" required>
+                                <select id="country" name="country" class="w-full px-4 py-3 bg-white border-2 border-primary/20 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5 cursor-pointer" required>
                                     <option value="">Select Country</option>
                                     @if(count($zonesWithCountries) > 0)
                                         @foreach($zonesWithCountries as $zone)
@@ -962,57 +930,57 @@ function buildCheckoutCustomizationInputs(customizations) {
 
                         <!-- Notes -->
                         <div class="space-y-5">
-                            <div class="flex items-center space-x-3 pb-3 border-b-2 border-gray-100">
-                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
+                            <div class="flex items-center space-x-3 pb-3 border-b-2 border-primary/10">
+                                <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                     </svg>
                                 </div>
-                                <h3 class="text-lg font-bold text-gray-800">Additional Notes</h3>
+                                <h3 class="text-lg font-bold text-slate-900">Additional Notes</h3>
                             </div>
                             <div class="relative">
-                                <label for="notes" class="block text-sm font-semibold text-gray-700 mb-2">
+                                <label for="notes" class="block text-sm font-semibold text-slate-700 mb-2">
                                     <span class="flex items-center">
-                                        <svg class="w-4 h-4 mr-1.5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-4 h-4 mr-1.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
                                         </svg>
                                         Order Notes (Optional)
                                     </span>
                                 </label>
                                 <textarea id="notes" name="notes" 
-                                          class="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5 resize-vertical min-h-[100px]" rows="3"
+                                          class="w-full px-4 py-3 bg-white border-2 border-primary/20 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5 resize-vertical min-h-[100px]" rows="3"
                                           placeholder="Any special instructions for your order..."></textarea>
                             </div>
                         </div>
 
                         <!-- Payment Method -->
                         <div class="space-y-5">
-                            <div class="flex items-center space-x-3 pb-3 border-b-2 border-gray-100">
-                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
+                            <div class="flex items-center space-x-3 pb-3 border-b-2 border-primary/10">
+                                <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
                                     </svg>
                                 </div>
-                                <h3 class="text-lg font-bold text-gray-800">Payment Method</h3>
+                                <h3 class="text-lg font-bold text-slate-900">Payment Method</h3>
                             </div>
                             <div class="space-y-4">
                                 <!-- Stripe -->
                                 <div class="relative">
-                                    <label for="payment_stripe" class="flex items-center p-6 border-2 border-gray-200 rounded-2xl cursor-pointer hover:border-blue-500 hover:shadow-xl transition-all duration-300 payment-option bg-white">
-                                        <input type="radio" id="payment_stripe" name="payment_method" value="stripe" class="w-6 h-6 text-blue-600 border-gray-300 focus:ring-blue-500 mr-5" checked>
+                                    <label for="payment_stripe" class="flex items-center p-6 border-2 border-primary/20 rounded-2xl cursor-pointer hover:border-primary hover:shadow-xl transition-all duration-300 payment-option bg-white">
+                                        <input type="radio" id="payment_stripe" name="payment_method" value="stripe" class="w-6 h-6 text-primary border-primary/30 focus:ring-primary mr-5" checked>
                                         <div class="flex items-center flex-1">
-                                            <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-4 mr-5 shadow-lg">
+                                            <div class="bg-primary rounded-2xl p-4 mr-5 shadow-lg">
                                                 <svg class="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
                                                     <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.274 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.386-2.061 1.386-1.705 0-3.888-.921-5.811-1.758L4.443 24c2.254.893 5.18 1.758 7.83 1.758 2.532 0 4.633-.624 6.123-1.844 1.543-1.271 2.346-3.116 2.346-5.342 0-3.896-2.467-5.76-6.476-7.219z"/>
                                                 </svg>
                                             </div>
                                             <div class="flex-1">
                                                 <div class="flex items-center space-x-3">
-                                                    <span class="font-bold text-gray-900 text-xl">Credit Card (Stripe)</span>
-                                                    <span class="px-3 py-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-bold rounded-full shadow-md">SECURE</span>
+                                                    <span class="font-bold text-slate-900 text-xl">Credit Card (Stripe)</span>
+                                                    <span class="px-3 py-1 bg-primary text-white text-xs font-bold rounded-full shadow-md">SECURE</span>
                                                 </div>
-                                                <p class="text-sm text-gray-600 mt-2">Direct credit card processing</p>
-                                                <div class="flex items-center mt-3 text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg">
+                                                <p class="text-sm text-slate-600 mt-2">Direct credit card processing</p>
+                                                <div class="flex items-center mt-3 text-sm text-primary bg-primary/10 px-3 py-2 rounded-lg">
                                                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                     </svg>
@@ -1023,37 +991,37 @@ function buildCheckoutCustomizationInputs(customizations) {
                                     </label>
                                     
                                     <!-- Stripe Card Element -->
-                                    <div id="stripe-card-container" class="mt-4 p-6 border-2 border-purple-200 rounded-xl bg-gradient-to-r from-purple-50 to-blue-50">
+                                    <div id="stripe-card-container" class="mt-4 p-6 border-2 border-primary/20 rounded-xl bg-primary/5">
                                         <div class="flex items-center mb-4">
-                                            <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mr-3">
+                                            <div class="w-8 h-8 bg-primary rounded-xl flex items-center justify-center mr-3">
                                                 <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
                                                 </svg>
                                             </div>
-                                            <h4 class="font-bold text-purple-900 text-lg">💳 Credit Card Details</h4>
+                                            <h4 class="font-bold text-slate-900 text-lg">💳 Credit Card Details</h4>
                                         </div>
                                         
                                         <!-- Card Type Logos -->
                                         <div class="flex gap-3 mb-4 justify-center">
-                                            <div class="w-12 h-8 bg-gradient-to-r from-blue-600 to-blue-800 rounded text-white text-xs font-bold flex items-center justify-center">VISA</div>
-                                            <div class="w-12 h-8 bg-gradient-to-r from-red-500 to-red-700 rounded text-white text-xs font-bold flex items-center justify-center">MC</div>
-                                            <div class="w-12 h-8 bg-gradient-to-r from-blue-400 to-blue-600 rounded text-white text-xs font-bold flex items-center justify-center">AMEX</div>
-                                            <div class="w-12 h-8 bg-gradient-to-r from-orange-400 to-orange-600 rounded text-white text-xs font-bold flex items-center justify-center">DISC</div>
+                                            <div class="w-12 h-8 bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">VISA</div>
+                                            <div class="w-12 h-8 bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">MC</div>
+                                            <div class="w-12 h-8 bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">AMEX</div>
+                                            <div class="w-12 h-8 bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">DISC</div>
                                         </div>
 
                                         <!-- Stripe Card Element Container -->
-                                        <div id="stripe-card-element" class="p-4 border-2 border-gray-200 rounded-xl bg-white">
+                                        <div id="stripe-card-element" class="p-4 border-2 border-primary/20 rounded-xl bg-white">
                                             <!-- Stripe Elements will be inserted here -->
                                         </div>
                                         <div id="stripe-card-errors" class="text-red-500 text-sm mt-2" role="alert"></div>
 
                                         <!-- Security Notice -->
-                                        <div class="mt-4 p-3 bg-white/60 rounded-lg border border-purple-200">
+                                        <div class="mt-4 p-3 bg-white/60 rounded-lg border border-primary/20">
                                             <div class="flex items-start">
-                                                <svg class="w-5 h-5 text-green-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                                <svg class="w-5 h-5 text-primary mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
                                                 </svg>
-                                                <div class="text-sm text-purple-800">
+                                                <div class="text-sm text-slate-800">
                                                     <p class="font-semibold mb-1">🔒 100% Secure Payment</p>
                                                     <p>Your payment information is encrypted and processed securely by Stripe. We never store your card details.</p>
                                                 </div>
@@ -1062,88 +1030,19 @@ function buildCheckoutCustomizationInputs(customizations) {
                                     </div>
                                 </div>
 
-                                <!-- LianLian Pay -->
-                                <div class="relative">
-                                    <label for="payment_lianlian" class="flex items-center p-6 border-2 border-gray-200 rounded-2xl cursor-pointer hover:border-blue-500 hover:shadow-xl transition-all duration-300 payment-option bg-white">
-                                        <input type="radio" id="payment_lianlian" name="payment_method" value="lianlian_pay" class="w-6 h-6 text-blue-600 border-gray-300 focus:ring-blue-500 mr-5">
-                                        <div class="flex items-center flex-1">
-                                            <div class="bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl p-4 mr-5 shadow-lg">
-                                                <svg class="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                                                </svg>
-                                            </div>
-                                            <div class="flex-1">
-                                                <div class="flex items-center space-x-3">
-                                                    <span class="font-bold text-gray-900 text-xl">LianLian Pay</span>
-                                                    <span class="px-3 py-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-bold rounded-full shadow-md">RECOMMENDED</span>
-                                                </div>
-                                                <p class="text-sm text-gray-600 mt-2">Credit Card & Digital Wallet with 3D Secure</p>
-                                                <div class="flex items-center mt-3 text-sm text-blue-600 bg-blue-50 px-3 py-2 rounded-lg">
-                                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                    </svg>
-                                                    <span class="font-medium">3DS authentication may be required</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </label>
-                                    
-                                    <!-- LianLian Pay Form -->
-                                    <div id="lianlian-pay-info" class="hidden mt-4 p-6 border-2 border-orange-200 rounded-xl bg-gradient-to-r from-orange-50 to-red-50">
-                                        <div class="flex items-center mb-4">
-                                            <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center mr-3">
-                                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                                                </svg>
-                                            </div>
-                                            <h4 class="font-bold text-orange-900 text-lg">💳 LianLian Pay Secure Checkout</h4>
-                                        </div>
-                                        
-                                        <!-- Card Type Logos -->
-                                        <div class="flex gap-3 mb-4 justify-center">
-                                            <div class="w-12 h-8 bg-gradient-to-r from-blue-600 to-blue-800 rounded text-white text-xs font-bold flex items-center justify-center">VISA</div>
-                                            <div class="w-12 h-8 bg-gradient-to-r from-red-500 to-red-700 rounded text-white text-xs font-bold flex items-center justify-center">MC</div>
-                                            <div class="w-12 h-8 bg-gradient-to-r from-blue-400 to-blue-600 rounded text-white text-xs font-bold flex items-center justify-center">AMEX</div>
-                                        </div>
-
-                                        <!-- LianLian Pay iframe Container -->
-                                        <div id="llpay-card-element" class="min-h-[280px] border-2 border-gray-200 rounded-xl bg-white relative overflow-hidden">
-                                            <div id="lianlian-loading-placeholder" class="absolute inset-0 flex items-center justify-center bg-gray-50">
-                                                <div class="text-center">
-                                                    <div class="animate-spin w-8 h-8 border-4 border-orange-200 border-t-orange-500 rounded-full mx-auto mb-3"></div>
-                                                    <p class="text-gray-600 text-sm">Loading secure payment form...</p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Security Notice -->
-                                        <div class="mt-4 p-3 bg-white/60 rounded-lg border border-orange-200">
-                                            <div class="flex items-start">
-                                                <svg class="w-5 h-5 text-green-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                                                </svg>
-                                                <div class="text-sm text-orange-800">
-                                                    <p class="font-semibold mb-1">🔒 Secure Payment</p>
-                                                    <p>Your card information is encrypted with 256-bit SSL. 3D Secure authentication may be required for additional security.</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
                                 <!-- PayPal -->
                                 <div class="relative">
-                                    <label for="payment_paypal" class="flex items-center p-6 border-2 border-gray-200 rounded-2xl cursor-pointer hover:border-blue-500 hover:shadow-xl transition-all duration-300 payment-option bg-white">
-                                        <input type="radio" id="payment_paypal" name="payment_method" value="paypal" class="w-6 h-6 text-blue-600 border-gray-300 focus:ring-blue-500 mr-5">
+                                    <label for="payment_paypal" class="flex items-center p-6 border-2 border-primary/20 rounded-2xl cursor-pointer hover:border-primary hover:shadow-xl transition-all duration-300 payment-option bg-white">
+                                        <input type="radio" id="payment_paypal" name="payment_method" value="paypal" class="w-6 h-6 text-primary border-primary/30 focus:ring-primary mr-5">
                                         <div class="flex items-center flex-1">
                                             <div class="bg-blue-600 rounded-2xl p-4 mr-5 shadow-lg">
                                                 <img src="https://www.paypalobjects.com/webstatic/icon/pp258.png" 
                                                      alt="PayPal" class="h-10 w-10">
                                             </div>
                                             <div class="flex-1">
-                                                <span class="font-bold text-gray-900 text-xl">PayPal</span>
-                                                <p class="text-sm text-gray-600 mt-2">Safe & secure payment platform</p>
-                                                <div class="flex items-center mt-3 text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg">
+                                                <span class="font-bold text-slate-900 text-xl">PayPal</span>
+                                                <p class="text-sm text-slate-600 mt-2">Safe & secure payment platform</p>
+                                                <div class="flex items-center mt-3 text-sm text-primary bg-primary/10 px-3 py-2 rounded-lg">
                                                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                     </svg>
@@ -1155,19 +1054,19 @@ function buildCheckoutCustomizationInputs(customizations) {
                                 </div>
                                 
                                 <!-- PayPal Button Container -->
-                                <div id="paypal-button-container" class="hidden mt-4 p-6 border-2 border-blue-200 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50">
+                                <div id="paypal-button-container" class="hidden mt-4 p-6 border-2 border-primary/20 rounded-xl bg-primary/5">
                                     <div class="flex items-center mb-4">
-                                        <div class="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center text-white mr-3">
+                                        <div class="w-8 h-8 bg-primary rounded-xl flex items-center justify-center text-white mr-3">
                                             <img src="https://www.paypalobjects.com/webstatic/icon/pp258.png" 
                                                  alt="PayPal" class="h-6 w-6">
                                         </div>
-                                        <h4 class="font-bold text-blue-900 text-lg">💳 PayPal Checkout</h4>
+                                        <h4 class="font-bold text-slate-900 text-lg">💳 PayPal Checkout</h4>
                                     </div>
                                     <!-- PayPal button will be rendered here -->
                                     <div id="paypal-button" class="min-h-[120px] flex items-center justify-center">
                                         <div class="text-center">
-                                            <div class="animate-spin w-8 h-8 border-4 border-blue-200 border-t-blue-500 rounded-full mx-auto mb-3"></div>
-                                            <p class="text-blue-600 text-sm">Loading PayPal...</p>
+                                            <div class="animate-spin w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full mx-auto mb-3"></div>
+                                            <p class="text-primary text-sm">Loading PayPal...</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1178,10 +1077,10 @@ function buildCheckoutCustomizationInputs(customizations) {
                             @enderror
                         </div>
 
-                        <!-- Submit Button -->
-                        <div class="mt-8 pt-6 border-t-2 border-gray-100 relative z-10">
+                        <!-- Submit Button - match cart primary -->
+                        <div class="mt-8 pt-6 border-t-2 border-primary/10 relative z-10">
                             <button type="submit" 
-                                    class="w-full py-5 px-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group cursor-pointer">
+                                    class="w-full py-5 px-6 bg-primary hover:brightness-110 text-white rounded-xl font-bold text-lg shadow-lg shadow-primary/30 hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group cursor-pointer">
                                 <span class="flex items-center justify-center relative z-20">
                                     <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
@@ -1195,17 +1094,17 @@ function buildCheckoutCustomizationInputs(customizations) {
                                 <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 -translate-x-full group-hover:translate-x-full transition-transform duration-700 z-10"></div>
                             </button>
                             
-                            <!-- Security Information -->
-                            <div class="mt-6 p-6 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl shadow-xl">
-                                <div class="flex items-center justify-center text-white">
-                                    <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center mr-4">
-                                        <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <!-- Security Information - match cart primary -->
+                            <div class="mt-6 p-6 bg-primary/10 border border-primary/20 rounded-2xl shadow-sm">
+                                <div class="flex items-center justify-center text-slate-900">
+                                    <div class="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mr-4">
+                                        <svg class="w-6 h-6 text-primary" fill="currentColor" viewBox="0 0 20 20">
                                             <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path>
                                         </svg>
                                     </div>
                                     <div class="text-center">
-                                        <h3 class="text-lg font-bold mb-1">🔒 100% Secure Checkout</h3>
-                                        <p class="text-green-100 text-sm">Your information is protected with 256-bit SSL encryption</p>
+                                        <h3 class="text-lg font-bold mb-1 text-slate-900">🔒 100% Secure Checkout</h3>
+                                        <p class="text-slate-600 text-sm">Your information is protected with 256-bit SSL encryption</p>
                                     </div>
                                 </div>
                             </div>
@@ -1215,22 +1114,22 @@ function buildCheckoutCustomizationInputs(customizations) {
                 </div>
             </div>
 
-            <!-- Order Summary -->
+            <!-- Order Summary - match cart -->
             <div class="order-1 lg:order-2 animate-slideInRight">
-                <div class="bg-white rounded-2xl shadow-lg p-6 lg:sticky lg:top-8 order-summary-container">
+                <div class="bg-white rounded-2xl border border-primary/10 shadow-sm p-6 lg:sticky lg:top-8 order-summary-container">
                     <div class="flex items-center mb-6">
-                        <div class="w-8 h-8 rounded-lg bg-purple-500 flex items-center justify-center text-white mr-3">
+                        <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white mr-3">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
                             </svg>
                         </div>
-                        <h2 class="text-xl font-bold text-gray-900">Order Summary</h2>
+                        <h2 class="text-xl font-bold text-slate-900">Order Summary</h2>
                     </div>
                     
                     <!-- Products -->
                     <div class="space-y-3 mb-6">
                         @foreach($products as $item)
-                            <div class="product-item p-3 bg-white border border-gray-200 rounded-xl hover:shadow-sm transition flex gap-3" data-checkout-cart-item-id="{{ $item['cart_item']->id }}">
+                            <div class="product-item p-3 bg-white border border-primary/10 rounded-xl hover:shadow-sm transition flex gap-3" data-checkout-cart-item-id="{{ $item['cart_item']->id }}">
                                 @php
                                     $media = $item['product']->getEffectiveMedia();
                                     $imageUrl = null;
@@ -1260,21 +1159,21 @@ function buildCheckoutCustomizationInputs(customizations) {
                                     <div class="flex items-start justify-between gap-3">
                                         <h3 class="font-semibold text-gray-900 text-sm truncate">{{ Str::limit($item['product']->name, 42) }}</h3>
                                         <div class="flex items-center gap-2 shrink-0">
-                                            <button onclick="openCheckoutEditCartModal({{ $item['cart_item']->id }})" class="p-1.5 text-gray-400 hover:text-blue-600" title="Edit item">
+                                            <button onclick="openCheckoutEditCartModal({{ $item['cart_item']->id }})" class="p-1.5 text-slate-400 hover:text-primary transition-colors" title="Edit item">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                             </button>
-                                            <p class="font-semibold text-gray-900">
+                                            <p class="font-semibold text-slate-900">
                                                 {{ \App\Services\CurrencyService::formatPrice($item['total'], $currency ?? 'USD') }}
                                             </p>
                                         </div>
                                     </div>
-                                    <p class="text-[11px] text-gray-500 mt-0.5">Qty: {{ $item['quantity'] }}</p>
+                                    <p class="text-[11px] text-slate-500 mt-0.5">Qty: {{ $item['quantity'] }}</p>
 
                                     @php $sv = $item['cart_item']->selected_variant; @endphp
                                     @if($sv && is_array($sv) && isset($sv['attributes']) && is_array($sv['attributes']))
                                         <div class="flex flex-wrap gap-1 mt-1">
                                             @foreach($sv['attributes'] as $k => $v)
-                                                <span class="px-2 py-0.5 bg-gray-100 text-gray-700 text-[10px] rounded">{{ $k }}: {{ $v }}</span>
+                                                    <span class="px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] rounded">{{ $k }}: {{ $v }}</span>
                                             @endforeach
                                         </div>
                                     @endif
@@ -1284,8 +1183,8 @@ function buildCheckoutCustomizationInputs(customizations) {
                                         <div class="mt-2">
                                             <ul id="cust-list-{{ $cid }}" class="space-y-0.5">
                                                 @foreach($item['cart_item']->customizations as $k => $c)
-                                                    <li class="text-[11px] text-gray-700 {{ $loop->iteration > 3 ? 'hidden more-'.$cid : '' }}">
-                                                        <span class="text-gray-500">{{ $k }}:</span>
+                                                    <li class="text-[11px] text-slate-700 {{ $loop->iteration > 3 ? 'hidden more-'.$cid : '' }}">
+                                                        <span class="text-slate-500">{{ $k }}:</span>
                                                         <span class="font-medium customization-value" title="{{ $c['value'] }}">
                                                             @if(strlen($c['value']) > 50)
                                                                 {{ Str::limit($c['value'], 50) }}
@@ -1300,7 +1199,7 @@ function buildCheckoutCustomizationInputs(customizations) {
                                                 @endforeach
                                             </ul>
                                             @if(count($item['cart_item']->customizations) > 3)
-                                                <button type="button" class="mt-1 text-[11px] text-blue-600 hover:underline" onclick="toggleCheckoutCustList({{ $cid }})" id="cust-toggle-{{ $cid }}">View more</button>
+                                                <button type="button" class="mt-1 text-[11px] text-primary hover:underline" onclick="toggleCheckoutCustList({{ $cid }})" id="cust-toggle-{{ $cid }}">View more</button>
                                             @endif
                                         </div>
                                     @endif
@@ -1309,62 +1208,66 @@ function buildCheckoutCustomizationInputs(customizations) {
                         @endforeach
                     </div>
 
-                    <!-- Tip Selection -->
-                    <div class="border-t border-gray-200 pt-4 mb-4">
+                    <!-- Tip Selection - primary pink -->
+                    <div class="border-t border-primary/10 pt-4 mb-4">
                         <div class="flex items-center mb-3">
-                            <svg class="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-primary mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
                             </svg>
-                            <h3 class="text-sm font-semibold text-gray-700">Love your items? Please support our designers. Thank you! ❤️</h3>
+                            <h3 class="text-sm font-semibold text-slate-700">Love your items? Please support our designers. Thank you! ❤️</h3>
                         </div>
                         
                         <div class="grid grid-cols-2 gap-2 mb-3">
-                            <button type="button" onclick="selectTip(0)" class="tip-option p-3 border-2 border-gray-200 rounded-lg text-center hover:border-blue-500 transition-all duration-200" data-tip="0">
-                                <span class="text-sm font-medium text-gray-700">No tips</span>
+                            <button type="button" onclick="selectTip(0)" class="tip-option p-3 border-2 border-primary/20 rounded-lg text-center hover:border-primary transition-all duration-200" data-tip="0">
+                                <span class="text-sm font-medium text-slate-700">No tips</span>
                             </button>
-                            <button type="button" onclick="selectTip(5)" class="tip-option p-3 border-2 border-gray-200 rounded-lg text-center hover:border-green-500 transition-all duration-200" data-tip="5">
-                                <span class="text-sm font-medium text-gray-700 tip-amount-5">
+                            <button type="button" onclick="selectTip(5)" class="tip-option p-3 border-2 border-primary/20 rounded-lg text-center hover:border-primary transition-all duration-200" data-tip="5">
+                                <span class="text-sm font-medium text-slate-700 tip-amount-5">
                                     {{ \App\Services\CurrencyService::formatPrice(($currency ?? 'USD') !== 'USD' && isset($currencyRate) ? 5 * $currencyRate : 5, $currency ?? 'USD') }}
                                 </span>
                             </button>
-                            <button type="button" onclick="selectTip(3)" class="tip-option p-3 border-2 border-gray-200 rounded-lg text-center hover:border-green-500 transition-all duration-200" data-tip="3">
-                                <span class="text-sm font-medium text-gray-700 tip-amount-3">
+                            <button type="button" onclick="selectTip(3)" class="tip-option p-3 border-2 border-primary/20 rounded-lg text-center hover:border-primary transition-all duration-200" data-tip="3">
+                                <span class="text-sm font-medium text-slate-700 tip-amount-3">
                                     {{ \App\Services\CurrencyService::formatPrice(($currency ?? 'USD') !== 'USD' && isset($currencyRate) ? 3 * $currencyRate : 3, $currency ?? 'USD') }}
                                 </span>
                             </button>
-                            <button type="button" onclick="selectTip(3.15)" class="tip-option p-3 border-2 border-gray-200 rounded-lg text-center hover:border-green-500 transition-all duration-200" data-tip="3.15">
-                                <span class="text-sm font-medium text-gray-700 tip-amount-3.15">
+                            <button type="button" onclick="selectTip(3.15)" class="tip-option p-3 border-2 border-primary/20 rounded-lg text-center hover:border-primary transition-all duration-200" data-tip="3.15">
+                                <span class="text-sm font-medium text-slate-700 tip-amount-3.15">
                                     {{ \App\Services\CurrencyService::formatPrice(($currency ?? 'USD') !== 'USD' && isset($currencyRate) ? 3.15 * $currencyRate : 3.15, $currency ?? 'USD') }}
                                 </span>
                             </button>
                         </div>
                         
                         <div class="flex gap-2">
-                            <button type="button" onclick="selectTip('custom')" class="tip-option flex-1 p-3 border-2 border-gray-200 rounded-lg text-center hover:border-green-500 transition-all duration-200" data-tip="custom">
-                                <span class="text-sm font-medium text-gray-700">Other</span>
+                            <button type="button" onclick="selectTip('custom')" class="tip-option flex-1 p-3 border-2 border-primary/20 rounded-lg text-center hover:border-primary transition-all duration-200" data-tip="custom">
+                                <span class="text-sm font-medium text-slate-700">Other</span>
                             </button>
-                            <input type="number" id="custom-tip-amount" placeholder="Custom amount" min="0" step="0.01" class="hidden w-32 px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-green-500 focus:outline-none" onchange="updateCustomTip(this.value)">
+                            <input type="number" id="custom-tip-amount" placeholder="Custom amount" min="0" step="0.01" class="hidden w-32 px-3 py-2 border-2 border-primary/20 rounded-lg text-sm focus:border-primary focus:outline-none" onchange="updateCustomTip(this.value)">
                         </div>
                     </div>
 
                     <!-- Order Totals -->
-                    <div class="border-t border-gray-200 pt-4 space-y-3">
-                        <div class="flex justify-between text-gray-600">
+                    <div class="border-t border-primary/10 pt-4 space-y-3">
+                        <div class="flex justify-between text-slate-600">
                             <span>Subtotal</span>
                             <span class="subtotal-display" id="checkout-subtotal">
                                 {{ \App\Services\CurrencyService::formatPrice($subtotal, $currency ?? 'USD') }}
                             </span>
                         </div>
-                        
+                        @if(!empty($appliedPromoCode) && ($discount ?? 0) > 0)
+                        <div class="flex justify-between text-emerald-600" id="checkout-promo-row">
+                            <span>Promo ({{ $appliedPromoCode }})</span>
+                            <span class="promo-discount-display" id="checkout-promo-discount">-{{ \App\Services\CurrencyService::formatPrice($discount ?? 0, $currency ?? 'USD') }}</span>
+                        </div>
+                        @endif
                         <!-- Shipping Zone is auto-detected from country selection -->
-                        
-                        <div class="flex justify-between text-gray-600" id="checkout-shipping-cost-row">
+                        <div class="flex justify-between text-slate-600" id="checkout-shipping-cost-row">
                             <span id="checkout-shipping-label">Shipping</span>
                             <span class="font-semibold" id="checkout-shipping-cost">{{ \App\Services\CurrencyService::formatPrice(0, $currency ?? 'USD') }}</span>
                         </div>
                         
                         <!-- Exchange Rate Display (only show if currency is not USD) -->
-                        <div id="exchange-rate-display" class="text-xs text-gray-500 bg-gray-50 p-2 rounded-lg border border-gray-200" style="display: {{ ($currency ?? 'USD') !== 'USD' && isset($currencyRate) ? 'block' : 'none' }};">
+                        <div id="exchange-rate-display" class="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-primary/10" style="display: {{ ($currency ?? 'USD') !== 'USD' && isset($currencyRate) ? 'block' : 'none' }};">
                             <div class="flex justify-between items-center">
                                 <span>Exchange Rate:</span>
                                 <span class="font-medium" id="exchange-rate-value">
@@ -1375,35 +1278,34 @@ function buildCheckoutCustomizationInputs(customizations) {
                                     @endif
                                 </span>
                             </div>
-                            <div class="text-[10px] text-gray-400 mt-1">
+                            <div class="text-[10px] text-slate-400 mt-1">
                                 Prices converted from USD
                             </div>
                         </div>
                         
-                        
-                        <div class="flex justify-between text-gray-600" id="tip-line" style="display: none;">
+                        <div class="flex justify-between text-slate-600" id="tip-line" style="display: none;">
                             <span>Tips</span>
                             <span class="tip-amount-display">{{ \App\Services\CurrencyService::getCurrencySymbol($currency ?? 'USD') }}0.00</span>
                         </div>
                         
-                        <div class="flex justify-between text-lg font-bold text-gray-900 border-t border-gray-200 pt-3 mt-3">
+                        <div class="flex justify-between text-lg font-bold text-slate-900 border-t border-primary/10 pt-3 mt-3">
                             <span>Total</span>
-                            <span class="text-blue-600 total-display" id="checkout-total">
-                                {{ \App\Services\CurrencyService::formatPrice($convertedSubtotal ?? $subtotal, $currency ?? 'USD') }}
+                            <span class="text-primary total-display" id="checkout-total">
+                                {{ \App\Services\CurrencyService::formatPrice($convertedTotal ?? ($subtotal - ($discount ?? 0) + ($convertedShipping ?? $shippingCost ?? 0)), $currency ?? 'USD') }}
                             </span>
                         </div>
                     </div>
 
-                    <!-- Security Badge -->
-                    <div class="mt-6 p-6 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl shadow-xl text-white">
+                    <!-- Security Badge - match cart primary -->
+                    <div class="mt-6 p-6 bg-primary/5 border border-primary/10 rounded-2xl">
                         <div class="text-center">
-                            <div class="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
                                 </svg>
                             </div>
-                            <h3 class="font-bold text-xl mb-2">🔒 100% Secure Checkout</h3>
-                            <div class="space-y-1 text-green-100 text-sm">
+                            <h3 class="font-bold text-xl mb-2 text-slate-900">🔒 100% Secure Checkout</h3>
+                            <div class="space-y-1 text-slate-600 text-sm">
                                 <div class="flex items-center justify-center">
                                     <span class="mr-2">🔒</span>
                                     <span>SSL Encrypted</span>
@@ -1427,10 +1329,10 @@ function buildCheckoutCustomizationInputs(customizations) {
 
 <!-- Checkout Edit Cart Modal -->
 <div id="checkoutEditCartModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
-            <h2 class="text-2xl font-bold text-gray-900">Edit Item</h2>
-            <button onclick="closeCheckoutEditCartModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+    <div class="bg-white rounded-2xl border border-primary/10 shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-primary/10 px-6 py-4 flex justify-between items-center z-10">
+            <h2 class="text-2xl font-bold text-slate-900">Edit Item</h2>
+            <button onclick="closeCheckoutEditCartModal()" class="text-slate-400 hover:text-primary transition-colors">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
@@ -1583,31 +1485,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
     
-    // Check if this is a 3DS return
-    const threeDSInfo = sessionStorage.getItem('lianlian_3ds_info');
-    const pending3DS = sessionStorage.getItem('pending_3ds_transaction');
-    
-    if (threeDSInfo || pending3DS) {
-        console.log('🔄 3DS Return Detected', {
-            threeDSInfo: threeDSInfo ? JSON.parse(threeDSInfo) : null,
-            pending3DS: pending3DS ? JSON.parse(pending3DS) : null,
-        });
-        
-        // Clear 3DS session data
-        sessionStorage.removeItem('lianlian_3ds_info');
-        sessionStorage.removeItem('pending_3ds_transaction');
-        
-        // Show success message
-        showToast('success', '3DS Authentication Complete', 'Your payment has been processed successfully');
-        
-        // Redirect to success page after a delay
-        setTimeout(() => {
-            window.location.href = '{{ route("checkout.lianlian.success") }}';
-        }, 3000);
-        
-        return; // Exit early for 3DS return
-    }
-    
     const form = document.getElementById('checkout-form');
     
     // Check if form exists
@@ -1620,11 +1497,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const submitBtn = form.querySelector('button[type="submit"]');
     const paymentOptions = document.querySelectorAll('.payment-option');
-    
-    // LianLian Pay integration
-    let isRedirecting3DS = false;
-    let lianLianCardInstance = null;
-    let iframeToken = null;
     
     // PayPal integration
     let paypalButtonsInitialized = false;
@@ -1718,9 +1590,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (responseData.success) {
                 // Handle different payment method responses
-                if (orderData.payment_method === 'lianlian_pay') {
-                    await handleLianLianResponse(responseData);
-                } else if (orderData.payment_method === 'paypal') {
+                if (orderData.payment_method === 'paypal') {
                     await handlePayPalResponse(responseData);
                 } else if (orderData.payment_method === 'stripe') {
                     await handleStripeResponse(responseData);
@@ -1740,44 +1610,6 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // Helper functions for payment responses
-    const handleLianLianResponse = async (responseData) => {
-        console.log('🔄 Handling LianLian response:', responseData);
-        
-        if (responseData.payment_completed === true || responseData.payment_status === 'paid') {
-            console.log('✅ LianLian Payment Completed');
-            showToast('success', 'Payment Successful!', 'Your payment has been processed successfully');
-            
-            // Clear cart from localStorage
-            localStorage.removeItem('cart');
-            
-            // Redirect to success page
-            setTimeout(() => {
-                if (responseData.order_number) {
-                    window.location.href = '{{ route("checkout.success", ":order_number") }}'.replace(':order_number', responseData.order_number);
-                } else {
-                    window.location.href = '{{ route("home") }}';
-                }
-            }, 2000);
-        } else if (responseData.requires_3ds === true && responseData.redirect_url) {
-            console.log('🔐 3DS Authentication Required');
-            await handle3DSRedirect(responseData.redirect_url, responseData.transaction_id);
-        } else if (responseData.payment_url) {
-            // Redirect to payment URL
-            window.location.href = responseData.payment_url;
-        } else {
-            // Payment pending
-            console.log('⏳ LianLian Payment Pending');
-            showToast('info', 'Payment is processing...', 'Your payment is being processed');
-            setTimeout(() => {
-                if (responseData.order_number) {
-                    window.location.href = '{{ route("checkout.success", ":order_number") }}'.replace(':order_number', responseData.order_number);
-                } else {
-                    window.location.href = '{{ route("checkout.index") }}';
-                }
-            }, 2000);
-        }
-    };
-
     const handlePayPalResponse = async (responseData) => {
         console.log('🔄 Handling PayPal response:', responseData);
         
@@ -1883,114 +1715,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // Initialize LianLian Pay iframe
-    const initializeLianLianIframe = async () => {
-        try {
-            console.log('🚀 Initializing LianLian Pay iframe...');
-            
-            // Get token first
-            const tokenUrl = new URL('/payment/lianlian/token', window.location.origin);
-            console.log('📡 Token URL:', tokenUrl.toString());
-            
-            const tokenResponse = await fetch(tokenUrl.toString(), {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}'
-                },
-                credentials: 'same-origin',
-                mode: 'same-origin'
-            });
-            
-            if (!tokenResponse.ok) {
-                throw new Error(`Token request failed: ${tokenResponse.status} ${tokenResponse.statusText}`);
-            }
-            
-            const tokenData = await tokenResponse.json();
-            console.log('🎫 Token response:', tokenData);
-            
-            if (!tokenData.success) {
-                throw new Error(tokenData.message || 'Failed to get payment token');
-            }
-            
-            iframeToken = tokenData.token;
-            console.log('✅ Token received:', iframeToken);
-            
-            // Load LianLian SDK
-            if (!window.LLP) {
-                const script = document.createElement('script');
-                script.src = 'https://secure-checkout.lianlianpay.com/v2/llpay.min.js';
-                script.async = true;
-                
-                await new Promise((resolve, reject) => {
-                    script.onload = resolve;
-                    script.onerror = reject;
-                    document.head.appendChild(script);
-                });
-                
-                if (!window.LLP) {
-                    throw new Error('LianLian Pay SDK failed to load');
-                }
-            }
-            
-            // Set language
-            window.LLP.setLanguage('en-US');
-            
-            // Create card element
-            const elements = window.LLP.elements();
-            lianLianCardInstance = elements.create('card', {
-                token: iframeToken,
-                style: {
-                    base: {
-                        backgroundColor: '#f8f8f8',
-                        borderColor: '#f1f1f1',
-                        color: '#bcbcbc',
-                        fontWeight: '400',
-                        fontFamily: 'Roboto, Open Sans, Segoe UI, sans-serif',
-                        fontSize: '14px',
-                        fontSmoothing: 'antialiased',
-                        floatLabelSize: '12px',
-                        floatLabelColor: '#333333',
-                        floatLabelWeight: '100',
-                    },
-                },
-                merchantUrl: window.location.origin,
-            });
-            
-            // Mount the card
-            lianLianCardInstance.mount('#llpay-card-element');
-            
-            // Hide loading placeholder after mount
-            setTimeout(() => {
-                const loadingPlaceholder = document.getElementById('lianlian-loading-placeholder');
-                if (loadingPlaceholder) {
-                    loadingPlaceholder.style.display = 'none';
-                }
-                console.log('✅ LianLian Pay iframe initialized successfully');
-            }, 2000);
-            
-        } catch (error) {
-            console.error('❌ LianLian Pay iframe initialization error:', error);
-            showToast('error', 'Payment Error', 'Failed to initialize payment form: ' + error.message);
-            
-            // Show error in iframe container
-            const iframeContainer = document.getElementById('llpay-card-element');
-            if (iframeContainer) {
-                iframeContainer.innerHTML = `
-                    <div class="flex items-center justify-center h-full text-red-500">
-                        <div class="text-center">
-                            <svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <p class="text-sm">Failed to load payment form</p>
-                        </div>
-                    </div>
-                `;
-            }
-        }
-    };
-    
     // Initialize PayPal buttons
     const initializePayPalButtons = async () => {
         try {
@@ -2018,9 +1742,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Calculate total amount
             const subtotal = parseFloat('{{ $subtotal }}');
+            const discount = parseFloat(CHECKOUT_DISCOUNT || 0);
             const tax = parseFloat('{{ $taxAmount }}');
             const tip = parseFloat(document.getElementById('tip_amount')?.value || 0);
-            const total = subtotal + tax + tip;
+            const total = subtotal - discount + tax + tip;
             
             // Get order data from form
             const checkoutForm = document.getElementById('checkout-form');
@@ -2086,6 +1811,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Calculate total amount for PayPal
                         // Subtotal is already in current currency
                         const subtotal = parseFloat(CHECKOUT_CONVERTED_SUBTOTAL || CHECKOUT_BASE_SUBTOTAL || '{{ $subtotal }}');
+                        const discount = parseFloat(CHECKOUT_DISCOUNT || 0);
                         const tax = parseFloat('{{ $taxAmount }}');
                         const tip = parseFloat(document.getElementById('tip_amount')?.value || 0);
                         
@@ -2095,7 +1821,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         // Convert tip from USD to current currency
                         const convertedTip = convertFromUSD(tip, currentCurrency);
-                        const total = subtotal + tax + convertedTip + shippingCost;
+                        const total = subtotal - discount + tax + convertedTip + shippingCost;
                         
                         // Build description from product SKUs
                         const skuList = [];
@@ -2395,7 +2121,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Payment method change handler
     const handlePaymentMethodChange = function() {
         const selectedRadio = document.querySelector('input[name="payment_method"]:checked');
-        const lianLianInfo = document.getElementById('lianlian-pay-info');
         const paypalContainer = document.getElementById('paypal-button-container');
         const stripeContainer = document.getElementById('stripe-card-container');
         
@@ -2414,65 +2139,31 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('💳 Payment method changed:', selectedRadio ? selectedRadio.value : 'none');
         
-        if (selectedRadio && selectedRadio.value === 'lianlian_pay') {
-            console.log('🔧 LianLian Pay selected');
-            // Show LianLian Pay form
-            if (lianLianInfo) {
-                lianLianInfo.classList.remove('hidden');
-            }
-            // Hide others
-            if (paypalContainer) {
-                paypalContainer.classList.add('hidden');
-            }
-            if (stripeContainer) {
-                stripeContainer.classList.add('hidden');
-            }
-            // Initialize LianLian iframe if not already done
-            if (!lianLianCardInstance && !iframeToken) {
-                initializeLianLianIframe();
-            }
-        } else if (selectedRadio && selectedRadio.value === 'paypal') {
+        if (selectedRadio && selectedRadio.value === 'paypal') {
             console.log('🔧 PayPal selected - initializing buttons');
-            // Hide others
-            if (lianLianInfo) {
-                lianLianInfo.classList.add('hidden');
-            }
             if (stripeContainer) {
                 stripeContainer.classList.add('hidden');
             }
-            // Show PayPal container
             if (paypalContainer) {
                 paypalContainer.classList.remove('hidden');
-                // Initialize PayPal buttons if not already done
                 if (!paypalButtonsInitialized && window.paypal) {
                     initializePayPalButtons();
                 }
-                // Update PayPal button state based on form validation
                 setTimeout(() => updatePayPalButtonState(), 100);
             }
         } else if (selectedRadio && selectedRadio.value === 'stripe') {
             console.log('🔧 Stripe selected - initializing card element');
-            // Hide others
-            if (lianLianInfo) {
-                lianLianInfo.classList.add('hidden');
-            }
             if (paypalContainer) {
                 paypalContainer.classList.add('hidden');
             }
-            // Show Stripe container
             if (stripeContainer) {
                 stripeContainer.classList.remove('hidden');
-                // Initialize Stripe Elements if not already done
                 if (!stripeCardElement) {
                     initializeStripeElements();
                 }
             }
         } else {
             console.log('🔧 Hiding all payment methods...');
-            // Hide all containers
-            if (lianLianInfo) {
-                lianLianInfo.classList.add('hidden');
-            }
             if (paypalContainer) {
                 paypalContainer.classList.add('hidden');
             }
@@ -2609,6 +2300,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Calculate total amount
             // Subtotal is already in current currency
             const subtotal = parseFloat(CHECKOUT_CONVERTED_SUBTOTAL || CHECKOUT_BASE_SUBTOTAL || '{{ $subtotal }}');
+            const discount = parseFloat(CHECKOUT_DISCOUNT || 0);
             const tax = parseFloat('{{ $taxAmount }}');
             const tip = parseFloat(document.getElementById('tip_amount')?.value || 0);
             
@@ -2618,7 +2310,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Convert tip from USD to current currency
             const convertedTip = convertFromUSD(tip, currentCurrency);
-            const total = subtotal + tax + convertedTip + shippingCost;
+            const total = subtotal - discount + tax + convertedTip + shippingCost;
             
             // Create Payment Intent on server
             console.log('📝 Creating Payment Intent...');
@@ -2756,21 +2448,23 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Validate minimum order amount for Stripe
         if (selectedPaymentMethod === 'stripe') {
-            const subtotal = parseFloat('{{ $subtotal }}');
+            const subtotal = parseFloat(CHECKOUT_CONVERTED_SUBTOTAL || '{{ $subtotal }}');
+            const discount = parseFloat(CHECKOUT_DISCOUNT || 0);
+            const shippingCostEl = document.getElementById('checkout-shipping-cost');
+            const shippingCost = shippingCostEl ? parseFloat(shippingCostEl.textContent.replace(/[^0-9.-]/g, '')) || 0 : 0;
             const tip = parseFloat(document.getElementById('tip_amount')?.value || 0);
-            const total = subtotal + tip;
+            const convertedTip = typeof convertFromUSD === 'function' ? convertFromUSD(tip, CHECKOUT_CURRENCY) : tip;
+            const total = subtotal - discount + shippingCost + convertedTip;
             
             if (total < 0.5) {
                 showToast('error', 'Minimum Order Amount', 
                     'Stripe requires a minimum order of $0.50. Your order total is $' + total.toFixed(2) + 
-                    '. Please use LianLian Pay or PayPal for smaller orders.');
+                    '. Please use PayPal for smaller orders.');
                 return;
             }
         }
         
-        if (selectedPaymentMethod === 'lianlian_pay') {
-            handleLianLianPayment();
-        } else if (selectedPaymentMethod === 'paypal') {
+        if (selectedPaymentMethod === 'paypal') {
             // PayPal is handled by the SDK, just show info
             showToast('info', 'PayPal Checkout', 'Please use the PayPal button below to complete your payment');
             return;
@@ -2780,93 +2474,6 @@ document.addEventListener('DOMContentLoaded', function() {
             handleRegularPayment();
         }
     });
-    
-    // Handle LianLian Pay payment using iframe
-    const handleLianLianPayment = async () => {
-        try {
-            console.log('🚀 Processing LianLian Pay payment via iframe...');
-            showLoading(true);
-            trackTikTokAddPayment('lianlian_pay');
-            
-            if (!lianLianCardInstance || !window.LLP) {
-                throw new Error('Payment form not initialized. Please refresh and try again.');
-            }
-            
-            // Validate card information using SDK
-            const validateResult = await window.LLP.getValidateResult();
-            if (!validateResult || !validateResult.validateResult) {
-                showToast('error', 'Payment Error', 'Please fill in all card information correctly.');
-                showLoading(false);
-                return;
-            }
-            
-            // Get card token from SDK
-            const paymentResult = await window.LLP.confirmPay();
-            console.log('Payment result:', paymentResult);
-            
-            if (!paymentResult || !paymentResult.data) {
-                throw new Error('Failed to process card. Please check your information and try again.');
-            }
-            
-            const cardToken = paymentResult.data;
-            console.log('✅ Card token generated:', cardToken);
-            
-            // Process payment with server
-            await processLianLianPayment(cardToken);
-            
-        } catch (error) {
-            console.error('❌ LianLian Pay payment error:', error);
-            showToast('error', 'Payment Error', error.message);
-            showLoading(false);
-        }
-    };
-    
-    // Process payment with server using card token
-    const processLianLianPayment = async (cardToken) => {
-        try {
-            console.log('📤 Processing payment with server...');
-            
-            // Get form data for order creation
-            const checkoutForm = document.getElementById('checkout-form');
-            const orderData = {
-                customer_name: checkoutForm.querySelector('[name="customer_name"]')?.value?.trim() || '',
-                customer_email: checkoutForm.querySelector('[name="customer_email"]')?.value?.trim() || '',
-                customer_phone: checkoutForm.querySelector('[name="customer_phone"]')?.value?.trim() || '',
-                shipping_address: checkoutForm.querySelector('[name="shipping_address"]')?.value?.trim() || '',
-                city: checkoutForm.querySelector('[name="city"]')?.value?.trim() || '',
-                state: checkoutForm.querySelector('[name="state"]')?.value?.trim() || '',
-                postal_code: checkoutForm.querySelector('[name="postal_code"]')?.value?.trim() || '',
-                country: checkoutForm.querySelector('[name="country"]')?.value?.trim() || '',
-                payment_method: 'lianlian_pay',
-                notes: checkoutForm.querySelector('[name="notes"]')?.value?.trim() || '',
-                tip_amount: parseFloat(document.getElementById('tip_amount')?.value || 0),
-                shipping_cost: parseFloat(document.getElementById('shipping_cost')?.value || 0),
-                shipping_zone_id: document.getElementById('shipping_zone_id')?.value || '',
-            };
-            
-            // Validate order data
-            const requiredFields = ['customer_name', 'customer_email', 'shipping_address', 'city', 'postal_code', 'country'];
-            const missingFields = requiredFields.filter(field => !orderData[field]);
-            
-            if (missingFields.length > 0) {
-                throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
-            }
-            
-            // Add card token to order data
-            orderData.card_token = cardToken;
-            
-            // Create order using unified processing
-            console.log('📦 Creating order with unified processing...');
-            await processUnifiedOrder(orderData);
-            
-        } catch (error) {
-            console.error('❌ Server payment error:', error);
-            showToast('error', 'Payment Error', 'Payment processing failed: ' + error.message);
-        } finally {
-            showLoading(false);
-        }
-    };
-    
     
     // Handle regular payment (PayPal) - improved for mobile
     const handleRegularPayment = async () => {
@@ -2904,53 +2511,6 @@ document.addEventListener('DOMContentLoaded', function() {
             showToast('error', 'Payment Error', 'Failed to process payment: ' + error.message);
         }
     };
-    
-    // Handle 3DS redirect
-    const handle3DSRedirect = async (redirectUrl, transactionId) => {
-        const { value: confirmRedirect } = await Swal.fire({
-            title: '3DS Authentication Required',
-            html: `
-                <div style="text-align: left; margin: 20px 0;">
-                    <p style="margin-bottom: 15px; color: #333;">
-                        <i class="fas fa-shield-alt" style="color: #007bff; margin-right: 8px;"></i>
-                        Your bank requires additional verification for this payment.
-                    </p>
-                    <p style="margin-bottom: 15px; color: #666;">
-                        You will be redirected to your bank's secure page to complete the verification process.
-                    </p>
-                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff;">
-                        <p style="margin: 0; font-weight: 500; color: #495057;">
-                            <i class="fas fa-info-circle" style="color: #007bff; margin-right: 5px;"></i>
-                            Please complete the verification and you will be redirected back automatically.
-                        </p>
-                    </div>
-                </div>
-            `,
-            icon: 'info',
-            showCancelButton: true,
-            confirmButtonText: '<i class="fas fa-external-link-alt"></i> Continue to Bank',
-            cancelButtonText: '<i class="fas fa-times"></i> Cancel',
-            confirmButtonColor: '#007bff',
-            cancelButtonColor: '#6c757d',
-            width: '500px'
-        });
-        
-        if (confirmRedirect) {
-            sessionStorage.setItem('pending_3ds_transaction', JSON.stringify({
-                transaction_id: transactionId,
-                timestamp: Date.now(),
-                redirect_url: redirectUrl
-            }));
-            
-            isRedirecting3DS = true;
-            showToast('info', 'Redirecting to 3DS Authentication...', 'Please wait while we redirect you to your bank');
-            
-            setTimeout(() => {
-                window.location.href = redirectUrl;
-            }, 1500);
-        }
-    };
-    
     
     // Add event listeners for form field changes to update PayPal button state
     const formFieldsToWatch = [
@@ -2993,17 +2553,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // console.log('Available tip options:', document.querySelectorAll('.tip-option'));
     }
     
-    // Cleanup iframe on page unload
-    window.addEventListener('beforeunload', () => {
-        if (lianLianCardInstance) {
-            try {
-                lianLianCardInstance.unmount();
-            } catch (e) {
-                console.log('Error unmounting LianLian Pay:', e);
-            }
-        }
-    });
-
     // Tip selection functionality
     let selectedTipAmount = 0;
     
@@ -3028,10 +2577,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (clickedButton) {
             clickedButton.classList.add('selected');
             
-            // Force inline styles as backup
-            clickedButton.style.border = '3px solid #10b981';
-            clickedButton.style.backgroundColor = '#f0fdf4';
-            clickedButton.style.boxShadow = '0 0 0 4px rgba(16, 185, 129, 0.4)';
+            // Force inline styles as backup (primary pink)
+            clickedButton.style.border = '3px solid #f0427c';
+            clickedButton.style.backgroundColor = '#fce7ef';
+            clickedButton.style.boxShadow = '0 0 0 4px rgba(240, 66, 124, 0.3)';
             clickedButton.style.transform = 'translateY(-2px)';
             
             console.log('Added selected to:', clickedButton);
@@ -3087,10 +2636,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const customButton = document.querySelector('[data-tip="custom"]');
             customButton.classList.add('selected');
             
-            // Force inline styles for custom button
-            customButton.style.border = '3px solid #10b981';
-            customButton.style.backgroundColor = '#f0fdf4';
-            customButton.style.boxShadow = '0 0 0 4px rgba(16, 185, 129, 0.4)';
+            // Force inline styles for custom button (primary pink)
+            customButton.style.border = '3px solid #f0427c';
+            customButton.style.backgroundColor = '#fce7ef';
+            customButton.style.boxShadow = '0 0 0 4px rgba(240, 66, 124, 0.3)';
             customButton.style.transform = 'translateY(-2px)';
         }
         
@@ -3140,6 +2689,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateTotal() {
         // Subtotal is already in current currency, no need to convert
         const subtotal = parseFloat(CHECKOUT_CONVERTED_SUBTOTAL || CHECKOUT_BASE_SUBTOTAL || '{{ $subtotal }}');
+        const discount = parseFloat(CHECKOUT_DISCOUNT || 0);
         const tip = selectedTipAmount;
         
         // Convert tip from USD to current currency
@@ -3155,7 +2705,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('💰 updateTotal - Shipping cost from display:', shippingCost, 'text:', shippingText);
         }
         
-        const total = subtotal + convertedTip + shippingCost;
+        const total = subtotal - discount + convertedTip + shippingCost;
         
         console.log('💰 updateTotal calculation:', {
             subtotal: subtotal,
@@ -3277,9 +2827,6 @@ document.addEventListener('DOMContentLoaded', function() {
         let generalDomainRates = [];
         let currentZoneName = null; // Initialize zone name variable for use throughout function
         
-        // Get current domain for filtering (prioritize current domain)
-        const currentDomain = CHECKOUT_CURRENT_DOMAIN || null;
-        console.log('🌐 Current domain:', currentDomain);
         console.log('📊 Total shipping rates available:', SHIPPING_RATES.length);
         
         if (zoneId !== null && zoneId !== undefined && zoneId !== '') {
@@ -3335,23 +2882,17 @@ document.addEventListener('DOMContentLoaded', function() {
                            normalizedZoneName.includes(normalizedRateZoneName);
                 });
                 
-                // Prioritize current domain rates, then others
-                domainSpecificRates = matchingRates.filter(r => r.domain === currentDomain);
-                generalDomainRates = matchingRates.filter(r => r.domain !== currentDomain);
-                
-                // Combine: domain-specific first, then general domain
-                availableRates = [...domainSpecificRates, ...generalDomainRates];
+                availableRates = matchingRates;
+                domainSpecificRates = matchingRates;
+                generalDomainRates = [];
                 
                 // If no rates found with matching zone_name, fallback to all general domain rates (zone_id = null)
             if (availableRates.length === 0) {
                     const allGeneralRates = SHIPPING_RATES.filter(r => r.zone_id === null);
                     if (allGeneralRates.length > 0) {
                         availableRates = allGeneralRates;
-                        domainSpecificRates = allGeneralRates.filter(r => r.domain === currentDomain);
-                        generalDomainRates = allGeneralRates.filter(r => r.domain !== currentDomain);
-                        if (generalDomainRates.length === 0) {
-                            generalDomainRates = allGeneralRates;
-                        }
+                        domainSpecificRates = allGeneralRates;
+                        generalDomainRates = [];
                     }
                 }
             } else {
@@ -3376,72 +2917,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 const normalizeZoneName = (name) => name ? name.toLowerCase().trim().replace(/\s+/g, ' ') : '';
                 const normalizedZoneName = zoneName ? normalizeZoneName(zoneName) : null;
                 
-                // Find rates by zone_id FIRST (strict matching), then zone_name as fallback
-                // Current domain rates: domain = current domain and (zone_id matches OR zone_name matches)
+                // Find rates by zone_id first, then zone_name
                 domainSpecificRates = SHIPPING_RATES.filter(r => {
-                    if (r.domain !== currentDomain) return false;
-                    // PRIORITY 1: Match by zone_id (strict matching - most important)
-                    if (r.zone_id === parsedZoneId) {
-                        console.log(`   ✅ Rate ${r.id} matches zone ${parsedZoneId} by zone_id (domain-specific)`);
-                        return true;
-                    }
-                    // PRIORITY 2: Also match by zone_name if zone_id doesn't match (for zones like Europe)
-                    // But only if zone_name is provided and matches
+                    if (r.zone_id === parsedZoneId) return true;
                     if (normalizedZoneName && r.zone_name) {
                         const normalizedRateZoneName = normalizeZoneName(r.zone_name);
-                        const matchesByName = normalizedRateZoneName === normalizedZoneName || 
-                                             normalizedRateZoneName.includes(normalizedZoneName) ||
-                                             normalizedZoneName.includes(normalizedRateZoneName);
-                        if (matchesByName) {
-                            console.log(`   ⚠️ Rate ${r.id} matches zone ${parsedZoneId} by zone_name (${r.zone_name}), but zone_id is ${r.zone_id} (domain-specific)`);
-                        }
-                        return matchesByName;
+                        return normalizedRateZoneName === normalizedZoneName || 
+                               normalizedRateZoneName.includes(normalizedZoneName) ||
+                               normalizedZoneName.includes(normalizedRateZoneName);
                     }
                     return false;
                 });
+                generalDomainRates = [];
                 
-                console.log(`🔍 Domain-specific rates for zone ${parsedZoneId} (domain: ${currentDomain}):`, domainSpecificRates.length);
-                if (domainSpecificRates.length > 0) {
-                    console.log('   Rates:', domainSpecificRates.map(r => ({id: r.id, name: r.name, zone_id: r.zone_id, zone_name: r.zone_name})));
-                }
-                
-                // Other domain rates: any other domain with zone_id matches (strict matching first)
-                // Only match by zone_name if zone_id doesn't match (for zones like Europe)
-                generalDomainRates = SHIPPING_RATES.filter(r => {
-                    if (r.domain === currentDomain) return false;
-                    // STRICT: Match by zone_id first (most important)
-                    if (r.zone_id === parsedZoneId) {
-                        console.log(`   ✅ Rate ${r.id} matches zone ${parsedZoneId} by zone_id`);
-                        return true;
-                    }
-                    // FALLBACK: Also match by zone_name if zone_id doesn't match (for zones like Europe)
-                    // But only if zone_name is provided and matches
-                    if (normalizedZoneName && r.zone_name) {
-                        const normalizedRateZoneName = normalizeZoneName(r.zone_name);
-                        const matchesByName = normalizedRateZoneName === normalizedZoneName || 
-                                             normalizedRateZoneName.includes(normalizedZoneName) ||
-                                             normalizedZoneName.includes(normalizedRateZoneName);
-                        if (matchesByName) {
-                            console.log(`   ⚠️ Rate ${r.id} matches zone ${parsedZoneId} by zone_name (${r.zone_name}), but zone_id is ${r.zone_id}`);
-                        }
-                        return matchesByName;
-                    }
-                    return false;
-                });
-                
-                console.log(`🔍 Other domain rates for zone ${parsedZoneId}:`, generalDomainRates.length);
-                if (generalDomainRates.length > 0) {
-                    console.log('   Rates:', generalDomainRates.map(r => ({
-                        id: r.id, 
-                        name: r.name, 
-                        zone_id: r.zone_id, 
-                        zone_name: r.zone_name,
-                        first_item_cost: r.first_item_cost,
-                        domain: r.domain
-                    })));
-                }
-                
-                // Priority: current domain first, then other domains as fallback
+                // Priority: zone-matching rates
                 // IMPORTANT: Only include rates that match the zone_id (strict matching)
                 // Filter out rates that don't match zone_id (only keep zone_name matches if zone_id matches too)
                 const strictDomainSpecificRates = domainSpecificRates.filter(r => {
@@ -3505,8 +2994,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         name: r.name,
                         zone_id: r.zone_id,
                         zone_name: r.zone_name,
-                        first_item_cost: r.first_item_cost,
-                        domain: r.domain
+                        first_item_cost: r.first_item_cost
                     })));
                 }
                 
@@ -3517,12 +3005,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log(`🔍 General rates (zone_id = null):`, generalRates.length);
                     if (generalRates.length > 0) {
                         availableRates = generalRates;
-                        domainSpecificRates = generalRates.filter(r => r.domain === currentDomain);
-                        generalDomainRates = generalRates.filter(r => r.domain !== currentDomain);
-                        if (generalDomainRates.length === 0) {
-                            generalDomainRates = generalRates;
-                        }
-                        console.log(`✅ Using general rates - Domain-specific: ${domainSpecificRates.length}, Other domains: ${generalDomainRates.length}`);
+                        domainSpecificRates = generalRates;
+                        generalDomainRates = [];
+                        console.log(`✅ Using general rates: ${generalRates.length}`);
                     }
                 }
             }
@@ -3564,19 +3049,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (fallbackRates.length > 0) {
                     availableRates = fallbackRates;
-                    // Update domainSpecificRates and generalDomainRates based on fallback rates
-                    domainSpecificRates = fallbackRates.filter(r => r.domain === currentDomain);
-                    generalDomainRates = fallbackRates.filter(r => r.domain !== currentDomain);
-                    if (generalDomainRates.length === 0) {
-                        generalDomainRates = fallbackRates;
-                    }
+                    domainSpecificRates = fallbackRates;
+                    generalDomainRates = [];
                 }
             }
         } else {
-            // When zoneId is null, separate rates for priority handling
-            domainSpecificRates = SHIPPING_RATES.filter(r => r.domain === currentDomain);
-            generalDomainRates = SHIPPING_RATES.filter(r => r.domain !== currentDomain);
-            // Use all rates, but will prioritize current domain in rate selection
+            domainSpecificRates = SHIPPING_RATES;
+            generalDomainRates = [];
             availableRates = SHIPPING_RATES;
         }
         
@@ -4208,30 +3687,30 @@ function buildCheckoutEditContent(ci) {
             <div class="flex gap-4">
                 <img src="${img}" alt="${product.name}" class="w-24 h-24 object-cover rounded-lg">
                 <div>
-                    <h3 class="text-lg font-semibold text-gray-900">${product.name}</h3>
-                    <p class="text-gray-600">${CHECKOUT_CURRENCY_SYMBOL}${parseFloat(ci.price).toFixed(2)} each</p>
+                    <h3 class="text-lg font-semibold text-slate-900">${product.name}</h3>
+                    <p class="text-slate-600">${CHECKOUT_CURRENCY_SYMBOL}${parseFloat(ci.price).toFixed(2)} each</p>
                 </div>
             </div>
             ${variants.length ? `
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Variants</label>
+                <label class="block text-sm font-medium text-slate-700 mb-2">Variants</label>
                 <div class="space-y-2">${buildCheckoutVariantOptions(variants, selectedVariant)}</div>
             </div>` : ''}
             ${Object.keys(customizations).length ? `
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Customizations</label>
+                <label class="block text-sm font-medium text-slate-700 mb-2">Customizations</label>
                 <div class="space-y-3">
                     ${buildCheckoutCustomizationInputs(customizations)}
                 </div>
             </div>` : ''}
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                <label class="block text-sm font-medium text-slate-700 mb-2">Quantity</label>
                 <div class="flex items-center gap-3">
-                    <button onclick="updateCheckoutModalQty(${ci.id}, ${ci.quantity - 1})" class="w-10 h-10 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors" ${ci.quantity<=1?'disabled':''}>
+                    <button onclick="updateCheckoutModalQty(${ci.id}, ${ci.quantity - 1})" class="w-10 h-10 rounded-lg border border-primary/20 flex items-center justify-center hover:bg-primary/5 transition-colors" ${ci.quantity<=1?'disabled':''}>
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
                     </button>
                     <span class="text-xl font-semibold" id="checkoutModalQty${ci.id}">${ci.quantity}</span>
-                    <button onclick="updateCheckoutModalQty(${ci.id}, ${ci.quantity + 1})" class="w-10 h-10 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors">
+                    <button onclick="updateCheckoutModalQty(${ci.id}, ${ci.quantity + 1})" class="w-10 h-10 rounded-lg border border-primary/20 flex items-center justify-center hover:bg-primary/5 transition-colors">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     </button>
                 </div>
@@ -4239,12 +3718,12 @@ function buildCheckoutEditContent(ci) {
             <div class="border-t pt-4">
                 <div class="flex justify-between items-center">
                     <span class="text-lg font-semibold text-gray-900">Total</span>
-                    <span class="text-2xl font-bold text-[#005366]" id="checkoutModalTotal${ci.id}">${CHECKOUT_CURRENCY_SYMBOL}${total}</span>
+                    <span class="text-2xl font-bold text-primary" id="checkoutModalTotal${ci.id}">${CHECKOUT_CURRENCY_SYMBOL}${total}</span>
                 </div>
             </div>
             <div class="flex gap-3 pt-4">
-                <button onclick="saveCheckoutCartChanges(${ci.id})" class="flex-1 bg-[#005366] hover:bg-[#003d4d] text-white font-bold py-3 rounded-xl transition-colors">Save Changes</button>
-                <button onclick="closeCheckoutEditCartModal()" class="px-6 py-3 border-2 border-gray-300 hover:border-gray-400 text-gray-700 font-medium rounded-xl transition-colors">Cancel</button>
+                <button onclick="saveCheckoutCartChanges(${ci.id})" class="flex-1 bg-primary hover:brightness-110 text-white font-bold py-3 rounded-xl transition-colors">Save Changes</button>
+                <button onclick="closeCheckoutEditCartModal()" class="px-6 py-3 border-2 border-primary/20 hover:border-primary text-slate-700 font-medium rounded-xl transition-colors">Cancel</button>
             </div>
         </div>`;
 }
@@ -4258,7 +3737,7 @@ function buildCheckoutVariantOptions(variants, selectedVariant) {
         return `
         <div>
             <label class="block text-sm text-gray-600 mb-1">${k.charAt(0).toUpperCase()+k.slice(1)}</label>
-            <select class="w-full border-2 border-gray-200 rounded-lg px-4 py-2 focus:border-[#005366] focus:outline-none" id="checkout-variant-${k}" onchange="updateCheckoutModalTotal()">
+                <select class="w-full border-2 border-primary/20 rounded-lg px-4 py-2 focus:border-primary focus:outline-none" id="checkout-variant-${k}" onchange="updateCheckoutModalTotal()">
                 ${values.map(v => `<option value="${v}" ${v===sel?'selected':''}>${v}</option>`).join('')}
             </select>
         </div>`;
@@ -4272,9 +3751,9 @@ function buildCheckoutCustomizationInputs(customizations) {
         var v = customizations[k] || {};
         var value = v && v.value ? String(v.value).replace(/"/g, '&quot;') : '';
         html += '<div class="grid grid-cols-1 sm:grid-cols-5 gap-3 items-center">'
-             + '<div class="sm:col-span-2"><span class="text-sm text-gray-600">' + k + '</span></div>'
+             + '<div class="sm:col-span-2"><span class="text-sm text-slate-600">' + k + '</span></div>'
              + '<div class="sm:col-span-3">'
-             + '<input type="text" class="w-full border-2 border-gray-200 rounded-lg px-3 py-2 checkout-customization-input" data-label="' + k + '" value="' + value + '" oninput="updateCheckoutModalTotal()" title="' + value + '" />'
+             + '<input type="text" class="w-full border-2 border-primary/20 rounded-lg px-3 py-2 checkout-customization-input" data-label="' + k + '" value="' + value + '" oninput="updateCheckoutModalTotal()" title="' + value + '" />'
              + '</div>'
              + '</div>';
     });
@@ -4325,10 +3804,7 @@ function saveCheckoutCartChanges(cartItemId) {
 
 </script>
 
-<!-- Modal for editing cart items -->
-<div id="checkoutEditCartModal" class="hidden fixed top-0 left-0 w-full h-full bg-gray-500 bg-opacity-75 items-center justify-center">
-    <div id="checkoutEditCartModalContent" class="bg-white rounded-lg shadow-lg p-6 w-1/2"></div>
-</div>
+<!-- Modal for editing cart items (duplicate removed - use single modal above) -->
 
 
 @endsection

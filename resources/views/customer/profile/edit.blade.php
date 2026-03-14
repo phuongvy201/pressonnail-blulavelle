@@ -1,272 +1,263 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Profile')
+@section('title', __('Edit Profile'))
 
 @section('content')
-<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <!-- Header -->
-    <div class="mb-8">
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900">Edit Profile</h1>
-                <p class="text-gray-600 mt-1">Update your personal information and settings</p>
+<div class="min-h-screen bg-background-light font-display text-slate-900">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        @if(session('success'))
+            <div class="mb-6 bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
+                <span class="material-symbols-outlined text-green-600">check_circle</span>
+                <p class="text-green-800">{{ session('success') }}</p>
             </div>
-            <a href="{{ route('customer.profile.index') }}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                </svg>
-                Back
-            </a>
-        </div>
-    </div>
+        @endif
 
-    <!-- Error Messages -->
-    @if($errors->any())
-        <div class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-            <div class="flex items-start">
-                <svg class="w-5 h-5 text-red-600 mr-3 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                </svg>
-                <div>
-                    <h3 class="font-semibold text-red-800">Please fix the following errors:</h3>
-                    <ul class="list-disc list-inside text-sm text-red-700 mt-2">
-                        @foreach($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
+        @if($errors->any())
+            <div class="mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
+                <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-red-600 shrink-0">error</span>
+                    <div>
+                        <h3 class="font-semibold text-red-800">{{ __('Please fix the following errors:') }}</h3>
+                        <ul class="list-disc list-inside text-sm text-red-700 mt-2">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
                 </div>
             </div>
-        </div>
-    @endif
+        @endif
 
-    <!-- Profile Form -->
-    <form action="{{ route('customer.profile.update') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
-        @csrf
-        @method('PUT')
+        <div class="flex flex-col lg:flex-row gap-8">
+            @include('customer.profile.partials.sidebar')
 
-        <!-- Personal Information -->
-        <div class="bg-white rounded-xl shadow-md overflow-hidden">
-            <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900">Personal Information</h3>
-            </div>
-            <div class="p-6 space-y-6">
-                <!-- Avatar -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-3">Profile Picture</label>
-                    <div class="flex items-center space-x-6">
-                        <div class="shrink-0">
+            <div class="flex-1 space-y-8">
+                {{-- Profile Header (theo code.html) --}}
+                <section class="bg-white border border-primary/10 rounded-xl p-6 flex flex-col sm:flex-row items-center gap-6 shadow-sm">
+                    <div class="relative group">
+                        <div class="h-24 w-24 rounded-full overflow-hidden border-4 border-primary/10 bg-slate-100">
                             @if($user->avatar)
-                                <img id="avatar-preview" src="{{ $user->avatar }}" alt="{{ $user->name }}" class="w-24 h-24 rounded-full object-cover border-4 border-gray-200">
+                                <img id="avatar-preview" src="{{ $user->avatar }}" alt="{{ $user->name }}" class="h-full w-full object-cover">
                             @else
-                                <div id="avatar-preview" class="w-24 h-24 rounded-full bg-[#005366] flex items-center justify-center border-4 border-gray-200">
-                                    <span class="text-3xl font-bold text-white">{{ substr($user->name, 0, 1) }}</span>
+                                <div id="avatar-preview" class="h-full w-full flex items-center justify-center bg-primary/20 text-primary text-3xl font-bold">
+                                    {{ strtoupper(substr($user->name, 0, 1)) }}
                                 </div>
                             @endif
                         </div>
-                        <div class="flex-1">
-                            <input type="file" name="avatar" id="avatar" accept="image/jpeg,image/jpg,image/png,image/webp" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#005366] file:text-white hover:file:bg-[#003d4d]">
-                            <p class="text-xs text-gray-500 mt-1">JPG, PNG or WEBP. Max size 5MB.</p>
+                        <label class="absolute bottom-0 right-0 bg-primary text-white p-1.5 rounded-full border-2 border-white shadow-lg cursor-pointer hover:bg-primary/90 transition-colors">
+                            <span class="material-symbols-outlined text-sm">photo_camera</span>
+                            <input type="file" name="avatar" id="avatar" accept="image/jpeg,image/jpg,image/png,image/webp" class="hidden">
+                        </label>
+                    </div>
+                    <div class="text-center sm:text-left">
+                        <h1 class="text-2xl font-bold text-slate-900">{{ $user->name }}</h1>
+                        <p class="text-slate-500">{{ __('Member since') }} {{ $user->created_at->translatedFormat('F Y') }}</p>
+                        <div class="mt-2 flex gap-2 flex-wrap justify-center sm:justify-start">
+                            @if($user->email_verified_at)
+                                <span class="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full uppercase tracking-wider">{{ __('Verified User') }}</span>
+                            @else
+                                <span class="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full uppercase tracking-wider">{{ __('Unverified') }}</span>
+                            @endif
                         </div>
                     </div>
-                </div>
+                </section>
 
-                <!-- Name & Email -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
-                        <input type="text" name="name" value="{{ old('name', $user->name) }}" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#005366] focus:border-transparent">
+                {{-- Personal Information Form --}}
+                <form action="{{ route('customer.profile.update') }}" method="POST" enctype="multipart/form-data" id="profile-form">
+                    @csrf
+                    @method('PUT')
+
+                    <section class="bg-white border border-primary/10 rounded-xl p-8 shadow-sm">
+                        <h3 class="text-lg font-bold mb-6 text-slate-900 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary">edit_square</span>
+                            {{ __('Personal Information') }}
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="flex flex-col gap-2">
+                                <label class="text-sm font-semibold text-slate-700" for="name">{{ __('Full Name') }}</label>
+                                <input id="name" name="name" type="text" value="{{ old('name', $user->name) }}" required
+                                    class="w-full px-4 py-3 rounded-lg border border-primary/10 bg-primary/5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-slate-900">
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-sm font-semibold text-slate-700" for="email">{{ __('Email Address') }}</label>
+                                <input id="email" name="email" type="email" value="{{ old('email', $user->email) }}" required
+                                    class="w-full px-4 py-3 rounded-lg border border-primary/10 bg-primary/5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-slate-900">
+                                @if($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && !$user->hasVerifiedEmail())
+                                    <p class="text-sm text-amber-600 mt-1">
+                                        {{ __('Your email is unverified.') }}
+                                        <button form="send-verification" type="submit" class="underline hover:no-underline">{{ __('Resend verification email') }}</button>
+                                    </p>
+                                @endif
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-sm font-semibold text-slate-700" for="phone">{{ __('Phone Number') }}</label>
+                                <input id="phone" name="phone" type="tel" value="{{ old('phone', $user->phone) }}"
+                                    class="w-full px-4 py-3 rounded-lg border border-primary/10 bg-primary/5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-slate-900">
+                            </div>
+                        </div>
+                    </section>
+
+                    {{-- Address (anchor #address for sidebar) --}}
+                    <section id="address" class="bg-white border border-primary/10 rounded-xl p-8 shadow-sm scroll-mt-24">
+                        <h3 class="text-lg font-bold mb-6 text-slate-900 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary">location_on</span>
+                            {{ __('Address') }}
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="md:col-span-2 flex flex-col gap-2">
+                                <label class="text-sm font-semibold text-slate-700" for="address">{{ __('Street Address') }}</label>
+                                <input id="address" name="address" type="text" value="{{ old('address', $user->address) }}"
+                                    class="w-full px-4 py-3 rounded-lg border border-primary/10 bg-primary/5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-slate-900">
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-sm font-semibold text-slate-700" for="city">{{ __('City') }}</label>
+                                <input id="city" name="city" type="text" value="{{ old('city', $user->city) }}"
+                                    class="w-full px-4 py-3 rounded-lg border border-primary/10 bg-primary/5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-slate-900">
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-sm font-semibold text-slate-700" for="state">{{ __('State / Province') }}</label>
+                                <input id="state" name="state" type="text" value="{{ old('state', $user->state) }}"
+                                    class="w-full px-4 py-3 rounded-lg border border-primary/10 bg-primary/5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-slate-900">
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-sm font-semibold text-slate-700" for="postal_code">{{ __('Postal Code') }}</label>
+                                <input id="postal_code" name="postal_code" type="text" value="{{ old('postal_code', $user->postal_code) }}"
+                                    class="w-full px-4 py-3 rounded-lg border border-primary/10 bg-primary/5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-slate-900">
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-sm font-semibold text-slate-700" for="country">{{ __('Country') }}</label>
+                                <input id="country" name="country" type="text" value="{{ old('country', $user->country) }}"
+                                    class="w-full px-4 py-3 rounded-lg border border-primary/10 bg-primary/5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-slate-900">
+                            </div>
+                        </div>
+                    </section>
+
+                    {{-- Actions --}}
+                    <div class="flex justify-end gap-4">
+                        <a href="{{ route('customer.profile.index') }}" class="px-6 py-3 rounded-lg border border-primary text-primary font-bold hover:bg-primary/5 transition-colors">
+                            {{ __('Cancel') }}
+                        </a>
+                        <button type="submit" class="px-10 py-3 rounded-lg bg-primary text-white font-bold shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all active:scale-95">
+                            {{ __('Save Changes') }}
+                        </button>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
-                        <input type="email" name="email" value="{{ old('email', $user->email) }}" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#005366] focus:border-transparent">
-                    </div>
-                </div>
+                </form>
 
-                <!-- Phone -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                    <input type="tel" name="phone" value="{{ old('phone', $user->phone) }}" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#005366] focus:border-transparent">
-                </div>
-            </div>
-        </div>
+                {{-- Change Password Section (theo code.html) --}}
+                <section class="bg-white border border-primary/10 rounded-xl p-8 shadow-sm">
+                    <h3 class="text-lg font-bold mb-6 text-slate-900 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">lock_reset</span>
+                        {{ __('Change Password') }}
+                    </h3>
+                    <form action="{{ route('customer.profile.password') }}" method="POST" class="space-y-6">
+                        @csrf
+                        @method('PUT')
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="flex flex-col gap-2">
+                                <label class="text-sm font-semibold text-slate-700" for="current_password">{{ __('Current Password') }}</label>
+                                <input id="current_password" name="current_password" type="password" required autocomplete="current-password"
+                                    class="w-full px-4 py-3 rounded-lg border border-primary/10 bg-primary/5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-slate-900" placeholder="••••••••">
+                                @error('current_password')
+                                    <p class="text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div class="flex flex-col gap-2"></div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-sm font-semibold text-slate-700" for="password">{{ __('New Password') }}</label>
+                                <input id="password" name="password" type="password" required autocomplete="new-password"
+                                    class="w-full px-4 py-3 rounded-lg border border-primary/10 bg-primary/5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-slate-900" placeholder="••••••••">
+                                @error('password')
+                                    <p class="text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-sm font-semibold text-slate-700" for="password_confirmation">{{ __('Confirm New Password') }}</label>
+                                <input id="password_confirmation" name="password_confirmation" type="password" required autocomplete="new-password"
+                                    class="w-full px-4 py-3 rounded-lg border border-primary/10 bg-primary/5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-slate-900" placeholder="••••••••">
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 italic">{{ __('Password must be at least 8 characters long and include a symbol.') }}</p>
+                        <div class="flex justify-end">
+                            <button type="submit" class="px-6 py-3 rounded-lg bg-primary text-white font-bold hover:bg-primary/90 transition-colors">
+                                {{ __('Update Password') }}
+                            </button>
+                        </div>
+                    </form>
+                </section>
 
-        <!-- Address Information -->
-        <div class="bg-white rounded-xl shadow-md overflow-hidden">
-            <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900">Address Information</h3>
-            </div>
-            <div class="p-6 space-y-6">
-                <!-- Street Address -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
-                    <input type="text" name="address" value="{{ old('address', $user->address) }}" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#005366] focus:border-transparent">
-                </div>
-
-                <!-- City, State, Postal Code -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">City</label>
-                        <input type="text" name="city" value="{{ old('city', $user->city) }}" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#005366] focus:border-transparent">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">State/Province</label>
-                        <input type="text" name="state" value="{{ old('state', $user->state) }}" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#005366] focus:border-transparent">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Postal Code</label>
-                        <input type="text" name="postal_code" value="{{ old('postal_code', $user->postal_code) }}" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#005366] focus:border-transparent">
-                    </div>
-                </div>
-
-                <!-- Country -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Country</label>
-                    <input type="text" name="country" value="{{ old('country', $user->country) }}" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#005366] focus:border-transparent">
-                </div>
-            </div>
-        </div>
-
-        <!-- Save Button -->
-        <div class="flex items-center justify-end space-x-4">
-            <a href="{{ route('customer.profile.index') }}" class="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                Cancel
-            </a>
-            <button type="submit" class="px-6 py-3 bg-[#005366] text-white rounded-lg hover:bg-[#003d4d] transition-colors shadow-md hover:shadow-lg">
-                Save Changes
-            </button>
-        </div>
-    </form>
-
-    <!-- Change Password -->
-    <div class="bg-white rounded-xl shadow-md overflow-hidden mt-6">
-        <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-semibold text-gray-900">Change Password</h3>
-        </div>
-        <div class="p-6">
-            <form action="{{ route('customer.profile.password') }}" method="POST" class="space-y-6">
-                @csrf
-                @method('PUT')
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Current Password *</label>
-                    <input type="password" name="current_password" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#005366] focus:border-transparent">
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">New Password *</label>
-                        <input type="password" name="password" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#005366] focus:border-transparent">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password *</label>
-                        <input type="password" name="password_confirmation" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#005366] focus:border-transparent">
-                    </div>
-                </div>
-
-                <div class="flex justify-end">
-                    <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                        Update Password
+                {{-- Delete Account --}}
+                <section class="bg-white border border-red-200 rounded-xl p-8 shadow-sm">
+                    <h3 class="text-lg font-bold mb-2 text-slate-900">{{ __('Delete Account') }}</h3>
+                    <p class="text-sm text-slate-600 mb-4">{{ __('Once your account is deleted, all of its resources and data will be permanently deleted.') }}</p>
+                    <button type="button" id="delete-account-btn" class="px-6 py-3 rounded-lg border border-red-500 text-red-500 font-bold hover:bg-red-50 transition-colors">
+                        {{ __('Delete Account') }}
                     </button>
-                </div>
-            </form>
-        </div>
-    </div>
 
-    <!-- Delete Account -->
-    <div class="bg-white rounded-xl shadow-md overflow-hidden mt-6 border-2 border-red-200">
-        <div class="bg-red-50 px-6 py-4 border-b border-red-200">
-            <h3 class="text-lg font-semibold text-red-900">Danger Zone</h3>
-        </div>
-        <div class="p-6">
-            <p class="text-gray-700 mb-4">Once you delete your account, there is no going back. Please be certain.</p>
-            
-            <button onclick="document.getElementById('delete-modal').classList.remove('hidden')" class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
-                Delete Account
-            </button>
-
-            <!-- Delete Confirmation Modal -->
-            <div id="delete-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
-                    <div class="p-6">
-                        <h3 class="text-xl font-bold text-gray-900 mb-4">Delete Account?</h3>
-                        <p class="text-gray-600 mb-6">This action cannot be undone. All your data will be permanently deleted.</p>
-                        
-                        <form action="{{ route('customer.profile.destroy') }}" method="POST">
-                            @csrf
-                            @method('DELETE')
-                            
-                            <div class="mb-6">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Confirm your password *</label>
-                                <input type="password" name="password" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                    <div id="delete-modal" class="fixed inset-0 bg-black/50 z-50 p-4 hidden" aria-hidden="true" role="dialog" aria-modal="true">
+                        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full border border-slate-200">
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold text-slate-900 mb-4">{{ __('Are you sure you want to delete your account?') }}</h3>
+                                <p class="text-slate-600 mb-6">{{ __('This action cannot be undone. Please enter your password to confirm.') }}</p>
+                                <form action="{{ route('customer.profile.destroy') }}" method="POST">
+                                    @csrf
+                                    @method('DELETE')
+                                    <div class="mb-6">
+                                        <label class="block text-sm font-semibold text-slate-700 mb-2">{{ __('Password') }}</label>
+                                        <input type="password" name="password" required class="w-full px-4 py-3 rounded-lg border border-primary/10 bg-primary/5 text-slate-900">
+                                        @error('password')
+                                            <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                    <div class="flex justify-end gap-3">
+                                        <button type="button" id="delete-modal-cancel" class="px-4 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">
+                                            {{ __('Cancel') }}
+                                        </button>
+                                        <button type="submit" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">
+                                            {{ __('Delete Account') }}
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
-
-                            <div class="flex items-center justify-end space-x-3">
-                                <button type="button" onclick="document.getElementById('delete-modal').classList.add('hidden')" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                                    Cancel
-                                </button>
-                                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                                    Yes, Delete My Account
-                                </button>
-                            </div>
-                        </form>
+                        </div>
                     </div>
-                </div>
+                </section>
             </div>
         </div>
     </div>
 </div>
 
+<form id="send-verification" method="post" action="{{ route('verification.send') }}" class="hidden">
+    @csrf
+</form>
+
 <script>
-// Preview avatar when selected (without compression to avoid upload issues)
 document.getElementById('avatar').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (file) {
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = function(ev) {
             const preview = document.getElementById('avatar-preview');
-            preview.innerHTML = `<img src="${e.target.result}" alt="Preview" class="w-24 h-24 rounded-full object-cover border-4 border-gray-200">`;
-            
-            // Also update header avatar immediately
-            const headerAvatar = document.querySelector('.header-user-avatar');
-            if (headerAvatar) {
-                headerAvatar.innerHTML = `<img src="${e.target.result}" alt="Avatar" class="w-9 h-9 rounded-full object-cover shadow-md">`;
-            }
-        }
+            preview.outerHTML = '<img id="avatar-preview" src="' + ev.target.result + '" alt="Preview" class="h-full w-full object-cover">';
+        };
         reader.readAsDataURL(file);
     }
 });
 
-// Update header avatar on page load if user has avatar
-document.addEventListener('DOMContentLoaded', function() {
-    const userAvatar = @json(auth()->user()->avatar);
-    if (userAvatar) {
-        const headerAvatar = document.querySelector('.header-user-avatar');
-        if (headerAvatar) {
-            headerAvatar.innerHTML = `<img src="${userAvatar}" alt="Avatar" class="w-9 h-9 rounded-full object-cover shadow-md">`;
-        }
-    }
+document.querySelector('form#profile-form').addEventListener('submit', function() {
+    var btn = this.querySelector('button[type="submit"]');
+    if (btn) { btn.disabled = true; btn.textContent = '{{ __("Saving...") }}'; }
 });
 
-// Show loading overlay when form is submitted
-document.querySelector('form[action="{{ route('customer.profile.update') }}"]').addEventListener('submit', function(e) {
-    // Create loading overlay
-    const overlay = document.createElement('div');
-    overlay.id = 'upload-overlay';
-    overlay.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center';
-    overlay.innerHTML = `
-        <div class="bg-white rounded-xl p-8 shadow-2xl max-w-sm mx-4">
-            <div class="text-center">
-                <svg class="animate-spin h-12 w-12 text-[#005366] mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">Uploading...</h3>
-                <p class="text-sm text-gray-600">Please wait while we update your profile</p>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(overlay);
+var deleteModal = document.getElementById('delete-modal');
+document.getElementById('delete-account-btn').addEventListener('click', function() {
+    deleteModal.classList.remove('hidden');
+    deleteModal.classList.add('flex', 'items-center', 'justify-center');
+    deleteModal.setAttribute('aria-hidden', 'false');
+});
+document.getElementById('delete-modal-cancel').addEventListener('click', function() {
+    deleteModal.classList.add('hidden');
+    deleteModal.classList.remove('flex', 'items-center', 'justify-center');
+    deleteModal.setAttribute('aria-hidden', 'true');
 });
 </script>
 @endsection
-

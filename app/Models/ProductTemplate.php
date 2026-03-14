@@ -13,6 +13,7 @@ class ProductTemplate extends Model
         'category_id',
         'user_id',
         'base_price',
+        'list_price',
         'description',
         'media',
         'allow_customization',
@@ -21,6 +22,7 @@ class ProductTemplate extends Model
 
     protected $casts = [
         'base_price' => 'decimal:2',
+        'list_price' => 'decimal:2',
         'media' => 'array',
         'allow_customization' => 'boolean',
         'customizations' => 'array',

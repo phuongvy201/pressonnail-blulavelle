@@ -12,12 +12,14 @@ class TemplateVariant extends Model
         'variant_name',
         'attributes',
         'price',
+        'list_price',
         'quantity',
         'media'
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'list_price' => 'decimal:2',
         'quantity' => 'integer',
         'media' => 'array',
         'attributes' => 'array',

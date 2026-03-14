@@ -1,0 +1,34 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        if (Schema::hasColumn('shipping_rates', 'is_default')) {
+            return;
+        }
+
+        Schema::table('shipping_rates', function (Blueprint $table) {
+            $table->boolean('is_default')->default(false)->after('is_active');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        if (Schema::hasColumn('shipping_rates', 'is_default')) {
+            Schema::table('shipping_rates', function (Blueprint $table) {
+                $table->dropColumn('is_default');
+            });
+        }
+    }
+};

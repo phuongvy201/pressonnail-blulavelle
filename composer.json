@@ -21,6 +21,7 @@
         "lianlian_acquiring/sdkv3": "^1.0",
         "maatwebsite/excel": "^3.1",
         "paypal/rest-api-sdk-php": "^1.6",
+        "pbmedia/laravel-ffmpeg": "^8.9",
         "spatie/laravel-permission": "^6.21",
         "stripe/stripe-php": "^18.0"
     },

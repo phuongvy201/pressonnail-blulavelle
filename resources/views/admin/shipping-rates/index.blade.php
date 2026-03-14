@@ -49,20 +49,6 @@
                 </select>
             </div>
 
-            <!-- Domain Filter -->
-            <div>
-                <label for="domain" class="block text-sm font-medium text-gray-700 mb-2">Filter by Domain</label>
-                <select name="domain" id="domain" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                    <option value="">All Domains</option>
-                    <option value="null" {{ request('domain') === 'null' ? 'selected' : '' }}>No Domain (General)</option>
-                    @foreach($domains as $domain)
-                    <option value="{{ $domain }}" {{ request('domain') == $domain ? 'selected' : '' }}>
-                        {{ $domain }}
-                    </option>
-                    @endforeach
-                </select>
-            </div>
-
             <!-- Category Filter -->
             <div>
                 <label for="category_id" class="block text-sm font-medium text-gray-700 mb-2">Filter by Category</label>
@@ -107,7 +93,6 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Rate Name</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Domain</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Zone</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Category</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Pricing</th>
@@ -124,29 +109,6 @@
                             <div class="text-sm font-semibold text-gray-900">{{ $rate->name }}</div>
                             @if($rate->description)
                             <div class="text-xs text-gray-500 line-clamp-1">{{ $rate->description }}</div>
-                            @endif
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            @php
-                                $domains = collect($rate->domains ?? []);
-                                if ($rate->domain) {
-                                    $domains->prepend($rate->domain);
-                                }
-                                $domains = $domains->filter()->unique()->values();
-                            @endphp
-
-                            @if($domains->isNotEmpty())
-                                <div class="flex flex-wrap gap-1">
-                                    @foreach($domains as $d)
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
-                                            {{ $d }}
-                            </span>
-                                    @endforeach
-                                </div>
-                            @else
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                                General
-                            </span>
                             @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -219,17 +181,15 @@
                                     </button>
                                 </form>
                             </div>
-                            @elseif($rate->domain)
+                            @else
                             <form action="{{ route('admin.shipping-rates.set-default', $rate) }}" method="POST" class="inline">
                                 @csrf
                                 <button type="submit" 
                                         class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 hover:bg-yellow-100 hover:text-yellow-700 transition-colors"
-                                        onclick="return confirm('Set this rate as default for domain {{ $rate->domain }}?')">
+                                        onclick="return confirm('Set this rate as default for this zone/category?')">
                                     Set Default
                                 </button>
                             </form>
-                            @else
-                            <span class="text-xs text-gray-400">N/A</span>
                             @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

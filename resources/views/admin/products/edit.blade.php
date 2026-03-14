@@ -84,6 +84,17 @@
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
+                    <div>
+                        <label for="list_price" class="block text-sm font-medium text-gray-700 mb-2">List Price (giá niêm yết)</label>
+                        <input type="number" 
+                               id="list_price" 
+                               name="list_price" 
+                               value="{{ old('list_price', $product->list_price) }}"
+                               step="0.01" 
+                               min="0"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Để trống = không hiển thị gạch ngang">
+                    </div>
 
                     <div>
                         <label for="quantity" class="block text-sm font-medium text-gray-700 mb-2">Total Quantity *</label>
@@ -195,6 +206,7 @@
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Variant</th>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Current Price</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">List Price</th>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">New Price</th>
                                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Quantity</th>
                             </tr>
@@ -226,6 +238,15 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span class="text-sm font-medium text-gray-900">${{ number_format($variant->price ?? 0, 2) }}</span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <input type="number" 
+                                           name="variants[{{ $index }}][list_price]" 
+                                           value="{{ old("variants.{$index}.list_price", $variant->list_price) }}"
+                                           step="0.01" 
+                                           min="0"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                           placeholder="—">
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <input type="number" 
@@ -281,7 +302,7 @@
                             @endphp
                             
                             @if($mediaUrl)
-                            <div class="current-media-item relative bg-white rounded-lg border-2 border-gray-200 p-2 cursor-move"
+                            <div class="current-media-item relative bg-white rounded-lg border-2 border-gray-200 p-2 cursor-move group"
                                  draggable="true"
                                  data-media-key="{{ $loop->index }}">
                                 @if(str_contains($mediaUrl, '.mp4') || str_contains($mediaUrl, '.mov') || str_contains($mediaUrl, '.avi'))
@@ -291,9 +312,15 @@
                                         </svg>
                                     </div>
                                 @else
-                                    <img src="{{ $mediaUrl }}" class="w-full aspect-square object-cover rounded-lg">
+                                    <img src="{{ $mediaUrl }}" class="w-full aspect-square object-cover rounded-lg" alt="">
                                 @endif
                                 <input type="hidden" name="current_media_order[]" value="{{ $mediaUrl }}">
+                                <button type="button" 
+                                        onclick="removeCurrentMedia(this)" 
+                                        class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 z-10 opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                                        title="Xóa ảnh này">
+                                    <span class="sr-only">Xóa</span>×
+                                </button>
                             </div>
                             @endif
                         @endforeach
@@ -499,6 +526,13 @@ function updateDescriptionValue() {
     const hiddenInput = document.getElementById('description');
     if (!editor || !hiddenInput) return;
     hiddenInput.value = editor.innerHTML;
+}
+
+function removeCurrentMedia(btn) {
+    const item = btn.closest('.current-media-item');
+    if (item && confirm('Bạn có chắc muốn xóa ảnh này khỏi sản phẩm?')) {
+        item.remove();
+    }
 }
 
 function initCurrentMediaDrag() {

@@ -12,9 +12,12 @@ class PageController extends Controller
      */
     public function show(string $slug)
     {
-        // Redirect shipping-delivery to dedicated route
+        // Redirect to dedicated routes
         if ($slug === 'shipping-delivery') {
             return redirect()->route('shipping-delivery.index');
+        }
+        if ($slug === 'sizing-kit') {
+            return redirect()->route('sizing-kit.index');
         }
 
         $page = Page::where('slug', $slug)

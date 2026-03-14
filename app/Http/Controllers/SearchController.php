@@ -5,62 +5,63 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Collection;
 use App\Models\Shop;
+use App\Services\SearchService;
 use App\Services\TikTokEventsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class SearchController extends Controller
 {
+    public function __construct(
+        protected SearchService $searchService
+    ) {}
+
     /**
-     * Display search results
+     * Display search results (products: name, description, category, variant; multi-word; filter color/shape/size/price; category priority).
      */
     public function index(Request $request)
     {
-        $query = $request->get('q', '');
-        $type = $request->get('type', 'all'); // all, products, collections, shops
+        $query = trim((string) $request->get('q', ''));
+        $type = $request->get('type', 'all');
 
-        // Ensure type is set to 'all' if not provided or empty
         if (empty($type)) {
             $type = 'all';
         }
 
-        // Initialize empty results
+        $filters = [
+            'color' => $request->get('color'),
+            'shape' => $request->get('shape'),
+            'size' => $request->get('size'),
+            'price_min' => $request->get('price_min'),
+            'price_max' => $request->get('price_max'),
+        ];
+
         $products = collect();
         $collections = collect();
         $shops = collect();
         $totalResults = 0;
-        $counts = [
-            'products' => 0,
-            'collections' => 0,
-            'shops' => 0,
-        ];
+        $counts = ['products' => 0, 'collections' => 0, 'shops' => 0];
+        $filterOptions = ['colors' => [], 'shapes' => [], 'sizes' => []];
 
         if (strlen($query) >= 2) {
-            // Search Products (chỉ lấy đủ điều kiện hiển thị)
             if ($type === 'all' || $type === 'products') {
-                $products = Product::with(['template.category', 'shop'])
-                    ->availableForDisplay()
-                    ->where(function ($q) use ($query) {
-                        $q->where('name', 'like', "%{$query}%")
-                            ->orWhere('description', 'like', "%{$query}%")
-                            ->orWhereHas('template', function ($q) use ($query) {
-                                $q->where('name', 'like', "%{$query}%")
-                                    ->orWhere('description', 'like', "%{$query}%");
-                            })
-                            ->orWhereHas('template.category', function ($q) use ($query) {
-                                $q->where('name', 'like', "%{$query}%");
-                            });
-                    })
-                    ->when($type === 'products', function ($q) {
-                        return $q->paginate(12);
-                    }, function ($q) {
-                        return $q->limit(6)->get();
-                    });
-
-                $totalResults += $type === 'products' ? $products->total() : $products->count();
+                $products = $this->searchService->buildProductSearchQuery(
+                    $query,
+                    $filters,
+                    $paginate = ($type === 'products'),
+                    12,
+                    6
+                );
+                if ($type === 'products' && method_exists($products, 'withQueryString')) {
+                    $products->withQueryString();
+                }
+                $counts['products'] = $type === 'products'
+                    ? $products->total()
+                    : $this->searchService->countProducts($query, $filters);
+                $totalResults += $counts['products'];
+                $filterOptions = $this->searchService->getAvailableFilters($query);
             }
 
-            // Search Collections
             if ($type === 'all' || $type === 'collections') {
                 $collections = Collection::with(['shop'])
                     ->active()
@@ -69,60 +70,35 @@ class SearchController extends Controller
                         $q->where('name', 'like', "%{$query}%")
                             ->orWhere('description', 'like', "%{$query}%");
                     })
-                    ->when($type === 'collections', function ($q) {
-                        return $q->paginate(12);
-                    }, function ($q) {
-                        return $q->limit(6)->get();
-                    });
-
+                    ->when($type === 'collections', fn($q) => $q->paginate(12), fn($q) => $q->limit(6)->get());
                 $totalResults += $type === 'collections' ? $collections->total() : $collections->count();
             }
 
-            // Search Shops
             if ($type === 'all' || $type === 'shops') {
                 $shops = Shop::where('shop_status', 'active')
                     ->where(function ($q) use ($query) {
                         $q->where('shop_name', 'like', "%{$query}%")
                             ->orWhere('shop_description', 'like', "%{$query}%");
                     })
-                    ->when($type === 'shops', function ($q) {
-                        return $q->paginate(12);
-                    }, function ($q) {
-                        return $q->limit(6)->get();
-                    });
-
+                    ->when($type === 'shops', fn($q) => $q->paginate(12), fn($q) => $q->limit(6)->get());
                 $totalResults += $type === 'shops' ? $shops->total() : $shops->count();
             }
 
-            // Count results for each type
-            // When type is 'all', need to query actual counts, not just limited results
-            $counts = [
-                'products' => $type === 'products' ? $products->total() : ($type === 'all' ? Product::availableForDisplay()
-                    ->where(function ($q) use ($query) {
-                        $q->where('name', 'like', "%{$query}%")
-                            ->orWhere('description', 'like', "%{$query}%")
-                            ->orWhereHas('template', function ($q) use ($query) {
-                                $q->where('name', 'like', "%{$query}%")
-                                    ->orWhere('description', 'like', "%{$query}%");
-                            })
-                            ->orWhereHas('template.category', function ($q) use ($query) {
-                                $q->where('name', 'like', "%{$query}%");
-                            });
-                    })->count() : 0),
-                'collections' => $type === 'collections' ? $collections->total() : ($type === 'all' ? Collection::active()
-                    ->approved()
+            $counts['collections'] = $type === 'collections'
+                ? $collections->total()
+                : ($type === 'all' ? Collection::active()->approved()
                     ->where(function ($q) use ($query) {
                         $q->where('name', 'like', "%{$query}%")
                             ->orWhere('description', 'like', "%{$query}%");
-                    })->count() : 0),
-                'shops' => $type === 'shops' ? $shops->total() : ($type === 'all' ? Shop::where('shop_status', 'active')
+                    })->count() : 0);
+            $counts['shops'] = $type === 'shops'
+                ? $shops->total()
+                : ($type === 'all' ? Shop::where('shop_status', 'active')
                     ->where(function ($q) use ($query) {
                         $q->where('shop_name', 'like', "%{$query}%")
                             ->orWhere('shop_description', 'like', "%{$query}%");
-                    })->count() : 0),
-            ];
+                    })->count() : 0);
 
-            // Recalculate total results with actual counts when type is 'all'
             if ($type === 'all') {
                 $totalResults = $counts['products'] + $counts['collections'] + $counts['shops'];
             }
@@ -137,7 +113,9 @@ class SearchController extends Controller
             'collections',
             'shops',
             'totalResults',
-            'counts'
+            'counts',
+            'filters',
+            'filterOptions'
         ));
     }
 
@@ -185,69 +163,62 @@ class SearchController extends Controller
     }
 
     /**
-     * API endpoint for search suggestions (autocomplete)
+     * API autocomplete: products (name, description, category, variant), collections, shops; thêm gợi ý cụm từ từ tên sản phẩm.
      */
     public function suggestions(Request $request)
     {
-        $query = $request->get('q', '');
+        $query = trim((string) $request->get('q', ''));
 
         if (strlen($query) < 2) {
-            return response()->json([]);
+            return response()->json(['items' => [], 'phrases' => []]);
         }
 
-        // Get top 5 products (chỉ lấy đủ điều kiện hiển thị)
-        $products = Product::with('template')
-            ->availableForDisplay()
-            ->where(function ($q) use ($query) {
-                $q->where('name', 'like', "%{$query}%")
-                    ->orWhereHas('template', function ($q) use ($query) {
-                        $q->where('name', 'like', "%{$query}%");
-                    });
-            })
-            ->limit(5)
-            ->get()
-            ->map(function ($product) {
-                return [
-                    'type' => 'product',
-                    'name' => $product->name,
-                    'image' => $product->media[0] ?? null,
-                    'price' => $product->price,
-                    'url' => route('products.show', $product->slug)
-                ];
-            });
+        $products = $this->searchService->buildProductSearchQuery($query, [], false, 12, 5);
+        $productItems = collect($products)->map(function ($product) {
+            $media = $product->getEffectiveMedia();
+            $img = null;
+            if (!empty($media)) {
+                $first = $media[0];
+                $img = is_string($first) ? $first : ($first['url'] ?? $first['path'] ?? null);
+            }
+            return [
+                'type' => 'product',
+                'name' => $product->name,
+                'image' => $img,
+                'price' => $product->price ?? $product->base_price ?? 0,
+                'url' => route('products.show', $product->slug),
+            ];
+        });
 
-        // Get top 3 collections
         $collections = Collection::active()
             ->approved()
             ->where('name', 'like', "%{$query}%")
             ->limit(3)
             ->get()
-            ->map(function ($collection) {
-                return [
-                    'type' => 'collection',
-                    'name' => $collection->name,
-                    'image' => $collection->image,
-                    'products_count' => $collection->active_products_count,
-                    'url' => route('collections.show', $collection->slug)
-                ];
-            });
+            ->map(fn($c) => [
+                'type' => 'collection',
+                'name' => $c->name,
+                'image' => $c->image,
+                'products_count' => $c->active_products_count,
+                'url' => route('collections.show', $c->slug),
+            ]);
 
-        // Get top 2 shops
         $shops = Shop::where('shop_status', 'active')
             ->where('shop_name', 'like', "%{$query}%")
             ->limit(2)
             ->get()
-            ->map(function ($shop) {
-                return [
-                    'type' => 'shop',
-                    'name' => $shop->shop_name,
-                    'image' => $shop->shop_logo,
-                    'url' => route('shops.show', $shop->shop_slug)
-                ];
-            });
+            ->map(fn($s) => [
+                'type' => 'shop',
+                'name' => $s->shop_name,
+                'image' => $s->shop_logo,
+                'url' => route('shops.show', $s->shop_slug ?? $s->id),
+            ]);
 
-        $suggestions = $products->concat($collections)->concat($shops);
+        $phrases = $productItems->pluck('name')->unique()->take(5)->values()->all();
 
-        return response()->json($suggestions);
+        return response()->json([
+            'items' => $productItems->concat($collections)->concat($shops)->values()->all(),
+            'phrases' => $phrases,
+        ]);
     }
 }

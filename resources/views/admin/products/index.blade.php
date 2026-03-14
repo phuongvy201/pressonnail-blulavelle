@@ -21,6 +21,7 @@
                 Delete Selected (<span id="selectedCount">0</span>)
             </button>
             
+            @if(($availableGmcConfigs ?? collect())->isNotEmpty())
             <!-- Feed to GMC Button (Hidden by default) -->
             <button id="feedToGMCBtn" onclick="feedToGMC()" 
                     style="display: none;"
@@ -30,6 +31,7 @@
                 </svg>
                 Feed to GMC (<span id="gmcSelectedCount">0</span>)
             </button>
+            @endif
             
             <!-- Export to Meta Button (Hidden by default) -->
             <button id="exportToMetaBtn" onclick="exportToMeta()" 
@@ -443,12 +445,17 @@
                         
                         <!-- Price -->
                         <td class="px-6 py-4 whitespace-nowrap">
+                            @php
+                                $displayPrice = (float) ($product->price ?? $product->template->base_price);
+                                $displayListPrice = (float) ($product->list_price ?? $product->template->list_price ?? 0);
+                                $showListPrice = $displayListPrice > 0 && $displayListPrice > $displayPrice;
+                            @endphp
                             <div class="text-lg font-bold text-green-600">
-                                ${{ number_format($product->price ?? $product->template->base_price, 2) }}
+                                ${{ number_format($displayPrice, 2) }}
                             </div>
-                            @if($product->price && $product->price != $product->template->base_price)
+                            @if($showListPrice)
                                 <p class="text-xs text-gray-500 line-through">
-                                    ${{ number_format($product->template->base_price, 2) }}
+                                    ${{ number_format($displayListPrice, 2) }}
                                 </p>
                             @endif
                         </td>
@@ -844,14 +851,14 @@ function updateBulkDeleteButton() {
     
     if (checkedBoxes.length > 0) {
         bulkDeleteBtn.style.display = 'inline-flex';
-        feedToGMCBtn.style.display = 'inline-flex';
+        if (feedToGMCBtn) feedToGMCBtn.style.display = 'inline-flex';
         exportToMetaBtn.style.display = 'inline-flex';
         selectedCount.textContent = checkedBoxes.length;
         gmcSelectedCount.textContent = checkedBoxes.length;
         metaSelectedCount.textContent = checkedBoxes.length;
     } else {
         bulkDeleteBtn.style.display = 'none';
-        feedToGMCBtn.style.display = 'none';
+        if (feedToGMCBtn) feedToGMCBtn.style.display = 'none';
         exportToMetaBtn.style.display = 'none';
     }
     
@@ -1153,7 +1160,7 @@ function showTargetCountryModal() {
         const availableConfigs = @json($availableGmcConfigs ?? []);
         
         if (availableConfigs.length === 0) {
-            alert('Chưa có cấu hình GMC nào cho domain này. Vui lòng tạo cấu hình GMC trước tại /admin/settings/gmc-config');
+            alert('Chưa có cấu hình GMC nào cho domain này.');
             resolve(null);
             return;
         }

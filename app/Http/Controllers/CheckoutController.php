@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\PromoCode;
 use App\Models\Cart;
 use App\Models\ShippingZone;
 use App\Services\PayPalService;
@@ -12,6 +13,7 @@ use App\Services\ShippingCalculator;
 use App\Services\TikTokEventsService;
 use App\Services\CurrencyService;
 use App\Mail\OrderConfirmation;
+use App\Services\PromoCodeSendService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -77,11 +79,7 @@ class CheckoutController extends Controller
             $currencyRate = $defaultRates[$currency] ?? 1.0;
         }
 
-        // Get current domain to determine country and prioritize default rate
-        $currentDomain = CurrencyService::getCurrentDomain();
-        
-        // Determine country from currency (same logic as cart page)
-        // Priority: currency -> domain name -> default to US
+        // Determine default country from currency
         $currencyToCountry = [
             'USD' => 'US',
             'GBP' => 'GB',
@@ -90,38 +88,7 @@ class CheckoutController extends Controller
             'VND' => 'VN',
             'EUR' => 'DE'
         ];
-        
         $defaultCountry = $currencyToCountry[$currency] ?? 'US';
-        
-        // If domain is available, try to get country from domain name
-        if ($currentDomain) {
-            $domainToCountry = [
-                'mx' => 'MX',
-                'mexico' => 'MX',
-                'us' => 'US',
-                'usa' => 'US',
-                'united-states' => 'US',
-                'gb' => 'GB',
-                'uk' => 'GB',
-                'united-kingdom' => 'GB',
-                'ca' => 'CA',
-                'canada' => 'CA',
-                'vn' => 'VN',
-                'vietnam' => 'VN',
-                'de' => 'DE',
-                'germany' => 'DE',
-                'eu' => 'DE',
-                'europe' => 'DE'
-            ];
-            
-            $domainLower = strtolower($currentDomain);
-            foreach ($domainToCountry as $domainKey => $countryCode) {
-                if (strpos($domainLower, $domainKey) !== false) {
-                    $defaultCountry = $countryCode;
-                    break;
-                }
-            }
-        }
         
         $shippingCost = 0;
         $shippingDetails = session()->get('shipping_details');
@@ -141,8 +108,7 @@ class CheckoutController extends Controller
             });
 
             $calculator = new ShippingCalculator();
-            // Pass domain to prioritize default rate
-            $shippingDetails = $calculator->calculateShipping($items, $defaultCountry, $currentDomain);
+            $shippingDetails = $calculator->calculateShipping($items, $defaultCountry);
 
             if ($shippingDetails['success']) {
                 $shippingCostUSD = $shippingDetails['total_shipping'];
@@ -225,7 +191,26 @@ class CheckoutController extends Controller
             // Currency didn't change, shippingCost is already converted
             $convertedShipping = $shippingCost;
         }
-        $convertedTotal = $convertedSubtotal + $convertedShipping;
+        // Promo code discount (from session – applied on cart page), use final currency
+        $discount = 0.0;
+        $appliedPromoCode = null;
+        $baseSubtotalForPromo = $currency !== 'USD' ? $subtotal / $currencyRate : $subtotal;
+        $promoId = session('applied_promo_code_id');
+        if ($promoId && $baseSubtotalForPromo > 0) {
+            $promo = PromoCode::find($promoId);
+            if ($promo && $promo->isValidForSubtotal($baseSubtotalForPromo)) {
+                $discountUsd = $promo->calculateDiscountUsd($baseSubtotalForPromo);
+                $discount = $currency !== 'USD'
+                    ? CurrencyService::convertFromUSDWithRate($discountUsd, $currency, $currencyRate)
+                    : $discountUsd;
+                $appliedPromoCode = $promo->code;
+            } else {
+                session()->forget(['applied_promo_code_id', 'applied_promo_code']);
+            }
+        }
+
+        $total = $subtotal - $discount + $shippingCost;
+        $convertedTotal = $convertedSubtotal - $discount + $convertedShipping;
 
         // Log shipping calculation for debugging
         Log::info('🚚 CHECKOUT CONTROLLER - Shipping Calculation', [
@@ -251,26 +236,8 @@ class CheckoutController extends Controller
             }])
             ->get();
 
-        // Filter zones by domain and get default zone
         $availableZones = $shippingZones;
-        $defaultZone = null;
-
-        if ($currentDomain && $availableZones->isNotEmpty()) {
-            // Sort zones: domain matching zones first
-            $availableZones = $availableZones->sortBy(function ($zone) use ($currentDomain) {
-                return $zone->domain === $currentDomain ? 0 : 1;
-            });
-
-            // Find default zone for current domain
-            $defaultZone = $availableZones->first(function ($zone) use ($currentDomain) {
-                return $zone->domain === $currentDomain;
-            });
-        }
-
-        // If no default zone found, use first available zone
-        if (!$defaultZone && $availableZones->isNotEmpty()) {
-            $defaultZone = $availableZones->first();
-        }
+        $defaultZone = $availableZones->isNotEmpty() ? $availableZones->first() : null;
 
         $eventItems = collect($products)->map(function ($item) {
             return [
@@ -293,10 +260,12 @@ class CheckoutController extends Controller
 
         return view('checkout.index', compact(
             'products',
-            'cartItems', // Add cartItems for shipping calculation in delivery modal
+            'cartItems',
             'subtotal',
             'shippingCost',
             'taxAmount',
+            'discount',
+            'appliedPromoCode',
             'total',
             'currency',
             'currencyRate',
@@ -306,7 +275,6 @@ class CheckoutController extends Controller
             'shippingDetails',
             'shippingZones',
             'availableZones',
-            'currentDomain',
             'defaultZone',
             'defaultCountry'
         ));
@@ -590,7 +558,22 @@ class CheckoutController extends Controller
                 ? CurrencyService::convertFromUSDWithRate($tipAmount, $orderCurrency, $currencyRate)
                 : $tipAmount;
 
-            $total = $subtotal + $shippingCost + $convertedTipAmount;
+            // Promo discount (same session as cart)
+            $orderDiscount = 0.0;
+            $orderPromoCode = null;
+            $promoId = session('applied_promo_code_id');
+            if ($promoId && $baseSubtotalUSD > 0) {
+                $promo = PromoCode::find($promoId);
+                if ($promo && $promo->isValidForSubtotal($baseSubtotalUSD)) {
+                    $discountUsd = $promo->calculateDiscountUsd($baseSubtotalUSD);
+                    $orderDiscount = $orderCurrency !== 'USD'
+                        ? CurrencyService::convertFromUSDWithRate($discountUsd, $orderCurrency, $currencyRate)
+                        : $discountUsd;
+                    $orderPromoCode = $promo->code;
+                }
+            }
+
+            $total = $subtotal - $orderDiscount + $shippingCost + $convertedTipAmount;
 
             // Log freeship application and currency conversion for debugging
             Log::info('🚚 CHECKOUT PROCESS - Shipping & Currency Conversion', [
@@ -647,6 +630,8 @@ class CheckoutController extends Controller
                 'country' => $request->country,
                 'subtotal' => $subtotal, // Already in order currency
                 'tax_amount' => $taxAmount,
+                'discount_amount' => $orderDiscount,
+                'promo_code' => $orderPromoCode,
                 'shipping_cost' => $shippingCost, // Converted to order currency
                 'tip_amount' => $convertedTipAmount, // Converted to order currency
                 'total_amount' => $total, // All in order currency
@@ -656,6 +641,11 @@ class CheckoutController extends Controller
                 'payment_method' => $request->payment_method,
                 'notes' => $request->notes,
             ]);
+
+            if ($orderPromoCode && $promoId) {
+                PromoCode::where('id', $promoId)->increment('used_count');
+                session()->forget(['applied_promo_code_id', 'applied_promo_code']);
+            }
 
             $this->trackTikTokCheckoutEvent(
                 $request,
@@ -1587,6 +1577,11 @@ class CheckoutController extends Controller
     {
         $order = Order::with(['items.product'])->where('order_number', $orderNumber)->firstOrFail();
 
+        // Gửi email promo "thank you" (mỗi đơn chỉ gửi 1 lần)
+        if ($order->customer_email) {
+            app(PromoCodeSendService::class)->sendThankYouIfNotSent($order->customer_email, $order);
+        }
+
         // Get currency and rate for display
         $currency = $order->currency ?? CurrencyService::getCurrencyForDomain() ?? 'USD';
         $currencyRate = CurrencyService::getCurrencyRateForDomain();
@@ -1751,6 +1746,67 @@ class CheckoutController extends Controller
             // Fallback: return error or HTML
             return back()->with('error', 'Failed to generate PDF receipt. Please try again.');
         }
+    }
+
+    /**
+     * Show order receipt as HTML page (view/print in browser).
+     */
+    public function showReceipt($orderNumber)
+    {
+        $order = Order::with(['items.product'])->where('order_number', $orderNumber)->firstOrFail();
+        $country = $order->country ?? 'US';
+        $locale = $this->getLocaleFromCountry($country);
+        $currency = $order->currency ?? CurrencyService::getCurrencyForDomain() ?? 'USD';
+        $currencyRate = CurrencyService::getCurrencyRateForDomain();
+
+        if (!$currencyRate || $currencyRate == 1.0) {
+            $defaultRates = ['USD' => 1.0, 'GBP' => 0.79, 'EUR' => 0.92, 'CAD' => 1.35, 'AUD' => 1.52, 'JPY' => 150.0, 'CNY' => 7.2, 'HKD' => 7.8, 'SGD' => 1.34];
+            $currencyRate = $defaultRates[$currency] ?? 1.0;
+        }
+
+        $orderCurrency = $order->currency ?? 'USD';
+        if ($currency === $orderCurrency) {
+            $convertedSubtotal = $order->subtotal;
+            $convertedShipping = $order->shipping_cost;
+            $convertedTax = $order->tax_amount;
+            $convertedTip = $order->tip_amount;
+            $convertedTotal = $order->total_amount;
+        } else {
+            $orderCurrencyRate = CurrencyService::getCurrencyRateForDomain() ?? 1.0;
+            if ($orderCurrency !== 'USD' && $orderCurrencyRate != 1.0) {
+                $subtotalUSD = $order->subtotal / $orderCurrencyRate;
+                $shippingUSD = $order->shipping_cost / $orderCurrencyRate;
+                $taxUSD = $order->tax_amount / $orderCurrencyRate;
+                $tipUSD = $order->tip_amount / $orderCurrencyRate;
+                $totalUSD = $order->total_amount / $orderCurrencyRate;
+            } else {
+                $subtotalUSD = $order->subtotal;
+                $shippingUSD = $order->shipping_cost;
+                $taxUSD = $order->tax_amount;
+                $tipUSD = $order->tip_amount;
+                $totalUSD = $order->total_amount;
+            }
+            $convertedSubtotal = $currency !== 'USD' ? CurrencyService::convertFromUSDWithRate($subtotalUSD, $currency, $currencyRate) : $subtotalUSD;
+            $convertedShipping = $currency !== 'USD' ? CurrencyService::convertFromUSDWithRate($shippingUSD, $currency, $currencyRate) : $shippingUSD;
+            $convertedTax = $currency !== 'USD' ? CurrencyService::convertFromUSDWithRate($taxUSD, $currency, $currencyRate) : $taxUSD;
+            $convertedTip = $currency !== 'USD' ? CurrencyService::convertFromUSDWithRate($tipUSD, $currency, $currencyRate) : $tipUSD;
+            $convertedTotal = $currency !== 'USD' ? CurrencyService::convertFromUSDWithRate($totalUSD, $currency, $currencyRate) : $totalUSD;
+        }
+
+        app()->setLocale($locale);
+
+        return view('checkout.receipt', [
+            'order' => $order,
+            'country' => $country,
+            'locale' => $locale,
+            'currency' => $currency,
+            'currencyRate' => $currencyRate,
+            'convertedSubtotal' => $convertedSubtotal,
+            'convertedShipping' => $convertedShipping,
+            'convertedTax' => $convertedTax,
+            'convertedTip' => $convertedTip,
+            'convertedTotal' => $convertedTotal,
+        ]);
     }
 
     /**
@@ -2098,11 +2154,8 @@ class CheckoutController extends Controller
             });
         }
 
-        // Calculate shipping
-        // Get current domain to prioritize rates for this domain
-        $currentDomain = \App\Services\CurrencyService::getCurrentDomain();
         $calculator = new ShippingCalculator();
-        $shippingResult = $calculator->calculateShipping($items, $request->country, $currentDomain);
+        $shippingResult = $calculator->calculateShipping($items, $request->country);
 
         if (!$shippingResult['success']) {
             return response()->json([
@@ -2184,12 +2237,9 @@ class CheckoutController extends Controller
             ], 400);
         }
 
-        // Get domain, currency and rate
-        $currentDomain = CurrencyService::getCurrentDomain();
         $currency = CurrencyService::getCurrencyForDomain();
         $currencyRate = CurrencyService::getCurrencyRateForDomain() ?? 1.0;
 
-        // Find shipping zone from country
         $zone = ShippingZone::findByCountry($request->country);
         if (!$zone) {
             return response()->json([
@@ -2198,7 +2248,6 @@ class CheckoutController extends Controller
             ], 400);
         }
 
-        // Calculate total items and value for checking applicability
         $totalItems = $cartItems->sum('quantity');
         $totalValue = 0;
         foreach ($cartItems as $item) {
@@ -2206,22 +2255,10 @@ class CheckoutController extends Controller
             $totalValue += $priceInUSD * $item->quantity;
         }
 
-        // Get all shipping rates for this domain and zone
-        // If no domain, get rates without domain filter as fallback
-        $rateQuery = \App\Models\ShippingRate::active()
-            ->where('shipping_zone_id', $zone->id);
-        
-        if ($currentDomain) {
-            $rateQuery->where(function ($q) use ($currentDomain) {
-                $q->forDomain($currentDomain)
-                    ->orWhere(function ($q2) {
-                        $q2->whereNull('domain')
-                            ->orWhereNull('domains');
-                    });
-            });
-        }
-        
-        $allRates = $rateQuery->ordered()->get();
+        $allRates = \App\Models\ShippingRate::active()
+            ->where('shipping_zone_id', $zone->id)
+            ->ordered()
+            ->get();
 
         // Filter rates by applicability and prepare response
         $applicableRates = [];
