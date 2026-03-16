@@ -4,7 +4,7 @@
 
 /* Auth pages gradient (built via Vite) */
 .gradient-bg {
-    background: linear-gradient(180deg, #055164 0%, #E0F2FE 100%);
+    background: linear-gradient(180deg, #F0427C 0%, #fce7ec 100%);
 }
 
 /* Product detail page - dropdown Size/Shape */
@@ -24,7 +24,7 @@
     .size-badge {
         @apply flex flex-col items-center justify-center py-2 px-2.5 rounded-lg cursor-pointer transition-all duration-200;
         @apply border border-slate-200 bg-slate-50/80 text-slate-700;
-        @apply hover:border-[#f0427c]/40 hover:bg-pink-50/50;
+        @apply hover:border-[#F0427C]/40 hover:bg-pink-50/50;
         min-height: 2.5rem;
         width: max-content;
         min-width: 2.25rem;
@@ -36,11 +36,11 @@
         @apply text-[9px] text-slate-500 mt-0.5 leading-tight text-center whitespace-nowrap;
     }
     .size-badge.active {
-        @apply border-[#f0427c] bg-[#fce7ef] text-[#f0427c];
-        box-shadow: 0 0 0 1px rgba(240, 66, 124, 0.15);
+        @apply border-[#F0427C] bg-[#fce7ef] text-[#F0427C];
+        box-shadow: 0 0 0 1px rgba(251, 123, 124, 0.15);
     }
     .size-badge.active .size-label {
-        @apply text-[#c71e54] font-semibold;
+        @apply text-[#d6386a] font-semibold;
     }
     .size-badge.active .size-mm {
         @apply text-slate-600;
@@ -48,17 +48,17 @@
     .shape-button {
         @apply flex items-center gap-2 py-2 px-2.5 rounded-lg cursor-pointer transition-all duration-200;
         @apply border border-slate-200 bg-slate-50/80;
-        @apply hover:border-[#f0427c]/40 hover:bg-pink-50/50;
+        @apply hover:border-[#F0427C]/40 hover:bg-pink-50/50;
     }
     .shape-button .shape-icon-wrap {
         @apply size-7 rounded-md bg-white border border-slate-100 flex items-center justify-center shrink-0;
     }
     .shape-button.active {
-        @apply border-[#f0427c] bg-[#fce7ef];
-        box-shadow: 0 0 0 1px rgba(240, 66, 124, 0.15);
+        @apply border-[#F0427C] bg-[#fce7ef];
+        box-shadow: 0 0 0 1px rgba(251, 123, 124, 0.15);
     }
     .shape-button.active .shape-icon-wrap {
-        @apply border-[#f0427c]/30 bg-[#fce7ef];
+        @apply border-[#F0427C]/30 bg-[#fce7ef];
     }
     /* Nail shape chỉ chữ, không icon */
     .shape-button-text {

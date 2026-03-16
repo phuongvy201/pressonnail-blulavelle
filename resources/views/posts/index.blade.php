@@ -4,7 +4,7 @@
 
 @section('content')
 <!-- Blog Header -->
-<div class="bg-gradient-to-r from-[#005366] to-[#003d4d] text-white">
+<div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div class="text-center">
             <h1 class="text-4xl md:text-5xl font-bold mb-4">Our Blog</h1>
@@ -35,7 +35,7 @@
                             <option value="popular" {{ request('sort') == 'popular' ? 'selected' : '' }}>Most Viewed</option>
                             <option value="trending" {{ request('sort') == 'trending' ? 'selected' : '' }}>Trending</option>
                         </select>
-                        <button type="submit" class="px-6 py-2 bg-[#005366] text-white rounded-lg hover:bg-[#003d4d] transition">
+                        <button type="submit" class="px-6 py-2 bg-[#F0427C] text-white rounded-lg hover:bg-[#d6386a] transition">
                             Apply
                         </button>
                     </form>
@@ -76,7 +76,7 @@
 
                                         <div class="flex items-center space-x-3 text-sm text-gray-500 mb-3">
                                             @if($post->category)
-                                                <a href="{{ route('blog.category', $post->category->slug) }}" class="text-[#005366] hover:text-[#003d4d] font-semibold">
+                                                <a href="{{ route('blog.category', $post->category->slug) }}" class="text-[#F0427C] hover:text-[#d6386a] font-semibold">
                                                     {{ $post->category->name }}
                                                 </a>
                                             @endif
@@ -115,7 +115,7 @@
                                                 </span>
                                             </div>
 
-                                            <a href="{{ route('blog.show', $post->slug) }}" class="text-[#005366] hover:text-[#003d4d] font-semibold text-sm flex items-center">
+                                            <a href="{{ route('blog.show', $post->slug) }}" class="text-[#F0427C] hover:text-[#d6386a] font-semibold text-sm flex items-center">
                                                 Read More
                                                 <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>

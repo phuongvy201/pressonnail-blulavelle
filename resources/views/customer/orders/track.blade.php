@@ -49,7 +49,7 @@
                     </div>
 
                     <button type="submit" 
-                            class="w-full px-6 py-4 bg-[#005366] text-white font-bold rounded-lg hover:bg-[#003d4d] transition shadow-lg hover:shadow-xl">
+                            class="w-full px-6 py-4 bg-[#F0427C] text-white font-bold rounded-lg hover:bg-[#d6386a] transition shadow-lg hover:shadow-xl">
                         Track Order
                     </button>
                 </form>
@@ -201,7 +201,7 @@
                 <!-- Track Another Order -->
                 <div class="text-center">
                     <a href="{{ route('orders.track') }}" 
-                       class="inline-flex items-center text-[#005366] hover:text-[#003d4d] transition">
+                       class="inline-flex items-center text-[#F0427C] hover:text-[#d6386a] transition">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                         </svg>

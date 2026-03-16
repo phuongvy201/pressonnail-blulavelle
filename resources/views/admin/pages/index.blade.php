@@ -6,7 +6,7 @@
 <div class="p-6">
     <div class="flex items-center justify-between mb-6">
         <h1 class="text-3xl font-bold text-gray-900">Pages</h1>
-        <a href="{{ route('admin.pages.create') }}" class="px-6 py-3 bg-[#005366] text-white rounded-lg hover:bg-[#003d4d] transition">
+        <a href="{{ route('admin.pages.create') }}" class="px-6 py-3 bg-[#F0427C] text-white rounded-lg hover:bg-[#d6386a] transition">
             + New Page
         </a>
     </div>

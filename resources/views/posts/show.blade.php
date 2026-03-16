@@ -32,7 +32,7 @@
         </div>
     </div>
 @else
-    <div class="bg-gradient-to-r from-[#005366] to-[#003d4d] text-white py-16">
+    <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white py-16">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             @if($post->category)
                 <a href="{{ route('blog.category', $post->category->slug) }}" class="inline-block px-3 py-1 bg-white/20 text-white text-sm font-semibold rounded-full mb-4">

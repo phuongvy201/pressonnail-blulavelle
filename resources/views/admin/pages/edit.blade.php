@@ -139,7 +139,7 @@
                 <a href="{{ route('admin.pages.index') }}" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
                     Cancel
                 </a>
-                <button type="submit" class="px-6 py-2 bg-[#005366] text-white rounded-lg hover:bg-[#003d4d]">
+                <button type="submit" class="px-6 py-2 bg-[#F0427C] text-white rounded-lg hover:bg-[#d6386a]">
                     Update Page
                 </button>
             </div>

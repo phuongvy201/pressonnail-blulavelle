@@ -834,7 +834,7 @@ function buildEditCartModalContent(cartItem) {
             <!-- Action Buttons -->
             <div class="flex gap-3 pt-4">
                 <button onclick="saveCartChanges(${cartItem.id})" 
-                        class="flex-1 bg-[#005366] hover:bg-[#003d4d] text-white font-bold py-3 rounded-xl transition-colors">
+                        class="flex-1 bg-[#F0427C] hover:bg-[#d6386a] text-white font-bold py-3 rounded-xl transition-colors">
                     Save Changes
                 </button>
                 <button onclick="closeEditCartModal()" 

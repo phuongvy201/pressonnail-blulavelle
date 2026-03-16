@@ -5,7 +5,7 @@
 
 @section('content')
 <!-- Page Header -->
-<div class="bg-gradient-to-r from-[#005366] to-[#003d4d] text-white py-16">
+<div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white py-16">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <h1 class="text-4xl md:text-5xl font-bold mb-4">{{ $page->title }}</h1>
         @if($page->excerpt)

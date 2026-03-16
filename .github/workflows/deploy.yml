@@ -1,4 +1,4 @@
-name: Deploy to EC2
+name: Deploy Laravel to EC2
 
 on:
   push:
@@ -10,59 +10,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source code
-        uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Setup SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H 3.107.252.204 >> ~/.ssh/known_hosts
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, bcmath, zip, intl, gd
 
-      - name: Deploy to EC2
-        run: |
-          ssh -i ~/.ssh/id_ed25519 ec2-user@3.107.252.204 << 'EOF'
-            set -e
+      - name: Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction
 
-            PROJECT_PATH=/var/www/html
-            WEB_USER=nginx
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user   # ⚠️ ghi thẳng luôn cho chắc
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            cd /var/www/blulavelle
 
-            cd $PROJECT_PATH
-
-            # 🔧 Fix dubious ownership
-            git config --global --add safe.directory $PROJECT_PATH
-
-            # 🔑 Fix ownership
-            echo "🔑 Fixing ownership (ec2-user:nginx)..."
-            sudo chown -R ec2-user:$WEB_USER $PROJECT_PATH
-
-            # 🔄 Pull latest code
-            echo "🔄 Pulling latest code..."
-            git fetch origin main
+            git fetch origin
             git reset --hard origin/main
 
-            # 📦 Composer install
-            echo "📦 Installing dependencies..."
             composer install --no-dev --optimize-autoloader --no-interaction
 
-            # 🗄 Run migrations
-            echo "🗄 Running migrations..."
             php artisan migrate --force
-
-            # 🧹 Optimize cache
-            echo "🧹 Clearing & optimizing cache..."
-            php artisan optimize:clear
+            php artisan config:clear
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
             php artisan optimize
-
-            # 🔐 Fix permissions
-            echo "🔐 Fixing storage permissions..."
-            sudo chmod -R 775 $PROJECT_PATH/storage $PROJECT_PATH/bootstrap/cache
-
-            # 🚀 Restart services
-            echo "🚀 Restarting services..."
+            
+            sudo chown -R nginx:nginx storage bootstrap/cache
+            sudo chmod -R 775 storage bootstrap/cache
+            
             sudo systemctl restart php-fpm
             sudo systemctl restart nginx
-
-            echo "✅ Deployment completed successfully!"
-          EOF

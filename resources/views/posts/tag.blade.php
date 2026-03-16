@@ -3,7 +3,7 @@
 @section('title', 'Tag: ' . $tag->name)
 
 @section('content')
-<div class="bg-gradient-to-r from-[#005366] to-[#003d4d] text-white py-16">
+<div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white py-16">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <div class="inline-flex items-center px-6 py-3 bg-white/20 rounded-full text-2xl font-bold mb-4">
             #{{ $tag->name }}

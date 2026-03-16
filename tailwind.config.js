@@ -3,6 +3,7 @@ import forms from "@tailwindcss/forms";
 
 /** @type {import('tailwindcss').Config} */
 export default {
+    darkMode: false, /* dark theme disabled - only light */
     content: [
         "./vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php",
         "./storage/framework/views/*.php",
@@ -14,7 +15,7 @@ export default {
         "./resources/js/**/*.tsx",
     ],
 
-    // Safelist các class dùng cho layout sticky sidebar (đã có sẵn, giữ nguyên)
+    // Safelist các class dùng cho layout sticky sidebar + màu hồng từ nội dung page (DB)
     safelist: [
         'flex-1',
         'min-h-0',
@@ -26,7 +27,13 @@ export default {
         'lg:top-4',
         'lg:top-10',
         'lg:self-start',
-        // Nếu bạn dùng thêm class nào khác cho sticky, có thể bổ sung ở đây
+        // Màu hồng trong PageSeeder (HTML lưu DB → safelist từng class arbitrary value)
+        'bg-[#F0427C]', 'bg-[#d6386a]', 'text-[#F0427C]', 'text-[#d6386a]', 'text-pink-700', 'text-pink-800',
+        'border-[#F0427C]', 'border-l-4', 'border-2', 'border-pink-200', 'border-pink-300',
+        'from-[#F0427C]', 'to-[#d6386a]', 'via-[#f89192]',
+        'hover:bg-[#d6386a]', 'hover:text-[#d6386a]', 'hover:underline',
+        'bg-gradient-to-r', 'bg-gradient-to-br',
+        'shadow-md', 'shadow-lg', 'shadow-xl', 'shadow-2xl', 'transition', 'duration-200',
     ],
 
     theme: {
@@ -36,9 +43,8 @@ export default {
                 display: ["Plus Jakarta Sans", ...defaultTheme.fontFamily.sans],
             },
             colors: {
-                primary: "#f0427c",
+                primary: "#F0427C",
                 "background-light": "#f8f6f6",
-                "background-dark": "#221016",
             },
             borderRadius: {
                 DEFAULT: "0.25rem",

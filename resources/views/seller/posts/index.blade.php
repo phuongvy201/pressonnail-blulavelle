@@ -30,7 +30,7 @@
                 </p>
             @endif
         </div>
-        <a href="{{ route('admin.posts.create') }}" class="px-6 py-3 bg-[#005366] text-white rounded-lg hover:bg-[#003d4d] transition">
+        <a href="{{ route('admin.posts.create') }}" class="px-6 py-3 bg-[#F0427C] text-white rounded-lg hover:bg-[#d6386a] transition">
             + New Post
         </a>
     </div>

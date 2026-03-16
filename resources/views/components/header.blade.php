@@ -540,7 +540,7 @@
                             // Add "View all results" link
                             html += `
                                 <div class="border-t border-gray-200 mt-2 pt-2">
-                                    <a href="{{ route('search') }}?q=${encodeURIComponent(query)}" class="block text-center text-sm text-[#005366] hover:text-[#003d4d] font-semibold p-3 hover:bg-gray-50 rounded-xl transition-colors">
+                                    <a href="{{ route('search') }}?q=${encodeURIComponent(query)}" class="block text-center text-sm text-[#F0427C] hover:text-[#d6386a] font-semibold p-3 hover:bg-gray-50 rounded-xl transition-colors">
                                         View all results for "${query}"
                                     </a>
                                 </div>

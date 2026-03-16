@@ -137,7 +137,7 @@
                 Cancel
             </a>
             <button type="submit" 
-                    class="bg-[#005366] hover:bg-[#003d4d] text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+                    class="bg-[#F0427C] hover:bg-[#d6386a] text-white px-8 py-3 rounded-lg font-semibold transition-colors">
                 Create Category
             </button>
         </div>
