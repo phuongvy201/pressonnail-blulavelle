@@ -29,23 +29,20 @@ jobs:
           username: ec2-user   # ⚠️ ghi thẳng luôn cho chắc
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
-          script: |
-            cd /var/www/blulavelle
+         script: |
+  cd /var/www/blulavelle
 
-            git fetch origin
-            git reset --hard origin/main
+  git fetch origin
+  git reset --hard origin/main
 
-            composer install --no-dev --optimize-autoloader --no-interaction
+  composer install --no-dev --optimize-autoloader --no-interaction
 
-            php artisan migrate --force
-            php artisan config:clear
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
-            php artisan optimize
-            
-            sudo chown -R nginx:nginx storage bootstrap/cache
-            sudo chmod -R 775 storage bootstrap/cache
-            
-            sudo systemctl restart php-fpm
-            sudo systemctl restart nginx
+  php artisan migrate --force
+  php artisan optimize:clear
+  php artisan optimize
+
+  sudo chown -R nginx:nginx storage bootstrap/cache
+  sudo chmod -R 775 storage bootstrap/cache
+
+  sudo systemctl restart php-fpm
+  sudo systemctl reload nginx
