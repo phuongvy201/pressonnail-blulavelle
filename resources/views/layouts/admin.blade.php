@@ -82,8 +82,8 @@
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
                             <div class="w-10 h-10 overflow-hidden">
-                                <img src="{{ asset('images/logo nhỏ.png') }}" 
-                                     alt="Bluprinter Logo" 
+                                <img src="{{ asset('storage/images/logo (3).png') }}" 
+                                     alt="Blu Lavelle Logo" 
                                      class="w-full h-full object-contain"
                                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                 <!-- Fallback SVG if image fails to load -->
@@ -445,8 +445,8 @@
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
                         <div class="w-8 h-8 overflow-hidden">
-                            <img src="{{ asset('images/logo nhỏ.png') }}" 
-                                 alt="Bluprinter Logo" 
+                            <img src="{{ asset('storage/images/logo (3).png') }}" 
+                                 alt="Blu Lavelle Logo" 
                                  class="w-full h-full object-contain"
                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                             <!-- Fallback SVG if image fails to load -->

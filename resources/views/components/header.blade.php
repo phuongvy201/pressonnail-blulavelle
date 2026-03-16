@@ -1,17 +1,14 @@
 <!-- Header Component - Responsive: logo + nav + search + cart + user -->
-<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-primary/10 px-3 sm:px-6 lg:px-20 py-3 sm:py-4 lg:py-5 bg-background-light sticky top-0 z-50">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-primary/10 px-3 sm:px-6 lg:px-20 sm:py-1.5 bg-background-light sticky top-0 z-50">
     <div class="flex items-center gap-4 sm:gap-6 lg:gap-12 w-full min-w-0">
         <!-- Logo -->
-        <a href="{{ route('home') }}" class="flex items-center gap-2 sm:gap-3 md:gap-4 text-primary flex-shrink-0">
-            <div class="w-9 h-9 sm:w-11 sm:h-11 md:w-12 md:h-12 overflow-hidden rounded flex items-center justify-center">
-                <img src="{{ asset('images/logo nhỏ.png') }}" alt="Bluprinter" class="w-full h-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <a href="{{ route('home') }}" class="flex items-center flex-shrink-0 -my-1">
+            <div class="w-28 h-28 sm:w-24 sm:h-24 md:w-28 md:h-28 overflow-hidden rounded flex items-center justify-center">
+                <img src="{{ asset('storage/images/logo (3).png') }}" alt="Blu Lavelle" class="w-full h-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                 <div class="w-full h-full flex items-center justify-center text-primary" style="display: none;">
                     <svg class="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
                 </div>
             </div>
-            <h2 class="text-slate-900 text-lg sm:text-xl md:text-2xl font-extrabold leading-tight tracking-tight truncate">
-                <span class="text-primary">Blu</span>lavelle
-            </h2>
         </a>
 
         <!-- Desktop/MD Nav -->

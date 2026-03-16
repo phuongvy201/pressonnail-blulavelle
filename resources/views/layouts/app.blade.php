@@ -166,9 +166,6 @@
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
-    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    <link rel="apple-touch-icon" href="{{ asset('favicon.png') }}">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -353,10 +350,10 @@
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
                     {{-- Col 1: Logo, About, Operating entities, Follow us, Buttons, Badges --}}
                     <div class="lg:col-span-5 space-y-6">
-                        <div class="flex items-center gap-2">
-                            <span class="w-9 h-9 rounded-lg bg-primary flex items-center justify-center text-white font-black text-lg">P</span>
+                        <div class="flex items-center gap-3">
+                            <img src="{{ asset('storage/images/logo (3).png') }}" alt="Blu Lavelle" class="h-16 w-auto object-contain">
                             <div>
-                                <h2 class="text-xl font-black text-white tracking-tight">Blulavelle</h2>
+                                <h2 class="text-xl font-black text-white tracking-tight">Blu <span class="text-primary">lavelle</span></h2>
                                 <p class="text-xs text-slate-400">spice up your life</p>
                             </div>
                         </div>
