@@ -87,7 +87,7 @@
                     </div>
 
                     <div class="flex space-x-2">
-                        <button type="submit" class="flex-1 px-4 py-2 bg-[#F0427C] text-white rounded-lg hover:bg-[#d6386a] text-sm">
+                        <button type="submit" class="flex-1 px-4 py-2 bg-[#0297FE] text-white rounded-lg hover:bg-[#d6386a] text-sm">
                             Update Post
                         </button>
                         <a href="{{ route('admin.posts.index') }}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">

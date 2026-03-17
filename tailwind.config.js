@@ -3,19 +3,20 @@ import forms from "@tailwindcss/forms";
 
 /** @type {import('tailwindcss').Config} */
 export default {
-    darkMode: false, /* dark theme disabled - only light */
     content: [
         "./vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php",
         "./storage/framework/views/*.php",
         "./resources/views/**/*.blade.php",
         "./app/Filament/**/*.php",
+        // Page content seeding (HTML strings contain Tailwind classes)
+        "./database/seeders/**/*.php",
         "./resources/js/**/*.js",
         "./resources/js/**/*.jsx",
         "./resources/js/**/*.ts",
         "./resources/js/**/*.tsx",
     ],
 
-    // Safelist các class dùng cho layout sticky sidebar + màu hồng từ nội dung page (DB)
+    // Safelist các class dùng cho layout sticky sidebar + class trong nội dung page (DB)
     safelist: [
         'flex-1',
         'min-h-0',
@@ -27,11 +28,10 @@ export default {
         'lg:top-4',
         'lg:top-10',
         'lg:self-start',
-        // Màu hồng trong PageSeeder (HTML lưu DB → safelist từng class arbitrary value)
-        'bg-[#F0427C]', 'bg-[#d6386a]', 'text-[#F0427C]', 'text-[#d6386a]', 'text-pink-700', 'text-pink-800',
-        'border-[#F0427C]', 'border-l-4', 'border-2', 'border-pink-200', 'border-pink-300',
-        'from-[#F0427C]', 'to-[#d6386a]', 'via-[#f89192]',
-        'hover:bg-[#d6386a]', 'hover:text-[#d6386a]', 'hover:underline',
+        // Brand primary (#0195FE) + helpers often used in seeded HTML
+        'bg-[#0195FE]', 'text-[#0195FE]', 'border-[#0195FE]',
+        'from-[#0195FE]', 'via-[#0195FE]', 'to-[#0195FE]',
+        'hover:bg-[#0195FE]', 'hover:text-[#0195FE]', 'hover:underline',
         'bg-gradient-to-r', 'bg-gradient-to-br',
         'shadow-md', 'shadow-lg', 'shadow-xl', 'shadow-2xl', 'transition', 'duration-200',
     ],
@@ -43,7 +43,7 @@ export default {
                 display: ["Plus Jakarta Sans", ...defaultTheme.fontFamily.sans],
             },
             colors: {
-                primary: "#F0427C",
+                primary: "#0195FE",
                 "background-light": "#f8f6f6",
             },
             borderRadius: {

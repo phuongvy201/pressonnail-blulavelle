@@ -2,10 +2,18 @@
     'title' => 'Over 50,000+ Happy Customers',
     'rating' => '4.8/5',
     'reviews' => null,
+    'bgColor' => null,
 ])
 @php
     $perSlide = 3;
     $totalToLoad = 9;
+    $bgSetting = \App\Support\Settings::get('theme.testimonials_bg', null);
+    $bgCustom = null;
+    if (is_string($bgColor) && (str_starts_with(trim($bgColor), '#') || str_starts_with(trim($bgColor), 'rgb'))) {
+        $bgCustom = trim($bgColor);
+    } elseif (is_string($bgSetting) && (str_starts_with(trim($bgSetting), '#') || str_starts_with(trim($bgSetting), 'rgb'))) {
+        $bgCustom = trim($bgSetting);
+    }
     if (!isset($reviews)) {
         $pinned = \App\Models\Review::approved()->pinnedToHome()->orderByDesc('created_at')->limit($totalToLoad)->get();
         if ($pinned->count() >= $totalToLoad) {
@@ -20,7 +28,7 @@
         $reviewsSlides = $reviews->chunk($perSlide)->values();
     }
 @endphp
-<section {{ $attributes->merge(['class' => 'px-4 sm:px-6 lg:px-20 py-16 sm:py-20 md:py-24 bg-white']) }}>
+<section {{ $attributes->merge(['class' => 'px-4 sm:px-6 lg:px-20 py-16 sm:py-20 md:py-24 bg-white']) }} @if($bgCustom) style="background-color: {{ $bgCustom }};" @endif>
     <div class="max-w-7xl mx-auto text-center">
         <div class="flex justify-center text-primary mb-2">
             @for($i = 0; $i < 5; $i++)

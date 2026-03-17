@@ -4,9 +4,20 @@
 @section('meta_description', $page->meta_description ?? $page->excerpt)
 
 @section('content')
+@php
+    // If page content already includes its own Tailwind layout (seeded pages),
+    // don't wrap it in an extra narrow container/card/prose.
+    $content = (string) ($page->content ?? '');
+    $hasOwnLayout =
+        str_contains($content, 'max-w-') ||
+        str_contains($content, 'mx-auto') ||
+        str_contains($content, 'bg-gradient') ||
+        str_contains($content, 'rounded-') ||
+        str_contains($content, 'shadow-');
+@endphp
 <!-- Page Header -->
-<div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white py-16">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+<div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] text-white py-16">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-12 2xl:px-20 text-center">
         <h1 class="text-4xl md:text-5xl font-bold mb-4">{{ $page->title }}</h1>
         @if($page->excerpt)
             <p class="text-xl text-gray-100">{{ $page->excerpt }}</p>
@@ -31,18 +42,26 @@
 
 <!-- Page Content -->
 <div class="bg-gray-50 py-12">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="bg-white rounded-2xl shadow-sm p-8 md:p-12">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-12 2xl:px-20">
+        @if(!$hasOwnLayout)
+            <div class="bg-white rounded-2xl shadow-sm p-8 md:p-12">
+        @endif
             @if($page->featured_image)
                 <div class="mb-8 rounded-xl overflow-hidden">
                     <img src="{{ Storage::url($page->featured_image) }}" alt="{{ $page->title }}" class="w-full h-auto">
                 </div>
             @endif
 
-            <div class="prose prose-lg max-w-none">
+            @if($hasOwnLayout)
                 {!! $page->content !!}
+            @else
+                <div class="prose prose-lg max-w-none">
+                    {!! $page->content !!}
+                </div>
+            @endif
+        @if(!$hasOwnLayout)
             </div>
-        </div>
+        @endif
 
         <!-- Child Pages -->
         @if($childPages->isNotEmpty())

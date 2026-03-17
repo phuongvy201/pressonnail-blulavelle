@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\DomainShippingCost;
 use App\Models\ShippingRate;
 use App\Services\CurrencyService;
 use Illuminate\Http\Request;
@@ -19,39 +18,14 @@ class ShippingDeliveryController extends Controller
         $currencyRate = CurrencyService::getCurrencyRateForDomain($domain) ?? 1.0;
 
         // Get region from domain
-        $region = DomainShippingCost::getRegionFromDomain($domain);
+        $region = $this->getRegionFromDomain($domain);
 
-        // Lấy toàn bộ phí ship cho domain hiện tại và phí general (domain null)
-        $shippingCosts = DomainShippingCost::where('is_active', true)
-            ->where(function ($query) use ($domain) {
-                $query->where('domain', $domain)
-                    ->orWhereNull('domain');
-            })
-            ->orderBy('region')
-            ->orderBy('product_type')
-            ->get();
+        // Project hiện không có bảng/model DomainShippingCost → luôn fallback sang ShippingRate
+        $shippingCosts = collect();
 
-        // Nếu chưa có dữ liệu DomainShippingCost, fallback sang ShippingRate (ưu tiên theo domain)
+        // Fallback sang ShippingRate (bảng shipping_rates không còn cột domain/domains)
         if ($shippingCosts->isEmpty()) {
-            $shippingRates = ShippingRate::where(function ($query) use ($domain) {
-                if ($domain) {
-                    // Ưu tiên domain hiện tại
-                    $query->where(function ($q) use ($domain) {
-                        $q->where('domain', $domain)
-                            ->orWhereJsonContains('domains', $domain);
-                    })
-                        // Lấy thêm general (domain null) làm fallback nhưng không trộn domain khác
-                        ->orWhere(function ($q) {
-                            $q->whereNull('domain')
-                                ->orWhereNull('domains');
-                        });
-                } else {
-                    // Không có domain: chỉ lấy general
-                    $query->whereNull('domain')
-                        ->orWhereNull('domains');
-                }
-            })
-                ->where('is_active', true)
+            $shippingRates = ShippingRate::where('is_active', true)
                 ->whereNotNull('first_item_cost')
                 ->whereNotNull('additional_item_cost')
                 ->with(['category', 'shippingZone'])
@@ -331,5 +305,31 @@ class ShippingDeliveryController extends Controller
         }
 
         return $defaultRegion;
+    }
+
+    /**
+     * Detect region from current domain/host.
+     *
+     * @return 'US'|'UK'|'CA'|'MX'|'EU'
+     */
+    private function getRegionFromDomain(?string $domain): string
+    {
+        $d = strtolower(trim((string) $domain));
+        if ($d === '') {
+            return 'US';
+        }
+
+        // Basic TLD / host heuristics
+        if (str_ends_with($d, '.co.uk') || str_ends_with($d, '.uk') || str_contains($d, 'uk')) {
+            return 'UK';
+        }
+        if (str_ends_with($d, '.ca') || str_contains($d, 'canada') || str_contains($d, 'ca')) {
+            return 'CA';
+        }
+        if (str_ends_with($d, '.mx') || str_contains($d, 'mexico') || str_contains($d, 'mx')) {
+            return 'MX';
+        }
+
+        return 'US';
     }
 }

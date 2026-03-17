@@ -1,12 +1,21 @@
 <!-- Header Component - Responsive: logo + nav + search + cart + user -->
-<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-primary/10 px-3 sm:px-6 lg:px-20 sm:py-1.5 bg-background-light sticky top-0 z-50">
+@php
+    $headerBg = \App\Support\Settings::get('theme.header_bg', null);
+    $headerBorder = \App\Support\Settings::get('theme.header_border', null);
+    $headerBgCustom = (is_string($headerBg) && (str_starts_with(trim($headerBg), '#') || str_starts_with(trim($headerBg), 'rgb'))) ? trim($headerBg) : null;
+    $headerBorderCustom = (is_string($headerBorder) && (str_starts_with(trim($headerBorder), '#') || str_starts_with(trim($headerBorder), 'rgb'))) ? trim($headerBorder) : null;
+    $headerStyle = '';
+    if ($headerBgCustom) $headerStyle .= "background-color: {$headerBgCustom};";
+    if ($headerBorderCustom) $headerStyle .= "border-bottom-color: {$headerBorderCustom};";
+@endphp
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-primary/10 px-3 sm:px-6 lg:px-20 py-1 sm:py-1.5 bg-background-light sticky top-0 z-50" @if($headerStyle !== '') style="{{ $headerStyle }}" @endif>
     <div class="flex items-center gap-4 sm:gap-6 lg:gap-12 w-full min-w-0">
         <!-- Logo -->
-        <a href="{{ route('home') }}" class="flex items-center flex-shrink-0 -my-1">
-            <div class="w-28 h-28 sm:w-24 sm:h-24 md:w-28 md:h-28 overflow-hidden rounded flex items-center justify-center">
-                <img src="{{ asset('storage/images/logo (3).png') }}" alt="Blu Lavelle" class="w-full h-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <a href="{{ route('home') }}" class="flex items-center flex-shrink-0">
+            <div class="max-w-[160px] max-h-[72px] sm:max-w-[190px] sm:max-h-[80px] md:max-w-[220px] md:max-h-[88px] lg:max-w-[260px] lg:max-h-[96px] overflow-hidden rounded flex items-center justify-center">
+                <img src="{{ asset('storage/images/logo (3).png') }}" alt="Blu Lavelle" class="w-auto h-auto max-w-full max-h-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                 <div class="w-full h-full flex items-center justify-center text-primary" style="display: none;">
-                    <svg class="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                    <svg class="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 lg:w-10 lg:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
                 </div>
             </div>
         </a>
@@ -537,7 +546,7 @@
                             // Add "View all results" link
                             html += `
                                 <div class="border-t border-gray-200 mt-2 pt-2">
-                                    <a href="{{ route('search') }}?q=${encodeURIComponent(query)}" class="block text-center text-sm text-[#F0427C] hover:text-[#d6386a] font-semibold p-3 hover:bg-gray-50 rounded-xl transition-colors">
+                                    <a href="{{ route('search') }}?q=${encodeURIComponent(query)}" class="block text-center text-sm text-[#0297FE] hover:text-[#d6386a] font-semibold p-3 hover:bg-gray-50 rounded-xl transition-colors">
                                         View all results for "${query}"
                                     </a>
                                 </div>

@@ -231,7 +231,7 @@
     {{-- CTA --}}
     <section class="px-4 sm:px-6 lg:px-10 py-12 bg-white border-t border-slate-100">
         <div class="max-w-2xl mx-auto text-center">
-            <a href="{{ route('products.index') }}" class="inline-flex items-center justify-center gap-2 bg-primary hover:bg-[#e03a70] text-white font-bold py-4 px-8 rounded-xl shadow-lg shadow-primary/25 transition-all">
+            <a href="{{ route('products.index') }}" class="inline-flex items-center justify-center gap-2 bg-primary-dark text-white font-bold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">
                 <span class="material-symbols-outlined">shopping_bag</span>
                 Shop All Nails
             </a>

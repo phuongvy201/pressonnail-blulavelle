@@ -128,6 +128,80 @@
                     </div>
                 </div>
 
+                <div class="pt-2 border-t border-gray-100">
+                    <h2 class="text-xl font-bold text-gray-900 mb-1">Theme colors</h2>
+                    <p class="text-sm text-gray-600 mb-5">
+                        Nhập màu dạng <code>#RRGGBB</code> hoặc <code>rgb(...)</code>. Để trống sẽ dùng màu mặc định trong giao diện.
+                    </p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="header_bg" class="block text-sm font-semibold text-gray-900 mb-1">Header background</label>
+                            <input
+                                type="text"
+                                name="header_bg"
+                                id="header_bg"
+                                value="{{ old('header_bg', $settings['header_bg']) }}"
+                                placeholder="#f8fafc"
+                                class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
+                            >
+                            @error('header_bg')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div>
+                            <label for="header_border" class="block text-sm font-semibold text-gray-900 mb-1">Header border color</label>
+                            <input
+                                type="text"
+                                name="header_border"
+                                id="header_border"
+                                value="{{ old('header_border', $settings['header_border']) }}"
+                                placeholder="#e2e8f0"
+                                class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
+                            >
+                            @error('header_border')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div>
+                            <label for="testimonials_bg" class="block text-sm font-semibold text-gray-900 mb-1">Reviews/Testimonials background</label>
+                            <input
+                                type="text"
+                                name="testimonials_bg"
+                                id="testimonials_bg"
+                                value="{{ old('testimonials_bg', $settings['testimonials_bg']) }}"
+                                placeholder="#ffffff"
+                                class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
+                            >
+                            @error('testimonials_bg')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div>
+                            <label for="footer_faq_bg" class="block text-sm font-semibold text-gray-900 mb-1">Footer FAQ background</label>
+                            <input
+                                type="text"
+                                name="footer_faq_bg"
+                                id="footer_faq_bg"
+                                value="{{ old('footer_faq_bg', $settings['footer_faq_bg']) }}"
+                                placeholder="#ffffff"
+                                class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
+                            >
+                            @error('footer_faq_bg')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div>
+                            <label for="footer_bg" class="block text-sm font-semibold text-gray-900 mb-1">Footer background</label>
+                            <input
+                                type="text"
+                                name="footer_bg"
+                                id="footer_bg"
+                                value="{{ old('footer_bg', $settings['footer_bg']) }}"
+                                placeholder="#242B3D"
+                                class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
+                            >
+                            @error('footer_bg')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex items-center justify-end gap-3">
                     <a href="{{ route('admin.dashboard') }}" class="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 transition">
                         Quay lại

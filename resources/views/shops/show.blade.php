@@ -268,7 +268,7 @@ document.addEventListener('DOMContentLoaded', function() {
         font-family: 'Plus Jakarta Sans', sans-serif;
     }
     :root {
-        --primary: #f0427c;
+        --primary: #0297FE;
         --background-light: #f8f6f6;
     }
     .bg-primary { background-color: var(--primary); }

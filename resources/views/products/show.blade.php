@@ -207,7 +207,7 @@
                                 <div id="gallery-track" class="flex gap-3 overflow-x-auto scroll-smooth no-scrollbar py-1">
                                     @foreach($galleryItems as $index => $item)
                                     <button type="button"
-                                            class="gallery-thumb shrink-0 w-[88px] sm:w-[96px] md:w-[104px] aspect-square rounded-xl overflow-hidden border-2 {{ $index === 0 ? 'border-primary' : 'border-slate-200' }} bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all relative group"
+                                            class="gallery-thumb shrink-0 w-[88px] sm:w-[96px] md:w-[104px] aspect-square rounded-xl overflow-hidden border-2 {{ $index === 0 ? 'border-[#0297FE]' : 'border-slate-200' }} bg-white focus:outline-none focus:ring-2 focus:ring-[#0297FE]/40 transition-all relative group"
                                             data-index="{{ $index }}"
                                             data-type="{{ $item['type'] }}"
                                             data-url="{{ $item['url'] }}"
@@ -265,12 +265,12 @@
                     <h1 class="text-2xl md:text-3xl text-heading font-extrabold text-slate-900 tracking-tight leading-tight">{{ $product->name }}</h1>
                     @if($product->shop)
                     <p class="mt-2 text-sm text-slate-600">
-                        Sold by <a href="{{ route('shops.show', $product->shop->shop_slug) }}" class="font-semibold text-slate-800 hover:text-[#f0427c] transition-colors underline underline-offset-2">{{ $product->shop->shop_name ?? $product->shop->name ?? 'Shop' }}</a>
+                        Sold by <a href="{{ route('shops.show', $product->shop->shop_slug) }}" class="font-semibold text-slate-800 hover:text-[#0297FE] transition-colors underline underline-offset-2">{{ $product->shop->shop_name ?? $product->shop->name ?? 'Shop' }}</a>
                     </p>
                     @endif
                     @if($product->collections->isNotEmpty())
                     <div class="mt-3 flex items-center gap-2">
-                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-[#fce7ef] text-[#f0427c] border border-[#f0427c]/20 uppercase tracking-wide">
+                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-[#0297FE]/10 text-[#0297FE] border border-[#0297FE]/20 uppercase tracking-wide">
                             {{ $product->collections->first()->name }}
                         </span>
                     </div>
@@ -286,7 +286,7 @@
                             <span class="material-symbols-outlined text-base">visibility</span>
                             <span id="product-viewers">{{ $productViewingCount }}</span> viewing
                         </span>
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[#fce7ef] text-[#f0427c] border border-[#f0427c]/15">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[#0297FE]/10 text-[#0297FE] border border-[#0297FE]/15">
                             <span class="material-symbols-outlined text-base">shopping_cart</span>
                             In <span id="product-carts">{{ $productCartsCount }}+</span> carts
                         </span>
@@ -296,7 +296,7 @@
                     </div>
 
                     <div class="mt-4 inline-flex flex-wrap items-center gap-2">
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-widest bg-[#fce7ef] text-[#f0427c] border border-[#f0427c]/15">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-widest bg-[#0297FE]/10 text-[#0297FE] border border-[#0297FE]/15">
                             Total
                         </span>
                         <span id="product-price" data-base-price="{{ $productPrice }}" data-list-price="{{ $productListPrice }}"
@@ -308,14 +308,14 @@
                         @else
                             <span id="product-list-price" class="text-lg sm:text-xl text-slate-400 line-through font-semibold hidden"></span>
                         @endif
-                        <span id="product-price-note" class="text-sm font-bold text-[#f0427c] hidden"></span>
+                        <span id="product-price-note" class="text-sm font-bold text-[#0297FE] hidden"></span>
                     </div>
                 </div>
 
                 {{-- Toast thông báo (thay alert) --}}
                 <div id="product-toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] max-w-md w-full mx-4 hidden" role="alert" aria-live="polite">
                     <div class="flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border bg-white border-slate-200">
-                        <span id="product-toast-icon" class="material-symbols-outlined text-2xl text-[#f0427c]">error</span>
+                        <span id="product-toast-icon" class="material-symbols-outlined text-2xl text-[#0297FE]">error</span>
                         <p id="product-toast-message" class="flex-1 text-sm font-medium text-slate-800"></p>
                         <button type="button" id="product-toast-close" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" aria-label="Đóng">
                             <span class="material-symbols-outlined text-xl">close</span>
@@ -347,13 +347,13 @@
                                 @if($required)<span class="text-red-500">*</span>@endif
                             </label>
                             @if($type === 'text')
-                                <input type="text" class="customization-field w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#f0427c]/30 focus:border-[#f0427c]" name="customization[{{ $index }}]" placeholder="{{ $placeholder }}" @if($required) data-required="1" @endif>
+                                <input type="text" class="customization-field w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#0297FE]/30 focus:border-[#0297FE]" name="customization[{{ $index }}]" placeholder="{{ $placeholder }}" @if($required) data-required="1" @endif>
                             @elseif($type === 'number')
-                                <input type="number" class="customization-field w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#f0427c]/30 focus:border-[#f0427c]" name="customization[{{ $index }}]" placeholder="{{ $placeholder }}" @if($required) data-required="1" @endif>
+                                <input type="number" class="customization-field w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#0297FE]/30 focus:border-[#0297FE]" name="customization[{{ $index }}]" placeholder="{{ $placeholder }}" @if($required) data-required="1" @endif>
                             @elseif($type === 'textarea')
-                                <textarea class="customization-field w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#f0427c]/30 focus:border-[#f0427c] resize-none" name="customization[{{ $index }}]" rows="2" placeholder="{{ $placeholder }}" @if($required) data-required="1" @endif></textarea>
+                                <textarea class="customization-field w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#0297FE]/30 focus:border-[#0297FE] resize-none" name="customization[{{ $index }}]" rows="2" placeholder="{{ $placeholder }}" @if($required) data-required="1" @endif></textarea>
                             @elseif($type === 'select')
-                                <select class="customization-field w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#f0427c]/30 focus:border-[#f0427c]" name="customization[{{ $index }}]" @if($required) data-required="1" @endif>
+                                <select class="customization-field w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#0297FE]/30 focus:border-[#0297FE]" name="customization[{{ $index }}]" @if($required) data-required="1" @endif>
                                     <option value="">— Select —</option>
                                     @foreach($options as $opt)
                                     <option value="{{ e(trim($opt)) }}">{{ e(trim($opt)) }}</option>
@@ -361,11 +361,11 @@
                                 </select>
                             @elseif($type === 'checkbox')
                                 <label class="inline-flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" class="customization-field w-4 h-4 rounded border-slate-300 text-[#f0427c] focus:ring-[#f0427c]" name="customization[{{ $index }}]" value="1" @if($required) data-required="1" @endif>
+                                    <input type="checkbox" class="customization-field w-4 h-4 rounded border-slate-300 text-[#0297FE] focus:ring-[#0297FE]" name="customization[{{ $index }}]" value="1" @if($required) data-required="1" @endif>
                                     <span class="text-sm text-slate-600">{{ $placeholder ?: 'Yes' }}</span>
                                 </label>
                             @else
-                                <input type="text" class="customization-field w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#f0427c]/30 focus:border-[#f0427c]" name="customization[{{ $index }}]" placeholder="{{ $placeholder }}" @if($required) data-required="1" @endif>
+                                <input type="text" class="customization-field w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#0297FE]/30 focus:border-[#0297FE]" name="customization[{{ $index }}]" placeholder="{{ $placeholder }}" @if($required) data-required="1" @endif>
                             @endif
                         </div>
                         @endforeach
@@ -404,7 +404,7 @@
                             <button type="button" id="qty-minus" class="w-10 h-10 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Giảm số lượng">
                                 <span class="material-symbols-outlined text-xl">remove</span>
                             </button>
-                            <input type="number" id="product-quantity" name="quantity" min="1" max="99" value="1" class="w-16 text-center py-2 text-sm font-medium border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#f0427c]/30 focus:border-[#f0427c]">
+                            <input type="number" id="product-quantity" name="quantity" min="1" max="99" value="1" class="w-16 text-center py-2 text-sm font-medium border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#0297FE]/30 focus:border-[#0297FE]">
                             <button type="button" id="qty-plus" class="w-10 h-10 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Tăng số lượng">
                                 <span class="material-symbols-outlined text-xl">add</span>
                             </button>
@@ -413,13 +413,24 @@
 
                     {{-- Add to Cart + Favorite --}}
                     <div class="flex gap-3 pt-1">
-                        <button type="button" id="add-to-cart-btn" class="flex-1 bg-[#f0427c] hover:bg-[#e03a70] text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg shadow-[#f0427c]/25 flex items-center justify-center gap-2">
-                            <span class="material-symbols-outlined text-xl">shopping_cart</span>
-                            Add to Cart
+                        <button type="button" id="add-to-cart-btn" class="add-to-cart-btn flex-1 text-white font-bold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-2 min-h-[52px] touch-manipulation">
+                            <svg class="add-to-cart-icon w-6 h-6 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                            </svg>
+                            <span>Add to Cart</span>
                         </button>
-                        <a href="{{ route('cart.index') }}" class="shrink-0 w-14 h-14 rounded-xl border-2 border-slate-200 hover:border-[#f0427c]/50 hover:bg-[#fce7ef]/50 transition-all inline-flex items-center justify-center" aria-label="Yêu thích">
-                            <span class="material-symbols-outlined text-slate-600 text-2xl">favorite</span>
-                        </a>
+                        <button type="button"
+                                data-wishlist-toggle
+                                data-product-id="{{ $product->id }}"
+                                data-product-name="{{ $product->name }}"
+                                data-product-price="{{ $product->base_price ?? $product->price ?? 0 }}"
+                                class="wishlist-btn shrink-0 w-14 h-14 rounded-xl border-2 border-slate-200 hover:border-[#0297FE]/50 hover:bg-[#0297FE]/5 transition-all inline-flex items-center justify-center not-in-wishlist text-slate-600"
+                                aria-label="Yêu thích / Wishlist">
+                            <svg class="wishlist-icon w-7 h-7 transition-colors" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                            </svg>
+                        </button>
                     </div>
 
                     {{-- Shipping info --}}
@@ -451,14 +462,14 @@
                                 <span class="material-symbols-outlined text-slate-600 text-xl leading-none">calendar_month</span>
                                 <div class="leading-snug">
                                     <span class="text-slate-600">Order today to get by</span>
-                                    <span class="font-bold underline underline-offset-2 ml-1" style="text-decoration-color: #f0427c;">{{ $deliveryRangeText }}</span>
+                                    <span class="font-bold underline underline-offset-2 decoration-[#0297FE] ml-1">{{ $deliveryRangeText }}</span>
                                 </div>
                             </div>
 
                             <div class="flex items-start gap-3">
                                 <span class="material-symbols-outlined text-slate-600 text-xl leading-none">assignment_return</span>
                                 <div class="relative leading-snug">
-                                    <span class="group inline-flex items-center gap-1 font-bold underline underline-offset-2 cursor-help" style="text-decoration-color: #f0427c;">
+                                    <span class="group inline-flex items-center gap-1 font-bold underline underline-offset-2 decoration-[#0297FE] cursor-help">
                                         Returns &amp; exchanges accepted
                                         <span class="material-symbols-outlined text-base text-slate-500">info</span>
 
@@ -522,7 +533,7 @@
             @if($videoUrl)
             <div>
                 <h3 class="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-[#f0427c]">play_circle</span>
+                    <span class="material-symbols-outlined text-[#0297FE]">play_circle</span>
                     See it in Action
                 </h3>
                 <div class="aspect-video w-full max-w-3xl rounded-2xl overflow-hidden bg-slate-200">
@@ -553,6 +564,29 @@
 /* Hide scrollbar but keep scroll (gallery thumbnails) */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+/* Wishlist button SVG: outline mặc định, filled khi trong wishlist */
+button.wishlist-btn .wishlist-icon { fill: none; stroke: currentColor; }
+button.wishlist-btn.in-wishlist .wishlist-icon { fill: currentColor; stroke: none; }
+button.wishlist-btn.in-wishlist { color: #0297FE; }
+/* Add to Cart button */
+.add-to-cart-btn {
+    background-color: #0297FE;
+    box-shadow: 0 10px 15px -3px rgba(2, 151, 254, 0.25), 0 4px 6px -2px rgba(2, 151, 254, 0.15);
+}
+.add-to-cart-btn:hover {
+    opacity: 0.9;
+    box-shadow: 0 20px 25px -5px rgba(2, 151, 254, 0.2), 0 10px 10px -5px rgba(2, 151, 254, 0.1);
+}
+.add-to-cart-btn:active {
+    transform: scale(0.98);
+}
+.add-to-cart-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+.add-to-cart-btn .add-to-cart-icon {
+    stroke: currentColor;
+}
 </style>
 
 <script>
@@ -584,8 +618,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (mainVideo) { mainVideo.pause(); mainVideo.classList.add('hidden'); mainVideo.removeAttribute('src'); }
             if (mainImg) { mainImg.src = url; mainImg.classList.remove('hidden'); }
         }
-        thumbs.forEach(function(b) { b.classList.remove('border-primary'); b.classList.add('border-slate-200'); });
-        btn.classList.add('border-primary'); btn.classList.remove('border-slate-200');
+        thumbs.forEach(function(b) { b.classList.remove('border-[#0297FE]'); b.classList.add('border-slate-200'); });
+        btn.classList.add('border-[#0297FE]'); btn.classList.remove('border-slate-200');
         btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
     }
 
@@ -664,7 +698,7 @@ document.addEventListener('DOMContentLoaded', function() {
         msgEl.textContent = message;
         if (icon) {
             icon.textContent = type === 'success' ? 'check_circle' : 'error';
-            icon.className = 'material-symbols-outlined text-2xl ' + (type === 'success' ? 'text-emerald-500' : 'text-[#f0427c]');
+            icon.className = 'material-symbols-outlined text-2xl ' + (type === 'success' ? 'text-emerald-500' : 'text-[#0297FE]');
         }
         toast.classList.remove('hidden');
         toastTimeout = setTimeout(function() { toast.classList.add('hidden'); }, 5000);

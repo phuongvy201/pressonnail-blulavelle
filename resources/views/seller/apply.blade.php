@@ -9,12 +9,12 @@
     <section class="bg-gradient-to-br from-sky-600 via-sky-500 to-blue-700 text-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20 grid lg:grid-cols-2 gap-10 items-center">
             <div class="space-y-5">
-                <p class="text-sm uppercase tracking-widest text-white/80">Sell on Bluprinter</p>
+                <p class="text-sm uppercase tracking-widest text-white/80">Sell on BluLavelle</p>
                 <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight">
-                    Millions of shoppers can't wait to see what you have.
+                    Turn your nail designs into a real business.
                 </h1>
                 <p class="text-lg text-white/90">
-                    Creativity. Community. And great earnings. Sell your products to a global audience—fast, easy, fully supported.
+                    Create, list, and sell press-on nails to customers worldwide—fast setup, secure payments, and reliable fulfillment support.
                 </p>
                 <div class="flex flex-wrap gap-3">
                     <a href="#apply-form" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-sky-700 font-semibold shadow-lg hover:shadow-xl transition">
@@ -25,11 +25,11 @@
                         See benefits
                     </a>
                 </div>
-                <p class="text-sm text-white/80">No monthly fees. Secure payments. Global fulfillment support.</p>
+                <p class="text-sm text-white/80">No monthly fees. Secure payments. Shipping & support made simple.</p>
             </div>
             <div class="relative">
                 <div class="absolute inset-0 bg-white/10 blur-3xl rounded-full"></div>
-                <img src="https://meear.com/modules/seller/images/your-art.png?v=20251219085848" alt="Sell on Bluprinter" class="relative w-full max-w-xl mx-auto rounded-3xl shadow-2xl ring-1 ring-white/20">
+                <img src="https://meear.com/modules/seller/images/your-art.png?v=20251219085848" alt="Sell on BluLavelle" class="relative w-full max-w-xl mx-auto rounded-3xl shadow-2xl ring-1 ring-white/20">
             </div>
         </div>
     </section>
@@ -56,8 +56,8 @@
             <div class="bg-gray-50 rounded-2xl shadow-sm border border-gray-100 p-8 space-y-6">
                 <div class="space-y-2">
                     <p class="text-sm font-semibold text-sky-600">Apply</p>
-                    <h3 class="text-2xl font-bold text-gray-900">Tell us about your shop</h3>
-                    <p class="text-gray-600">Share a few details and we’ll review to activate your seller account.</p>
+                    <h3 class="text-2xl font-bold text-gray-900">Tell us about your nail brand</h3>
+                    <p class="text-gray-600">Share a few details and we’ll review to activate your BluLavelle seller account.</p>
                 </div>
 
                 <form action="{{ route('seller.apply.submit') }}" method="POST" class="space-y-6" id="seller-apply-form">
@@ -96,7 +96,7 @@
                     </div>
 
                     <div class="flex flex-wrap items-center justify-between gap-3">
-                        <p class="text-sm text-gray-500">By submitting, you agree Bluprinter may contact you via email/phone.</p>
+                        <p class="text-sm text-gray-500">By submitting, you agree BluLavelle may contact you via email/phone.</p>
                         <button type="submit" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold shadow-sm transition">
                             Submit application
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -120,16 +120,16 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
             <div class="text-center space-y-3">
                 <p class="text-sm font-semibold text-sky-600">How it works</p>
-                <h2 class="text-3xl font-bold text-gray-900">How Bluprinter works</h2>
-                <p class="text-gray-600 max-w-2xl mx-auto">From listing to worldwide delivery—every step is simple.</p>
+                <h2 class="text-3xl font-bold text-gray-900">How BluLavelle works</h2>
+                <p class="text-gray-600 max-w-2xl mx-auto">From listing your press-on nails to delivery—every step is simple.</p>
             </div>
             <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 @php
                     $steps = [
-                        ['title' => 'Publish products', 'desc' => 'Create your shop and upload your products.', 'img' => 'https://meear.com/modules/seller/images/upload.svg'],
-                        ['title' => 'Shoppers buy', 'desc' => 'Millions of shoppers discover items they love.', 'img' => 'https://meear.com/modules/seller/images/customers.svg'],
-                        ['title' => 'Worldwide shipping', 'desc' => 'Orders are fulfilled and shipped globally.', 'img' => 'https://meear.com/modules/seller/images/products.svg'],
-                        ['title' => 'Get paid', 'desc' => 'Payouts flow automatically to your account.', 'img' => 'https://meear.com/modules/seller/images/paid.svg'],
+                        ['title' => 'List your nail sets', 'desc' => 'Create your shop and publish your press-on nail designs.', 'img' => 'https://meear.com/modules/seller/images/upload.svg'],
+                        ['title' => 'Customers order', 'desc' => 'Shoppers discover nail sets they love and place orders.', 'img' => 'https://meear.com/modules/seller/images/customers.svg'],
+                        ['title' => 'We help you ship', 'desc' => 'We provide guidance and tools to get orders delivered smoothly.', 'img' => 'https://meear.com/modules/seller/images/products.svg'],
+                        ['title' => 'Get paid', 'desc' => 'Secure payouts flow automatically to your account.', 'img' => 'https://meear.com/modules/seller/images/paid.svg'],
                     ];
                 @endphp
                 @foreach($steps as $step)
@@ -148,12 +148,12 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-10 items-center">
             <div class="order-2 lg:order-1 space-y-4">
                 <p class="text-sm font-semibold text-sky-600">Product</p>
-                <h2 class="text-3xl font-bold text-gray-900">Sell what you love</h2>
-                <p class="text-gray-600">From handmade crafts to creative merch—if you create value, Bluprinter gets it to customers.</p>
+                <h2 class="text-3xl font-bold text-gray-900">Sell press-on nails customers love</h2>
+                <p class="text-gray-600">From minimal everyday sets to bold statement designs—BluLavelle helps you reach customers and grow.</p>
                 <ul class="space-y-2 text-gray-700">        
-                    <li class="flex items-start gap-2"><span class="mt-1 text-sky-600">•</span> Multi-category, no listing fee.</li>
-                    <li class="flex items-start gap-2"><span class="mt-1 text-sky-600">•</span> Tools for shop, order, and inventory management.</li>
-                    <li class="flex items-start gap-2"><span class="mt-1 text-sky-600">•</span> Marketing support and analytics.</li>
+                    <li class="flex items-start gap-2"><span class="mt-1 text-sky-600">•</span> No monthly fees, simple onboarding.</li>
+                    <li class="flex items-start gap-2"><span class="mt-1 text-sky-600">•</span> Tools to manage products, orders, and customers.</li>
+                    <li class="flex items-start gap-2"><span class="mt-1 text-sky-600">•</span> Promotions, insights, and seller support.</li>
                 </ul>
             </div>
             <div class="order-1 lg:order-2">
@@ -167,8 +167,8 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-10 items-center">
             <div class="space-y-4">
                 <p class="text-sm font-semibold text-sky-600">Community</p>
-                <h2 class="text-3xl font-bold text-gray-900">Join thousands of successful sellers</h2>
-                <p class="text-gray-600">Bluprinter is home to creators, professional sellers, and passionate makers. They earn daily—you can too.</p>
+                <h2 class="text-3xl font-bold text-gray-900">Join nail creators worldwide</h2>
+                <p class="text-gray-600">BluLavelle is home to nail artists, brands, and passionate creators. Build your audience and earn from your designs.</p>
                 <div class="flex flex-wrap gap-3">
                     <a href="/shops" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-600 text-white font-semibold hover:bg-sky-700 transition">
                         View shops
@@ -200,7 +200,7 @@
                             'No monthly maintenance fees',
                             'Secure payments and fraud protection',
                             'Automatic scheduled payouts',
-                            'Seller and product protection',
+                            'Seller and brand protection',
                         ];
                     @endphp
                     @foreach($points as $p)
@@ -214,7 +214,7 @@
                 </div>
                 <div class="bg-white/5 rounded-2xl p-4 md:p-6 border border-white/10">
                     <div class="flex items-center gap-2 mb-3">
-                        <span class="text-sm font-semibold text-sky-300">Sample commission table</span>
+                        <span class="text-sm font-semibold text-sky-300">Sample fee table</span>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="min-w-full text-sm text-left text-white/90">
@@ -227,30 +227,28 @@
                             </thead>
                             <tbody class="divide-y divide-white/10">
                                 <tr>
-                                    <td class="py-3 pr-4 font-semibold">Premium T-Shirt</td>
-                                    <td class="py-3 pr-4">30%</td>
-                                    <td class="py-3 pr-4">25%</td>
+                                    <td class="py-3 pr-4 font-semibold">Press-on nail sets</td>
+                                    <td class="py-3 pr-4">—</td>
+                                    <td class="py-3 pr-4">—</td>
                                 </tr>
                                 <tr>
-                                    <td class="py-3 pr-4 font-semibold">Tri-Blend Extra Soft</td>
-                                    <td class="py-3 pr-4">30%</td>
-                                    <td class="py-3 pr-4">25%</td>
+                                    <td class="py-3 pr-4 font-semibold">Nail prep & accessories</td>
+                                    <td class="py-3 pr-4">—</td>
+                                    <td class="py-3 pr-4">—</td>
                                 </tr>
                                 <tr>
-                                    <td class="py-3 pr-4 font-semibold">Classic T-Shirt</td>
-                                    <td class="py-3 pr-4">30%</td>
-                                    <td class="py-3 pr-4">25%</td>
+                                    <td class="py-3 pr-4 font-semibold">Bundles</td>
+                                    <td class="py-3 pr-4">—</td>
+                                    <td class="py-3 pr-4">—</td>
                                 </tr>
                                 <tr>
-                                    <td class="py-3 pr-4 font-semibold">V-Neck T-Shirt</td>
-                                    <td class="py-3 pr-4">20%</td>
-                                    <td class="py-3 pr-4">15%</td>
+                                    <td class="py-3 pr-4 font-semibold">Seasonal collections</td>
+                                    <td class="py-3 pr-4">—</td>
+                                    <td class="py-3 pr-4">—</td>
                                 </tr>
                                 <tr>
                                     <td colspan="3" class="py-3">
-                                        <a href="https://meear.com/modules/seller/printerval-seller-commissions.pdf" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-500 text-white font-semibold hover:bg-sky-600 transition">
-                                            See full table
-                                        </a>
+                                        <span class="text-white/70 text-xs">Fees vary by category and promotion. We’ll share details after your application is approved.</span>
                                     </td>
                                 </tr>
                             </tbody>
@@ -267,14 +265,14 @@
             <div class="text-center space-y-3">
                 <p class="text-sm font-semibold text-sky-600">Control</p>
                 <h2 class="text-3xl font-bold text-gray-900">You’re the boss</h2>
-                <p class="text-gray-600">Pricing, products, IP protection, and logistics—all in your control.</p>
+                <p class="text-gray-600">Pricing, products, brand protection, and operations—all in your control.</p>
             </div>
             <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 @php
                     $features = [
                         ['title' => 'Own your pricing', 'desc' => 'Customize prices and promotions for every product.', 'img' => 'https://meear.com/modules/seller/images/complete-control.svg'],
-                        ['title' => 'Anti-piracy tools', 'desc' => 'Watermarks and download controls to protect your content.', 'img' => 'https://meear.com/modules/seller/images/anti-piracy.svg'],
-                        ['title' => 'Global operations', 'desc' => 'Fulfillment network delivers fast to worldwide customers.', 'img' => 'https://meear.com/modules/seller/images/world-class.svg'],
+                        ['title' => 'Brand protection', 'desc' => 'Report counterfeit listings and protect your designs.', 'img' => 'https://meear.com/modules/seller/images/anti-piracy.svg'],
+                        ['title' => 'Sell globally', 'desc' => 'Reach customers worldwide with reliable shipping support.', 'img' => 'https://meear.com/modules/seller/images/world-class.svg'],
                     ];
                 @endphp
                 @foreach($features as $f)
@@ -292,7 +290,7 @@
     <section class="bg-sky-600 text-white py-14">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
             <h3 class="text-3xl font-bold">Ready to start selling?</h3>
-            <p class="text-white/90">Open your shop in minutes and reach global customers.</p>
+            <p class="text-white/90">Apply now to open your BluLavelle nail shop and reach global customers.</p>
             <div class="flex flex-wrap justify-center gap-3">
                 <a href="#apply-form" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-sky-700 font-semibold hover:shadow-lg transition">
                     Start now

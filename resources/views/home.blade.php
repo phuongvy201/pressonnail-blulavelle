@@ -14,6 +14,8 @@
         'cta_secondary_label' => 'How it Works',
         'cta_secondary_url' => route('page.show', 'about-us') ?? route('page.show', 'faqs') ?? '#',
         'image' => asset('storage/images/44ad1fa40f4f3b0b55214cf29e1dd8a2.jpg'),
+        // Optional colors (admin configurable)
+        'bg_color' => null, // e.g. #ffffff
     ]);
     $heroImageUrl = $hero['image'] ?? '';
     if ($heroImageUrl && !str_starts_with($heroImageUrl, 'http')) {
@@ -29,6 +31,7 @@
         ['key' => 'cta_secondary_label', 'label' => 'Nút phụ - chữ', 'type' => 'text'],
         ['key' => 'cta_secondary_url', 'label' => 'Nút phụ - link', 'type' => 'url'],
         ['key' => 'image', 'label' => 'Ảnh Hero', 'type' => 'image'],
+        ['key' => 'bg_color', 'label' => 'Màu nền section (HEX, vd: #ffffff) – để trống dùng mặc định', 'type' => 'text'],
     ];
 @endphp
 <script>
@@ -46,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <!-- Hero Section -->
-<section class="relative px-4 sm:px-6 lg:px-20 py-12 lg:py-24 overflow-hidden bg-background-light" data-content-block="home.hero">
+<section class="relative px-4 sm:px-6 lg:px-20 py-12 lg:py-24 overflow-hidden bg-background-light" data-content-block="home.hero" @if(!empty($hero['bg_color'])) style="background-color: {{ $hero['bg_color'] }};" @endif>
     @if(isset($canEdit) && $canEdit && isset($editMode) && $editMode)
     <div class="absolute top-4 right-4 z-20">
         <button type="button" class="inline-edit-trigger px-3 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-lg hover:opacity-90" data-block="home.hero">Chỉnh sửa Hero</button>
@@ -99,24 +102,38 @@ document.addEventListener('DOMContentLoaded', function() {
         ->orderBy('created_at', 'desc')
         ->limit(3)
         ->get();
-    $whyChoose = content_block('home.why_choose', ['title' => 'Why Choose Our Press-on Nails?']);
+    $whyChoose = content_block('home.why_choose', [
+        'title' => 'Why Choose Our Press-on Nails?',
+        'bg_color' => null,
+    ]);
     $bestsellersBlock = content_block('home.bestsellers', [
         'heading' => 'Shop Our Bestsellers',
         'subheading' => 'The most-loved styles by our community',
         'view_all_label' => 'View All Sets',
+        'bg_color' => null,
     ]);
-    $collectionsBlock = content_block('home.collections', ['heading' => 'Explore Our Collections']);
-    $whyChooseSchema = [['key' => 'title', 'label' => 'Tiêu đề', 'type' => 'text']];
+    $collectionsBlock = content_block('home.collections', [
+        'heading' => 'Explore Our Collections',
+        'bg_color' => null,
+    ]);
+    $whyChooseSchema = [
+        ['key' => 'title', 'label' => 'Tiêu đề', 'type' => 'text'],
+        ['key' => 'bg_color', 'label' => 'Màu nền section (HEX, vd: #f8fafc) – để trống dùng mặc định', 'type' => 'text'],
+    ];
     $bestsellersSchema = [
         ['key' => 'heading', 'label' => 'Tiêu đề', 'type' => 'text'],
         ['key' => 'subheading', 'label' => 'Mô tả', 'type' => 'text'],
         ['key' => 'view_all_label', 'label' => 'Chữ nút View All', 'type' => 'text'],
+        ['key' => 'bg_color', 'label' => 'Màu nền section (HEX) – để trống dùng mặc định', 'type' => 'text'],
     ];
-    $collectionsSchema = [['key' => 'heading', 'label' => 'Tiêu đề', 'type' => 'text']];
+    $collectionsSchema = [
+        ['key' => 'heading', 'label' => 'Tiêu đề', 'type' => 'text'],
+        ['key' => 'bg_color', 'label' => 'Màu nền section (HEX) – để trống dùng mặc định', 'type' => 'text'],
+    ];
 @endphp
 
 <!-- Why Choose Our Press-on Nails? -->
-<section class="px-4 sm:px-6 lg:px-20 py-12 sm:py-16 md:py-20 lg:py-24 bg-slate-50" data-content-block="home.why_choose">
+<section class="px-4 sm:px-6 lg:px-20 py-12 sm:py-16 md:py-20 lg:py-24 bg-slate-50" data-content-block="home.why_choose" @if(!empty($whyChoose['bg_color'])) style="background-color: {{ $whyChoose['bg_color'] }};" @endif>
     @if(isset($canEdit) && $canEdit && isset($editMode) && $editMode)
     <div class="max-w-7xl mx-auto flex justify-end mb-2">
         <button type="button" class="inline-edit-trigger px-3 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-lg hover:opacity-90" data-block="home.why_choose">Chỉnh sửa</button>
@@ -159,19 +176,19 @@ document.addEventListener('DOMContentLoaded', function() {
 </section>
 
 <!-- Shop Our Bestsellers -->
-<section class="px-4 sm:px-6 lg:px-20 py-16 sm:py-20 md:py-24 bg-white" data-content-block="home.bestsellers">
+<section class="px-4 sm:px-6 lg:px-20 py-16 sm:py-20 md:py-24 bg-white" data-content-block="home.bestsellers" @if(!empty($bestsellersBlock['bg_color'])) style="background-color: {{ $bestsellersBlock['bg_color'] }};" @endif>
     @if(isset($canEdit) && $canEdit && isset($editMode) && $editMode)
     <div class="max-w-7xl mx-auto flex justify-end mb-2">
         <button type="button" class="inline-edit-trigger px-3 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-lg hover:opacity-90" data-block="home.bestsellers">Chỉnh sửa</button>
     </div>
     @endif
     <div class="max-w-7xl mx-auto">
-        <div class="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+        <div class="flex flex-col md:flex-row justify-between items-center md:items-end mb-12 gap-6 text-center md:text-left">
             <div>
                 <h2 class="text-3xl lg:text-4xl font-black text-slate-900 mb-4" data-content-field="heading">{{ $bestsellersBlock['heading'] ?? 'Shop Our Bestsellers' }}</h2>
                 <p class="text-slate-600" data-content-field="subheading">{{ $bestsellersBlock['subheading'] ?? 'The most-loved styles by our community' }}</p>
             </div>
-            <a class="text-primary font-bold flex items-center gap-2 hover:underline underline-offset-4" href="{{ route('products.index', ['filter' => 'bestsellers']) }}" data-content-field="view_all_label">{{ $bestsellersBlock['view_all_label'] ?? 'View All Sets' }}
+            <a class="text-primary font-bold flex items-center justify-center md:justify-start gap-2 hover:underline underline-offset-4 shrink-0" href="{{ route('products.index', ['filter' => 'bestsellers']) }}" data-content-field="view_all_label">{{ $bestsellersBlock['view_all_label'] ?? 'View All Sets' }}
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
             </a>
         </div>
@@ -184,7 +201,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </section>
 
 <!-- Explore Our Collections -->
-<section class="px-4 sm:px-6 lg:px-20 py-16 sm:py-20 md:py-24 bg-white" data-content-block="home.collections">
+<section class="px-4 sm:px-6 lg:px-20 py-16 sm:py-20 md:py-24 bg-white" data-content-block="home.collections" @if(!empty($collectionsBlock['bg_color'])) style="background-color: {{ $collectionsBlock['bg_color'] }};" @endif>
     @if(isset($canEdit) && $canEdit && isset($editMode) && $editMode)
     <div class="max-w-7xl mx-auto flex justify-end mb-2">
         <button type="button" class="inline-edit-trigger px-3 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-lg hover:opacity-90" data-block="home.collections">Chỉnh sửa</button>
@@ -297,6 +314,7 @@ document.addEventListener('DOMContentLoaded', function() {
         'review_text' => '50k+ Reviews',
         'title' => 'Premium Press-on Nails',
         'subtitle' => 'Complete set • Reusable • Easy to apply',
+        'bg_color' => '#2b2533',
     ]);
     $indulgeFallback = asset('storage/images/fbe2e728-728c-4815-bc47-db0f790a5b1b.mp4');
     $indulgeImages = isset($indulge['images']) && is_array($indulge['images']) ? array_filter($indulge['images']) : [];
@@ -319,6 +337,7 @@ document.addEventListener('DOMContentLoaded', function() {
         ['key' => 'title', 'label' => 'Tiêu đề nhỏ', 'type' => 'text'],
         ['key' => 'subtitle', 'label' => 'Mô tả nhỏ', 'type' => 'text'],
         ['key' => 'images', 'label' => 'Ảnh carousel', 'type' => 'images'],
+        ['key' => 'bg_color', 'label' => 'Màu nền section (HEX) – mặc định #2b2533', 'type' => 'text'],
     ];
     $indulgeDataForEdit = array_merge($indulge, [
         'images' => (isset($indulge['images']) && is_array($indulge['images']) && count($indulge['images']) > 0)
@@ -327,7 +346,7 @@ document.addEventListener('DOMContentLoaded', function() {
     ]);
 @endphp
 <!-- Featured product / CTA -->
-<section class="px-4 sm:px-6 lg:px-20 py-16 sm:py-20 md:py-24 bg-[#2b2533] text-white overflow-hidden" data-content-block="home.indulge">
+<section class="px-4 sm:px-6 lg:px-20 py-16 sm:py-20 md:py-24 bg-[#2b2533] text-white overflow-hidden" data-content-block="home.indulge" style="background-color: {{ $indulge['bg_color'] ?? '#2b2533' }};">
     @if(isset($canEdit) && $canEdit && isset($editMode) && $editMode)
     <div class="max-w-7xl mx-auto flex justify-end mb-2">
         <button type="button" class="inline-edit-trigger px-3 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-lg hover:opacity-90" data-block="home.indulge">Chỉnh sửa CTA</button>
@@ -656,7 +675,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             img.alt = 'Preview';
                             var removeBtn = document.createElement('button');
                             removeBtn.type = 'button';
-                            removeBtn.className = 'ml-auto px-2 py-1 text-red-600 hover:bg-red-50 rounded text-sm font-medium';
+                            removeBtn.className = 'ml-auto px-2 py-1 text-red-600 hover:bg-primary rounded text-sm font-medium';
                             removeBtn.textContent = 'Xóa';
                             removeBtn.addEventListener('click', function() {
                                 imagesList.splice(idx, 1);

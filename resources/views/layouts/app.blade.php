@@ -215,11 +215,11 @@
     }
     .material-symbols-outlined.fill-current { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
 
-    /* Promo banner color-shift animation */
+    /* Promo banner color-shift animation (màu chủ đạo #0297FE) */
     @keyframes promo-banner-shift {
-        0%, 100% { background-color: #f0427c; }
-        33% { background-color: #FF8FB1; }
-        66% { background-color: #9B5DE5; }
+        0%, 100% { background-color: #0297FE; }
+        33% { background-color: #3d9ad1; }
+        66% { background-color: #1565a0; }
     }
     .promo-banner-animate {
         animation: promo-banner-shift 6s ease-in-out infinite;
@@ -232,6 +232,10 @@
     @php
         $promoBannerBg = \App\Support\Settings::get('site.promo_banner_bg');
         $promoBannerCustom = (is_string($promoBannerBg) && (str_starts_with(trim($promoBannerBg), '#') || str_starts_with(trim($promoBannerBg), 'rgb'))) ? trim($promoBannerBg) : null;
+        $footerFaqBg = \App\Support\Settings::get('theme.footer_faq_bg', null); // e.g. #ffffff
+        $footerBg = \App\Support\Settings::get('theme.footer_bg', null); // e.g. #242B3D
+        $footerFaqBgCustom = (is_string($footerFaqBg) && (str_starts_with(trim($footerFaqBg), '#') || str_starts_with(trim($footerFaqBg), 'rgb'))) ? trim($footerFaqBg) : null;
+        $footerBgCustom = (is_string($footerBg) && (str_starts_with(trim($footerBg), '#') || str_starts_with(trim($footerBg), 'rgb'))) ? trim($footerBg) : null;
     @endphp
     <div class="text-white text-center py-1.5 sm:py-2 px-3 sm:px-4 text-xs sm:text-sm font-bold tracking-wide {{ $promoBannerCustom ? '' : 'bg-primary promo-banner-animate' }}" @if($promoBannerCustom) style="background-color: {{ $promoBannerCustom }};" @endif>
         {{ \App\Support\Settings::get('site.promo_banner', 'Free Shipping on Orders Over $100 • Premium Press-on Nails') }}
@@ -284,7 +288,7 @@
         </main>
 
         <!-- FAQ Section (Minimalist Footer) -->
-        <section class="px-4 sm:px-6 lg:px-20 py-10 sm:py-14 lg:py-20 bg-white" id="footer-faq">
+        <section class="px-4 sm:px-6 lg:px-20 py-10 sm:py-14 lg:py-20 bg-white" id="footer-faq" @if($footerFaqBgCustom) style="background-color: {{ $footerFaqBgCustom }};" @endif>
             <div class="max-w-3xl mx-auto">
                 <h2 class="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 text-center mb-8 sm:mb-12">Frequently Asked Questions</h2>
                 <div class="space-y-3 sm:space-y-4">
@@ -345,17 +349,13 @@
         </section>
 
         <!-- Footer (dark slate layout) -->
-        <footer class="bg-[#242B3D] text-slate-300 px-4 sm:px-6 lg:px-20 py-10 sm:py-14 lg:py-16" style="background-color: #242B3D;">
+        <footer class="bg-[#242B3D] text-slate-300 px-4 sm:px-6 lg:px-20 py-10 sm:py-14 lg:py-16" style="background-color: {{ $footerBgCustom ?? '#242B3D' }};">
             <div class="max-w-7xl mx-auto">
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
                     {{-- Col 1: Logo, About, Operating entities, Follow us, Buttons, Badges --}}
                     <div class="lg:col-span-5 space-y-6">
                         <div class="flex items-center gap-3">
-                            <img src="{{ asset('storage/images/logo (3).png') }}" alt="Blu Lavelle" class="h-16 w-auto object-contain">
-                            <div>
-                                <h2 class="text-xl font-black text-white tracking-tight">Blu <span class="text-primary">lavelle</span></h2>
-                                <p class="text-xs text-slate-400">spice up your life</p>
-                            </div>
+                            <img src="{{ asset('storage/images/BABY BLUE.png') }}" alt="Baby Blue" class="h-20 sm:h-24 lg:h-28 w-auto object-contain">
                         </div>
                         <p class="text-sm text-slate-400 leading-relaxed max-w-md">
                             Blulavelle.com is a global online marketplace where people come together to make, sell, buy, and collect unique items. There's no Blulavelle warehouse – just independent sellers selling the things they love. We make the whole process easy, helping you connect directly with makers to find something extraordinary.
@@ -400,7 +400,7 @@
                         </div>
                         <div class="flex gap-3 items-center">
                             <span class="inline-flex items-center px-3 py-1.5 rounded bg-emerald-600/20 text-emerald-400 text-xs font-bold">DMCA</span>
-                            <span class="inline-flex items-center px-3 py-1.5 rounded bg-white/10 text-slate-300 text-xs font-bold">Trustpilot</span>
+                            <span class="inline-flex items-center px-3 py-1.5 rounded bg-white/10 text-slate-300 text-xs font-bold"><a href="https://www.dmca.com/Protection/Status.aspx?id=7afce096-ea62-47a0-8c3b-a3fbd663bf4d&refurl=https%3a%2f%2fbluprinter.com%2f&rlo=true">Trustpilot</span></a>
                         </div>
                     </div>
 
@@ -413,7 +413,7 @@
                                 <li><a href="{{ route('page.show', 'privacy-policy') }}" class="text-slate-400 hover:text-primary transition-colors">Privacy Policy</a></li>
                                 <li><a href="{{ route('page.show', 'terms-of-service') }}" class="text-slate-400 hover:text-primary transition-colors">Terms of Service</a></li>
                                 <li><a href="{{ route('page.show', 'secure-payments') }}" class="text-slate-400 hover:text-primary transition-colors">Secure Payments</a></li>
-                                <li><a href="{{ route('contact') }}" class="text-slate-400 hover:text-primary transition-colors">Contact Us</a></li>
+                                <li><a href="{{ route('page.show','contact-us') }}" class="text-slate-400 hover:text-primary transition-colors">Contact Us</a></li>
                                 <li><a href="{{ route('page.show', 'help-center') }}" class="text-slate-400 hover:text-primary transition-colors">Help Center</a></li>
                                 <li><a href="{{ route('page.show', 'sitemap') }}" class="text-slate-400 hover:text-primary transition-colors">Sitemap</a></li>
                             </ul>
@@ -421,10 +421,10 @@
                         <div>
                             <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-4">Get Help</h3>
                             <ul class="space-y-2.5 text-sm">
-                                <li><a href="#footer-faq" class="text-slate-400 hover:text-primary transition-colors">FAQs</a></li>
+                                <li><a href="{{ route('page.show', 'faqs') }}" class="text-slate-400 hover:text-primary transition-colors">FAQs</a></li>
                                 <li><a href="{{ route('orders.track') }}" class="text-slate-400 hover:text-primary transition-colors">Order Tracking</a></li>
-                                <li><a href="{{ route('shipping-delivery.index') }}" class="text-slate-400 hover:text-primary transition-colors">Shipping & Delivery</a></li>
-                                <li><a href="{{ route('page.show', 'cancel-change-order') }}" class="text-slate-400 hover:text-primary transition-colors">Cancel/Change Order</a></li>
+                                <li><a href="{{ route('page.show','shipping-delivery') }}" class="text-slate-400 hover:text-primary transition-colors">Shipping & Delivery</a></li>
+                                <li><a href="{{ route('page.show', 'cancelchange-order') }}" class="text-slate-400 hover:text-primary transition-colors">Cancel/Change Order</a></li>
                                 <li><a href="{{ route('page.show', 'refund-policy') }}" class="text-slate-400 hover:text-primary transition-colors">Refund Policy</a></li>
                                 <li><a href="{{ route('page.show', 'returns-exchanges-policy') }}" class="text-slate-400 hover:text-primary transition-colors">Returns & Exchanges Policy</a></li>
                                 <li><a href="{{ route('page.show', 'dmca') }}" class="text-slate-400 hover:text-primary transition-colors">DMCA</a></li>
@@ -436,7 +436,7 @@
                             <ul class="space-y-2.5 text-sm">
                                 <li><a href="{{ route('bulk.order.create') }}" class="text-slate-400 hover:text-primary transition-colors">Bulk Order</a></li>
                                 <li><a href="{{ route('promo.code.create') }}" class="text-slate-400 hover:text-primary transition-colors">Promo Code</a></li>
-                                <li><a href="{{ route('page.show', 'sell-on-Blulavelle') }}" class="text-slate-400 hover:text-primary transition-colors">Sell on Blulavelle</a></li>
+                                <li><a href="/become-a-seller" class="text-slate-400 hover:text-primary transition-colors">Sell on Blulavelle</a></li>
                             </ul>
                         </div>
                     </div>
@@ -465,7 +465,7 @@
                 {{-- Bottom bar: Language, Copyright, Payment icons --}}
                 <div class="max-w-7xl mx-auto mt-10 sm:mt-12 pt-6 sm:pt-8 border-t border-slate-600/80 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div class="flex items-center gap-2 text-sm text-slate-400">
-                        <span class="inline-block w-6 h-4 rounded-sm bg-red-500 flex items-center justify-center text-white text-[10px] font-bold">VN</span>
+                        <span class="inline-block w-6 h-4 rounded-sm bg-primary0 flex items-center justify-center text-white text-[10px] font-bold">VN</span>
                         <span>Vietnam</span>
                         <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </div>
@@ -587,64 +587,65 @@
     {{-- Toast thông báo (dùng cho newsletter, v.v.) --}}
     <div id="toast-container" class="fixed top-4 right-4 z-[70] flex flex-col gap-3 pointer-events-none max-w-sm w-full sm:max-w-md" aria-live="polite"></div>
 
-    {{-- Live Chat widget (khách hàng) --}}
-    <div id="live-chat-widget" class="fixed bottom-6 right-6 z-[55]">
+    {{-- Live Chat widget (khách hàng) - responsive --}}
+    <div id="live-chat-widget" class="fixed z-[55] bottom-4 right-4 sm:bottom-6 sm:right-6 md:bottom-6 md:right-6" style="padding-bottom: max(0.25rem, env(safe-area-inset-bottom)); padding-right: max(0.25rem, env(safe-area-inset-right));">
         <div id="live-chat-toggle-wrap" class="relative inline-block">
-            <button type="button" id="live-chat-toggle" class="live-chat-ring-target w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white hover:opacity-90 transition-opacity" style="background: #f0427c;" aria-label="Chat">
-                <span class="material-symbols-outlined text-3xl">chat</span>
+            <button type="button" id="live-chat-toggle" class="live-chat-ring-target w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg flex items-center justify-center text-white hover:opacity-90 transition-opacity flex-shrink-0" style="background: #0297FE;" aria-label="Chat">
+                <span class="material-symbols-outlined text-2xl sm:text-3xl">chat</span>
             </button>
-            <span id="live-chat-unread-badge" class="absolute -top-0.5 -right-0.5 min-w-[20px] h-5 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold hidden" aria-hidden="true">0</span>
+            <span id="live-chat-unread-badge" class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-5 px-1 flex items-center justify-center rounded-full bg-primary text-white text-[10px] sm:text-xs font-bold hidden" aria-hidden="true">0</span>
         </div>
-        <div id="live-chat-panel" class="hidden absolute bottom-16 right-0 w-full sm:w-[380px] h-[480px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
-            <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200" style="background: #f0427c;">
-                <span class="font-bold text-white">Chat with us</span>
-                <button type="button" id="live-chat-close" class="p-1 rounded-lg text-white/90 hover:bg-white/20">
-                    <span class="material-symbols-outlined">close</span>
+        {{-- Panel: mobile = bottom sheet full width, desktop = floating 380px --}}
+        <div id="live-chat-panel" class="live-chat-panel hidden fixed left-0 right-0 bottom-20 sm:left-auto sm:right-0 sm:bottom-16 sm:absolute w-full sm:w-[380px] max-h-[calc(100vh-6rem)] sm:max-h-[480px] sm:h-[480px] min-h-[280px] sm:min-h-0 bg-white shadow-2xl border border-slate-200 flex flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl border-b-0 sm:border-b">
+            <div class="flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3 border-b border-slate-200 flex-shrink-0" style="background: #0297FE;">
+                <span class="font-bold text-white text-sm sm:text-base">Chat with us</span>
+                <button type="button" id="live-chat-close" class="p-1.5 sm:p-1 rounded-lg text-white/90 hover:bg-white/20 touch-manipulation" aria-label="Close chat">
+                    <span class="material-symbols-outlined text-xl sm:text-base">close</span>
                 </button>
             </div>
-            <div id="live-chat-start" class="p-4">
-                <p class="text-sm text-slate-600 mb-4">Send a message, we'll reply soon.</p>
-                <div id="live-chat-guest-form" class="space-y-3 {{ auth()->check() ? 'hidden' : '' }}">
+            <div id="live-chat-start" class="p-3 sm:p-4 flex-shrink-0">
+                <p class="text-xs sm:text-sm text-slate-600 mb-3 sm:mb-4">Send a message, we'll reply soon.</p>
+                <div id="live-chat-guest-form" class="space-y-2.5 sm:space-y-3 {{ auth()->check() ? 'hidden' : '' }}">
                     {{-- Honeypot: ẩn với CSS, bot điền vào sẽ bị từ chối --}}
                     <input type="text" id="live-chat-website" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="absolute left-[-9999px] w-0 h-0 opacity-0 pointer-events-none">
-                    <input type="text" id="live-chat-guest-name" placeholder="Your name" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm" autocomplete="name">
-                    <input type="email" id="live-chat-guest-email" placeholder="Email" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm" autocomplete="email">
+                    <input type="text" id="live-chat-guest-name" placeholder="Your name" class="w-full px-3 py-2 sm:px-4 rounded-xl border border-slate-200 text-sm min-h-[44px] sm:min-h-0" autocomplete="name">
+                    <input type="email" id="live-chat-guest-email" placeholder="Email" class="w-full px-3 py-2 sm:px-4 rounded-xl border border-slate-200 text-sm min-h-[44px] sm:min-h-0" autocomplete="email">
                 </div>
-                <button type="button" id="live-chat-start-btn" class="w-full py-3 rounded-xl font-bold text-white mt-4" style="background: #f0427c;">Start chat</button>
+                <button type="button" id="live-chat-start-btn" class="w-full py-3 rounded-xl font-bold text-white mt-3 sm:mt-4 text-sm sm:text-base touch-manipulation min-h-[44px] sm:min-h-0" style="background: #0297FE;">Start chat</button>
             </div>
-            <div id="live-chat-box" class="hidden flex-1 flex flex-col min-h-0">
-                <div id="live-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
-                <div class="p-3 border-t border-slate-200">
+            <div id="live-chat-box" class="hidden flex-1 flex flex-col min-h-0 overflow-hidden">
+                <div id="live-chat-messages" class="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 min-h-0"></div>
+                <div class="p-2 sm:p-3 border-t border-slate-200 flex-shrink-0 bg-white">
                     <form id="live-chat-send-form" class="flex gap-2">
-                        <input type="text" id="live-chat-input" placeholder="Enter message..." class="flex-1 px-4 py-2 border border-slate-200 rounded-xl text-sm">
-                        <button type="submit" id="live-chat-send-btn" class="px-4 py-2 rounded-xl font-semibold text-white" style="background: #f0427c;">Send</button>
+                        <input type="text" id="live-chat-input" placeholder="Enter message..." class="flex-1 min-w-0 px-3 py-2 sm:px-4 border border-slate-200 rounded-xl text-sm min-h-[44px] sm:min-h-0">
+                        <button type="submit" id="live-chat-send-btn" class="px-3 py-2 sm:px-4 rounded-xl font-semibold text-white text-sm flex-shrink-0 touch-manipulation min-h-[44px] sm:min-h-0" style="background: #0297FE;">Send</button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Promo popup: sau Add to Cart / Wishlist — "Get 10% OFF! Enter your email..." --}}
+    {{-- Promo popup: sau Add to Cart / Wishlist — "Get 10% OFF! Enter your email..." (responsive) --}}
     <div id="promo-popup-backdrop" class="fixed inset-0 bg-black/40 z-[55] hidden transition-opacity" aria-hidden="true"></div>
-    <div id="promo-popup" class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl z-[60] hidden overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="promo-popup-headline">
-        <div class="bg-primary text-white px-6 py-6 text-center">
-            <p id="promo-popup-headline" class="text-2xl font-extrabold tracking-tight">Get 10% OFF!</p>
+    <div id="promo-popup" class="fixed left-4 right-4 top-1/2 -translate-y-1/2 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 w-[calc(100%-2rem)] sm:w-full max-w-md max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl z-[60] hidden flex flex-col" style="padding-bottom: max(1rem, env(safe-area-inset-bottom));" role="dialog" aria-modal="true" aria-labelledby="promo-popup-headline">
+        <div class="bg-primary text-white px-4 py-5 sm:px-6 sm:py-6 text-center flex-shrink-0">
+            <p id="promo-popup-headline" class="text-xl sm:text-2xl font-extrabold tracking-tight">Get 10% OFF!</p>
             <p id="promo-popup-subline" class="mt-2 text-white/95 text-sm">Enter your email to receive your discount code.</p>
         </div>
-        <div class="p-6">
+        <div class="p-4 sm:p-6 flex-1 min-h-0">
             <div id="promo-popup-form-wrap">
                 <form id="promo-popup-form" class="space-y-4">
-                    <input type="email" id="promo-popup-email" required placeholder="Your email" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary focus:border-primary text-slate-900" autocomplete="email">
+                    <input type="email" id="promo-popup-email" required placeholder="Your email" class="w-full px-4 py-3.5 sm:py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary focus:border-primary text-slate-900 text-base min-h-[48px] sm:min-h-0" autocomplete="email">
                 </form>
                 <p id="promo-popup-description" class="mt-2 text-sm text-slate-500 hidden"></p>
-                <div class="mt-4 flex gap-3">
-                    <button type="submit" form="promo-popup-form" id="promo-popup-submit" class="flex-1 py-3 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition-opacity">Get my code</button>
-                    <button type="button" id="promo-popup-close" class="px-4 py-3 border border-slate-200 rounded-xl font-medium text-slate-600 hover:bg-slate-50 transition-colors">No thanks</button>
+                <div class="mt-4 flex flex-col sm:flex-row gap-3">
+                    <button type="submit" form="promo-popup-form" id="promo-popup-submit" class="flex-1 py-3.5 sm:py-3 min-h-[48px] sm:min-h-0 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition-opacity touch-manipulation">Get my code</button>
+                    <button type="button" id="promo-popup-close" class="py-3.5 sm:py-3 min-h-[48px] sm:min-h-0 px-4 border border-slate-200 rounded-xl font-medium text-slate-600 hover:bg-slate-50 transition-colors touch-manipulation">No thanks</button>
                 </div>
             </div>
             <div id="promo-popup-success" class="hidden text-center py-2">
-                <p class="text-green-600 font-semibold">Check your inbox for your discount code!</p>
-                <button type="button" id="promo-popup-success-close" class="mt-4 px-6 py-2 bg-primary text-white font-bold rounded-xl hover:opacity-90">Close</button>
+                <p class="text-green-600 font-semibold text-sm sm:text-base">Check your inbox for your discount code!</p>
+                <button type="button" id="promo-popup-success-close" class="mt-4 px-6 py-3 min-h-[48px] bg-primary text-white font-bold rounded-xl hover:opacity-90 touch-manipulation">Close</button>
             </div>
         </div>
     </div>
@@ -983,7 +984,7 @@
             toast.className = 'pointer-events-auto rounded-xl shadow-lg border overflow-hidden transform transition-all duration-300 ease-out ' +
                 (isSuccess
                     ? 'bg-emerald-50 border-emerald-200/80 text-emerald-800'
-                    : 'bg-red-50 border-red-200/80 text-red-800');
+                    : 'bg-primary border-red-200/80 text-red-800');
             toast.style.animation = 'toastIn 0.35s ease-out';
             var icon = isSuccess
                 ? '<svg class="w-6 h-6 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
@@ -1073,6 +1074,13 @@
     #live-chat-toggle-wrap.live-chat-ring .live-chat-ring-target {
         animation: liveChatRing 0.5s ease-in-out 6 forwards;
     }
+    /* Live chat responsive: bottom sheet trên mobile, tránh safe area */
+    @media (max-width: 639px) {
+        #live-chat-panel.live-chat-panel {
+            bottom: max(5rem, calc(env(safe-area-inset-bottom, 0px) + 3.5rem));
+            max-height: min(85vh, calc(100vh - 6rem - env(safe-area-inset-bottom, 0px)));
+        }
+    }
     </style>
 
     <!-- Live Chat widget: khách hàng chat với seller -->
@@ -1103,7 +1111,7 @@
                 var isMe = m.is_from_customer;
                 var align = isMe ? 'justify-end' : 'justify-start';
                 var bg = isMe ? 'text-white' : 'bg-slate-100 text-slate-900';
-                var style = isMe ? ' style="background:#f0427c"' : '';
+                var style = isMe ? ' style="background:#7BC5ED;color:#fff"' : '';
                 var sender = isMe ? 'You' : 'Blulavelle';
                 var time = (function() { var d = new Date(m.created_at); return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }); })();
                 return '<div class="flex ' + align + '"><div class="max-w-[85%] rounded-xl px-3 py-2 text-sm ' + bg + '"' + style + '><p class="text-xs font-semibold opacity-90 mb-1">' + sender + '</p><p class="whitespace-pre-wrap">' + (m.body || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p><p class="text-xs mt-1 opacity-80">' + time + '</p></div></div>';
@@ -1168,9 +1176,15 @@
             if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
         }
 
+        function isMobileChat() { return typeof window !== 'undefined' && window.innerWidth < 640; }
+        function setChatPanelBodyScroll(open) {
+            if (isMobileChat()) document.body.style.overflow = open ? 'hidden' : '';
+        }
         document.getElementById('live-chat-toggle').addEventListener('click', function() {
             panel.classList.toggle('hidden');
-            if (!panel.classList.contains('hidden') && conversationId) {
+            var isOpen = !panel.classList.contains('hidden');
+            setChatPanelBodyScroll(isOpen);
+            if (isOpen && conversationId) {
                 unreadCount = 0;
                 updateUnreadBadge();
                 fetchMessages();
@@ -1179,6 +1193,10 @@
         });
         document.getElementById('live-chat-close').addEventListener('click', function() {
             panel.classList.add('hidden');
+            setChatPanelBodyScroll(false);
+        });
+        window.addEventListener('resize', function() {
+            if (!isMobileChat() && document.body.style.overflow === 'hidden') document.body.style.overflow = '';
         });
 
         function tryResumeThenStart(payload, btn) {

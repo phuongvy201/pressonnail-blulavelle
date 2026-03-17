@@ -40,9 +40,9 @@ class PageSeeder extends Seeder
                 'content' => '<div class="max-w-5xl mx-auto py-8 px-4">
                     <div class="bg-white rounded-lg shadow-lg overflow-hidden">
                         <!-- Header -->
-                        <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white px-8 py-10">
+                        <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] text-white px-8 py-10">
                             <h1 class="text-4xl font-bold mb-3">DMCA & Intellectual Property Policy</h1>
-                            <p class="text-pink-100 text-lg">Protecting intellectual property rights on PressOnNail</p>
+                            <p class="text-pink-100 text-lg">Protecting intellectual property rights on Blu Lavelle</p>
                             <p class="text-pink-200 text-sm mt-2">Last updated: ' . now()->format('F d, Y') . '</p>
                         </div>
 
@@ -51,17 +51,17 @@ class PageSeeder extends Seeder
                             <div class="mb-10">
                                 <div class="flex items-start mb-4">
                                     <div class="flex-shrink-0 w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center mr-4">
-                                        <svg class="w-6 h-6 text-[#F0427C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-6 h-6 text-[#0297FE]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
                                         </svg>
                                     </div>
                         <div>
                                         <h2 class="text-2xl font-bold text-gray-800 mb-3">Intellectual Property Complaint Policy</h2>
                                         <p class="text-gray-700 leading-relaxed mb-4">
-                                            PressOnNail provides users with a platform to sell their own press-on nail designs and products. User contractually agree to all terms prior to use of PressOnNail services. PressOnNail contractually prohibit users from using its services to sell products that infringe upon third party intellectual property rights (such as copyright, trademark, trade dress, and right of publicity).
+                                            Blu Lavelle provides users with a platform to sell their own press-on nail designs and products. User contractually agree to all terms prior to use of Blu Lavelle services. Blu Lavelle contractually prohibit users from using its services to sell products that infringe upon third party intellectual property rights (such as copyright, trademark, trade dress, and right of publicity).
                                         </p>
                                         <p class="text-gray-700 leading-relaxed">
-                                            It is PressOnNail policy to block and remove any content that it believes in good faith to infringe the intellectual property rights of third parties following receipt of a compliant notice; and to terminate service for repeated infringement.
+                                            It is Blu Lavelle policy to block and remove any content that it believes in good faith to infringe the intellectual property rights of third parties following receipt of a compliant notice; and to terminate service for repeated infringement.
                                         </p>
                             </div>
                         </div>
@@ -76,47 +76,47 @@ class PageSeeder extends Seeder
                                     How to Report Infringement
                                 </h3>
                                 <p class="text-gray-700 mb-4">
-                                    If you believe that your intellectual property rights have been infringed upon by a PressOnNail user, please notify PressOnNail at <a href="mailto:legal@blulavelle.com" class="text-[#F0427C] hover:text-[#d6386a] font-semibold underline">legal@blulavelle.com</a>
+                                    If you believe that your intellectual property rights have been infringed upon by a Blu Lavelle user, please notify Blu Lavelle at <a href="mailto:legal@blulavelle.com" class="text-[#0297FE] hover:text-[#d6386a] font-semibold underline">legal@blulavelle.com</a>
                                 </p>
                                 <p class="text-gray-800 font-semibold mb-3">You must include within your notification the following information:</p>
                                 
                                 <div class="space-y-3">
                                     <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                        <span class="flex-shrink-0 w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center font-bold mr-3">1</span>
+                                        <span class="flex-shrink-0 w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center font-bold mr-3">1</span>
                                         <p class="text-gray-700 pt-1">A physical or electronic signature of a person authorized to act on behalf of the owner of the intellectual property that you allege is being infringed</p>
                         </div>
                         
                                     <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                        <span class="flex-shrink-0 w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center font-bold mr-3">2</span>
-                                        <p class="text-gray-700 pt-1">The URL to the PressOnNail product listing(s) used in connection with the allegedly infringing products</p>
+                                        <span class="flex-shrink-0 w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center font-bold mr-3">2</span>
+                                        <p class="text-gray-700 pt-1">The URL to the Blu Lavelle product listing(s) used in connection with the allegedly infringing products</p>
                         </div>
                         
                                     <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                        <span class="flex-shrink-0 w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center font-bold mr-3">3</span>
+                                        <span class="flex-shrink-0 w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center font-bold mr-3">3</span>
                                         <p class="text-gray-700 pt-1">Identification of the copyright, trademark, or other rights that allegedly have been infringed, including proof of ownership (such as copies of existing trademark or copyright registrations)</p>
                         </div>
                         
                                     <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                        <span class="flex-shrink-0 w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center font-bold mr-3">4</span>
+                                        <span class="flex-shrink-0 w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center font-bold mr-3">4</span>
                                         <p class="text-gray-700 pt-1">Your full name, address, telephone number(s), and email address(es)</p>
                     </div>
 
                                     <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                        <span class="flex-shrink-0 w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center font-bold mr-3">5</span>
+                                        <span class="flex-shrink-0 w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center font-bold mr-3">5</span>
                                         <p class="text-gray-700 pt-1">A statement that you have a good-faith belief that use of the material in the URL submitted is unauthorized by the rights owner, or its licensee, and such use amounts to infringement under federal or state law</p>
                         </div>
                         
                                     <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                        <span class="flex-shrink-0 w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center font-bold mr-3">6</span>
+                                        <span class="flex-shrink-0 w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center font-bold mr-3">6</span>
                                         <p class="text-gray-700 pt-1">A statement, under penalty of perjury, that the information in the notification is complete and accurate and that you are authorized to act on behalf of the owner of the intellectual property or other right that is allegedly infringed</p>
                                     </div>
                         </div>
                     </div>
 
                             <!-- Counter-Notice Policy -->
-                            <div class="mb-10 bg-pink-50 border-l-4 border-[#F0427C] rounded-r-lg p-6">
+                            <div class="mb-10 bg-pink-50 border-l-4 border-[#0297FE] rounded-r-lg p-6">
                                 <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                                    <svg class="w-6 h-6 text-[#F0427C] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-6 h-6 text-[#0297FE] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                     </svg>
                                     Counter-Notice Policy
@@ -131,38 +131,38 @@ class PageSeeder extends Seeder
                                         </p>
                                     </div>
                                     <p class="text-gray-700 mb-3">
-                                        The counter-notice should be submitted to <a href="mailto:legal@blulavelle.com" class="text-[#F0427C] hover:text-[#d6386a] font-semibold underline">legal@blulavelle.com</a> and must include:
+                                        The counter-notice should be submitted to <a href="mailto:legal@blulavelle.com" class="text-[#0297FE] hover:text-[#d6386a] font-semibold underline">legal@blulavelle.com</a> and must include:
                                     </p>
                                 </div>
 
                                 <div class="space-y-3">
                                     <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                        <span class="flex-shrink-0 w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center font-bold mr-3 text-sm">①</span>
+                                        <span class="flex-shrink-0 w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center font-bold mr-3 text-sm">①</span>
                                         <p class="text-gray-700 pt-1">Your physical or electronic signature</p>
                     </div>
 
                                     <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                        <span class="flex-shrink-0 w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center font-bold mr-3 text-sm">②</span>
+                                        <span class="flex-shrink-0 w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center font-bold mr-3 text-sm">②</span>
                                         <p class="text-gray-700 pt-1">Your full name, address, telephone number(s), and email address(es)</p>
                                     </div>
                                     
                                     <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                        <span class="flex-shrink-0 w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center font-bold mr-3 text-sm">③</span>
-                                        <p class="text-gray-700 pt-1">Identification of the material and its location before it was removed, either by URL to the PressOnNail product listing(s) used in connection with the allegedly infringing products or PressOnNail order/listing number</p>
+                                        <span class="flex-shrink-0 w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center font-bold mr-3 text-sm">③</span>
+                                        <p class="text-gray-700 pt-1">Identification of the material and its location before it was removed, either by URL to the Blu Lavelle product listing(s) used in connection with the allegedly infringing products or Blu Lavelle order/listing number</p>
                     </div>
 
                                     <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                        <span class="flex-shrink-0 w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center font-bold mr-3 text-sm">④</span>
+                                        <span class="flex-shrink-0 w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center font-bold mr-3 text-sm">④</span>
                                         <p class="text-gray-700 pt-1">A statement under penalty of perjury that the claim of intellectual property infringement that led to the removal or blockage of access to material was filed by mistake or misidentification</p>
                                     </div>
                                     
                                     <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                        <span class="flex-shrink-0 w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center font-bold mr-3 text-sm">⑤</span>
+                                        <span class="flex-shrink-0 w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center font-bold mr-3 text-sm">⑤</span>
                                         <p class="text-gray-700 pt-1">Your consent to the jurisdiction of a federal court in the district where you live (if you are in the U.S.), or your consent to the jurisdiction of a federal court in the district where your service provider is located (if you are not in the U.S.)</p>
                                     </div>
                                     
                                     <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                        <span class="flex-shrink-0 w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center font-bold mr-3 text-sm">⑥</span>
+                                        <span class="flex-shrink-0 w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center font-bold mr-3 text-sm">⑥</span>
                                         <p class="text-gray-700 pt-1">Your consent to accept service of process from the party who submitted the takedown notice or an agent of that party</p>
                                     </div>
                                 </div>
@@ -184,11 +184,11 @@ class PageSeeder extends Seeder
                                 </h3>
                                 <div class="bg-white rounded-lg p-5 space-y-3">
                                     <p class="text-gray-700 leading-relaxed">
-                                        If PressOnNail receives repeated notices that you have posted others\' intellectual property without permission, <strong class="text-red-600">PressOnNail may terminate your account</strong>. PressOnNail has a system for keeping track of repeat violators of intellectual property rights of others, and determining when to suspend or terminate your account.
+                                        If Blu Lavelle receives repeated notices that you have posted others\' intellectual property without permission, <strong class="text-red-600">Blu Lavelle may terminate your account</strong>. Blu Lavelle has a system for keeping track of repeat violators of intellectual property rights of others, and determining when to suspend or terminate your account.
                                     </p>
                                     <div class="bg-red-100 border border-red-300 rounded-lg p-4">
                                         <p class="text-red-800 font-semibold">
-                                            ⚠️ PressOnNail reserves the right to terminate accounts that act against the spirit of the Terms of Service, regardless of how many strikes are involved.
+                                            ⚠️ Blu Lavelle reserves the right to terminate accounts that act against the spirit of the Terms of Service, regardless of how many strikes are involved.
                                         </p>
                                     </div>
                                 </div>
@@ -200,13 +200,13 @@ class PageSeeder extends Seeder
                                     <h3 class="text-lg font-bold text-gray-800 mb-3">Need Assistance?</h3>
                                     <p class="text-gray-700 mb-4">If you require further assistance, please contact us:</p>
                                     <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
-                                        <a href="mailto:legal@blulavelle.com" class="inline-flex items-center px-6 py-3 bg-[#F0427C] hover:bg-[#d6386a] text-white font-semibold rounded-lg shadow-md transition duration-200">
+                                        <a href="mailto:legal@blulavelle.com" class="inline-flex items-center px-6 py-3 bg-[#0297FE] hover:bg-[#d6386a] text-white font-semibold rounded-lg shadow-md transition duration-200">
                                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                             </svg>
                                             legal@blulavelle.com
                                         </a>
-                                        <a href="mailto:support@blulavelle.com" class="inline-flex items-center px-6 py-3 bg-[#F0427C] hover:bg-[#d6386a] text-white font-semibold rounded-lg shadow-md transition duration-200">
+                                        <a href="mailto:support@blulavelle.com" class="inline-flex items-center px-6 py-3 bg-[#0297FE] hover:bg-[#d6386a] text-white font-semibold rounded-lg shadow-md transition duration-200">
                                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"></path>
                                             </svg>
@@ -218,14 +218,14 @@ class PageSeeder extends Seeder
                         </div>
                     </div>
                 </div>',
-                'excerpt' => 'DMCA policy and intellectual property complaint procedures for PressOnNail (press-on nail store)',
+                'excerpt' => 'DMCA policy and intellectual property complaint procedures for Blu Lavelle (press-on nail store)',
                 'status' => 'published',
                 'published_at' => now(),
                 'template' => 'default',
                 'show_in_menu' => true,
                 'menu_title' => 'DMCA',
                 'sort_order' => 1,
-                'meta_title' => 'DMCA & Intellectual Property Policy - PressOnNail',
+                'meta_title' => 'DMCA & Intellectual Property Policy - Blu Lavelle',
                 'meta_description' => 'Learn about our DMCA policy, how to report intellectual property infringement, counter-notice procedures, and repeat infringement policy.',
             ],
             [
@@ -235,17 +235,17 @@ class PageSeeder extends Seeder
                 'content' => '<div class="max-w-6xl mx-auto py-8 px-4">
                     <div class="bg-white rounded-lg shadow-2xl overflow-hidden">
                         <!-- Hero Header -->
-                        <div class="bg-gradient-to-r from-[#F0427C] via-[#f89192] to-[#d6386a] text-white px-8 py-12">
+                        <div class="bg-gradient-to-r from-[#0297FE] via-[#f89192] to-[#d6386a] text-white px-8 py-12">
                             <h1 class="text-5xl font-bold mb-4">Terms of Service</h1>
-                            <p class="text-pink-100 text-xl mb-2">Please read carefully before using the services offered by PressOnNail</p>
+                            <p class="text-pink-100 text-xl mb-2">Please read carefully before using the services offered by Blu Lavelle</p>
                             <p class="text-pink-200 text-sm">Last updated: ' . now()->format('F d, Y') . '</p>
                         </div>
 
                         <div class="px-8 py-8">
                             <!-- Introduction -->
-                            <div class="bg-pink-50 border-l-4 border-[#F0427C] rounded-r-lg p-6 mb-8">
+                            <div class="bg-pink-50 border-l-4 border-[#0297FE] rounded-r-lg p-6 mb-8">
                                 <p class="text-gray-800 leading-relaxed mb-3">
-                                    PressOnNail provides users with an automated Internet-based service to design and sell press-on nails and nail products. By using PressOnNail and its services in any capacity, you have agreed to the terms and conditions of the Terms of Service ("Agreement") and agree to use the site and service solely as provided in this Agreement.
+                                    Blu Lavelle provides users with an automated Internet-based service to design and sell press-on nails and nail products. By using Blu Lavelle and its services in any capacity, you have agreed to the terms and conditions of the Terms of Service ("Agreement") and agree to use the site and service solely as provided in this Agreement.
                                 </p>
                             </div>
 
@@ -261,7 +261,7 @@ class PageSeeder extends Seeder
                                     By violating this User Agreement in any capacity, you are subject to an immediate removal of your listing(s), possible forfeit of profit(s), and potential suspension or termination of your account.
                                 </p>
                                 <p class="text-gray-800 mt-4 leading-relaxed">
-                                    PressOnNail provides its website and related services to you ("Seller" or "you") subject to this User Agreement (the "Agreement"), the Intellectual Property Complaint Policy, the Counter-Notice Policy, the Repeat Intellectual Property Complaint Policy, the Refund Policy, and the Privacy Policy.
+                                    Blu Lavelle provides its website and related services to you ("Seller" or "you") subject to this User Agreement (the "Agreement"), the Intellectual Property Complaint Policy, the Counter-Notice Policy, the Repeat Intellectual Property Complaint Policy, the Refund Policy, and the Privacy Policy.
                                 </p>
                             </div>
 
@@ -270,7 +270,7 @@ class PageSeeder extends Seeder
                                 <!-- Delivery -->
                                 <div class="bg-gradient-to-br from-pink-50 to-pink-100 border border-pink-300 rounded-lg p-6">
                                     <div class="flex items-center mb-3">
-                                        <div class="w-10 h-10 bg-[#F0427C] rounded-full flex items-center justify-center mr-3">
+                                        <div class="w-10 h-10 bg-[#0297FE] rounded-full flex items-center justify-center mr-3">
                                             <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
                                             </svg>
@@ -283,7 +283,7 @@ class PageSeeder extends Seeder
                                 <!-- Design Variance -->
                                 <div class="bg-gradient-to-br from-pink-50 to-pink-100 border border-pink-300 rounded-lg p-6">
                                     <div class="flex items-center mb-3">
-                                        <div class="w-10 h-10 bg-[#F0427C] rounded-full flex items-center justify-center mr-3">
+                                        <div class="w-10 h-10 bg-[#0297FE] rounded-full flex items-center justify-center mr-3">
                                             <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
                                             </svg>
@@ -303,43 +303,43 @@ class PageSeeder extends Seeder
                                         </div>
                                         <h3 class="text-lg font-bold text-yellow-800">Price & Payment</h3>
                                     </div>
-                                    <p class="text-gray-700 text-sm">Seller determines the price of products; PressOnNail processes customer payments; the base price is cost of goods sold; PressOnNail remits Seller any amount in excess ("Seller Profits").</p>
+                                    <p class="text-gray-700 text-sm">Seller determines the price of products; Blu Lavelle processes customer payments; the base price is cost of goods sold; Blu Lavelle remits Seller any amount in excess ("Seller Profits").</p>
                                 </div>
                             </div>
 
                             <!-- Listing Obligations -->
                             <div class="bg-gradient-to-r from-pink-50 to-pink-100 border-2 border-pink-300 rounded-lg p-8 mb-8">
                                 <h2 class="text-2xl font-bold text-pink-900 mb-5 flex items-center">
-                                    <svg class="w-8 h-8 mr-3 text-[#F0427C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-8 h-8 mr-3 text-[#0297FE]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                     </svg>
-                                    BY CREATING A LISTING ON PRESSONNAIL:
+                                    BY CREATING A LISTING ON Blu Lavelle:
                                 </h2>
                                 
                                 <div class="space-y-4">
                                     <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                        <div class="flex-shrink-0 w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center mr-3 mt-1">✓</div>
-                                        <p class="text-gray-800">You agree to accept and abide by PressOnNail Terms of Service in their entirety.</p>
+                                        <div class="flex-shrink-0 w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center mr-3 mt-1">✓</div>
+                                        <p class="text-gray-800">You agree to accept and abide by Blu Lavelle Terms of Service in their entirety.</p>
                                     </div>
                                     
                                     <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                        <div class="flex-shrink-0 w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center mr-3 mt-1">✓</div>
+                                        <div class="flex-shrink-0 w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center mr-3 mt-1">✓</div>
                                         <p class="text-gray-800">You agree that you are the owner, or licensee, of all rights associated with any created or uploaded artwork or text, including trademarks and copyrights.</p>
                                     </div>
                                     
                                     <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                        <div class="flex-shrink-0 w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center mr-3 mt-1">✓</div>
+                                        <div class="flex-shrink-0 w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center mr-3 mt-1">✓</div>
                                         <p class="text-gray-800">You agree that the description and title of the listing do not infringe upon the rights of any third party.</p>
                                     </div>
                                     
                                     <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                        <div class="flex-shrink-0 w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center mr-3 mt-1">✓</div>
-                                        <p class="text-gray-800">You understand and agree that PressOnNail reserves the right to remove any content that may be considered to promote hate, violence, racial intolerance, or the financial exploitation of a crime.</p>
+                                        <div class="flex-shrink-0 w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center mr-3 mt-1">✓</div>
+                                        <p class="text-gray-800">You understand and agree that Blu Lavelle reserves the right to remove any content that may be considered to promote hate, violence, racial intolerance, or the financial exploitation of a crime.</p>
                                     </div>
                                     
                                     <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                        <div class="flex-shrink-0 w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center mr-3 mt-1">✓</div>
-                                        <p class="text-gray-800">You agree to defend, indemnify, and hold PressOnNail harmless from and against any and all claims, damages, costs, and expenses, including attorneys\' fees.</p>
+                                        <div class="flex-shrink-0 w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center mr-3 mt-1">✓</div>
+                                        <p class="text-gray-800">You agree to defend, indemnify, and hold Blu Lavelle harmless from and against any and all claims, damages, costs, and expenses, including attorneys\' fees.</p>
                                     </div>
                                 </div>
                             </div>
@@ -354,18 +354,18 @@ class PageSeeder extends Seeder
                                 </h2>
                                 <div class="bg-white rounded-lg p-5 space-y-3">
                                     <p class="text-gray-700 leading-relaxed">
-                                        By submitting listings to PressOnNail, you grant PressOnNail a <strong>non-exclusive, worldwide, royalty-free, sublicensable and transferable license</strong> to use, reproduce, distribute, prepare derivative works of and display the content of such listings in connection with PressOnNail\'s services.
+                                        By submitting listings to Blu Lavelle, you grant Blu Lavelle a <strong>non-exclusive, worldwide, royalty-free, sublicensable and transferable license</strong> to use, reproduce, distribute, prepare derivative works of and display the content of such listings in connection with Blu Lavelle\'s services.
                                     </p>
                                     <p class="text-gray-700 leading-relaxed">
-                                        All intellectual property rights in this website and the PressOnNail service are owned by or licensed to PressOnNail. You may not use, adapt, reproduce, store, distribute, print, display, perform, publish or create derivative works from any part of this website without PressOnNail\'s written permission.
+                                        All intellectual property rights in this website and the Blu Lavelle service are owned by or licensed to Blu Lavelle. You may not use, adapt, reproduce, store, distribute, print, display, perform, publish or create derivative works from any part of this website without Blu Lavelle\'s written permission.
                                     </p>
                                 </div>
                             </div>
 
                             <!-- Mobile Terms -->
-                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-2 border-[#F0427C] rounded-lg p-6 mb-8">
+                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-2 border-[#0297FE] rounded-lg p-6 mb-8">
                                 <h2 class="text-2xl font-bold text-pink-900 mb-4 flex items-center">
-                                    <svg class="w-7 h-7 mr-3 text-[#F0427C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-7 h-7 mr-3 text-[#0297FE]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                                     </svg>
                                     Mobile Terms of Service
@@ -376,7 +376,7 @@ class PageSeeder extends Seeder
                                     </p>
                                     <div class="bg-pink-100 border border-pink-300 rounded-lg p-4">
                                         <p class="text-pink-900"><strong>Opt-out:</strong> Text <strong>STOP</strong> to <strong>+18555255940</strong> or click the unsubscribe link</p>
-                                        <p class="text-pink-900 mt-2"><strong>Support:</strong> Text <strong>HELP</strong> to <strong>+18555255940</strong> or email <a href="mailto:admin@blulavelle.com" class="text-[#F0427C] hover:underline font-semibold">admin@blulavelle.com</a></p>
+                                        <p class="text-pink-900 mt-2"><strong>Support:</strong> Text <strong>HELP</strong> to <strong>+18555255940</strong> or email <a href="mailto:admin@blulavelle.com" class="text-[#0297FE] hover:underline font-semibold">admin@blulavelle.com</a></p>
                                     </div>
                                     <p class="text-gray-600 text-sm">Message frequency varies. Message and data rates may apply. You are responsible for all charges from your wireless provider.</p>
                                 </div>
@@ -393,7 +393,7 @@ class PageSeeder extends Seeder
                                         Disclaimer of Warranties
                                     </h3>
                                     <p class="text-gray-700 text-sm leading-relaxed uppercase">
-                                        Your use of the PressOnNail service is at your sole risk. The service is provided on an "AS IS" and "AS AVAILABLE" basis. PressOnNail expressly disclaims all warranties of any kind.
+                                        Your use of the Blu Lavelle service is at your sole risk. The service is provided on an "AS IS" and "AS AVAILABLE" basis. Blu Lavelle expressly disclaims all warranties of any kind.
                                     </p>
                                 </div>
 
@@ -406,15 +406,15 @@ class PageSeeder extends Seeder
                                         Limitation of Liability
                                     </h3>
                                     <p class="text-gray-700 text-sm leading-relaxed">
-                                        PressOnNail will not be liable for any indirect, incidental, special, or consequential damages. <strong>Total liability will not exceed the amount paid in the last 6 months, or $100, whichever is greater.</strong>
+                                        Blu Lavelle will not be liable for any indirect, incidental, special, or consequential damages. <strong>Total liability will not exceed the amount paid in the last 6 months, or $100, whichever is greater.</strong>
                                     </p>
                                 </div>
                             </div>
 
                             <!-- Buyer Terms -->
-                            <div class="bg-gradient-to-r from-pink-50 to-pink-100 border-l-4 border-[#F0427C] rounded-r-lg p-6 mb-8">
+                            <div class="bg-gradient-to-r from-pink-50 to-pink-100 border-l-4 border-[#0297FE] rounded-r-lg p-6 mb-8">
                                 <h2 class="text-2xl font-bold text-pink-900 mb-5 flex items-center">
-                                    <svg class="w-8 h-8 mr-3 text-[#F0427C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-8 h-8 mr-3 text-[#0297FE]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
                                     </svg>
                                     Buyer Payments, Returns, Refunds & Cancellation
@@ -423,15 +423,15 @@ class PageSeeder extends Seeder
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div class="bg-white rounded-lg p-4 shadow-sm">
                                         <h4 class="font-bold text-pink-800 mb-2 flex items-center">
-                                            <span class="w-2 h-2 bg-[#F0427C] rounded-full mr-2"></span>
+                                            <span class="w-2 h-2 bg-[#0297FE] rounded-full mr-2"></span>
                                             Payment Methods
                                         </h4>
-                                        <p class="text-gray-700 text-sm">PressOnNail accepts VISA, MASTER, AMERICAN EXPRESS and PayPal. Buyers charged at time of order placement.</p>
+                                        <p class="text-gray-700 text-sm">Blu Lavelle accepts VISA, MASTER, AMERICAN EXPRESS and PayPal. Buyers charged at time of order placement.</p>
                                     </div>
                                     
                                     <div class="bg-white rounded-lg p-4 shadow-sm">
                                         <h4 class="font-bold text-pink-800 mb-2 flex items-center">
-                                            <span class="w-2 h-2 bg-[#F0427C] rounded-full mr-2"></span>
+                                            <span class="w-2 h-2 bg-[#0297FE] rounded-full mr-2"></span>
                                             Shipping Time
                                         </h4>
                                         <p class="text-gray-700 text-sm">Customers can expect to receive products <strong>14-21 business days</strong> after payment. This is an estimate and may vary.</p>
@@ -439,15 +439,15 @@ class PageSeeder extends Seeder
                                     
                                     <div class="bg-white rounded-lg p-4 shadow-sm">
                                         <h4 class="font-bold text-pink-800 mb-2 flex items-center">
-                                            <span class="w-2 h-2 bg-[#F0427C] rounded-full mr-2"></span>
+                                            <span class="w-2 h-2 bg-[#0297FE] rounded-full mr-2"></span>
                                             International Shipping
                                         </h4>
-                                        <p class="text-gray-700 text-sm">Certain countries do not provide international tracking. PressOnNail is not responsible for lost or stolen shipments.</p>
+                                        <p class="text-gray-700 text-sm">Certain countries do not provide international tracking. Blu Lavelle is not responsible for lost or stolen shipments.</p>
                                     </div>
                                     
                                     <div class="bg-white rounded-lg p-4 shadow-sm">
                                         <h4 class="font-bold text-pink-800 mb-2 flex items-center">
-                                            <span class="w-2 h-2 bg-[#F0427C] rounded-full mr-2"></span>
+                                            <span class="w-2 h-2 bg-[#0297FE] rounded-full mr-2"></span>
                                             Returns & Refunds
                                         </h4>
                                         <p class="text-gray-700 text-sm">Email within <strong>30 days</strong> for domestic orders. <strong>60 days</strong> for international orders shipped outside the US.</p>
@@ -456,20 +456,20 @@ class PageSeeder extends Seeder
                             </div>
 
                             <!-- API Policy -->
-                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-2 border-[#F0427C] rounded-lg p-6 mb-8">
+                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-2 border-[#0297FE] rounded-lg p-6 mb-8">
                                 <h2 class="text-2xl font-bold text-pink-900 mb-4 flex items-center">
-                                    <svg class="w-8 h-8 mr-3 text-[#F0427C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-8 h-8 mr-3 text-[#0297FE]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                     </svg>
                                     API (Shopify, WooCommerce, etc.) Policy
                                 </h2>
                                 <div class="bg-white rounded-lg p-5 space-y-3">
                                     <p class="text-gray-700 leading-relaxed">
-                                        PressOnNail integrates all information, tools, and services through 3rd Party Platforms (i.e. Shopify) to benefit the Seller. By accessing or using any part of the PressOnNail application, the Seller agrees to be bound by this Agreement.
+                                        Blu Lavelle integrates all information, tools, and services through 3rd Party Platforms (i.e. Shopify) to benefit the Seller. By accessing or using any part of the Blu Lavelle application, the Seller agrees to be bound by this Agreement.
                                     </p>
                                     <div class="bg-pink-100 border border-pink-300 rounded-lg p-4">
                                         <p class="text-pink-900 text-sm">
-                                            <strong>Important:</strong> PressOnNail does not handle and is not responsible for any Seller services including payment processing, returns, refunds, or exchanges. PressOnNail is not responsible for Seller\'s customer service.
+                                            <strong>Important:</strong> Blu Lavelle does not handle and is not responsible for any Seller services including payment processing, returns, refunds, or exchanges. Blu Lavelle is not responsible for Seller\'s customer service.
                                         </p>
                                     </div>
                                 </div>
@@ -486,7 +486,7 @@ class PageSeeder extends Seeder
                                     
                                     <div class="bg-white rounded-lg p-4 border border-slate-200">
                                         <h4 class="font-bold text-slate-700 mb-2">Assignment</h4>
-                                        <p class="text-gray-600 text-sm">Seller may not assign rights without written consent. PressOnNail may assign at its discretion.</p>
+                                        <p class="text-gray-600 text-sm">Seller may not assign rights without written consent. Blu Lavelle may assign at its discretion.</p>
                                     </div>
                                     
                                     <div class="bg-white rounded-lg p-4 border border-slate-200">
@@ -505,7 +505,7 @@ class PageSeeder extends Seeder
                                     Exploiting System Vulnerabilities
                                 </h3>
                                 <p class="text-gray-800 mb-3">
-                                    PressOnNail preserves the right to deal with individuals and organizations that intentionally exploit system vulnerabilities. Those who exploit vulnerabilities are obligated to recover the damage caused including:
+                                    Blu Lavelle preserves the right to deal with individuals and organizations that intentionally exploit system vulnerabilities. Those who exploit vulnerabilities are obligated to recover the damage caused including:
                                 </p>
                                 <ul class="list-disc list-inside text-gray-700 space-y-1 ml-4">
                                     <li>Loss of money and other benefits</li>
@@ -515,37 +515,37 @@ class PageSeeder extends Seeder
                             </div>
 
                             <!-- Contact Footer -->
-                            <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] rounded-lg p-8 text-center text-white">
+                            <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] rounded-lg p-8 text-center text-white">
                                 <h3 class="text-2xl font-bold mb-3">Questions About These Terms?</h3>
                                 <p class="mb-5 text-pink-100">If you have any questions about these Terms of Service, please contact us:</p>
                                 <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
-                                    <a href="mailto:admin@blulavelle.com" class="inline-flex items-center px-8 py-3 bg-white text-[#F0427C] font-bold rounded-lg shadow-lg hover:shadow-xl transition duration-200">
+                                    <a href="mailto:admin@blulavelle.com" class="inline-flex items-center px-8 py-3 bg-white text-[#0297FE] font-bold rounded-lg shadow-lg hover:shadow-xl transition duration-200">
                                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                         </svg>
                                         admin@blulavelle.com
                                     </a>
-                                    <a href="mailto:legal@blulavelle.com" class="inline-flex items-center px-8 py-3 bg-white text-[#F0427C] font-bold rounded-lg shadow-lg hover:shadow-xl transition duration-200">
+                                    <a href="mailto:legal@blulavelle.com" class="inline-flex items-center px-8 py-3 bg-white text-[#0297FE] font-bold rounded-lg shadow-lg hover:shadow-xl transition duration-200">
                                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                         </svg>
                                         legal@blulavelle.com
                                     </a>
                                 </div>
-                                <p class="mt-6 text-sm text-pink-100">By using PressOnNail, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.</p>
+                                <p class="mt-6 text-sm text-pink-100">By using Blu Lavelle, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.</p>
                             </div>
                         </div>
                     </div>
                 </div>',
-                'excerpt' => 'Complete Terms of Service for PressOnNail - User Agreement, Payment Terms, IP Rights, Mobile Terms, API Policy, and Legal Information',
+                'excerpt' => 'Complete Terms of Service for Blu Lavelle - User Agreement, Payment Terms, IP Rights, Mobile Terms, API Policy, and Legal Information',
                 'status' => 'published',
                 'published_at' => now(),
                 'template' => 'default',
                 'show_in_menu' => true,
                 'menu_title' => 'Terms of Service',
                 'sort_order' => 2,
-                'meta_title' => 'Terms of Service - PressOnNail Legal Agreement',
-                'meta_description' => 'Read our complete Terms of Service including User Agreement, Intellectual Property Policy, Payment Terms, Mobile Terms, API Policy, and all legal information for using PressOnNail (press-on nail store).',
+                'meta_title' => 'Terms of Service - Blu Lavelle Legal Agreement',
+                'meta_description' => 'Read our complete Terms of Service including User Agreement, Intellectual Property Policy, Payment Terms, Mobile Terms, API Policy, and all legal information for using Blu Lavelle (press-on nail store).',
             ],
             [
                 'user_id' => $admin->id,
@@ -554,7 +554,7 @@ class PageSeeder extends Seeder
                 'content' => '<div class="max-w-5xl mx-auto py-8 px-4">
                     <div class="bg-white rounded-lg shadow-2xl overflow-hidden">
                         <!-- Hero Header -->
-                        <div class="bg-gradient-to-r from-[#F0427C] via-[#f89192] to-[#d6386a] text-white px-8 py-12">
+                        <div class="bg-gradient-to-r from-[#0297FE] via-[#f89192] to-[#d6386a] text-white px-8 py-12">
                             <h1 class="text-5xl font-bold mb-4">Our Intellectual Property Policy</h1>
                             <p class="text-pink-100 text-xl mb-2">Protecting copyright and intellectual property rights</p>
                             <p class="text-pink-200 text-sm">Last updated: ' . now()->format('F d, Y') . '</p>
@@ -562,42 +562,42 @@ class PageSeeder extends Seeder
 
                         <div class="px-8 py-8">
                             <!-- Introduction -->
-                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-l-4 border-[#F0427C] rounded-r-lg p-6 mb-8">
+                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-l-4 border-[#0297FE] rounded-r-lg p-6 mb-8">
                                 <p class="text-gray-800 leading-relaxed mb-4">
-                                    PressOnNail has adopted the following general policy towards the infringement of copyright and other intellectual property in accordance with general <strong>United States intellectual property laws</strong> and the <strong>Digital Millennium Copyright Act (DMCA)</strong>.
+                                    Blu Lavelle has adopted the following general policy towards the infringement of copyright and other intellectual property in accordance with general <strong>United States intellectual property laws</strong> and the <strong>Digital Millennium Copyright Act (DMCA)</strong>.
                                 </p>
                                 <p class="text-gray-800 leading-relaxed">
-                                    PressOnNail will respond to notices in the form provided below from jurisdictions other than the United States as well.
+                                    Blu Lavelle will respond to notices in the form provided below from jurisdictions other than the United States as well.
                                 </p>
                             </div>
 
                             <!-- Contact Information Box -->
-                            <div class="bg-gradient-to-r from-pink-100 to-pink-200 border-2 border-[#F0427C] rounded-lg p-6 mb-8">
+                            <div class="bg-gradient-to-r from-pink-100 to-pink-200 border-2 border-[#0297FE] rounded-lg p-6 mb-8">
                                 <h2 class="text-2xl font-bold text-pink-900 mb-4 flex items-center">
-                                    <svg class="w-8 h-8 mr-3 text-[#F0427C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-8 h-8 mr-3 text-[#0297FE]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                     </svg>
-                                    Contact PressOnNail Legal Department
+                                    Contact Blu Lavelle Legal Department
                                 </h2>
                                 <div class="bg-white rounded-lg p-5">
                                     <p class="text-gray-700 mb-4">
-                                        Please contact PressOnNail\'s Legal Department for any and all Notice and Counter Notice of claims of copyright or other intellectual property infringement:
+                                        Please contact Blu Lavelle\'s Legal Department for any and all Notice and Counter Notice of claims of copyright or other intellectual property infringement:
                                     </p>
                                     <div class="space-y-3">
                                         <div class="flex items-start">
-                                            <div class="flex-shrink-0 w-10 h-10 bg-[#F0427C] rounded-full flex items-center justify-center mr-3">
+                                            <div class="flex-shrink-0 w-10 h-10 bg-[#0297FE] rounded-full flex items-center justify-center mr-3">
                                                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                                 </svg>
                                             </div>
                                             <div>
                                                 <h4 class="font-bold text-gray-800">Email (Preferred Method)</h4>
-                                                <a href="mailto:legal@blulavelle.com" class="text-[#F0427C] hover:text-[#d6386a] font-semibold text-lg underline">legal@blulavelle.com</a>
+                                                <a href="mailto:legal@blulavelle.com" class="text-[#0297FE] hover:text-[#d6386a] font-semibold text-lg underline">legal@blulavelle.com</a>
                                             </div>
                                         </div>
                                         
                                         <div class="flex items-start">
-                                            <div class="flex-shrink-0 w-10 h-10 bg-[#F0427C] rounded-full flex items-center justify-center mr-3">
+                                            <div class="flex-shrink-0 w-10 h-10 bg-[#0297FE] rounded-full flex items-center justify-center mr-3">
                                                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -616,7 +616,7 @@ class PageSeeder extends Seeder
                                     </div>
                                     <div class="mt-4 p-4 bg-pink-50 border border-pink-200 rounded-lg">
                                         <p class="text-gray-800 text-sm">
-                                            <strong>Note:</strong> PressOnNail\'s Legal Department is the designated agent to receive notifications of alleged intellectual property infringements on the Website.
+                                            <strong>Note:</strong> Blu Lavelle\'s Legal Department is the designated agent to receive notifications of alleged intellectual property infringements on the Website.
                                         </p>
                                     </div>
                                 </div>
@@ -633,7 +633,7 @@ class PageSeeder extends Seeder
                                     <div>
                                         <h3 class="text-xl font-bold text-red-800 mb-2">Repeat Infringer Policy</h3>
                                         <p class="text-red-900 font-semibold">
-                                            PressOnNail will terminate rights of subscribers and account holders in appropriate circumstances if they are determined to be repeat infringers.
+                                            Blu Lavelle will terminate rights of subscribers and account holders in appropriate circumstances if they are determined to be repeat infringers.
                                         </p>
                                     </div>
                                 </div>
@@ -649,7 +649,7 @@ class PageSeeder extends Seeder
                                 </div>
                                 <div class="bg-amber-50 border-2 border-amber-300 border-t-0 rounded-b-lg p-6">
                                     <p class="text-gray-800 leading-relaxed mb-4">
-                                        PressOnNail respects the intellectual property of others, and asks our users to do the same. If you believe that your work has been copied in a way that constitutes copyright infringement, or your intellectual property rights have been otherwise violated, please provide <a href="mailto:legal@blulavelle.com" class="text-[#F0427C] hover:text-[#d6386a] font-semibold underline">legal@blulavelle.com</a> the following information in writing pursuant to the DMCA:
+                                        Blu Lavelle respects the intellectual property of others, and asks our users to do the same. If you believe that your work has been copied in a way that constitutes copyright infringement, or your intellectual property rights have been otherwise violated, please provide <a href="mailto:legal@blulavelle.com" class="text-[#0297FE] hover:text-[#d6386a] font-semibold underline">legal@blulavelle.com</a> the following information in writing pursuant to the DMCA:
                                     </p>
                                     
                                     <div class="bg-white rounded-lg p-5 mb-4">
@@ -673,7 +673,7 @@ class PageSeeder extends Seeder
                                             <div class="flex items-start">
                                                 <div class="flex-shrink-0 w-10 h-10 bg-amber-500 text-white rounded-full flex items-center justify-center mr-3 font-bold">c</div>
                                                 <div class="flex-1">
-                                                    <p class="text-gray-800">A <strong>specific description of the location</strong> where the material that you claim to be infringing is located in PressOnNail (sufficient to permit PressOnNail to locate the material)</p>
+                                                    <p class="text-gray-800">A <strong>specific description of the location</strong> where the material that you claim to be infringing is located in Blu Lavelle (sufficient to permit Blu Lavelle to locate the material)</p>
                                                 </div>
                                             </div>
                                             
@@ -701,7 +701,7 @@ class PageSeeder extends Seeder
                                     </div>
 
                                     <!-- Process Info -->
-                                    <div class="bg-pink-50 border-l-4 border-[#F0427C] rounded-r-lg p-5 mb-4">
+                                    <div class="bg-pink-50 border-l-4 border-[#0297FE] rounded-r-lg p-5 mb-4">
                                         <h4 class="font-bold text-pink-900 mb-2 flex items-center">
                                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -709,14 +709,14 @@ class PageSeeder extends Seeder
                                             What Happens Next
                                         </h4>
                                         <p class="text-gray-700 text-sm">
-                                            Once a proper infringement notification is received by PressOnNail\'s Legal Department, PressOnNail may remove or disable access to the infringing material. When removing or disabling access, PressOnNail will make reasonable attempts to inform the allegedly infringing user and may provide a copy of the notice.
+                                            Once a proper infringement notification is received by Blu Lavelle\'s Legal Department, Blu Lavelle may remove or disable access to the infringing material. When removing or disabling access, Blu Lavelle will make reasonable attempts to inform the allegedly infringing user and may provide a copy of the notice.
                                         </p>
                                     </div>
 
                                     <!-- Warning Box -->
                                     <div class="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4">
                                         <p class="text-yellow-900 text-sm">
-                                            <strong>⚠️ Important:</strong> If you fail to comply with all of the aforementioned Notice requirements in writing, your Notice may not be valid and PressOnNail may ignore such incomplete or inaccurate notices without liability. Under Section 512(f) of the Copyright Act, any person who knowingly materially misrepresents that material or activity is infringing may be subject to liability.
+                                            <strong>⚠️ Important:</strong> If you fail to comply with all of the aforementioned Notice requirements in writing, your Notice may not be valid and Blu Lavelle may ignore such incomplete or inaccurate notices without liability. Under Section 512(f) of the Copyright Act, any person who knowingly materially misrepresents that material or activity is infringing may be subject to liability.
                                         </p>
                                     </div>
                                 </div>
@@ -724,15 +724,15 @@ class PageSeeder extends Seeder
 
                             <!-- B. Responding To Infringements -->
                             <div class="mb-8">
-                                <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white px-6 py-4 rounded-t-lg">
+                                <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] text-white px-6 py-4 rounded-t-lg">
                                     <h2 class="text-3xl font-bold flex items-center">
-                                        <span class="w-12 h-12 bg-white text-[#F0427C] rounded-full flex items-center justify-center mr-3 text-2xl font-bold">B</span>
+                                        <span class="w-12 h-12 bg-white text-[#0297FE] rounded-full flex items-center justify-center mr-3 text-2xl font-bold">B</span>
                                         Responding To Infringements
                                     </h2>
                                 </div>
                                 <div class="bg-pink-50 border-2 border-pink-300 border-t-0 rounded-b-lg p-6">
                                     <p class="text-gray-800 leading-relaxed mb-4">
-                                        If you believe that your work has been removed or disabled by mistake or misidentification, please provide <a href="mailto:legal@blulavelle.com" class="text-[#F0427C] hover:text-[#d6386a] font-semibold underline">legal@blulavelle.com</a> with the following information in writing pursuant to the DMCA:
+                                        If you believe that your work has been removed or disabled by mistake or misidentification, please provide <a href="mailto:legal@blulavelle.com" class="text-[#0297FE] hover:text-[#d6386a] font-semibold underline">legal@blulavelle.com</a> with the following information in writing pursuant to the DMCA:
                                     </p>
                                     
                                     <div class="bg-white rounded-lg p-5 mb-4">
@@ -740,28 +740,28 @@ class PageSeeder extends Seeder
                                         
                                         <div class="space-y-4">
                                             <div class="flex items-start">
-                                                <div class="flex-shrink-0 w-10 h-10 bg-[#F0427C] text-white rounded-full flex items-center justify-center mr-3 font-bold">a</div>
+                                                <div class="flex-shrink-0 w-10 h-10 bg-[#0297FE] text-white rounded-full flex items-center justify-center mr-3 font-bold">a</div>
                                                 <div class="flex-1">
-                                                    <p class="text-gray-800">A physical or electronic <strong>signature</strong> of the subscriber of PressOnNail</p>
+                                                    <p class="text-gray-800">A physical or electronic <strong>signature</strong> of the subscriber of Blu Lavelle</p>
                                                 </div>
                                             </div>
                                             
                                             <div class="flex items-start">
-                                                <div class="flex-shrink-0 w-10 h-10 bg-[#F0427C] text-white rounded-full flex items-center justify-center mr-3 font-bold">b</div>
+                                                <div class="flex-shrink-0 w-10 h-10 bg-[#0297FE] text-white rounded-full flex items-center justify-center mr-3 font-bold">b</div>
                                                 <div class="flex-1">
                                                     <p class="text-gray-800"><strong>Identification</strong> of the material that has been removed or to which access has been disabled and the location at which the material appeared before removal</p>
                                                 </div>
                                             </div>
                                             
                                             <div class="flex items-start">
-                                                <div class="flex-shrink-0 w-10 h-10 bg-[#F0427C] text-white rounded-full flex items-center justify-center mr-3 font-bold">c</div>
+                                                <div class="flex-shrink-0 w-10 h-10 bg-[#0297FE] text-white rounded-full flex items-center justify-center mr-3 font-bold">c</div>
                                                 <div class="flex-1">
                                                     <p class="text-gray-800">A <strong>statement made under penalty of perjury</strong> that the subscriber has a good faith belief that the material was removed or disabled as a result of mistake or misidentification</p>
                                                 </div>
                                             </div>
                                             
                                             <div class="flex items-start">
-                                                <div class="flex-shrink-0 w-10 h-10 bg-[#F0427C] text-white rounded-full flex items-center justify-center mr-3 font-bold">d</div>
+                                                <div class="flex-shrink-0 w-10 h-10 bg-[#0297FE] text-white rounded-full flex items-center justify-center mr-3 font-bold">d</div>
                                                 <div class="flex-1">
                                                     <p class="text-gray-800">The subscriber\'s <strong>name, address, telephone number</strong>, and a statement that the subscriber consents to the jurisdiction of the Federal District Court (or appropriate judicial district outside the US) and will accept service of process from the complaining party or their agent</p>
                                                 </div>
@@ -770,7 +770,7 @@ class PageSeeder extends Seeder
                                     </div>
 
                                     <!-- Counter Notice Process -->
-                                    <div class="bg-pink-50 border-l-4 border-[#F0427C] rounded-r-lg p-5">
+                                    <div class="bg-pink-50 border-l-4 border-[#0297FE] rounded-r-lg p-5">
                                         <h4 class="font-bold text-pink-900 mb-3 flex items-center">
                                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
@@ -778,17 +778,17 @@ class PageSeeder extends Seeder
                                             Counter Notice Process
                                         </h4>
                                         <p class="text-gray-700 text-sm leading-relaxed">
-                                            If a Counter Notice is received by PressOnNail\'s Legal Department, PressOnNail may send a copy to the original complaining party. Unless the copyright or intellectual property owner files an action seeking a court order against you, the removed material may be replaced (or access restored) in approximately <strong class="text-pink-800">10 business days</strong> after receipt of the Counter Notice, at the sole discretion of PressOnNail\'s Legal Department.
+                                            If a Counter Notice is received by Blu Lavelle\'s Legal Department, Blu Lavelle may send a copy to the original complaining party. Unless the copyright or intellectual property owner files an action seeking a court order against you, the removed material may be replaced (or access restored) in approximately <strong class="text-pink-800">10 business days</strong> after receipt of the Counter Notice, at the sole discretion of Blu Lavelle\'s Legal Department.
                                         </p>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Footer Thank You -->
-                            <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] rounded-lg p-8 text-center text-white">
+                            <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] rounded-lg p-8 text-center text-white">
                                 <div class="flex justify-center mb-4">
                                     <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center">
-                                        <svg class="w-10 h-10 text-[#F0427C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-10 h-10 text-[#0297FE]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                         </svg>
                                     </div>
@@ -796,7 +796,7 @@ class PageSeeder extends Seeder
                                 <h3 class="text-2xl font-bold mb-3">Thank You</h3>
                                 <p class="text-lg text-pink-100 mb-5">Thank you for paying attention to these requirements</p>
                                 <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
-                                    <a href="mailto:legal@blulavelle.com" class="inline-flex items-center px-8 py-3 bg-white text-[#F0427C] font-bold rounded-lg shadow-lg hover:shadow-xl transition duration-200">
+                                    <a href="mailto:legal@blulavelle.com" class="inline-flex items-center px-8 py-3 bg-white text-[#0297FE] font-bold rounded-lg shadow-lg hover:shadow-xl transition duration-200">
                                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                         </svg>
@@ -814,8 +814,57 @@ class PageSeeder extends Seeder
                 'show_in_menu' => true,
                 'menu_title' => 'IP Policy',
                 'sort_order' => 3,
-                'meta_title' => 'Intellectual Property Policy - PressOnNail DMCA & Copyright Protection',
-                'meta_description' => 'Learn about our intellectual property policy, DMCA compliance, how to report copyright infringement, and counter-notice procedures on PressOnNail (press-on nail store).',
+                'meta_title' => 'Intellectual Property Policy - Blu Lavelle DMCA & Copyright Protection',
+                'meta_description' => 'Learn about our intellectual property policy, DMCA compliance, how to report copyright infringement, and counter-notice procedures on Blu Lavelle (press-on nail store).',
+            ],
+            [
+                'user_id' => $admin->id,
+                'title' => 'Intellectual Property Policy',
+                'slug' => 'intellectual-property-policy',
+                'content' => '<div class="max-w-5xl mx-auto py-10 px-4">
+                    <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+                        <div class="bg-gradient-to-r from-[#0297FE] via-[#f89192] to-[#d6386a] text-white px-8 py-12 text-center">
+                            <h1 class="text-5xl font-bold mb-3">Intellectual Property Policy</h1>
+                            <p class="text-pink-100 text-lg">Copyright, trademarks, and reporting infringement</p>
+                            <p class="text-pink-200 text-sm mt-2">Last updated: ' . now()->format('F d, Y') . '</p>
+                        </div>
+
+                        <div class="px-8 py-10 space-y-6">
+                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-l-4 border-[#0297FE] rounded-r-lg p-6">
+                                <p class="text-gray-800 leading-relaxed text-lg">
+                                    Trang này được giữ để tương thích với các link cũ. Nội dung “Intellectual Property Policy” hiện được trình bày tại trang:
+                                    <a href="/our-intellectual-property-policy" class="text-[#0297FE] font-semibold underline hover:text-[#d6386a]">Our Intellectual Property Policy</a>.
+                                </p>
+                            </div>
+
+                            <div class="bg-white border border-pink-200 rounded-xl p-6">
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3">Report an infringement</h2>
+                                <p class="text-gray-700 leading-relaxed mb-4">
+                                    Nếu bạn cho rằng quyền sở hữu trí tuệ của bạn bị xâm phạm, vui lòng gửi thông tin chi tiết (URL liên quan, bằng chứng sở hữu, thông tin liên hệ)
+                                    về địa chỉ email pháp lý:
+                                    <a href="mailto:legal@blulavelle.com" class="text-[#0297FE] font-semibold underline hover:text-[#d6386a]">legal@blulavelle.com</a>.
+                                </p>
+                                <div class="flex flex-col sm:flex-row gap-3">
+                                    <a href="/our-intellectual-property-policy" class="inline-flex items-center justify-center px-6 py-3 bg-[#0297FE] hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-md transition duration-200">
+                                        View full policy
+                                    </a>
+                                    <a href="/dmca" class="inline-flex items-center justify-center px-6 py-3 bg-white border-2 border-[#0297FE] text-[#0297FE] hover:bg-pink-50 font-semibold rounded-lg transition duration-200">
+                                        DMCA & IP policy
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>',
+                'excerpt' => 'Intellectual property policy landing page (legacy URL) linking to the full IP policy and DMCA procedures.',
+                'status' => 'published',
+                'published_at' => now(),
+                'template' => 'default',
+                'show_in_menu' => false,
+                'menu_title' => 'IP Policy',
+                'sort_order' => 999,
+                'meta_title' => 'Intellectual Property Policy - Blu Lavelle',
+                'meta_description' => 'Learn about Blu Lavelle intellectual property policy and how to report infringement. Full policy and DMCA procedures available.',
             ],
             [
                 'user_id' => $admin->id,
@@ -824,41 +873,41 @@ class PageSeeder extends Seeder
                 'content' => '<div class="max-w-6xl mx-auto py-8 px-4">
                     <div class="bg-white rounded-lg shadow-2xl overflow-hidden">
                         <!-- Hero Header -->
-                        <div class="bg-gradient-to-r from-[#F0427C] via-[#f89192] to-[#d6386a] text-white px-8 py-12">
-                            <h1 class="text-5xl font-bold mb-4">Returns & Exchanges Policy – PressOnNail</h1>
+                        <div class="bg-gradient-to-r from-[#0297FE] via-[#f89192] to-[#d6386a] text-white px-8 py-12">
+                            <h1 class="text-5xl font-bold mb-4">Returns & Exchanges Policy – Blu Lavelle</h1>
                             <p class="text-pink-100 text-xl mb-2">Your satisfaction is our priority - Easy returns within 30 days</p>
                             <p class="text-pink-200 text-sm">Last updated: ' . now()->format('F d, Y') . '</p>
                         </div>
 
                         <div class="px-8 py-8">
                             <!-- Introduction -->
-                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-l-4 border-[#F0427C] rounded-r-lg p-6 mb-8">
+                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-l-4 border-[#0297FE] rounded-r-lg p-6 mb-8">
                                 <p class="text-gray-800 leading-relaxed text-lg">
-                                    At <strong>PressOnNail</strong>, we offer returns and exchanges within <strong>30 days</strong> from the date you receive your order. If you need to return or exchange an item, please contact our customer support team to submit your request.
+                                    At <strong>Blu Lavelle</strong>, we offer returns and exchanges within <strong>30 days</strong> from the date you receive your order. If you need to return or exchange an item, please contact our customer support team to submit your request.
                                 </p>
                             </div>
 
                             <!-- No Restocking Fee -->
-                            <div class="bg-gradient-to-r from-pink-100 to-pink-200 border-2 border-[#F0427C] rounded-lg p-6 mb-8">
+                            <div class="bg-gradient-to-r from-pink-100 to-pink-200 border-2 border-[#0297FE] rounded-lg p-6 mb-8">
                                 <div class="flex items-center justify-center">
                                     <div class="text-center">
                                         <div class="flex justify-center mb-4">
-                                            <div class="w-20 h-20 bg-[#F0427C] rounded-full flex items-center justify-center">
+                                            <div class="w-20 h-20 bg-[#0297FE] rounded-full flex items-center justify-center">
                                                 <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                 </svg>
                                             </div>
                                         </div>
                                         <h2 class="text-3xl font-bold text-pink-900 mb-2">1. Restocking Fee</h2>
-                                        <p class="text-5xl font-bold text-[#F0427C]">NO FEE</p>
-                                        <p class="text-gray-700 mt-2">PressOnNail does not charge any restocking fees.</p>
+                                        <p class="text-5xl font-bold text-[#0297FE]">NO FEE</p>
+                                        <p class="text-gray-700 mt-2">Blu Lavelle does not charge any restocking fees.</p>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Return Criteria Section -->
                             <div class="mb-10">
-                                <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white px-6 py-4 rounded-t-lg mb-0">
+                                <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] text-white px-6 py-4 rounded-t-lg mb-0">
                                     <h2 class="text-3xl font-bold">2. Conditions Eligible for Returns & Exchanges</h2>
                                     <p class="text-pink-100 mt-2">You may request a return or exchange only if your item falls under one of the following categories:</p>
                                 </div>
@@ -871,7 +920,7 @@ class PageSeeder extends Seeder
                                             <div class="flex-shrink-0 w-14 h-14 bg-red-500 text-white rounded-full flex items-center justify-center mr-4 text-2xl font-bold">A</div>
                                             <div class="flex-1">
                                                 <h3 class="text-2xl font-bold text-red-800 mb-3">a. Wrong / Damaged / Defective Products</h3>
-                                                <p class="text-gray-700 mb-4">PressOnNail will fully support cases where:</p>
+                                                <p class="text-gray-700 mb-4">Blu Lavelle will fully support cases where:</p>
                                             </div>
                                         </div>
                                         
@@ -945,14 +994,14 @@ class PageSeeder extends Seeder
                                     </div>
 
                                     <!-- Criterion D -->
-                                    <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-l-4 border-[#F0427C] rounded-r-lg p-6">
+                                    <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-l-4 border-[#0297FE] rounded-r-lg p-6">
                                         <div class="flex items-start">
-                                            <div class="flex-shrink-0 w-14 h-14 bg-[#F0427C] text-white rounded-full flex items-center justify-center mr-4 text-2xl font-bold">D</div>
+                                            <div class="flex-shrink-0 w-14 h-14 bg-[#0297FE] text-white rounded-full flex items-center justify-center mr-4 text-2xl font-bold">D</div>
                                             <div class="flex-1">
                                                 <h3 class="text-2xl font-bold text-[#d6386a] mb-3">d. Shipping-related Damage or Errors</h3>
                                                 <div class="bg-white rounded-lg p-4 shadow-sm border border-pink-200">
                                                     <p class="text-gray-800 leading-relaxed mb-3">
-                                                        PressOnNail supports cases where the order is wrong, damaged, or faulty due to the shipping process.
+                                                        Blu Lavelle supports cases where the order is wrong, damaged, or faulty due to the shipping process.
                                                     </p>
                                                     <div class="bg-pink-100 border border-pink-300 rounded-lg p-3">
                                                         <p class="text-pink-900 text-sm mb-2">
@@ -960,7 +1009,7 @@ class PageSeeder extends Seeder
                                                         </p>
                                                         <ul class="list-disc list-inside text-pink-900 space-y-1">
                                                             <li>Refuse the package immediately, or</li>
-                                                            <li>Contact PressOnNail within <strong>30 days of delivery</strong> for assistance.</li>
+                                                            <li>Contact Blu Lavelle within <strong>30 days of delivery</strong> for assistance.</li>
                                                         </ul>
                                                     </div>
                                                 </div>
@@ -971,7 +1020,7 @@ class PageSeeder extends Seeder
                             </div>
 
                             <!-- Eligible Products Section -->
-                            <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white px-6 py-4 rounded-t-lg mb-0">
+                            <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] text-white px-6 py-4 rounded-t-lg mb-0">
                                 <h2 class="text-3xl font-bold flex items-center">
                                     <svg class="w-8 h-8 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -983,7 +1032,7 @@ class PageSeeder extends Seeder
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div class="bg-white rounded-lg p-5 shadow-md border border-pink-200">
                                         <div class="flex justify-center mb-3">
-                                            <div class="w-12 h-12 bg-[#F0427C] rounded-full flex items-center justify-center">
+                                            <div class="w-12 h-12 bg-[#0297FE] rounded-full flex items-center justify-center">
                                                 <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                 </svg>
@@ -994,7 +1043,7 @@ class PageSeeder extends Seeder
                                     
                                     <div class="bg-white rounded-lg p-5 shadow-md border border-pink-200">
                                         <div class="flex justify-center mb-3">
-                                            <div class="w-12 h-12 bg-[#F0427C] rounded-full flex items-center justify-center">
+                                            <div class="w-12 h-12 bg-[#0297FE] rounded-full flex items-center justify-center">
                                                 <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                 </svg>
@@ -1005,7 +1054,7 @@ class PageSeeder extends Seeder
                                     
                                     <div class="bg-white rounded-lg p-5 shadow-md border border-pink-200">
                                         <div class="flex justify-center mb-3">
-                                            <div class="w-12 h-12 bg-[#F0427C] rounded-full flex items-center justify-center">
+                                            <div class="w-12 h-12 bg-[#0297FE] rounded-full flex items-center justify-center">
                                                 <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                 </svg>
@@ -1018,7 +1067,7 @@ class PageSeeder extends Seeder
 
                             <!-- Return Process Section -->
                             <div class="mb-8">
-                                <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white px-6 py-4 rounded-t-lg">
+                                <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] text-white px-6 py-4 rounded-t-lg">
                                     <h2 class="text-3xl font-bold flex items-center">
                                         <svg class="w-8 h-8 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
@@ -1030,37 +1079,37 @@ class PageSeeder extends Seeder
                                     <!-- Step 1 -->
                                     <div class="mb-6">
                                         <div class="flex items-start">
-                                            <div class="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-[#F0427C] to-[#d6386a] text-white rounded-full flex items-center justify-center mr-4 text-2xl font-bold shadow-lg">Step 1</div>
+                                            <div class="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-[#0297FE] to-[#d6386a] text-white rounded-full flex items-center justify-center mr-4 text-2xl font-bold shadow-lg">Step 1</div>
                                             <div class="flex-1 bg-white rounded-lg p-5 shadow-md border border-pink-200">
-                                                <h3 class="text-xl font-bold text-pink-900 mb-3">Contact PressOnNail</h3>
+                                                <h3 class="text-xl font-bold text-pink-900 mb-3">Contact Blu Lavelle</h3>
                                                 <p class="text-gray-700 mb-3">When contacting us, please provide:</p>
                                                 <div class="space-y-3">
                                                     <div class="flex items-start bg-pink-50 rounded-lg p-3">
-                                                        <svg class="w-5 h-5 text-[#F0427C] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <svg class="w-5 h-5 text-[#0297FE] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                         </svg>
                                                         <p class="text-gray-800">Order information.</p>
                                                     </div>
                                                     <div class="flex items-start bg-pink-50 rounded-lg p-3">
-                                                        <svg class="w-5 h-5 text-[#F0427C] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <svg class="w-5 h-5 text-[#0297FE] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                         </svg>
                                                         <p class="text-gray-800">Photo of the shipping label.</p>
                                                     </div>
                                                     <div class="flex items-start bg-pink-50 rounded-lg p-3">
-                                                        <svg class="w-5 h-5 text-[#F0427C] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <svg class="w-5 h-5 text-[#0297FE] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                         </svg>
                                                         <p class="text-gray-800">Photos clearly showing the damaged/wrong/defective area.</p>
                                                     </div>
                                                     <div class="flex items-start bg-pink-50 rounded-lg p-3">
-                                                        <svg class="w-5 h-5 text-[#F0427C] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <svg class="w-5 h-5 text-[#0297FE] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                         </svg>
                                                         <p class="text-gray-800">Photos showing accurate width & length measurements (if the size is incorrect).</p>
                                                     </div>
                                                     <div class="flex items-start bg-pink-50 rounded-lg p-3">
-                                                        <svg class="w-5 h-5 text-[#F0427C] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <svg class="w-5 h-5 text-[#0297FE] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                         </svg>
                                                         <p class="text-gray-800">Information about the item you want to receive as a replacement.</p>
@@ -1078,11 +1127,11 @@ class PageSeeder extends Seeder
                                     <!-- Step 2 -->
                                     <div>
                                         <div class="flex items-start">
-                                            <div class="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-[#F0427C] to-[#d6386a] text-white rounded-full flex items-center justify-center mr-4 text-2xl font-bold shadow-lg">Step 2</div>
+                                            <div class="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-[#0297FE] to-[#d6386a] text-white rounded-full flex items-center justify-center mr-4 text-2xl font-bold shadow-lg">Step 2</div>
                                             <div class="flex-1 bg-white rounded-lg p-5 shadow-md border border-pink-200">
                                                 <h3 class="text-xl font-bold text-pink-900 mb-3">Verification</h3>
-                                                <p class="text-gray-700 mb-3">After confirming that your item qualifies for return or exchange, PressOnNail will:</p>
-                                                <div class="bg-pink-100 border-2 border-[#F0427C] rounded-lg p-4 mb-3">
+                                                <p class="text-gray-700 mb-3">After confirming that your item qualifies for return or exchange, Blu Lavelle will:</p>
+                                                <div class="bg-pink-100 border-2 border-[#0297FE] rounded-lg p-4 mb-3">
                                                     <p class="text-pink-900 font-semibold mb-2">
                                                         ✓ Issue a <strong>refund</strong>, or
                                                     </p>
@@ -1110,7 +1159,7 @@ class PageSeeder extends Seeder
                                 <div class="space-y-3">
                                     <div class="bg-white rounded-lg p-4 border-l-4 border-amber-500">
                                         <p class="text-gray-800">
-                                            <strong class="text-amber-800">⚠️</strong> Items returned <strong>without PressOnNail\'s prior verification will not be supported</strong>.
+                                            <strong class="text-amber-800">⚠️</strong> Items returned <strong>without Blu Lavelle\'s prior verification will not be supported</strong>.
                                         </p>
                                     </div>
                                     <div class="bg-white rounded-lg p-4 border-l-4 border-amber-500">
@@ -1122,10 +1171,10 @@ class PageSeeder extends Seeder
                             </div>
 
                             <!-- International Orders Notice -->
-                            <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] rounded-lg p-8 text-center text-white">
+                            <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] rounded-lg p-8 text-center text-white">
                                 <div class="flex justify-center mb-4">
                                     <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center">
-                                        <svg class="w-10 h-10 text-[#F0427C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-10 h-10 text-[#0297FE]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                         </svg>
                                     </div>
@@ -1150,8 +1199,8 @@ class PageSeeder extends Seeder
                 'show_in_menu' => true,
                 'menu_title' => 'Returns & Exchanges',
                 'sort_order' => 4,
-                'meta_title' => 'Returns & Exchanges Policy - PressOnNail Easy Returns',
-                'meta_description' => 'Easy returns and exchanges within 30 days. No restocking fee. Learn about our return policy for wrong, damaged, or non-fitting items on PressOnNail.',
+                'meta_title' => 'Returns & Exchanges Policy - Blu Lavelle Easy Returns',
+                'meta_description' => 'Easy returns and exchanges within 30 days. No restocking fee. Learn about our return policy for wrong, damaged, or non-fitting items on Blu Lavelle.',
             ],
             [
                 'user_id' => $admin->id,
@@ -1160,7 +1209,7 @@ class PageSeeder extends Seeder
                 'content' => '<div class="max-w-6xl mx-auto py-8 px-4">
                     <div class="bg-white rounded-lg shadow-2xl overflow-hidden">
                         <!-- Hero Header -->
-                        <div class="bg-gradient-to-r from-[#F0427C] via-[#f89192] to-[#d6386a] text-white px-8 py-12">
+                        <div class="bg-gradient-to-r from-[#0297FE] via-[#f89192] to-[#d6386a] text-white px-8 py-12">
                             <h1 class="text-5xl font-bold mb-4">Refund Policy</h1>
                             <p class="text-pink-100 text-xl mb-2">Your satisfaction guaranteed - Full refunds within 30 days</p>
                             <p class="text-pink-200 text-sm">Last updated: ' . now()->format('F d, Y') . '</p>
@@ -1168,12 +1217,12 @@ class PageSeeder extends Seeder
 
                         <div class="px-8 py-8">
                             <!-- Introduction -->
-                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-l-4 border-[#F0427C] rounded-r-lg p-6 mb-8">
+                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-l-4 border-[#0297FE] rounded-r-lg p-6 mb-8">
                                 <p class="text-gray-800 leading-relaxed text-lg mb-4">
-                                    PressOnNail and most sellers on PressOnNail offer <strong>refunds for items within 30 days</strong> from the date of delivery. If there are any problems, please <a href="mailto:support@blulavelle.com" class="text-[#F0427C] hover:text-[#d6386a] font-semibold underline">contact us here</a> to submit your request.
+                                    Blu Lavelle and most sellers on Blu Lavelle offer <strong>refunds for items within 30 days</strong> from the date of delivery. If there are any problems, please <a href="mailto:support@blulavelle.com" class="text-[#0297FE] hover:text-[#d6386a] font-semibold underline">contact us here</a> to submit your request.
                                 </p>
                                 <p class="text-gray-800 leading-relaxed text-lg">
-                                    We always guarantee that you are satisfied with the orders you have placed on PressOnNail. To guarantee your rights when placing orders, please refer to our refund policy under the following conditions:
+                                    We always guarantee that you are satisfied with the orders you have placed on Blu Lavelle. To guarantee your rights when placing orders, please refer to our refund policy under the following conditions:
                                 </p>
                             </div>
 
@@ -1269,7 +1318,7 @@ class PageSeeder extends Seeder
                                             </div>
                                         </div>
 
-                                        <div class="mt-6 bg-pink-100 border-2 border-[#F0427C] rounded-lg p-5">
+                                        <div class="mt-6 bg-pink-100 border-2 border-[#0297FE] rounded-lg p-5">
                                             <p class="text-pink-900 font-semibold text-lg">
                                                 ✓ After we confirm your product is eligible, you will receive a <strong>refund immediately</strong> to the account you used for payment.
                                             </p>
@@ -1325,7 +1374,7 @@ class PageSeeder extends Seeder
                                             </div>
                                         </div>
 
-                                        <div class="mt-6 bg-pink-100 border-2 border-[#F0427C] rounded-lg p-5">
+                                        <div class="mt-6 bg-pink-100 border-2 border-[#0297FE] rounded-lg p-5">
                                             <p class="text-pink-900 font-semibold text-lg">
                                                 ✓ After we confirm measurements (unused) differ over 1.5" from standard, you will receive a <strong>refund immediately</strong> to the account you used for payment.
                                             </p>
@@ -1335,9 +1384,9 @@ class PageSeeder extends Seeder
 
                                 <!-- Scenario 3: Lost Items -->
                                 <div class="border-2 border-pink-300 rounded-lg overflow-hidden">
-                                    <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white px-6 py-4">
+                                    <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] text-white px-6 py-4">
                                         <div class="flex items-center">
-                                            <div class="flex-shrink-0 w-14 h-14 bg-white text-[#F0427C] rounded-full flex items-center justify-center mr-4 text-2xl font-bold shadow-lg">3</div>
+                                            <div class="flex-shrink-0 w-14 h-14 bg-white text-[#0297FE] rounded-full flex items-center justify-center mr-4 text-2xl font-bold shadow-lg">3</div>
                                             <h2 class="text-3xl font-bold">Lost Items in Shipping</h2>
                                         </div>
                                     </div>
@@ -1346,7 +1395,7 @@ class PageSeeder extends Seeder
                                             We guarantee to assist with cases where your order is lost in the shipping process.
                                         </p>
 
-                                        <div class="bg-pink-100 border-l-4 border-[#F0427C] p-4 mb-6">
+                                        <div class="bg-pink-100 border-l-4 border-[#0297FE] p-4 mb-6">
                                             <p class="text-pink-900">
                                                 <strong>📧 Important:</strong> As soon as tracking reports show "delivered", we will email you to confirm receipt. Please check your mailbox, security cameras, neighbors, and contact local post office before claiming lost items.
                                             </p>
@@ -1362,19 +1411,19 @@ class PageSeeder extends Seeder
                                             <h3 class="font-bold text-pink-900 mb-3 text-lg">Required Information:</h3>
                                             <div class="space-y-2">
                                                 <div class="flex items-start">
-                                                    <svg class="w-5 h-5 text-[#F0427C] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <svg class="w-5 h-5 text-[#0297FE] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                     </svg>
                                                     <p class="text-gray-800">Order information</p>
                                                 </div>
                                                 <div class="flex items-start">
-                                                    <svg class="w-5 h-5 text-[#F0427C] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <svg class="w-5 h-5 text-[#0297FE] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                     </svg>
                                                     <p class="text-gray-800">Verified shipping address</p>
                                                 </div>
                                                 <div class="flex items-start">
-                                                    <svg class="w-5 h-5 text-[#F0427C] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <svg class="w-5 h-5 text-[#0297FE] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                     </svg>
                                                     <p class="text-gray-800">Verification from your local post office that you haven\'t received the package</p>
@@ -1382,7 +1431,7 @@ class PageSeeder extends Seeder
                                             </div>
                                         </div>
 
-                                        <div class="mt-6 bg-pink-100 border-2 border-[#F0427C] rounded-lg p-5">
+                                        <div class="mt-6 bg-pink-100 border-2 border-[#0297FE] rounded-lg p-5">
                                             <p class="text-pink-900 font-semibold text-lg">
                                                 ✓ After sending all necessary information, you will receive a <strong>refund immediately</strong> to the account you used for payment.
                                             </p>
@@ -1416,7 +1465,7 @@ class PageSeeder extends Seeder
                                             
                                             <div class="bg-red-100 border-2 border-red-400 rounded-lg p-4">
                                                 <p class="text-red-900 font-semibold">
-                                                    ⚠️ Once 4 hours have passed, PressOnNail <strong>refuses to support</strong> order cancellation or modification requests.
+                                                    ⚠️ Once 4 hours have passed, Blu Lavelle <strong>refuses to support</strong> order cancellation or modification requests.
                                                 </p>
                                             </div>
                                         </div>
@@ -1440,10 +1489,10 @@ class PageSeeder extends Seeder
                             </div>
 
                             <!-- International Orders Notice -->
-                            <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] rounded-lg p-8 text-center text-white mb-8">
+                            <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] rounded-lg p-8 text-center text-white mb-8">
                                 <div class="flex justify-center mb-4">
                                     <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center">
-                                        <svg class="w-10 h-10 text-[#F0427C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-10 h-10 text-[#0297FE]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                         </svg>
                                     </div>
@@ -1460,10 +1509,10 @@ class PageSeeder extends Seeder
                             </div>
 
                             <!-- Contact Footer -->
-                            <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] rounded-lg p-8 text-center text-white">
+                            <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] rounded-lg p-8 text-center text-white">
                                 <div class="flex justify-center mb-4">
                                     <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center">
-                                        <svg class="w-10 h-10 text-[#F0427C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-10 h-10 text-[#0297FE]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"></path>
                                         </svg>
                                     </div>
@@ -1472,7 +1521,7 @@ class PageSeeder extends Seeder
                                 <p class="text-lg text-pink-100 mb-5">
                                     If you have any questions regarding our refund policy, please contact our Customer Support Team for quick response and support.
                                 </p>
-                                <a href="mailto:support@blulavelle.com" class="inline-flex items-center px-8 py-3 bg-white text-[#F0427C] font-bold rounded-lg shadow-lg hover:shadow-xl transition duration-200">
+                                <a href="mailto:support@blulavelle.com" class="inline-flex items-center px-8 py-3 bg-white text-[#0297FE] font-bold rounded-lg shadow-lg hover:shadow-xl transition duration-200">
                                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                     </svg>
@@ -1489,8 +1538,8 @@ class PageSeeder extends Seeder
                 'show_in_menu' => true,
                 'menu_title' => 'Refund Policy',
                 'sort_order' => 5,
-                'meta_title' => 'Refund Policy - PressOnNail Full Refund Guarantee',
-                'meta_description' => 'Full refund policy within 30 days for wrong, damaged, or lost items. 4-hour cancellation window. Learn about our refund procedures on PressOnNail.',
+                'meta_title' => 'Refund Policy - Blu Lavelle Full Refund Guarantee',
+                'meta_description' => 'Full refund policy within 30 days for wrong, damaged, or lost items. 4-hour cancellation window. Learn about our refund procedures on Blu Lavelle.',
             ],
             [
                 'user_id' => $admin->id,
@@ -1528,7 +1577,7 @@ class PageSeeder extends Seeder
 
                             <!-- What Can Be Changed -->
                             <div class="mb-8">
-                                <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white px-6 py-4 rounded-t-lg">
+                                <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] text-white px-6 py-4 rounded-t-lg">
                                     <h2 class="text-3xl font-bold flex items-center">
                                         <svg class="w-8 h-8 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
@@ -1540,9 +1589,9 @@ class PageSeeder extends Seeder
                                     <p class="text-gray-800 font-semibold mb-4 text-lg">Within 4 hours, you can modify the following:</p>
                                     
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div class="bg-white rounded-lg p-5 shadow-md border-l-4 border-[#F0427C]">
+                                        <div class="bg-white rounded-lg p-5 shadow-md border-l-4 border-[#0297FE]">
                                             <div class="flex items-start">
-                                                <div class="flex-shrink-0 w-12 h-12 bg-[#F0427C] rounded-full flex items-center justify-center mr-3">
+                                                <div class="flex-shrink-0 w-12 h-12 bg-[#0297FE] rounded-full flex items-center justify-center mr-3">
                                                     <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
                                                     </svg>
@@ -1556,7 +1605,7 @@ class PageSeeder extends Seeder
 
                                         <div class="bg-white rounded-lg p-5 shadow-md border-l-4 border-cyan-500">
                                             <div class="flex items-start">
-                                                <div class="flex-shrink-0 w-12 h-12 bg-[#F0427C] rounded-full flex items-center justify-center mr-3">
+                                                <div class="flex-shrink-0 w-12 h-12 bg-[#0297FE] rounded-full flex items-center justify-center mr-3">
                                                     <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
                                                     </svg>
@@ -1568,9 +1617,9 @@ class PageSeeder extends Seeder
                                             </div>
                                         </div>
 
-                                        <div class="bg-white rounded-lg p-5 shadow-md border-l-4 border-[#F0427C]">
+                                        <div class="bg-white rounded-lg p-5 shadow-md border-l-4 border-[#0297FE]">
                                             <div class="flex items-start">
-                                                <div class="flex-shrink-0 w-12 h-12 bg-[#F0427C] rounded-full flex items-center justify-center mr-3">
+                                                <div class="flex-shrink-0 w-12 h-12 bg-[#0297FE] rounded-full flex items-center justify-center mr-3">
                                                     <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
                                                     </svg>
@@ -1584,7 +1633,7 @@ class PageSeeder extends Seeder
 
                                         <div class="bg-white rounded-lg p-5 shadow-md border-l-4 border-purple-500">
                                             <div class="flex items-start">
-                                                <div class="flex-shrink-0 w-12 h-12 bg-[#F0427C] rounded-full flex items-center justify-center mr-3">
+                                                <div class="flex-shrink-0 w-12 h-12 bg-[#0297FE] rounded-full flex items-center justify-center mr-3">
                                                     <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -1602,7 +1651,7 @@ class PageSeeder extends Seeder
 
                             <!-- How to Cancel or Change -->
                             <div class="mb-8">
-                                <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white px-6 py-4 rounded-t-lg">
+                                <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] text-white px-6 py-4 rounded-t-lg">
                                     <h2 class="text-3xl font-bold flex items-center">
                                         <svg class="w-8 h-8 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -1613,7 +1662,7 @@ class PageSeeder extends Seeder
                                 <div class="bg-pink-50 border-2 border-pink-300 border-t-0 rounded-b-lg p-6">
                                     <div class="space-y-4">
                                         <div class="flex items-start bg-white rounded-lg p-5 shadow-md">
-                                            <div class="flex-shrink-0 w-14 h-14 bg-gradient-to-br from-[#F0427C] to-[#d6386a] text-white rounded-full flex items-center justify-center mr-4 text-2xl font-bold shadow-lg">1</div>
+                                            <div class="flex-shrink-0 w-14 h-14 bg-gradient-to-br from-[#0297FE] to-[#d6386a] text-white rounded-full flex items-center justify-center mr-4 text-2xl font-bold shadow-lg">1</div>
                                             <div class="flex-1">
                                                 <h3 class="text-xl font-bold text-pink-900 mb-2">Go to "Contact Us"</h3>
                                                 <p class="text-gray-700">Navigate to our Contact Us page or customer support section</p>
@@ -1621,7 +1670,7 @@ class PageSeeder extends Seeder
                                         </div>
 
                                         <div class="flex items-start bg-white rounded-lg p-5 shadow-md">
-                                            <div class="flex-shrink-0 w-14 h-14 bg-gradient-to-br from-[#F0427C] to-[#d6386a] text-white rounded-full flex items-center justify-center mr-4 text-2xl font-bold shadow-lg">2</div>
+                                            <div class="flex-shrink-0 w-14 h-14 bg-gradient-to-br from-[#0297FE] to-[#d6386a] text-white rounded-full flex items-center justify-center mr-4 text-2xl font-bold shadow-lg">2</div>
                                             <div class="flex-1">
                                                 <h3 class="text-xl font-bold text-pink-900 mb-2">Create a Ticket</h3>
                                                 <p class="text-gray-700">Submit a support ticket with your order details and requested changes</p>
@@ -1633,7 +1682,7 @@ class PageSeeder extends Seeder
                                             <div class="flex-1">
                                                 <h3 class="text-xl font-bold text-pink-900 mb-2">Reach Customer Support</h3>
                                                 <p class="text-gray-700 mb-2">Or contact our customer support team directly:</p>
-                                                <a href="mailto:support@blulavelle.com" class="inline-flex items-center text-[#F0427C] hover:text-[#d6386a] font-semibold underline">
+                                                <a href="mailto:support@blulavelle.com" class="inline-flex items-center text-[#0297FE] hover:text-[#d6386a] font-semibold underline">
                                                     <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                                     </svg>
@@ -1656,7 +1705,7 @@ class PageSeeder extends Seeder
                                     <div class="flex-1">
                                         <h3 class="text-2xl font-bold text-red-800 mb-3">⚠️ Important: After 4 Hours</h3>
                                         <p class="text-red-900 font-semibold text-lg mb-3">
-                                            When it is more than <strong>4 hours after placing an order</strong>, PressOnNail <strong>refuses to support</strong> order cancellation or order modification requests.
+                                            When it is more than <strong>4 hours after placing an order</strong>, Blu Lavelle <strong>refuses to support</strong> order cancellation or order modification requests.
                                         </p>
                                         <div class="bg-white rounded-lg p-4 border-l-4 border-red-500">
                                             <p class="text-gray-800">
@@ -1682,16 +1731,16 @@ class PageSeeder extends Seeder
                                     </p>
                                     <div class="bg-yellow-100 border border-yellow-300 rounded-lg p-4">
                                         <p class="text-yellow-900 font-semibold">
-                                            <strong>⚠️ Please Note:</strong> PressOnNail takes <strong>no responsibility</strong> for any product a customer does not receive because of errors in the delivery address given to us.
+                                            <strong>⚠️ Please Note:</strong> Blu Lavelle takes <strong>no responsibility</strong> for any product a customer does not receive because of errors in the delivery address given to us.
                                         </p>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Quick Tips -->
-                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-l-4 border-[#F0427C] rounded-r-lg p-6">
+                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-l-4 border-[#0297FE] rounded-r-lg p-6">
                                 <h3 class="text-xl font-bold text-pink-900 mb-4 flex items-center">
-                                    <svg class="w-7 h-7 mr-2 text-[#F0427C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-7 h-7 mr-2 text-[#0297FE]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
                                     </svg>
                                     Quick Tips
@@ -1733,8 +1782,8 @@ class PageSeeder extends Seeder
                 'show_in_menu' => true,
                 'menu_title' => 'Cancel/Change Order',
                 'sort_order' => 6,
-                'meta_title' => 'Cancel or Change Order - PressOnNail 4-Hour Window',
-                'meta_description' => 'Need to cancel or change your order? You have 4 hours to modify size, color, quantity, or shipping address. Learn how on PressOnNail.',
+                'meta_title' => 'Cancel or Change Order - Blu Lavelle 4-Hour Window',
+                'meta_description' => 'Need to cancel or change your order? You have 4 hours to modify size, color, quantity, or shipping address. Learn how on Blu Lavelle.',
             ],
             [
                 'user_id' => $admin->id,
@@ -1743,16 +1792,16 @@ class PageSeeder extends Seeder
                 'content' => '<div class="max-w-7xl mx-auto py-8 px-4">
                     <div class="bg-white rounded-lg shadow-2xl overflow-hidden">
                         <!-- Hero Header -->
-                        <div class="relative bg-gradient-to-r from-[#F0427C] via-[#f89192] to-[#d6386a] text-white px-8 py-16">
+                        <div class="relative bg-gradient-to-r from-[#0297FE] via-[#f89192] to-[#d6386a] text-white px-8 py-16">
                             <div class="absolute inset-0 bg-black opacity-10"></div>
                             <div class="relative z-10 text-center">
-                                <h1 class="text-6xl font-bold mb-4">Welcome to PressOnNail</h1>
-                                <p class="text-3xl text-pink-100 mb-6">World of Unique Creations</p>
+                                <h1 class="text-6xl font-bold mb-4">Welcome to Blu Lavelle</h1>
+                                <p class="text-3xl text-pink-100 mb-6">Press-on Nails for Every Style</p>
                                 <div class="flex justify-center mb-4">
                                     <div class="w-24 h-1 bg-white rounded"></div>
                                 </div>
                                 <p class="text-xl text-pink-100 max-w-4xl mx-auto leading-relaxed">
-                                    Discover a global marketplace where creativity thrives
+                                    Discover premium press-on nail sets designed to elevate your look—anytime, anywhere
                                 </p>
                             </div>
                         </div>
@@ -1762,14 +1811,14 @@ class PageSeeder extends Seeder
                             <div class="max-w-5xl mx-auto mb-16">
                                 <div class="text-center mb-12">
                                     <p class="text-2xl text-gray-700 leading-relaxed mb-6">
-                                        At <strong class="text-[#F0427C]">PressOnNail</strong>, we bring together passionate makers, inspired collectors, and unique shoppers to celebrate individuality and craftsmanship. Whether you\'re looking for handmade treasures, vintage finds, or one-of-a-kind pieces, PressOnNail makes it simple to connect directly with independent sellers from around the world.
+                                        At <strong class="text-[#0297FE]">Blu Lavelle</strong>, we craft and curate press-on nails that help you express yourself with confidence. From everyday minimal sets to bold statement designs, our goal is to make salon‑quality nails easy, fast, and accessible—right at home.
                                     </p>
-                                    <div class="bg-gradient-to-r from-pink-50 to-pink-100 rounded-lg p-8 border-l-4 border-[#F0427C]">
+                                    <div class="bg-gradient-to-r from-pink-50 to-pink-100 rounded-lg p-8 border-l-4 border-[#0297FE]">
                                         <p class="text-xl text-gray-800 font-semibold">
-                                            No warehouses. No middlemen. <span class="text-[#F0427C]">Just extraordinary items made and sold with love.</span>
+                                            No salon appointments. No waiting. <span class="text-[#0297FE]">Just beautiful nails made to fit your lifestyle.</span>
                                         </p>
                                         <p class="text-lg text-gray-700 mt-3">
-                                            Start your journey today and find something truly special.
+                                            Start your journey today and find a set that feels uniquely yours.
                                         </p>
                                     </div>
                                 </div>
@@ -1777,7 +1826,7 @@ class PageSeeder extends Seeder
 
                             <!-- About Us Section -->
                             <div class="mb-16">
-                                <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white px-8 py-6 rounded-t-lg">
+                                <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] text-white px-8 py-6 rounded-t-lg">
                                     <h2 class="text-4xl font-bold flex items-center justify-center">
                                         <svg class="w-10 h-10 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
@@ -1788,14 +1837,16 @@ class PageSeeder extends Seeder
                                 <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-b-lg p-8 border-2 border-pink-200 border-t-0">
                                     <div class="max-w-4xl mx-auto">
                                         <p class="text-lg text-gray-800 leading-relaxed mb-6">
-                                            PressOnNail was born out of a vision to bridge the gap between creators and those seeking extraordinary items. We believe that every handmade piece, vintage find, or collectible has a story to tell. That\'s why we\'ve created a platform where independent sellers can share their passions and buyers can discover the magic of unique craftsmanship.
+                                            Blu Lavelle was created for people who love nails but don\'t always have time for the salon. We focus on comfort, durability, and trend‑forward designs so you can get a clean, polished look in minutes—whether you\'re getting ready for work, a party, or a weekend getaway.
+                                            <br>No salon appointments. No waiting. Just beautiful nails made to fit your lifestyle.
+                                            <br>Start your journey today and discover nails that feel uniquely yours.
                                         </p>
                                         <p class="text-lg text-gray-800 leading-relaxed mb-6">
-                                            At PressOnNail, we celebrate <strong class="text-[#F0427C]">creativity</strong>, <strong class="text-[#F0427C]">authenticity</strong>, and <strong class="text-[#F0427C]">community</strong>. With no central warehouse, every purchase directly supports talented makers and small businesses across the globe. We\'re more than just a marketplace—we\'re a movement to inspire and empower.
+                                            At Blu Lavelle, we celebrate <strong class="text-[#0297FE]">creativity</strong>, <strong class="text-[#0297FE]">quality</strong>, and <strong class="text-[#0297FE]">confidence</strong>. Every set is made with attention to detail—from shape and fit to color and finish—so you can switch styles whenever you want and feel great doing it.
                                         </p>
                                         <div class="bg-white rounded-lg p-6 shadow-lg border-l-4 border-purple-500">
                                             <p class="text-2xl font-bold text-center text-gray-800">
-                                                Our mission is simple: <span class="text-[#F0427C]">to make the world a little more creative, one connection at a time.</span>
+                                                Our mission is simple: <span class="text-[#0297FE]">to make salon‑quality nails effortless for everyone.</span>
                                             </p>
                                         </div>
                                     </div>
@@ -1804,7 +1855,7 @@ class PageSeeder extends Seeder
 
                             <!-- Contact Us Section -->
                             <div class="mb-16">
-                                <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white px-8 py-6 rounded-t-lg">
+                                <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] text-white px-8 py-6 rounded-t-lg">
                                     <h2 class="text-4xl font-bold flex items-center justify-center">
                                         <svg class="w-10 h-10 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
@@ -1822,31 +1873,31 @@ class PageSeeder extends Seeder
                                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                                         <div class="bg-white rounded-lg p-6 shadow-lg text-center border-2 border-pink-200 hover:border-blue-400 transition duration-200">
                                             <div class="flex justify-center mb-4">
-                                                <div class="w-16 h-16 bg-[#F0427C] rounded-full flex items-center justify-center">
+                                                <div class="w-16 h-16 bg-[#0297FE] rounded-full flex items-center justify-center">
                                                     <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                                     </svg>
                                                 </div>
                                             </div>
                                             <h3 class="text-xl font-bold text-gray-800 mb-2">Email</h3>
-                                            <a href="mailto:admin@blulavelle.com" class="text-[#F0427C] hover:text-[#d6386a] font-semibold text-lg underline">admin@blulavelle.com</a>
+                                            <a href="mailto:admin@blulavelle.com" class="text-[#0297FE] hover:text-[#d6386a] font-semibold text-lg underline">admin@blulavelle.com</a>
                                         </div>
 
-                                        <div class="bg-white rounded-lg p-6 shadow-lg text-center border-2 border-pink-200 hover:border-[#F0427C] transition duration-200">
+                                        <div class="bg-white rounded-lg p-6 shadow-lg text-center border-2 border-pink-200 hover:border-[#0297FE] transition duration-200">
                                             <div class="flex justify-center mb-4">
-                                                <div class="w-16 h-16 bg-[#F0427C] rounded-full flex items-center justify-center">
+                                                <div class="w-16 h-16 bg-[#0297FE] rounded-full flex items-center justify-center">
                                                     <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
                                                     </svg>
                                                 </div>
                                             </div>
                                             <h3 class="text-xl font-bold text-gray-800 mb-2">Phone</h3>
-                                            <a href="tel:0767383676" class="text-[#F0427C] hover:text-pink-800 font-semibold text-lg">0767 383 676</a>
+                                            <a href="tel:0767383676" class="text-[#0297FE] hover:text-pink-800 font-semibold text-lg">0767 383 676</a>
                                         </div>
 
                                         <div class="bg-white rounded-lg p-6 shadow-lg text-center border-2 border-pink-200 hover:border-purple-400 transition duration-200">
                                             <div class="flex justify-center mb-4">
-                                                <div class="w-16 h-16 bg-[#F0427C] rounded-full flex items-center justify-center">
+                                                <div class="w-16 h-16 bg-[#0297FE] rounded-full flex items-center justify-center">
                                                     <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                                                     </svg>
@@ -1875,9 +1926,9 @@ class PageSeeder extends Seeder
                                             </div>
                                         </div>
 
-                                        <div class="bg-white rounded-lg p-6 shadow-lg border-l-4 border-[#F0427C]">
+                                        <div class="bg-white rounded-lg p-6 shadow-lg border-l-4 border-[#0297FE]">
                                             <div class="flex items-start">
-                                                <div class="flex-shrink-0 w-12 h-12 bg-[#F0427C] rounded-full flex items-center justify-center mr-4">
+                                                <div class="flex-shrink-0 w-12 h-12 bg-[#0297FE] rounded-full flex items-center justify-center mr-4">
                                                     <span class="text-white font-bold text-xl">🇬🇧</span>
                                                 </div>
                                                 <div>
@@ -1894,7 +1945,7 @@ class PageSeeder extends Seeder
 
                                     <div class="mt-8 bg-pink-100 border-2 border-pink-300 rounded-lg p-6 text-center">
                                         <p class="text-pink-900 font-semibold text-lg">
-                                            We\'re committed to making your PressOnNail experience extraordinary. Let\'s connect!
+                                            We\'re committed to making your Blu Lavelle experience extraordinary. Let\'s connect!
                                         </p>
                                     </div>
                                 </div>
@@ -1953,7 +2004,7 @@ class PageSeeder extends Seeder
                                                 <h3 class="text-xl font-bold text-gray-800">United Kingdom</h3>
                                             </div>
                                             <div class="bg-pink-50 rounded-lg p-4">
-                                                <p class="font-bold text-pink-900 mb-2">PressOnNail LTD</p>
+                                                <p class="font-bold text-pink-900 mb-2">Blu Lavelle LTD</p>
                                                 <p class="text-gray-700 text-sm mb-2">
                                                     <strong>Company Number:</strong> 16342615
                                                 </p>
@@ -1972,7 +2023,7 @@ class PageSeeder extends Seeder
                                                 <h3 class="text-xl font-bold text-gray-800">United States</h3>
                                             </div>
                                             <div class="bg-red-50 rounded-lg p-4">
-                                                <p class="font-bold text-red-900 mb-2">PressOnNail LLC</p>
+                                                <p class="font-bold text-red-900 mb-2">Blu Lavelle LLC</p>
                                                 <p class="text-gray-700 text-sm">
                                                     5900 BALCONES DR STE 100<br>
                                                     AUSTIN, TX 78731<br>
@@ -1985,19 +2036,19 @@ class PageSeeder extends Seeder
                             </div>
 
                             <!-- Call to Action -->
-                            <div class="bg-gradient-to-r from-[#F0427C] via-[#f89192] to-[#d6386a] rounded-lg p-10 text-center text-white">
-                                <h3 class="text-3xl font-bold mb-4">Join Our Creative Community</h3>
+                            <div class="bg-gradient-to-r from-[#0297FE] via-[#f89192] to-[#d6386a] rounded-lg p-10 text-center text-white">
+                                <h3 class="text-3xl font-bold mb-4">Find Your Next Nail Set</h3>
                                 <p class="text-xl text-pink-100 mb-6 max-w-3xl mx-auto">
-                                    Start your journey with PressOnNail today and discover a world of unique, handcrafted treasures.
+                                    Explore our newest press-on nail designs and choose a style that matches your vibe today.
                                 </p>
                                 <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
-                                    <a href="/" class="inline-flex items-center px-8 py-4 bg-white text-[#F0427C] font-bold rounded-lg shadow-xl hover:shadow-2xl transition duration-200 text-lg">
+                                    <a href="/" class="inline-flex items-center px-8 py-4 bg-white text-[#0297FE] font-bold rounded-lg shadow-xl hover:shadow-2xl transition duration-200 text-lg">
                                         <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                                         </svg>
-                                        Explore Marketplace
+                                        Shop Nails
                                     </a>
-                                    <a href="mailto:admin@blulavelle.com" class="inline-flex items-center px-8 py-4 bg-transparent border-2 border-white text-white font-bold rounded-lg hover:bg-white hover:text-[#F0427C] transition duration-200 text-lg">
+                                    <a href="mailto:admin@blulavelle.com" class="inline-flex items-center px-8 py-4 bg-transparent border-2 border-white text-white font-bold rounded-lg hover:bg-white hover:text-[#0297FE] transition duration-200 text-lg">
                                         <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                         </svg>
@@ -2008,24 +2059,24 @@ class PageSeeder extends Seeder
                         </div>
                     </div>
                 </div>',
-                'excerpt' => 'Learn about PressOnNail - your destination for press-on nails. Discover our story, mission, and contact information.',
+                'excerpt' => 'Learn about Blu Lavelle - your destination for press-on nails. Discover our story, mission, and contact information.',
                 'status' => 'published',
                 'published_at' => now(),
                 'template' => 'default',
                 'show_in_menu' => true,
                 'menu_title' => 'About',
                 'sort_order' => 7,
-                'meta_title' => 'About Us - PressOnNail',
-                'meta_description' => 'Discover PressOnNail - your go-to for stylish press-on nails. Find unique designs and quality nail products.',
+                'meta_title' => 'About Us - Blu Lavelle',
+                'meta_description' => 'Discover Blu Lavelle - your go-to for stylish press-on nails. Find unique designs and quality nail products.',
             ],
             [
                 'user_id' => $admin->id,
                 'title' => 'Contact Us',
-                'slug' => 'contact-us',
+                'slug' => 'contact-us-2',
                 'content' => '<div class="max-w-7xl mx-auto py-8 px-4">
                     <div class="bg-white rounded-lg shadow-2xl overflow-hidden">
                         <!-- Hero Header -->
-                        <div class="bg-gradient-to-r from-[#F0427C] via-[#f89192] to-[#d6386a] text-white px-8 py-16">
+                        <div class="bg-gradient-to-r from-[#0297FE] via-[#f89192] to-[#d6386a] text-white px-8 py-16">
                             <div class="text-center">
                                 <div class="flex justify-center mb-6">
                                     <div class="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
@@ -2048,7 +2099,7 @@ class PageSeeder extends Seeder
                                 <div class="text-center mb-10">
                                     <h2 class="text-4xl font-bold text-gray-800 mb-3">Get In Touch</h2>
                                     <div class="flex justify-center">
-                                        <div class="w-20 h-1 bg-gradient-to-r from-[#F0427C] to-[#d6386a] rounded"></div>
+                                        <div class="w-20 h-1 bg-gradient-to-r from-[#0297FE] to-[#d6386a] rounded"></div>
                                     </div>
                                 </div>
 
@@ -2056,7 +2107,7 @@ class PageSeeder extends Seeder
                                     <!-- Email -->
                                     <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg p-6 shadow-lg border-2 border-pink-200 hover:border-blue-400 transition duration-200">
                                         <div class="flex justify-center mb-4">
-                                            <div class="w-16 h-16 bg-[#F0427C] rounded-full flex items-center justify-center shadow-lg">
+                                            <div class="w-16 h-16 bg-[#0297FE] rounded-full flex items-center justify-center shadow-lg">
                                                 <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                                 </svg>
@@ -2064,14 +2115,14 @@ class PageSeeder extends Seeder
                                         </div>
                                         <h3 class="text-xl font-bold text-center text-gray-800 mb-2">Email</h3>
                                         <p class="text-center">
-                                            <a href="mailto:admin@blulavelle.com" class="text-[#F0427C] hover:text-[#d6386a] font-semibold text-lg underline break-all">admin@blulavelle.com</a>
+                                            <a href="mailto:admin@blulavelle.com" class="text-[#0297FE] hover:text-[#d6386a] font-semibold text-lg underline break-all">admin@blulavelle.com</a>
                                         </p>
                                     </div>
 
                                     <!-- Phone -->
-                                    <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg p-6 shadow-lg border-2 border-pink-200 hover:border-[#F0427C] transition duration-200">
+                                    <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg p-6 shadow-lg border-2 border-pink-200 hover:border-[#0297FE] transition duration-200">
                                         <div class="flex justify-center mb-4">
-                                            <div class="w-16 h-16 bg-[#F0427C] rounded-full flex items-center justify-center shadow-lg">
+                                            <div class="w-16 h-16 bg-[#0297FE] rounded-full flex items-center justify-center shadow-lg">
                                                 <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
                                                 </svg>
@@ -2079,27 +2130,27 @@ class PageSeeder extends Seeder
                                         </div>
                                         <h3 class="text-xl font-bold text-center text-gray-800 mb-2">Call Us</h3>
                                         <p class="text-center">
-                                            <a href="tel:+18563782798" class="text-[#F0427C] hover:text-pink-800 font-semibold text-lg">+1 856-378-2798</a>
+                                            <a href="tel:+18563782798" class="text-[#0297FE] hover:text-pink-800 font-semibold text-lg">+1 856-378-2798</a>
                                         </p>
                                     </div>
 
                                     <!-- iMessage -->
                                     <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg p-6 shadow-lg border-2 border-pink-200 hover:border-purple-400 transition duration-200">
                                         <div class="flex justify-center mb-4">
-                                            <div class="w-16 h-16 bg-[#F0427C] rounded-full flex items-center justify-center shadow-lg">
+                                            <div class="w-16 h-16 bg-[#0297FE] rounded-full flex items-center justify-center shadow-lg">
                                                 <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
                                                 </svg>
                                             </div>
                                         </div>
                                         <h3 class="text-xl font-bold text-center text-gray-800 mb-2">iMessage</h3>
-                                        <p class="text-center text-[#F0427C] font-semibold text-lg">+1 856-378-2798</p>
+                                        <p class="text-center text-[#0297FE] font-semibold text-lg">+1 856-378-2798</p>
                                     </div>
 
                                     <!-- WhatsApp -->
-                                    <div class="bg-gradient-to-br from-green-50 to-lime-50 rounded-lg p-6 shadow-lg border-2 border-pink-200 hover:border-[#F0427C] transition duration-200">
+                                    <div class="bg-gradient-to-br from-green-50 to-lime-50 rounded-lg p-6 shadow-lg border-2 border-pink-200 hover:border-[#0297FE] transition duration-200">
                                         <div class="flex justify-center mb-4">
-                                            <div class="w-16 h-16 bg-[#F0427C] rounded-full flex items-center justify-center shadow-lg">
+                                            <div class="w-16 h-16 bg-[#0297FE] rounded-full flex items-center justify-center shadow-lg">
                                                 <svg class="w-9 h-9 text-white" fill="currentColor" viewBox="0 0 24 24">
                                                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"></path>
                                                 </svg>
@@ -2107,7 +2158,7 @@ class PageSeeder extends Seeder
                                         </div>
                                         <h3 class="text-xl font-bold text-center text-gray-800 mb-2">WhatsApp</h3>
                                         <p class="text-center">
-                                            <a href="https://wa.me/18563782798" target="_blank" class="text-[#F0427C] hover:text-pink-800 font-semibold text-lg">+1 856-378-2798</a>
+                                            <a href="https://wa.me/18563782798" target="_blank" class="text-[#0297FE] hover:text-pink-800 font-semibold text-lg">+1 856-378-2798</a>
                                         </p>
                                     </div>
                                 </div>
@@ -2118,7 +2169,7 @@ class PageSeeder extends Seeder
                                 <div class="text-center mb-10">
                                     <h2 class="text-4xl font-bold text-gray-800 mb-3">Our Global Offices</h2>
                                     <div class="flex justify-center">
-                                        <div class="w-20 h-1 bg-gradient-to-r from-[#F0427C] to-[#d6386a] rounded"></div>
+                                        <div class="w-20 h-1 bg-gradient-to-r from-[#0297FE] to-[#d6386a] rounded"></div>
                                     </div>
                                 </div>
 
@@ -2126,16 +2177,16 @@ class PageSeeder extends Seeder
                                     <!-- UK Office -->
                                     <div class="bg-white rounded-lg p-6 shadow-xl border-2 border-pink-200 hover:shadow-2xl transition duration-200">
                                         <div class="flex items-start mb-4">
-                                            <div class="flex-shrink-0 w-14 h-14 bg-[#F0427C] rounded-full flex items-center justify-center mr-4">
+                                            <div class="flex-shrink-0 w-14 h-14 bg-[#0297FE] rounded-full flex items-center justify-center mr-4">
                                                 <span class="text-2xl">🇬🇧</span>
                                             </div>
                                             <div>
                                                 <h3 class="text-2xl font-bold text-gray-800">United Kingdom</h3>
-                                                <p class="text-[#F0427C] text-sm font-semibold">Business Office</p>
+                                                <p class="text-[#0297FE] text-sm font-semibold">Business Office</p>
                                             </div>
                                         </div>
                                         <div class="bg-pink-50 rounded-lg p-4">
-                                            <p class="font-bold text-pink-900 mb-2">PressOnNail LTD</p>
+                                            <p class="font-bold text-pink-900 mb-2">Blu Lavelle LTD</p>
                                             <p class="text-gray-700 mb-2">
                                                 <strong>Company Number:</strong> 16342615
                                             </p>
@@ -2192,16 +2243,16 @@ class PageSeeder extends Seeder
                                     <!-- US Office -->
                                     <div class="bg-white rounded-lg p-6 shadow-xl border-2 border-pink-200 hover:shadow-2xl transition duration-200">
                                         <div class="flex items-start mb-4">
-                                            <div class="flex-shrink-0 w-14 h-14 bg-[#F0427C] rounded-full flex items-center justify-center mr-4">
+                                            <div class="flex-shrink-0 w-14 h-14 bg-[#0297FE] rounded-full flex items-center justify-center mr-4">
                                                 <span class="text-2xl">🇺🇸</span>
                                             </div>
                                             <div>
                                                 <h3 class="text-2xl font-bold text-gray-800">United States</h3>
-                                                <p class="text-[#F0427C] text-sm font-semibold">Business Office</p>
+                                                <p class="text-[#0297FE] text-sm font-semibold">Business Office</p>
                                             </div>
                                         </div>
                                         <div class="bg-pink-50 rounded-lg p-4">
-                                            <p class="font-bold text-pink-900 mb-2">PressOnNail LLC</p>
+                                            <p class="font-bold text-pink-900 mb-2">Blu Lavelle LLC</p>
                                             <p class="text-gray-700">
                                                 5900 BALCONES DR STE 100<br>
                                                 AUSTIN, TX 78731<br>
@@ -2260,7 +2311,7 @@ class PageSeeder extends Seeder
                                                     <span class="text-2xl mr-2">🇬🇧</span>
                                                     <h3 class="text-2xl font-bold text-gray-800">UK Warehouse</h3>
                                                 </div>
-                                                <p class="text-[#F0427C] text-sm font-semibold">Distribution Center</p>
+                                                <p class="text-[#0297FE] text-sm font-semibold">Distribution Center</p>
                                             </div>
                                         </div>
                                         <div class="bg-white rounded-lg p-4 shadow-md">
@@ -2271,7 +2322,7 @@ class PageSeeder extends Seeder
                                             </p>
                                             <div class="border-t border-pink-200 pt-3">
                                                 <p class="text-gray-700">
-                                                    <strong>📞 Phone:</strong> <a href="tel:02045136359" class="text-[#F0427C] hover:text-[#d6386a] font-semibold">020 4513 6359</a>
+                                                    <strong>📞 Phone:</strong> <a href="tel:02045136359" class="text-[#0297FE] hover:text-[#d6386a] font-semibold">020 4513 6359</a>
                                                 </p>
                                             </div>
                                         </div>
@@ -2280,7 +2331,7 @@ class PageSeeder extends Seeder
                             </div>
 
                             <!-- Call to Action -->
-                            <div class="bg-gradient-to-r from-[#F0427C] via-[#f89192] to-[#d6386a] rounded-lg p-10 text-center text-white">
+                            <div class="bg-gradient-to-r from-[#0297FE] via-[#f89192] to-[#d6386a] rounded-lg p-10 text-center text-white">
                                 <div class="flex justify-center mb-6">
                                     <div class="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
                                         <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2293,13 +2344,13 @@ class PageSeeder extends Seeder
                                     We\'re here 24/7 to answer your questions and provide support. Choose your preferred method and get in touch today!
                                 </p>
                                 <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
-                                    <a href="mailto:admin@blulavelle.com" class="inline-flex items-center px-8 py-4 bg-white text-[#F0427C] font-bold rounded-lg shadow-xl hover:shadow-2xl transition duration-200 text-lg">
+                                    <a href="mailto:admin@blulavelle.com" class="inline-flex items-center px-8 py-4 bg-white text-[#0297FE] font-bold rounded-lg shadow-xl hover:shadow-2xl transition duration-200 text-lg">
                                         <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                         </svg>
                                         Email Us
                                     </a>
-                                    <a href="https://wa.me/18563782798" target="_blank" class="inline-flex items-center px-8 py-4 bg-transparent border-2 border-white text-white font-bold rounded-lg hover:bg-white hover:text-[#F0427C] transition duration-200 text-lg">
+                                    <a href="https://wa.me/18563782798" target="_blank" class="inline-flex items-center px-8 py-4 bg-transparent border-2 border-white text-white font-bold rounded-lg hover:bg-white hover:text-[#0297FE] transition duration-200 text-lg">
                                         <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"></path>
                                         </svg>
@@ -2310,15 +2361,15 @@ class PageSeeder extends Seeder
                         </div>
                     </div>
                 </div>',
-                'excerpt' => 'Contact PressOnNail - Email, phone, WhatsApp, iMessage. Global offices in UK, US, Vietnam, Hong Kong with warehouse locations.',
+                'excerpt' => 'Contact Blu Lavelle - Email, phone, WhatsApp, iMessage. Global offices in UK, US, Vietnam, Hong Kong with warehouse locations.',
                 'status' => 'published',
                 'published_at' => now(),
                 'template' => 'default',
                 'show_in_menu' => true,
                 'menu_title' => 'Contact',
                 'sort_order' => 8,
-                'meta_title' => 'Contact Us - PressOnNail Global Support',
-                'meta_description' => 'Contact PressOnNail through email, phone, WhatsApp, or iMessage. Find our global offices in UK, US, Vietnam, Hong Kong and warehouse locations.',
+                'meta_title' => 'Contact Us - Blu Lavelle Global Support',
+                'meta_description' => 'Contact Blu Lavelle through email, phone, WhatsApp, or iMessage. Find our global offices in UK, US, Vietnam, Hong Kong and warehouse locations.',
             ],
             [
                 'user_id' => $admin->id,
@@ -2327,7 +2378,7 @@ class PageSeeder extends Seeder
                 'content' => '<div class="max-w-6xl mx-auto py-8 px-4">
                     <div class="bg-white rounded-lg shadow-2xl overflow-hidden">
                         <!-- Hero Header -->
-                        <div class="bg-gradient-to-r from-[#F0427C] via-[#f89192] to-[#d6386a] text-white px-8 py-16">
+                        <div class="bg-gradient-to-r from-[#0297FE] via-[#f89192] to-[#d6386a] text-white px-8 py-16">
                             <div class="text-center">
                                 <div class="flex justify-center mb-6">
                                     <div class="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
@@ -2351,7 +2402,7 @@ class PageSeeder extends Seeder
                                 <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg border-2 border-pink-200 overflow-hidden">
                                     <div class="bg-gradient-to-r from-blue-500 to-cyan-500 px-6 py-4">
                                         <h3 class="text-2xl font-bold text-white flex items-center">
-                                            <span class="w-10 h-10 bg-white text-[#F0427C] rounded-full flex items-center justify-center mr-3 font-bold">1</span>
+                                            <span class="w-10 h-10 bg-white text-[#0297FE] rounded-full flex items-center justify-center mr-3 font-bold">1</span>
                                             How do I place an order?
                                         </h3>
                                     </div>
@@ -2359,23 +2410,23 @@ class PageSeeder extends Seeder
                                         <p class="text-gray-700 mb-4">You can carry out the following steps to complete your order:</p>
                                         <div class="space-y-3">
                                             <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                                <span class="w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center mr-3 flex-shrink-0 font-bold">1</span>
+                                                <span class="w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center mr-3 flex-shrink-0 font-bold">1</span>
                                                 <p class="text-gray-800 pt-1">Choose your style on the product page</p>
                                             </div>
                                             <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                                <span class="w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center mr-3 flex-shrink-0 font-bold">2</span>
+                                                <span class="w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center mr-3 flex-shrink-0 font-bold">2</span>
                                                 <p class="text-gray-800 pt-1">Adjust the quantity of product</p>
                                             </div>
                                             <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                                <span class="w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center mr-3 flex-shrink-0 font-bold">3</span>
+                                                <span class="w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center mr-3 flex-shrink-0 font-bold">3</span>
                                                 <p class="text-gray-800 pt-1">Click the "Add To Cart" button</p>
                                             </div>
                                             <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                                <span class="w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center mr-3 flex-shrink-0 font-bold">4</span>
+                                                <span class="w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center mr-3 flex-shrink-0 font-bold">4</span>
                                                 <p class="text-gray-800 pt-1">Process payment and apply a discount code (if you have) to complete purchasing</p>
                                             </div>
                                             <div class="flex items-start bg-white rounded-lg p-4 shadow-sm">
-                                                <span class="w-8 h-8 bg-[#F0427C] text-white rounded-full flex items-center justify-center mr-3 flex-shrink-0 font-bold">5</span>
+                                                <span class="w-8 h-8 bg-[#0297FE] text-white rounded-full flex items-center justify-center mr-3 flex-shrink-0 font-bold">5</span>
                                                 <p class="text-gray-800 pt-1">Receive your confirmation email/message when your order is successful</p>
                                             </div>
                                         </div>
@@ -2387,9 +2438,9 @@ class PageSeeder extends Seeder
 
                                 <!-- FAQ 2 -->
                                 <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg border-2 border-pink-200 overflow-hidden">
-                                    <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] px-6 py-4">
+                                    <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] px-6 py-4">
                                         <h3 class="text-2xl font-bold text-white flex items-center">
-                                            <span class="w-10 h-10 bg-white text-[#F0427C] rounded-full flex items-center justify-center mr-3 font-bold">2</span>
+                                            <span class="w-10 h-10 bg-white text-[#0297FE] rounded-full flex items-center justify-center mr-3 font-bold">2</span>
                                             Where does your order ship from?
                                         </h3>
                                     </div>
@@ -2405,9 +2456,9 @@ class PageSeeder extends Seeder
 
                                 <!-- FAQ 3 -->
                                 <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg border-2 border-pink-200 overflow-hidden">
-                                    <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] px-6 py-4">
+                                    <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] px-6 py-4">
                                         <h3 class="text-2xl font-bold text-white flex items-center">
-                                            <span class="w-10 h-10 bg-white text-[#F0427C] rounded-full flex items-center justify-center mr-3 font-bold">3</span>
+                                            <span class="w-10 h-10 bg-white text-[#0297FE] rounded-full flex items-center justify-center mr-3 font-bold">3</span>
                                             What is the shipping cost?
                                         </h3>
                                     </div>
@@ -2437,7 +2488,7 @@ class PageSeeder extends Seeder
                                 <div class="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-lg border-2 border-pink-200 overflow-hidden">
                                     <div class="bg-gradient-to-r from-teal-500 to-cyan-500 px-6 py-4">
                                         <h3 class="text-2xl font-bold text-white flex items-center">
-                                            <span class="w-10 h-10 bg-white text-[#F0427C] rounded-full flex items-center justify-center mr-3 font-bold">5</span>
+                                            <span class="w-10 h-10 bg-white text-[#0297FE] rounded-full flex items-center justify-center mr-3 font-bold">5</span>
                                             What is the status of my order?
                                         </h3>
                                     </div>
@@ -2470,9 +2521,9 @@ class PageSeeder extends Seeder
 
                                 <!-- FAQ 7 -->
                                 <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg border-2 border-pink-200 overflow-hidden">
-                                    <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] px-6 py-4">
+                                    <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] px-6 py-4">
                                         <h3 class="text-2xl font-bold text-white flex items-center">
-                                            <span class="w-10 h-10 bg-white text-[#F0427C] rounded-full flex items-center justify-center mr-3 font-bold">7</span>
+                                            <span class="w-10 h-10 bg-white text-[#0297FE] rounded-full flex items-center justify-center mr-3 font-bold">7</span>
                                             Why is my tracking information not working?
                                         </h3>
                                     </div>
@@ -2480,7 +2531,7 @@ class PageSeeder extends Seeder
                                         <p class="text-gray-800 leading-relaxed mb-3">
                                             Please note that tracking information updates once the order ships and has been picked up and scanned by the postal courier.
                                         </p>
-                                        <div class="bg-indigo-100 border-l-4 border-[#F0427C] p-4 rounded">
+                                        <div class="bg-indigo-100 border-l-4 border-[#0297FE] p-4 rounded">
                                             <p class="text-pink-900">
                                                 If you placed your order over <strong>21 days ago</strong> and your tracking information is still not available, please <a href="mailto:support@blulavelle.com" class="font-semibold underline">contact customer support</a>. Be sure to have your order number and email that was used to make the purchase.
                                             </p>
@@ -2498,7 +2549,7 @@ class PageSeeder extends Seeder
                                     </div>
                                     <div class="p-6">
                                         <p class="text-gray-800 leading-relaxed">
-                                            Order changes have to be made within <strong class="text-pink-600">4 hours</strong> of first placing the order. If your order is eligible, you can <a href="mailto:support@blulavelle.com" class="text-[#F0427C] hover:text-[#d6386a] font-semibold underline">request changes here</a>.
+                                            Order changes have to be made within <strong class="text-pink-600">4 hours</strong> of first placing the order. If your order is eligible, you can <a href="mailto:support@blulavelle.com" class="text-[#0297FE] hover:text-[#d6386a] font-semibold underline">request changes here</a>.
                                         </p>
                                     </div>
                                 </div>
@@ -2513,7 +2564,7 @@ class PageSeeder extends Seeder
                                     </div>
                                     <div class="p-6">
                                         <p class="text-gray-800 leading-relaxed">
-                                            Order cancellations must be made within <strong class="text-red-600">4 hours</strong> after the order has been placed. If your order qualifies, you can <a href="mailto:support@blulavelle.com" class="text-[#F0427C] hover:text-[#d6386a] font-semibold underline">request cancellation here</a>.
+                                            Order cancellations must be made within <strong class="text-red-600">4 hours</strong> after the order has been placed. If your order qualifies, you can <a href="mailto:support@blulavelle.com" class="text-[#0297FE] hover:text-[#d6386a] font-semibold underline">request cancellation here</a>.
                                         </p>
                                     </div>
                                 </div>
@@ -2528,7 +2579,7 @@ class PageSeeder extends Seeder
                                     </div>
                                     <div class="p-6">
                                         <p class="text-gray-800 leading-relaxed">
-                                            If your item is missing, materially defective, or incorrect, please <a href="mailto:support@blulavelle.com" class="text-[#F0427C] hover:text-[#d6386a] font-semibold underline">contact us here</a>.
+                                            If your item is missing, materially defective, or incorrect, please <a href="mailto:support@blulavelle.com" class="text-[#0297FE] hover:text-[#d6386a] font-semibold underline">contact us here</a>.
                                         </p>
                                     </div>
                                 </div>
@@ -2537,7 +2588,7 @@ class PageSeeder extends Seeder
                                 <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg border-2 border-violet-200 overflow-hidden">
                                     <div class="bg-gradient-to-r from-violet-500 to-purple-500 px-6 py-4">
                                         <h3 class="text-2xl font-bold text-white flex items-center">
-                                            <span class="w-10 h-10 bg-white text-[#F0427C] rounded-full flex items-center justify-center mr-3 font-bold">11</span>
+                                            <span class="w-10 h-10 bg-white text-[#0297FE] rounded-full flex items-center justify-center mr-3 font-bold">11</span>
                                             Didn\'t Receive Confirmation Email
                                         </h3>
                                     </div>
@@ -2557,7 +2608,7 @@ class PageSeeder extends Seeder
                                                 <svg class="w-5 h-5 text-violet-500 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                                                 </svg>
-                                                <p class="text-gray-800">If these don\'t work, please <a href="mailto:support@blulavelle.com" class="text-[#F0427C] hover:text-[#d6386a] font-semibold underline">contact us</a></p>
+                                                <p class="text-gray-800">If these don\'t work, please <a href="mailto:support@blulavelle.com" class="text-[#0297FE] hover:text-[#d6386a] font-semibold underline">contact us</a></p>
                                             </div>
                                         </div>
                                     </div>
@@ -2565,9 +2616,9 @@ class PageSeeder extends Seeder
 
                                 <!-- FAQ 12 -->
                                 <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg border-2 border-pink-200 overflow-hidden">
-                                    <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] px-6 py-4">
+                                    <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] px-6 py-4">
                                         <h3 class="text-2xl font-bold text-white flex items-center">
-                                            <span class="w-10 h-10 bg-white text-[#F0427C] rounded-full flex items-center justify-center mr-3 font-bold">12</span>
+                                            <span class="w-10 h-10 bg-white text-[#0297FE] rounded-full flex items-center justify-center mr-3 font-bold">12</span>
                                             Size Guide
                                         </h3>
                                     </div>
@@ -2605,18 +2656,18 @@ class PageSeeder extends Seeder
                                 <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg border-2 border-pink-200 overflow-hidden">
                                     <div class="bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-4">
                                         <h3 class="text-2xl font-bold text-white flex items-center">
-                                            <span class="w-10 h-10 bg-white text-[#F0427C] rounded-full flex items-center justify-center mr-3 font-bold">14</span>
+                                            <span class="w-10 h-10 bg-white text-[#0297FE] rounded-full flex items-center justify-center mr-3 font-bold">14</span>
                                             How secure is my personal information?
                                         </h3>
                                     </div>
                                     <div class="p-6">
                                         <p class="text-gray-800 leading-relaxed mb-3">
-                                            PressOnNail Store adheres to the <strong>highest industry standards</strong> to protect your personal information when you checkout and purchase from our online store.
+                                            Blu Lavelle Store adheres to the <strong>highest industry standards</strong> to protect your personal information when you checkout and purchase from our online store.
                                         </p>
                                         <p class="text-gray-800 leading-relaxed mb-3">
                                             Your credit card information is encrypted during transmission using <strong>secure socket layer (SSL) technology</strong>, which is widely used on the Internet for processing payments. Your credit card information is only used to complete the requested transaction and is not subsequently stored.
                                         </p>
-                                        <div class="bg-pink-100 border-l-4 border-[#F0427C] p-4 rounded">
+                                        <div class="bg-pink-100 border-l-4 border-[#0297FE] p-4 rounded">
                                             <p class="text-pink-900">
                                                 If you need any further assistance, please contact us via email: <a href="mailto:support@blulavelle.com" class="font-semibold underline">support@blulavelle.com</a>
                                             </p>
@@ -2626,9 +2677,9 @@ class PageSeeder extends Seeder
 
                                 <!-- FAQ 15 -->
                                 <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg border-2 border-pink-200 overflow-hidden">
-                                    <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] px-6 py-4">
+                                    <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] px-6 py-4">
                                         <h3 class="text-2xl font-bold text-white flex items-center">
-                                            <span class="w-10 h-10 bg-white text-[#F0427C] rounded-full flex items-center justify-center mr-3 font-bold">15</span>
+                                            <span class="w-10 h-10 bg-white text-[#0297FE] rounded-full flex items-center justify-center mr-3 font-bold">15</span>
                                             How do I contact customer support?
                                         </h3>
                                     </div>
@@ -2637,13 +2688,13 @@ class PageSeeder extends Seeder
                                             We are glad to answer any questions that you may have. Please contact customer support:
                                         </p>
                                         <div class="flex flex-col sm:flex-row gap-3">
-                                            <a href="mailto:support@blulavelle.com" class="inline-flex items-center justify-center px-6 py-3 bg-[#F0427C] hover:bg-purple-700 text-white font-semibold rounded-lg shadow-md transition duration-200">
+                                            <a href="mailto:support@blulavelle.com" class="inline-flex items-center justify-center px-6 py-3 bg-[#0297FE] hover:bg-purple-700 text-white font-semibold rounded-lg shadow-md transition duration-200">
                                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                                 </svg>
                                                 support@blulavelle.com
                                             </a>
-                                            <a href="/contact-us" class="inline-flex items-center justify-center px-6 py-3 bg-[#F0427C] hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-md transition duration-200">
+                                            <a href="/contact-us" class="inline-flex items-center justify-center px-6 py-3 bg-[#0297FE] hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-md transition duration-200">
                                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                 </svg>
@@ -2655,7 +2706,7 @@ class PageSeeder extends Seeder
                             </div>
 
                             <!-- Call to Action Footer -->
-                            <div class="mt-12 bg-gradient-to-r from-[#F0427C] via-[#f89192] to-[#d6386a] rounded-lg p-10 text-center text-white">
+                            <div class="mt-12 bg-gradient-to-r from-[#0297FE] via-[#f89192] to-[#d6386a] rounded-lg p-10 text-center text-white">
                                 <div class="flex justify-center mb-6">
                                     <div class="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
                                         <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2668,13 +2719,13 @@ class PageSeeder extends Seeder
                                     Our customer support team is here to help you 24/7. Don\'t hesitate to reach out!
                                 </p>
                                 <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
-                                    <a href="mailto:support@blulavelle.com" class="inline-flex items-center px-8 py-4 bg-white text-[#F0427C] font-bold rounded-lg shadow-xl hover:shadow-2xl transition duration-200 text-lg">
+                                    <a href="mailto:support@blulavelle.com" class="inline-flex items-center px-8 py-4 bg-white text-[#0297FE] font-bold rounded-lg shadow-xl hover:shadow-2xl transition duration-200 text-lg">
                                         <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                         </svg>
                                         Email Support
                                     </a>
-                                    <a href="/contact-us" class="inline-flex items-center px-8 py-4 bg-transparent border-2 border-white text-white font-bold rounded-lg hover:bg-white hover:text-[#F0427C] transition duration-200 text-lg">
+                                    <a href="/contact-us" class="inline-flex items-center px-8 py-4 bg-transparent border-2 border-white text-white font-bold rounded-lg hover:bg-white hover:text-[#0297FE] transition duration-200 text-lg">
                                         <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                         </svg>
@@ -2685,15 +2736,15 @@ class PageSeeder extends Seeder
                         </div>
                     </div>
                 </div>',
-                'excerpt' => 'Find answers to frequently asked questions about ordering, shipping, returns, refunds, tracking, and more on PressOnNail.',
+                'excerpt' => 'Find answers to frequently asked questions about ordering, shipping, returns, refunds, tracking, and more on Blu Lavelle.',
                 'status' => 'published',
                 'published_at' => now(),
                 'template' => 'default',
                 'show_in_menu' => true,
                 'menu_title' => 'FAQs',
                 'sort_order' => 9,
-                'meta_title' => 'FAQs - Frequently Asked Questions | PressOnNail Help Center',
-                'meta_description' => 'Get answers to common questions about ordering, shipping, returns, tracking, payment, and more. Complete FAQ guide for PressOnNail customers.',
+                'meta_title' => 'FAQs - Frequently Asked Questions | Blu Lavelle Help Center',
+                'meta_description' => 'Get answers to common questions about ordering, shipping, returns, tracking, payment, and more. Complete FAQ guide for Blu Lavelle customers.',
             ],
             [
                 'user_id' => $admin->id,
@@ -2731,13 +2782,13 @@ class PageSeeder extends Seeder
                                 <!-- Email -->
                                 <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg p-8 shadow-xl border-2 border-pink-300 hover:shadow-2xl transition duration-200">
                                     <div class="flex flex-col items-center text-center">
-                                        <div class="w-20 h-20 bg-[#F0427C] rounded-full flex items-center justify-center mb-4 shadow-lg">
+                                        <div class="w-20 h-20 bg-[#0297FE] rounded-full flex items-center justify-center mb-4 shadow-lg">
                                             <svg class="w-11 h-11 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                             </svg>
                                         </div>
                                         <h3 class="text-2xl font-bold text-gray-800 mb-3">Email Support</h3>
-                                        <a href="mailto:support@blulavelle.com" class="text-[#F0427C] hover:text-[#d6386a] font-bold text-xl underline break-all">support@blulavelle.com</a>
+                                        <a href="mailto:support@blulavelle.com" class="text-[#0297FE] hover:text-[#d6386a] font-bold text-xl underline break-all">support@blulavelle.com</a>
                                         <p class="text-gray-600 text-sm mt-2">Response within 24 hours</p>
                                     </div>
                                 </div>
@@ -2745,13 +2796,13 @@ class PageSeeder extends Seeder
                                 <!-- Phone -->
                                 <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg p-8 shadow-xl border-2 border-pink-300 hover:shadow-2xl transition duration-200">
                                     <div class="flex flex-col items-center text-center">
-                                        <div class="w-20 h-20 bg-[#F0427C] rounded-full flex items-center justify-center mb-4 shadow-lg">
+                                        <div class="w-20 h-20 bg-[#0297FE] rounded-full flex items-center justify-center mb-4 shadow-lg">
                                             <svg class="w-11 h-11 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
                                             </svg>
                                         </div>
                                         <h3 class="text-2xl font-bold text-gray-800 mb-3">Call Us</h3>
-                                        <a href="tel:+18563782798" class="text-[#F0427C] hover:text-pink-800 font-bold text-2xl">+1 856-378-2798</a>
+                                        <a href="tel:+18563782798" class="text-[#0297FE] hover:text-pink-800 font-bold text-2xl">+1 856-378-2798</a>
                                         <p class="text-gray-600 text-sm mt-2">Available during business hours</p>
                                     </div>
                                 </div>
@@ -2759,13 +2810,13 @@ class PageSeeder extends Seeder
                                 <!-- iMessage -->
                                 <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg p-8 shadow-xl border-2 border-pink-300 hover:shadow-2xl transition duration-200">
                                     <div class="flex flex-col items-center text-center">
-                                        <div class="w-20 h-20 bg-[#F0427C] rounded-full flex items-center justify-center mb-4 shadow-lg">
+                                        <div class="w-20 h-20 bg-[#0297FE] rounded-full flex items-center justify-center mb-4 shadow-lg">
                                             <svg class="w-11 h-11 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
                                             </svg>
                                         </div>
                                         <h3 class="text-2xl font-bold text-gray-800 mb-3">iMessage</h3>
-                                        <p class="text-[#F0427C] font-bold text-2xl">+1 856-378-2798</p>
+                                        <p class="text-[#0297FE] font-bold text-2xl">+1 856-378-2798</p>
                                         <p class="text-gray-600 text-sm mt-2">For iOS users</p>
                                     </div>
                                 </div>
@@ -2773,13 +2824,13 @@ class PageSeeder extends Seeder
                                 <!-- WhatsApp -->
                                 <div class="bg-gradient-to-br from-green-50 to-lime-50 rounded-lg p-8 shadow-xl border-2 border-pink-300 hover:shadow-2xl transition duration-200">
                                     <div class="flex flex-col items-center text-center">
-                                        <div class="w-20 h-20 bg-[#F0427C] rounded-full flex items-center justify-center mb-4 shadow-lg">
+                                        <div class="w-20 h-20 bg-[#0297FE] rounded-full flex items-center justify-center mb-4 shadow-lg">
                                             <svg class="w-11 h-11 text-white" fill="currentColor" viewBox="0 0 24 24">
                                                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"></path>
                                             </svg>
                                         </div>
                                         <h3 class="text-2xl font-bold text-gray-800 mb-3">WhatsApp</h3>
-                                        <a href="https://wa.me/18563782798" target="_blank" class="text-[#F0427C] hover:text-pink-800 font-bold text-2xl">+1 856-378-2798</a>
+                                        <a href="https://wa.me/18563782798" target="_blank" class="text-[#0297FE] hover:text-pink-800 font-bold text-2xl">+1 856-378-2798</a>
                                         <p class="text-gray-600 text-sm mt-2">Quick messaging support</p>
                                     </div>
                                 </div>
@@ -2832,15 +2883,15 @@ class PageSeeder extends Seeder
                             <!-- Quick Access Links -->
                             <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-2 border-pink-300 rounded-lg p-8 mb-8">
                                 <h3 class="text-2xl font-bold text-pink-900 mb-6 text-center flex items-center justify-center">
-                                    <svg class="w-8 h-8 mr-3 text-[#F0427C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-8 h-8 mr-3 text-[#0297FE]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                                     </svg>
                                     Quick Access
                                 </h3>
                                 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <a href="mailto:support@blulavelle.com" class="flex items-center bg-white hover:bg-pink-50 rounded-lg p-5 shadow-md border-l-4 border-[#F0427C] transition duration-200">
-                                        <div class="flex-shrink-0 w-12 h-12 bg-[#F0427C] rounded-full flex items-center justify-center mr-4">
+                                    <a href="mailto:support@blulavelle.com" class="flex items-center bg-white hover:bg-pink-50 rounded-lg p-5 shadow-md border-l-4 border-[#0297FE] transition duration-200">
+                                        <div class="flex-shrink-0 w-12 h-12 bg-[#0297FE] rounded-full flex items-center justify-center mr-4">
                                             <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                             </svg>
@@ -2851,8 +2902,8 @@ class PageSeeder extends Seeder
                                         </div>
                                     </a>
 
-                                    <a href="tel:+18563782798" class="flex items-center bg-white hover:bg-pink-50 rounded-lg p-5 shadow-md border-l-4 border-[#F0427C] transition duration-200">
-                                        <div class="flex-shrink-0 w-12 h-12 bg-[#F0427C] rounded-full flex items-center justify-center mr-4">
+                                    <a href="tel:+18563782798" class="flex items-center bg-white hover:bg-pink-50 rounded-lg p-5 shadow-md border-l-4 border-[#0297FE] transition duration-200">
+                                        <div class="flex-shrink-0 w-12 h-12 bg-[#0297FE] rounded-full flex items-center justify-center mr-4">
                                             <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
                                             </svg>
@@ -2864,7 +2915,7 @@ class PageSeeder extends Seeder
                                     </a>
 
                                     <a href="sms:+18563782798" class="flex items-center bg-white hover:bg-pink-50 rounded-lg p-5 shadow-md border-l-4 border-purple-500 transition duration-200">
-                                        <div class="flex-shrink-0 w-12 h-12 bg-[#F0427C] rounded-full flex items-center justify-center mr-4">
+                                        <div class="flex-shrink-0 w-12 h-12 bg-[#0297FE] rounded-full flex items-center justify-center mr-4">
                                             <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
                                             </svg>
@@ -2876,7 +2927,7 @@ class PageSeeder extends Seeder
                                     </a>
 
                                     <a href="https://wa.me/18563782798" target="_blank" class="flex items-center bg-white hover:bg-pink-50 rounded-lg p-5 shadow-md border-l-4 border-green-600 transition duration-200">
-                                        <div class="flex-shrink-0 w-12 h-12 bg-[#F0427C] rounded-full flex items-center justify-center mr-4">
+                                        <div class="flex-shrink-0 w-12 h-12 bg-[#0297FE] rounded-full flex items-center justify-center mr-4">
                                             <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
                                                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"></path>
                                             </svg>
@@ -2971,8 +3022,8 @@ class PageSeeder extends Seeder
                 'show_in_menu' => true,
                 'menu_title' => 'Local Support',
                 'sort_order' => 10,
-                'meta_title' => 'Local Support Vietnam - PressOnNail Local Support',
-                'meta_description' => 'Contact PressOnNail local support team in Ho Chi Minh City, Vietnam. Vietnamese language support via email, phone, iMessage, and WhatsApp.',
+                'meta_title' => 'Local Support Vietnam - Blu Lavelle Local Support',
+                'meta_description' => 'Contact Blu Lavelle local support team in Ho Chi Minh City, Vietnam. Vietnamese language support via email, phone, iMessage, and WhatsApp.',
             ],
             [
                 'user_id' => $admin->id,
@@ -3004,30 +3055,30 @@ class PageSeeder extends Seeder
 
                         <div class="px-8 py-12">
                             <!-- Introduction -->
-                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-l-4 border-[#F0427C] rounded-r-lg p-8 mb-10">
+                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-l-4 border-[#0297FE] rounded-r-lg p-8 mb-10">
                                 <p class="text-xl text-gray-800 leading-relaxed mb-4">
-                                    At <strong class="text-[#F0427C]">PressOnNail</strong>, we strive to ensure your satisfaction with every purchase. If you need to return or exchange an item, our policy makes the process simple and straightforward.
+                                    At <strong class="text-[#0297FE]">Blu Lavelle</strong>, we strive to ensure your satisfaction with every purchase. If you need to return or exchange an item, our policy makes the process simple and straightforward.
                                 </p>
                                 <div class="bg-white rounded-lg p-6 shadow-md">
                                     <p class="text-gray-800 leading-relaxed">
-                                        If you need assistance, please contact us at <a href="mailto:support@blulavelle.com" class="text-[#F0427C] hover:text-[#d6386a] font-semibold underline">support@blulavelle.com</a>
+                                        If you need assistance, please contact us at <a href="mailto:support@blulavelle.com" class="text-[#0297FE] hover:text-[#d6386a] font-semibold underline">support@blulavelle.com</a>
                                     </p>
                                 </div>
                             </div>
 
                             <!-- No Restocking Fee -->
-                            <div class="bg-gradient-to-r from-pink-100 to-pink-200 border-2 border-[#F0427C] rounded-lg p-8 mb-10">
+                            <div class="bg-gradient-to-r from-pink-100 to-pink-200 border-2 border-[#0297FE] rounded-lg p-8 mb-10">
                                 <div class="flex items-center justify-center">
                                     <div class="text-center">
                                         <div class="flex justify-center mb-4">
-                                            <div class="w-24 h-24 bg-[#F0427C] rounded-full flex items-center justify-center shadow-xl">
+                                            <div class="w-24 h-24 bg-[#0297FE] rounded-full flex items-center justify-center shadow-xl">
                                                 <svg class="w-14 h-14 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                 </svg>
                                             </div>
                                         </div>
                                         <h2 class="text-4xl font-bold text-pink-900 mb-3">Restocking Fee</h2>
-                                        <p class="text-6xl font-bold text-[#F0427C] mb-2">NO FEE</p>
+                                        <p class="text-6xl font-bold text-[#0297FE] mb-2">NO FEE</p>
                                         <p class="text-gray-700 text-lg">We do not charge any restocking fees for returns or exchanges</p>
                                     </div>
                                 </div>
@@ -3035,7 +3086,7 @@ class PageSeeder extends Seeder
 
                             <!-- Eligible Reasons Section -->
                             <div class="mb-10">
-                                <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white px-6 py-5 rounded-t-lg">
+                                <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] text-white px-6 py-5 rounded-t-lg">
                                     <h2 class="text-4xl font-bold text-center">Eligible Reasons for Return</h2>
                                     <p class="text-center text-pink-100 mt-2 text-lg">Returns and exchanges are only permitted under the following conditions:</p>
                                 </div>
@@ -3131,7 +3182,7 @@ class PageSeeder extends Seeder
                                     <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-2 border-pink-300 rounded-lg overflow-hidden">
                                         <div class="bg-gradient-to-r from-blue-500 to-cyan-500 px-6 py-4">
                                             <div class="flex items-center">
-                                                <span class="w-12 h-12 bg-white text-[#F0427C] rounded-full flex items-center justify-center mr-3 text-2xl font-bold shadow-lg">D</span>
+                                                <span class="w-12 h-12 bg-white text-[#0297FE] rounded-full flex items-center justify-center mr-3 text-2xl font-bold shadow-lg">D</span>
                                                 <h3 class="text-2xl font-bold text-white">Damage Caused During Shipping</h3>
                                             </div>
                                         </div>
@@ -3166,7 +3217,7 @@ class PageSeeder extends Seeder
 
                             <!-- Eligibility Criteria -->
                             <div class="mb-10">
-                                <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white px-6 py-5 rounded-t-lg">
+                                <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] text-white px-6 py-5 rounded-t-lg">
                                     <h2 class="text-4xl font-bold text-center flex items-center justify-center">
                                         <svg class="w-9 h-9 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -3180,7 +3231,7 @@ class PageSeeder extends Seeder
                                     <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                                         <div class="bg-white rounded-lg p-6 shadow-lg border-2 border-pink-200">
                                             <div class="flex justify-center mb-4">
-                                                <div class="w-14 h-14 bg-[#F0427C] rounded-full flex items-center justify-center">
+                                                <div class="w-14 h-14 bg-[#0297FE] rounded-full flex items-center justify-center">
                                                     <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                     </svg>
@@ -3191,7 +3242,7 @@ class PageSeeder extends Seeder
                                         
                                         <div class="bg-white rounded-lg p-6 shadow-lg border-2 border-pink-200">
                                             <div class="flex justify-center mb-4">
-                                                <div class="w-14 h-14 bg-[#F0427C] rounded-full flex items-center justify-center">
+                                                <div class="w-14 h-14 bg-[#0297FE] rounded-full flex items-center justify-center">
                                                     <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                     </svg>
@@ -3202,7 +3253,7 @@ class PageSeeder extends Seeder
                                         
                                         <div class="bg-white rounded-lg p-6 shadow-lg border-2 border-pink-200">
                                             <div class="flex justify-center mb-4">
-                                                <div class="w-14 h-14 bg-[#F0427C] rounded-full flex items-center justify-center">
+                                                <div class="w-14 h-14 bg-[#0297FE] rounded-full flex items-center justify-center">
                                                     <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                     </svg>
@@ -3212,7 +3263,7 @@ class PageSeeder extends Seeder
                                         </div>
                                     </div>
 
-                                    <div class="mt-6 bg-pink-100 border-l-4 border-[#F0427C] rounded-r-lg p-5">
+                                    <div class="mt-6 bg-pink-100 border-l-4 border-[#0297FE] rounded-r-lg p-5">
                                         <p class="text-pink-900 font-semibold text-lg">
                                             🌍 For orders shipped outside the US: Defective or unwanted items are supported within <strong>60 days</strong> of delivery
                                         </p>
@@ -3222,7 +3273,7 @@ class PageSeeder extends Seeder
 
                             <!-- Return Process -->
                             <div class="mb-10">
-                                <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white px-6 py-5 rounded-t-lg">
+                                <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] text-white px-6 py-5 rounded-t-lg">
                                     <h2 class="text-4xl font-bold text-center flex items-center justify-center">
                                         <svg class="w-9 h-9 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
@@ -3235,7 +3286,7 @@ class PageSeeder extends Seeder
                                     <div class="space-y-6">
                                         <!-- Step 1 -->
                                         <div class="flex items-start">
-                                            <div class="flex-shrink-0 w-20 h-20 bg-gradient-to-br from-[#F0427C] to-[#d6386a] text-white rounded-full flex items-center justify-center mr-5 text-3xl font-bold shadow-xl">1</div>
+                                            <div class="flex-shrink-0 w-20 h-20 bg-gradient-to-br from-[#0297FE] to-[#d6386a] text-white rounded-full flex items-center justify-center mr-5 text-3xl font-bold shadow-xl">1</div>
                                             <div class="flex-1 bg-white rounded-lg p-6 shadow-lg border-2 border-pink-200">
                                                 <h3 class="text-2xl font-bold text-pink-900 mb-3">Verify Eligibility</h3>
                                                 <p class="text-gray-800 leading-relaxed">
@@ -3246,38 +3297,38 @@ class PageSeeder extends Seeder
 
                                         <!-- Step 2 -->
                                         <div class="flex items-start">
-                                            <div class="flex-shrink-0 w-20 h-20 bg-gradient-to-br from-[#F0427C] to-[#d6386a] text-white rounded-full flex items-center justify-center mr-5 text-3xl font-bold shadow-xl">2</div>
+                                            <div class="flex-shrink-0 w-20 h-20 bg-gradient-to-br from-[#0297FE] to-[#d6386a] text-white rounded-full flex items-center justify-center mr-5 text-3xl font-bold shadow-xl">2</div>
                                             <div class="flex-1 bg-white rounded-lg p-6 shadow-lg border-2 border-pink-200">
                                                 <h3 class="text-2xl font-bold text-pink-900 mb-3">Contact Us</h3>
-                                                <p class="text-gray-800 mb-4">Reach out via email at <a href="mailto:support@blulavelle.com" class="text-[#F0427C] hover:text-[#d6386a] font-semibold underline">support@blulavelle.com</a></p>
+                                                <p class="text-gray-800 mb-4">Reach out via email at <a href="mailto:support@blulavelle.com" class="text-[#0297FE] hover:text-[#d6386a] font-semibold underline">support@blulavelle.com</a></p>
                                                 <p class="text-gray-700 font-semibold mb-3">Provide the following information:</p>
                                                 <div class="space-y-2">
                                                     <div class="flex items-start bg-pink-50 rounded-lg p-3">
-                                                        <svg class="w-5 h-5 text-[#F0427C] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <svg class="w-5 h-5 text-[#0297FE] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                                         </svg>
                                                         <p class="text-gray-800"><strong>Order Details:</strong> Include your order number and relevant information</p>
                                                     </div>
                                                     <div class="flex items-start bg-pink-50 rounded-lg p-3">
-                                                        <svg class="w-5 h-5 text-[#F0427C] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <svg class="w-5 h-5 text-[#0297FE] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                                         </svg>
                                                         <p class="text-gray-800"><strong>Photos of Packaging Label:</strong> Clearly show the shipping label</p>
                                                     </div>
                                                     <div class="flex items-start bg-pink-50 rounded-lg p-3">
-                                                        <svg class="w-5 h-5 text-[#F0427C] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <svg class="w-5 h-5 text-[#0297FE] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                                         </svg>
                                                         <p class="text-gray-800"><strong>Photos of the Issue:</strong> Highlight damaged, faulty, or incorrect aspects</p>
                                                     </div>
                                                     <div class="flex items-start bg-pink-50 rounded-lg p-3">
-                                                        <svg class="w-5 h-5 text-[#F0427C] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <svg class="w-5 h-5 text-[#0297FE] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                                         </svg>
                                                         <p class="text-gray-800">For wrong-sized items: Include photos of actual measurements (width and length)</p>
                                                     </div>
                                                     <div class="flex items-start bg-pink-50 rounded-lg p-3">
-                                                        <svg class="w-5 h-5 text-[#F0427C] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <svg class="w-5 h-5 text-[#0297FE] mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                                         </svg>
                                                         <p class="text-gray-800"><strong>Replacement Details:</strong> Specify the item you wish to receive</p>
@@ -3299,16 +3350,16 @@ class PageSeeder extends Seeder
                                                 <p class="text-gray-800 mb-4 leading-relaxed">
                                                     Once we verify your claim, we will issue a refund or resend the replacement to your address within <strong class="text-pink-600">7 business days</strong>.
                                                 </p>
-                                                <div class="bg-pink-100 border-2 border-[#F0427C] rounded-lg p-5">
+                                                <div class="bg-pink-100 border-2 border-[#0297FE] rounded-lg p-5">
                                                     <div class="space-y-3">
                                                         <p class="text-pink-900 font-semibold text-lg flex items-center">
-                                                            <svg class="w-6 h-6 mr-2 text-[#F0427C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <svg class="w-6 h-6 mr-2 text-[#0297FE]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                                             </svg>
                                                             You do NOT need to return the original package unless instructed
                                                         </p>
                                                         <p class="text-pink-900 font-semibold text-lg flex items-center">
-                                                            <svg class="w-6 h-6 mr-2 text-[#F0427C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <svg class="w-6 h-6 mr-2 text-[#0297FE]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                                             </svg>
                                                             Replacements will be of equal or higher value
@@ -3356,7 +3407,7 @@ class PageSeeder extends Seeder
                                 <p class="text-xl text-green-100 mb-6 max-w-3xl mx-auto">
                                     If you have any questions or need assistance with your return or exchange, our support team is here to help!
                                 </p>
-                                <a href="mailto:support@blulavelle.com" class="inline-flex items-center px-10 py-4 bg-white text-[#F0427C] font-bold rounded-lg shadow-xl hover:shadow-2xl transition duration-200 text-xl">
+                                <a href="mailto:support@blulavelle.com" class="inline-flex items-center px-10 py-4 bg-white text-[#0297FE] font-bold rounded-lg shadow-xl hover:shadow-2xl transition duration-200 text-xl">
                                     <svg class="w-7 h-7 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                     </svg>
@@ -3373,369 +3424,310 @@ class PageSeeder extends Seeder
                 'show_in_menu' => true,
                 'menu_title' => 'Free Return',
                 'sort_order' => 11,
-                'meta_title' => 'Free Return - PressOnNail Easy Returns & Exchanges',
-                'meta_description' => 'Free returns and exchanges within 30 days. No restocking fee. Simple return process for wrong, damaged, or non-fitting items on PressOnNail.',
+                'meta_title' => 'Free Return - Blu Lavelle Easy Returns & Exchanges',
+                'meta_description' => 'Free returns and exchanges within 30 days. No restocking fee. Simple return process for wrong, damaged, or non-fitting items on Blu Lavelle.',
             ],
             [
                 'user_id' => $admin->id,
-                'title' => 'Privacy Policy',
-                'slug' => 'privacy-policy',
-                'content' => '<div class="max-w-6xl mx-auto py-8 px-4">
+                'title' => 'Contact Us',
+                'slug' => 'contact-us',
+                'content' => '<div class="max-w-7xl mx-auto py-8 px-4">
                     <div class="bg-white rounded-lg shadow-2xl overflow-hidden">
                         <!-- Hero Header -->
-                        <div class="relative bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 text-white px-8 py-16">
-                            <div class="absolute inset-0 bg-black opacity-10"></div>
-                            <div class="relative z-10 text-center">
+                        <div class="bg-gradient-to-r from-[#0297FE] via-[#f89192] to-[#d6386a] text-white px-8 py-16">
+                            <div class="text-center">
                                 <div class="flex justify-center mb-6">
-                                    <div class="w-32 h-32 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm shadow-2xl">
-                                        <svg class="w-20 h-20 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                    <div class="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                                        <svg class="w-14 h-14 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                         </svg>
                                     </div>
                                 </div>
-                                <h1 class="text-6xl font-bold mb-4">Privacy Policy</h1>
-                                <p class="text-2xl text-pink-100">Your Privacy is Our Priority</p>
-                                <p class="text-lg text-pink-100 mt-4 max-w-4xl mx-auto">
-                                    Last updated: ' . now()->format('F d, Y') . '
+                                <h1 class="text-6xl font-bold mb-4">Contact Us</h1>
+                                <p class="text-2xl text-green-100">We\'re Here to Help!</p>
+                                <p class="text-lg text-teal-100 mt-4 max-w-3xl mx-auto">
+                                    Get in touch with us through any of the channels below. We\'re available worldwide to support your needs.
                                 </p>
                             </div>
                         </div>
 
                         <div class="px-8 py-12">
-                            <!-- Introduction -->
-                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-l-4 border-[#F0427C] rounded-r-lg p-8 mb-10">
-                                <p class="text-xl text-gray-800 leading-relaxed mb-6">
-                                    At <strong class="text-[#F0427C]">PressOnNail</strong>, accessible at <strong>www.blulavelle.com</strong>, we are committed to protecting your personal information and your right to privacy. If you have any questions or concerns about this privacy policy or our practices regarding your personal data, please contact our external data protection officer:
-                                </p>
-                                <div class="bg-white rounded-lg p-6 shadow-lg grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <p class="text-gray-800"><strong>📍 Address:</strong></p>
-                                        <p class="text-gray-700">24 Thanh Xuan, Thanh Xuan Street<br>12 District, Ho Chi Minh City, Vietnam</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-gray-800"><strong>📧 Email:</strong></p>
-                                        <a href="mailto:support@blulavelle.com" class="text-[#F0427C] hover:text-[#d6386a] font-semibold underline text-lg">support@blulavelle.com</a>
+                            <!-- Contact Methods -->
+                            <div class="mb-16">
+                                <div class="text-center mb-10">
+                                    <h2 class="text-4xl font-bold text-gray-800 mb-3">Get In Touch</h2>
+                                    <div class="flex justify-center">
+                                        <div class="w-20 h-1 bg-gradient-to-r from-[#0297FE] to-[#d6386a] rounded"></div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Section 1: Information We Collect -->
-                            <div class="mb-10">
-                                <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white px-6 py-5 rounded-t-lg">
-                                    <h2 class="text-4xl font-bold flex items-center">
-                                        <span class="w-12 h-12 bg-white text-[#F0427C] rounded-full flex items-center justify-center mr-3 text-2xl font-bold">1</span>
-                                        Information We Collect
-                                    </h2>
-                                </div>
-                                <div class="bg-pink-50 border-2 border-pink-300 border-t-0 rounded-b-lg p-6">
-                                    <p class="text-gray-800 mb-6 text-lg">When you use PressOnNail, we may collect the following types of information:</p>
-                                    
-                                    <div class="space-y-4">
-                                        <div class="bg-white rounded-lg p-5 shadow-md border-l-4 border-[#F0427C]">
-                                            <h4 class="font-bold text-pink-900 text-lg mb-2">1.1. Personal Identifiable Information (PII)</h4>
-                                            <ul class="space-y-2 text-gray-700">
-                                                <li>• <strong>Account Information:</strong> Name, email, phone number, password</li>
-                                                <li>• <strong>Order Information:</strong> Billing and shipping address, order details</li>
-                                                <li>• <strong>Communication Information:</strong> Name, email, message content</li>
-                                            </ul>
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                                    <!-- Email -->
+                                    <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg p-6 shadow-lg border-2 border-pink-200 hover:border-blue-400 transition duration-200">
+                                        <div class="flex justify-center mb-4">
+                                            <div class="w-16 h-16 bg-[#0297FE] rounded-full flex items-center justify-center shadow-lg">
+                                                <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                                </svg>
+                                            </div>
                                         </div>
-                                        
-                                        <div class="bg-white rounded-lg p-5 shadow-md border-l-4 border-[#F0427C]">
-                                            <h4 class="font-bold text-pink-900 text-lg mb-2">1.2. Payment Information</h4>
-                                            <p class="text-gray-700">Credit/debit card details handled securely by third-party payment providers (not stored on our servers)</p>
-                                        </div>
-                                        
-                                        <div class="bg-white rounded-lg p-5 shadow-md border-l-4 border-purple-500">
-                                            <h4 class="font-bold text-pink-900 text-lg mb-2">1.3. Automatically Collected Information</h4>
-                                            <ul class="space-y-2 text-gray-700">
-                                                <li>• Device information (type, OS, browser)</li>
-                                                <li>• Usage information (pages visited, time spent)</li>
-                                                <li>• IP Address for location-based content</li>
-                                                <li>• Cookies and tracking data</li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Section 2: How We Use Your Information -->
-                            <div class="mb-10">
-                                <div class="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-5 rounded-t-lg">
-                                    <h2 class="text-4xl font-bold flex items-center">
-                                        <span class="w-12 h-12 bg-white text-[#F0427C] rounded-full flex items-center justify-center mr-3 text-2xl font-bold">2</span>
-                                        How We Use Your Information
-                                    </h2>
-                                </div>
-                                <div class="bg-pink-50 border-2 border-pink-300 border-t-0 rounded-b-lg p-6">
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div class="bg-white rounded-lg p-4 shadow-sm border-l-4 border-[#F0427C]">
-                                            <h4 class="font-bold text-pink-800 mb-2">✓ Provide Services</h4>
-                                            <p class="text-gray-700 text-sm">Process orders, manage accounts, handle communications</p>
-                                        </div>
-                                        <div class="bg-white rounded-lg p-4 shadow-sm border-l-4 border-[#F0427C]">
-                                            <h4 class="font-bold text-[#d6386a] mb-2">✓ Improve Experience</h4>
-                                            <p class="text-gray-700 text-sm">Personalize content, optimize functionality</p>
-                                        </div>
-                                        <div class="bg-white rounded-lg p-4 shadow-sm border-l-4 border-purple-500">
-                                            <h4 class="font-bold text-pink-800 mb-2">✓ Process Payments</h4>
-                                            <p class="text-gray-700 text-sm">Secure transactions, prevent fraud</p>
-                                        </div>
-                                        <div class="bg-white rounded-lg p-4 shadow-sm border-l-4 border-cyan-500">
-                                            <h4 class="font-bold text-cyan-800 mb-2">✓ Communicate</h4>
-                                            <p class="text-gray-700 text-sm">Updates, support, marketing (if opted in)</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Section 3: Sharing Your Information -->
-                            <div class="mb-10">
-                                <div class="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-5 rounded-t-lg">
-                                    <h2 class="text-4xl font-bold flex items-center">
-                                        <span class="w-12 h-12 bg-white text-[#F0427C] rounded-full flex items-center justify-center mr-3 text-2xl font-bold">3</span>
-                                        Sharing Your Information
-                                    </h2>
-                                </div>
-                                <div class="bg-pink-50 border-2 border-pink-300 border-t-0 rounded-b-lg p-6">
-                                    <div class="bg-red-100 border-l-4 border-red-500 p-5 rounded-lg mb-6">
-                                        <p class="text-red-900 font-semibold text-lg">
-                                            <strong>Important:</strong> We do NOT sell, rent, or trade your personal information to third parties.
+                                        <h3 class="text-xl font-bold text-center text-gray-800 mb-2">Email</h3>
+                                        <p class="text-center">
+                                            <a href="mailto:admin@blulavelle.com" class="text-[#0297FE] hover:text-[#d6386a] font-semibold text-lg underline break-all">admin@blulavelle.com</a>
                                         </p>
                                     </div>
-                                    <p class="text-gray-800 mb-4 font-semibold">Your information may be shared with:</p>
-                                    <div class="space-y-3">
-                                        <div class="bg-white rounded-lg p-4 shadow-sm">
-                                            <p class="text-gray-800"><strong class="text-[#F0427C]">Service Providers:</strong> Payment processors, shipping companies, analytics partners</p>
-                                        </div>
-                                        <div class="bg-white rounded-lg p-4 shadow-sm">
-                                            <p class="text-gray-800"><strong class="text-[#F0427C]">Legal Requirements:</strong> When required by law or to protect rights</p>
-                                        </div>
-                                        <div class="bg-white rounded-lg p-4 shadow-sm">
-                                            <p class="text-gray-800"><strong class="text-[#F0427C]">Business Transfers:</strong> In case of merger, acquisition, or sale</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
 
-                            <!-- Section 4: Data Retention -->
-                            <div class="mb-10">
-                                <div class="bg-gradient-to-r from-orange-600 to-red-600 text-white px-6 py-5 rounded-t-lg">
-                                    <h2 class="text-4xl font-bold flex items-center">
-                                        <span class="w-12 h-12 bg-white text-orange-600 rounded-full flex items-center justify-center mr-3 text-2xl font-bold">4</span>
-                                        Data Retention
-                                    </h2>
-                                </div>
-                                <div class="bg-orange-50 border-2 border-orange-300 border-t-0 rounded-b-lg p-6">
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div class="bg-white rounded-lg p-5 shadow-md">
-                                            <h4 class="font-bold text-orange-800 mb-2">Account Data</h4>
-                                            <p class="text-gray-700 text-sm">Retained while account is active</p>
-                                        </div>
-                                        <div class="bg-white rounded-lg p-5 shadow-md">
-                                            <h4 class="font-bold text-orange-800 mb-2">Order Data</h4>
-                                            <p class="text-gray-700 text-sm">Minimum 7 years for legal compliance</p>
-                                        </div>
-                                        <div class="bg-white rounded-lg p-5 shadow-md">
-                                            <h4 class="font-bold text-orange-800 mb-2">Communication Data</h4>
-                                            <p class="text-gray-700 text-sm">As needed for support and quality assurance</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Section 5: Your Rights -->
-                            <div class="mb-10">
-                                <div class="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-6 py-5 rounded-t-lg">
-                                    <h2 class="text-4xl font-bold flex items-center">
-                                        <span class="w-12 h-12 bg-white text-[#F0427C] rounded-full flex items-center justify-center mr-3 text-2xl font-bold">5</span>
-                                        Your Rights
-                                    </h2>
-                                </div>
-                                <div class="bg-pink-50 border-2 border-pink-300 border-t-0 rounded-b-lg p-6">
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div class="bg-white rounded-lg p-4 shadow-md border-l-4 border-[#F0427C]">
-                                            <h4 class="font-bold text-indigo-800 mb-2">Right to Access</h4>
-                                            <p class="text-gray-700 text-sm">Request access to your personal data</p>
-                                        </div>
-                                        <div class="bg-white rounded-lg p-4 shadow-md border-l-4 border-[#F0427C]">
-                                            <h4 class="font-bold text-[#d6386a] mb-2">Right to Rectification</h4>
-                                            <p class="text-gray-700 text-sm">Correct inaccurate or incomplete data</p>
-                                        </div>
-                                        <div class="bg-white rounded-lg p-4 shadow-md border-l-4 border-purple-500">
-                                            <h4 class="font-bold text-pink-800 mb-2">Right to Deletion</h4>
-                                            <p class="text-gray-700 text-sm">Request removal of your data</p>
-                                        </div>
-                                        <div class="bg-white rounded-lg p-4 shadow-md border-l-4 border-cyan-500">
-                                            <h4 class="font-bold text-cyan-800 mb-2">Right to Portability</h4>
-                                            <p class="text-gray-700 text-sm">Receive data in machine-readable format</p>
-                                        </div>
-                                        <div class="bg-white rounded-lg p-4 shadow-md border-l-4 border-[#F0427C]">
-                                            <h4 class="font-bold text-pink-800 mb-2">Right to Object</h4>
-                                            <p class="text-gray-700 text-sm">Object to processing for marketing</p>
-                                        </div>
-                                        <div class="bg-white rounded-lg p-4 shadow-md border-l-4 border-pink-500">
-                                            <h4 class="font-bold text-pink-800 mb-2">Right to Withdraw Consent</h4>
-                                            <p class="text-gray-700 text-sm">Withdraw consent at any time</p>
-                                        </div>
-                                    </div>
-                                    <div class="mt-6 bg-pink-100 border-l-4 border-[#F0427C] p-5 rounded-r-lg">
-                                        <p class="text-pink-900 font-semibold">We aim to respond to all legitimate requests within <strong>30 days</strong></p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Section 6: Security -->
-                            <div class="mb-10">
-                                <div class="bg-gradient-to-r from-red-600 to-rose-600 text-white px-6 py-5 rounded-t-lg">
-                                    <h2 class="text-4xl font-bold flex items-center">
-                                        <span class="w-12 h-12 bg-white text-red-600 rounded-full flex items-center justify-center mr-3 text-2xl font-bold">6</span>
-                                        Security of Your Information
-                                    </h2>
-                                </div>
-                                <div class="bg-red-50 border-2 border-red-300 border-t-0 rounded-b-lg p-6">
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div class="bg-white rounded-lg p-5 shadow-lg border-2 border-pink-200">
-                                            <div class="flex justify-center mb-3">
-                                                <div class="w-12 h-12 bg-[#F0427C] rounded-full flex items-center justify-center">
-                                                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                                                    </svg>
-                                                </div>
+                                    <!-- Phone -->
+                                    <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg p-6 shadow-lg border-2 border-pink-200 hover:border-[#0297FE] transition duration-200">
+                                        <div class="flex justify-center mb-4">
+                                            <div class="w-16 h-16 bg-[#0297FE] rounded-full flex items-center justify-center shadow-lg">
+                                                <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                                                </svg>
                                             </div>
-                                            <h4 class="font-bold text-gray-800 text-center mb-2">Technical Measures</h4>
-                                            <p class="text-gray-700 text-sm text-center">SSL encryption, secure servers, firewalls</p>
                                         </div>
-                                        
-                                        <div class="bg-white rounded-lg p-5 shadow-lg border-2 border-pink-200">
-                                            <div class="flex justify-center mb-3">
-                                                <div class="w-12 h-12 bg-[#F0427C] rounded-full flex items-center justify-center">
-                                                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                                                    </svg>
-                                                </div>
+                                        <h3 class="text-xl font-bold text-center text-gray-800 mb-2">Call Us</h3>
+                                        <p class="text-center">
+                                            <a href="tel:+18563782798" class="text-[#0297FE] hover:text-pink-800 font-semibold text-lg">+1 856-378-2798</a>
+                                        </p>
+                                    </div>
+
+                                    <!-- iMessage -->
+                                    <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg p-6 shadow-lg border-2 border-pink-200 hover:border-purple-400 transition duration-200">
+                                        <div class="flex justify-center mb-4">
+                                            <div class="w-16 h-16 bg-[#0297FE] rounded-full flex items-center justify-center shadow-lg">
+                                                <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+                                                </svg>
                                             </div>
-                                            <h4 class="font-bold text-gray-800 text-center mb-2">Administrative Measures</h4>
-                                            <p class="text-gray-700 text-sm text-center">Access control, employee training, audits</p>
                                         </div>
-                                        
-                                        <div class="bg-white rounded-lg p-5 shadow-lg border-2 border-pink-200">
-                                            <div class="flex justify-center mb-3">
-                                                <div class="w-12 h-12 bg-[#F0427C] rounded-full flex items-center justify-center">
-                                                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                                                    </svg>
-                                                </div>
+                                        <h3 class="text-xl font-bold text-center text-gray-800 mb-2">iMessage</h3>
+                                        <p class="text-center text-[#0297FE] font-semibold text-lg">+1 856-378-2798</p>
+                                    </div>
+
+                                    <!-- WhatsApp -->
+                                    <div class="bg-gradient-to-br from-green-50 to-lime-50 rounded-lg p-6 shadow-lg border-2 border-pink-200 hover:border-[#0297FE] transition duration-200">
+                                        <div class="flex justify-center mb-4">
+                                            <div class="w-16 h-16 bg-[#0297FE] rounded-full flex items-center justify-center shadow-lg">
+                                                <svg class="w-9 h-9 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"></path>
+                                                </svg>
                                             </div>
-                                            <h4 class="font-bold text-gray-800 text-center mb-2">Physical Measures</h4>
-                                            <p class="text-gray-700 text-sm text-center">Secure facilities with access control</p>
+                                        </div>
+                                        <h3 class="text-xl font-bold text-center text-gray-800 mb-2">WhatsApp</h3>
+                                        <p class="text-center">
+                                            <a href="https://wa.me/18563782798" target="_blank" class="text-[#0297FE] hover:text-pink-800 font-semibold text-lg">+1 856-378-2798</a>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Business Addresses -->
+                            <div class="mb-16">
+                                <div class="text-center mb-10">
+                                    <h2 class="text-4xl font-bold text-gray-800 mb-3">Our Global Offices</h2>
+                                    <div class="flex justify-center">
+                                        <div class="w-20 h-1 bg-gradient-to-r from-[#0297FE] to-[#d6386a] rounded"></div>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <!-- UK Office -->
+                                    <div class="bg-white rounded-lg p-6 shadow-xl border-2 border-pink-200 hover:shadow-2xl transition duration-200">
+                                        <div class="flex items-start mb-4">
+                                            <div class="flex-shrink-0 w-14 h-14 bg-[#0297FE] rounded-full flex items-center justify-center mr-4">
+                                                <span class="text-2xl">🇬🇧</span>
+                                            </div>
+                                            <div>
+                                                <h3 class="text-2xl font-bold text-gray-800">United Kingdom</h3>
+                                                <p class="text-[#0297FE] text-sm font-semibold">Business Office</p>
+                                            </div>
+                                        </div>
+                                        <div class="bg-pink-50 rounded-lg p-4">
+                                            <p class="font-bold text-pink-900 mb-2">Blu Lavelle LTD</p>
+                                            <p class="text-gray-700 mb-2">
+                                                <strong>Company Number:</strong> 16342615
+                                            </p>
+                                            <p class="text-gray-700">
+                                                71-75 Shelton Street<br>
+                                                Covent Garden, London<br>
+                                                WC2H 9JQ, United Kingdom
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Vietnam Office -->
+                                    <div class="bg-white rounded-lg p-6 shadow-xl border-2 border-red-200 hover:shadow-2xl transition duration-200">
+                                        <div class="flex items-start mb-4">
+                                            <div class="flex-shrink-0 w-14 h-14 bg-red-500 rounded-full flex items-center justify-center mr-4">
+                                                <span class="text-2xl">🇻🇳</span>
+                                            </div>
+                                            <div>
+                                                <h3 class="text-2xl font-bold text-gray-800">Vietnam</h3>
+                                                <p class="text-red-600 text-sm font-semibold">Business Office</p>
+                                            </div>
+                                        </div>
+                                        <div class="bg-red-50 rounded-lg p-4">
+                                            <p class="font-bold text-red-900 mb-2">HM FULFILL COMPANY LIMITED</p>
+                                            <p class="text-gray-700">
+                                                63/9Đ Ap Chanh 1, Tan Xuan<br>
+                                                Hoc Mon, Ho Chi Minh City<br>
+                                                700000, Vietnam
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Hong Kong Office -->
+                                    <div class="bg-white rounded-lg p-6 shadow-xl border-2 border-yellow-200 hover:shadow-2xl transition duration-200">
+                                        <div class="flex items-start mb-4">
+                                            <div class="flex-shrink-0 w-14 h-14 bg-yellow-500 rounded-full flex items-center justify-center mr-4">
+                                                <span class="text-2xl">🇭🇰</span>
+                                            </div>
+                                            <div>
+                                                <h3 class="text-2xl font-bold text-gray-800">Hong Kong</h3>
+                                                <p class="text-yellow-600 text-sm font-semibold">Business Office</p>
+                                            </div>
+                                        </div>
+                                        <div class="bg-yellow-50 rounded-lg p-4">
+                                            <p class="font-bold text-yellow-900 mb-2">BLUE STAR TRADING LIMITED</p>
+                                            <p class="text-gray-700">
+                                                RM C, 6/F, WORLD TRUST TOWER<br>
+                                                50 STANLEY STREET<br>
+                                                CENTRAL, HONG KONG
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- US Office -->
+                                    <div class="bg-white rounded-lg p-6 shadow-xl border-2 border-pink-200 hover:shadow-2xl transition duration-200">
+                                        <div class="flex items-start mb-4">
+                                            <div class="flex-shrink-0 w-14 h-14 bg-[#0297FE] rounded-full flex items-center justify-center mr-4">
+                                                <span class="text-2xl">🇺🇸</span>
+                                            </div>
+                                            <div>
+                                                <h3 class="text-2xl font-bold text-gray-800">United States</h3>
+                                                <p class="text-[#0297FE] text-sm font-semibold">Business Office</p>
+                                            </div>
+                                        </div>
+                                        <div class="bg-pink-50 rounded-lg p-4">
+                                            <p class="font-bold text-pink-900 mb-2">Blu Lavelle LLC</p>
+                                            <p class="text-gray-700">
+                                                5900 BALCONES DR STE 100<br>
+                                                AUSTIN, TX 78731<br>
+                                                United States
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Section 7: Cookies -->
-                            <div class="mb-10">
-                                <div class="bg-gradient-to-r from-yellow-600 to-amber-600 text-white px-6 py-5 rounded-t-lg">
-                                    <h2 class="text-4xl font-bold flex items-center">
-                                        <span class="w-12 h-12 bg-white text-yellow-600 rounded-full flex items-center justify-center mr-3 text-2xl font-bold">7</span>
-                                        Cookies and Tracking Technologies
-                                    </h2>
+                            <!-- Warehouses -->
+                            <div class="mb-8">
+                                <div class="text-center mb-10">
+                                    <h2 class="text-4xl font-bold text-gray-800 mb-3">Warehouse Locations</h2>
+                                    <div class="flex justify-center">
+                                        <div class="w-20 h-1 bg-gradient-to-r from-orange-500 to-red-500 rounded"></div>
+                                    </div>
                                 </div>
-                                <div class="bg-yellow-50 border-2 border-yellow-300 border-t-0 rounded-b-lg p-6">
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div class="bg-white rounded-lg p-4 shadow-md border-l-4 border-[#F0427C]">
-                                            <h4 class="font-bold text-[#d6386a] mb-2">Essential Cookies</h4>
-                                            <p class="text-gray-700 text-sm">Required for website functionality, secure login, order processing</p>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <!-- US Warehouse -->
+                                    <div class="bg-gradient-to-br from-orange-50 to-red-50 rounded-lg p-6 shadow-xl border-2 border-orange-300">
+                                        <div class="flex items-start mb-4">
+                                            <div class="flex-shrink-0 w-14 h-14 bg-gradient-to-br from-orange-500 to-red-500 rounded-full flex items-center justify-center mr-4 shadow-lg">
+                                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <div class="flex items-center mb-1">
+                                                    <span class="text-2xl mr-2">🇺🇸</span>
+                                                    <h3 class="text-2xl font-bold text-gray-800">US Warehouse</h3>
+                                                </div>
+                                                <p class="text-orange-600 text-sm font-semibold">Distribution Center</p>
+                                            </div>
                                         </div>
-                                        <div class="bg-white rounded-lg p-4 shadow-md border-l-4 border-[#F0427C]">
-                                            <h4 class="font-bold text-pink-800 mb-2">Performance Cookies</h4>
-                                            <p class="text-gray-700 text-sm">Analyze visitor interactions and improve performance</p>
-                                        </div>
-                                        <div class="bg-white rounded-lg p-4 shadow-md border-l-4 border-purple-500">
-                                            <h4 class="font-bold text-pink-800 mb-2">Functionality Cookies</h4>
-                                            <p class="text-gray-700 text-sm">Remember preferences like language and cart items</p>
-                                        </div>
-                                        <div class="bg-white rounded-lg p-4 shadow-md border-l-4 border-orange-500">
-                                            <h4 class="font-bold text-orange-800 mb-2">Advertising Cookies</h4>
-                                            <p class="text-gray-700 text-sm">Deliver relevant ads based on browsing activity</p>
+                                        <div class="bg-white rounded-lg p-4 shadow-md">
+                                            <p class="text-gray-700 leading-relaxed">
+                                                1301 E ARAPAHO RD, STE 101<br>
+                                                RICHARDSON, TX 75081<br>
+                                                United States
+                                            </p>
                                         </div>
                                     </div>
-                                    <div class="mt-6 bg-yellow-100 border border-yellow-300 rounded-lg p-4">
-                                        <p class="text-yellow-900 text-sm">You can manage cookies through your browser settings. Disabling cookies may affect website functionality.</p>
+
+                                    <!-- UK Warehouse -->
+                                    <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg p-6 shadow-xl border-2 border-pink-300">
+                                        <div class="flex items-start mb-4">
+                                            <div class="flex-shrink-0 w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center mr-4 shadow-lg">
+                                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <div class="flex items-center mb-1">
+                                                    <span class="text-2xl mr-2">🇬🇧</span>
+                                                    <h3 class="text-2xl font-bold text-gray-800">UK Warehouse</h3>
+                                                </div>
+                                                <p class="text-[#0297FE] text-sm font-semibold">Distribution Center</p>
+                                            </div>
+                                        </div>
+                                        <div class="bg-white rounded-lg p-4 shadow-md">
+                                            <p class="text-gray-700 leading-relaxed mb-3">
+                                                3 Kincraig Rd<br>
+                                                Blackpool FY2 0FY<br>
+                                                United Kingdom
+                                            </p>
+                                            <div class="border-t border-pink-200 pt-3">
+                                                <p class="text-gray-700">
+                                                    <strong>📞 Phone:</strong> <a href="tel:02045136359" class="text-[#0297FE] hover:text-[#d6386a] font-semibold">020 4513 6359</a>
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Section 8: Updates -->
-                            <div class="mb-10">
-                                <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white px-6 py-5 rounded-t-lg">
-                                    <h2 class="text-4xl font-bold flex items-center">
-                                        <span class="w-12 h-12 bg-white text-[#F0427C] rounded-full flex items-center justify-center mr-3 text-2xl font-bold">8</span>
-                                        Updates to This Privacy Policy
-                                    </h2>
-                                </div>
-                                <div class="bg-pink-50 border-2 border-pink-300 border-t-0 rounded-b-lg p-6">
-                                    <div class="space-y-4">
-                                        <div class="bg-white rounded-lg p-5 shadow-md">
-                                            <h4 class="font-bold text-pink-800 mb-2">SMS Abandoned Cart</h4>
-                                            <p class="text-gray-700">We may send SMS reminders about items in your cart if you\'ve opted in. You can unsubscribe anytime.</p>
-                                        </div>
-                                        <div class="bg-white rounded-lg p-5 shadow-md">
-                                            <h4 class="font-bold text-pink-800 mb-2">Location-Based Services</h4>
-                                            <p class="text-gray-700">We may collect location data to recommend nearby services and provide accurate shipping information.</p>
-                                        </div>
-                                        <div class="bg-white rounded-lg p-5 shadow-md">
-                                            <h4 class="font-bold text-pink-800 mb-2">Notification of Changes</h4>
-                                            <p class="text-gray-700">We\'ll notify you of updates via website posting or email to active account holders.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Contact Section -->
-                            <div class="bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 rounded-lg p-10 text-center text-white">
+                            <!-- Call to Action -->
+                            <div class="bg-gradient-to-r from-[#0297FE] via-[#f89192] to-[#d6386a] rounded-lg p-10 text-center text-white">
                                 <div class="flex justify-center mb-6">
                                     <div class="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
                                         <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path>
                                         </svg>
                                     </div>
                                 </div>
-                                <h3 class="text-3xl font-bold mb-4">Questions About Privacy?</h3>
-                                <p class="text-xl text-pink-100 mb-6 max-w-3xl mx-auto">
-                                    If you have questions about this Privacy Policy, please contact us:
+                                <h3 class="text-3xl font-bold mb-4">Ready to Connect?</h3>
+                                <p class="text-xl text-green-100 mb-6 max-w-3xl mx-auto">
+                                    We\'re here 24/7 to answer your questions and provide support. Choose your preferred method and get in touch today!
                                 </p>
-                                <div class="bg-white bg-opacity-10 rounded-lg p-6 mb-6 max-w-3xl mx-auto">
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-                                        <div>
-                                            <p class="text-white font-semibold mb-2">📧 Email:</p>
-                                            <a href="mailto:support@blulavelle.com" class="text-pink-200 hover:text-white underline text-lg">support@blulavelle.com</a>
-                                        </div>
-                                        <div>
-                                            <p class="text-white font-semibold mb-2">📍 Address:</p>
-                                            <p class="text-pink-100 text-sm">63/9Đ Ap Chanh, Tan Xuan<br>Hoc Mon, Ho Chi Minh City<br>700000, Vietnam</p>
-                                        </div>
-                                    </div>
+                                <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
+                                    <a href="mailto:admin@blulavelle.com" class="inline-flex items-center px-8 py-4 bg-white text-[#0297FE] font-bold rounded-lg shadow-xl hover:shadow-2xl transition duration-200 text-lg">
+                                        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                        </svg>
+                                        Email Us
+                                    </a>
+                                    <a href="https://wa.me/18563782798" target="_blank" class="inline-flex items-center px-8 py-4 bg-transparent border-2 border-white text-white font-bold rounded-lg hover:bg-white hover:text-[#0297FE] transition duration-200 text-lg">
+                                        <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"></path>
+                                        </svg>
+                                        WhatsApp
+                                    </a>
                                 </div>
-                                <a href="mailto:support@blulavelle.com" class="inline-flex items-center px-10 py-4 bg-white text-[#F0427C] font-bold rounded-lg shadow-xl hover:shadow-2xl transition duration-200 text-xl">
-                                    <svg class="w-7 h-7 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                                    </svg>
-                                    Contact Us
-                                </a>
                             </div>
                         </div>
                     </div>
                 </div>',
-                'excerpt' => 'Complete privacy policy - Learn how we collect, use, and protect your personal information. Your rights, data security, cookies, and more.',
+                'excerpt' => 'Contact Blu Lavelle - Email, phone, WhatsApp, iMessage. Global offices in UK, US, Vietnam, Hong Kong with warehouse locations.',
                 'status' => 'published',
                 'published_at' => now(),
                 'template' => 'default',
                 'show_in_menu' => true,
-                'menu_title' => 'Privacy Policy',
-                'sort_order' => 12,
-                'meta_title' => 'Privacy Policy - PressOnNail Data Protection & Security',
-                'meta_description' => 'Read our complete privacy policy. Learn how PressOnNail collects, uses, and protects your personal information. Your rights, data security, and cookie policy.',
+                'menu_title' => 'Contact',
+                'sort_order' => 8,
+                'meta_title' => 'Contact Us - Blu Lavelle Global Support',
+                'meta_description' => 'Contact Blu Lavelle through email, phone, WhatsApp, or iMessage. Find our global offices in UK, US, Vietnam, Hong Kong and warehouse locations.',
             ],
             [
                 'user_id' => $admin->id,
@@ -3744,7 +3736,7 @@ class PageSeeder extends Seeder
                 'content' => '<div class="max-w-7xl mx-auto py-8 px-4">
                     <div class="bg-white rounded-lg shadow-2xl overflow-hidden">
                         <!-- Hero Header -->
-                        <div class="relative bg-gradient-to-r from-[#F0427C] via-[#f89192] to-[#d6386a] text-white px-8 py-16">
+                        <div class="relative bg-gradient-to-r from-[#0297FE] via-[#f89192] to-[#d6386a] text-white px-8 py-16">
                             <div class="absolute inset-0 bg-black opacity-10"></div>
                             <div class="relative z-10 text-center">
                                 <div class="flex justify-center mb-6">
@@ -3762,9 +3754,9 @@ class PageSeeder extends Seeder
 
                         <div class="px-8 py-12">
                             <!-- Processing Notice -->
-                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-l-4 border-[#F0427C] rounded-r-lg p-8 mb-10">
+                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-l-4 border-[#0297FE] rounded-r-lg p-8 mb-10">
                                 <p class="text-xl text-gray-800 leading-relaxed text-center">
-                                    Your product will enter the <strong class="text-[#F0427C]">processing stage</strong> as soon as your order is placed.
+                                    Your product will enter the <strong class="text-[#0297FE]">processing stage</strong> as soon as your order is placed.
                                 </p>
                             </div>
 
@@ -3774,7 +3766,7 @@ class PageSeeder extends Seeder
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg p-8 shadow-xl border-2 border-pink-300">
                                         <div class="flex items-start">
-                                            <div class="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-[#F0427C] to-[#d6386a] rounded-full flex items-center justify-center mr-4 shadow-lg">
+                                            <div class="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-[#0297FE] to-[#d6386a] rounded-full flex items-center justify-center mr-4 shadow-lg">
                                                 <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                 </svg>
@@ -3782,7 +3774,7 @@ class PageSeeder extends Seeder
                                             <div>
                                                 <h3 class="text-2xl font-bold text-pink-900 mb-3">Processing Time</h3>
                                                 <p class="text-gray-800 leading-relaxed">
-                                                    After your payment is confirmed, your order will enter the processing stage and usually takes <strong class="text-[#F0427C]">1 - 7 days</strong> depending on the product you purchase.
+                                                    After your payment is confirmed, your order will enter the processing stage and usually takes <strong class="text-[#0297FE]">1 - 7 days</strong> depending on the product you purchase.
                                                 </p>
                                             </div>
                                         </div>
@@ -3790,7 +3782,7 @@ class PageSeeder extends Seeder
 
                                     <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg p-8 shadow-xl border-2 border-pink-300">
                                         <div class="flex items-start">
-                                            <div class="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-[#F0427C] to-[#d6386a] rounded-full flex items-center justify-center mr-4 shadow-lg">
+                                            <div class="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-[#0297FE] to-[#d6386a] rounded-full flex items-center justify-center mr-4 shadow-lg">
                                                 <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
                                                 </svg>
@@ -3808,7 +3800,7 @@ class PageSeeder extends Seeder
 
                             <!-- Delivery Times Table -->
                             <div class="mb-12">
-                                <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white px-6 py-5 rounded-t-lg">
+                                <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] text-white px-6 py-5 rounded-t-lg">
                                     <h2 class="text-3xl font-bold text-center">Delivery Times by Product</h2>
                                 </div>
                                 <div class="bg-white border-2 border-pink-300 border-t-0 rounded-b-lg overflow-x-auto">
@@ -3917,11 +3909,11 @@ class PageSeeder extends Seeder
                                         <div class="bg-white rounded-lg p-5 shadow-md border-l-4 border-yellow-500">
                                             <p class="text-gray-800"><strong class="text-yellow-600">⚠️</strong> Shipping to Alaska, Hawaii, Puerto Rico can take additional <strong>7-12 business days</strong></p>
                                         </div>
-                                        <div class="bg-white rounded-lg p-5 shadow-md border-l-4 border-[#F0427C]">
-                                            <p class="text-gray-800"><strong class="text-[#F0427C]">ℹ️</strong> Shipping times are approximate and may vary due to customs, weather, or courier issues</p>
+                                        <div class="bg-white rounded-lg p-5 shadow-md border-l-4 border-[#0297FE]">
+                                            <p class="text-gray-800"><strong class="text-[#0297FE]">ℹ️</strong> Shipping times are approximate and may vary due to customs, weather, or courier issues</p>
                                         </div>
                                         <div class="bg-white rounded-lg p-5 shadow-md border-l-4 border-purple-500">
-                                            <p class="text-gray-800"><strong class="text-[#F0427C]">📦</strong> Single destination shipping only. For multiple locations, order separately</p>
+                                            <p class="text-gray-800"><strong class="text-[#0297FE]">📦</strong> Single destination shipping only. For multiple locations, order separately</p>
                                         </div>
                                         <div class="bg-white rounded-lg p-5 shadow-md border-l-4 border-red-500">
                                             <p class="text-gray-800"><strong class="text-red-600">🏢</strong> PO boxes and Military APO/FPO available (US only). APO delivery: <strong>40-45 days</strong></p>
@@ -3940,7 +3932,7 @@ class PageSeeder extends Seeder
                                 <!-- US Shipping Costs -->
                                 {{SHIPPING_SECTION_US_START}}
                                 <div class="mb-8">
-                                    <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white px-6 py-3 rounded-t-lg">
+                                    <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] text-white px-6 py-3 rounded-t-lg">
                                         <h3 class="text-2xl font-bold text-center">United States Shipping</h3>
                                     </div>
                                     <div class="bg-white border-2 border-pink-300 border-t-0 rounded-b-lg overflow-x-auto">
@@ -3972,7 +3964,7 @@ class PageSeeder extends Seeder
                                 <!-- UK Shipping Costs -->
                                 {{SHIPPING_SECTION_UK_START}}
                                 <div class="mb-8">
-                                    <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white px-6 py-3 rounded-t-lg">
+                                    <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] text-white px-6 py-3 rounded-t-lg">
                                         <h3 class="text-2xl font-bold text-center">United Kingdom Shipping</h3>
                                     </div>
                                     <div class="bg-white border-2 border-pink-300 border-t-0 rounded-b-lg overflow-x-auto">
@@ -4038,7 +4030,7 @@ class PageSeeder extends Seeder
                             <div class="mb-12">
                                 <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-2 border-pink-300 rounded-lg p-8">
                                     <div class="flex items-start">
-                                        <div class="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-[#F0427C] to-[#d6386a] rounded-full flex items-center justify-center mr-4 shadow-lg">
+                                        <div class="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-[#0297FE] to-[#d6386a] rounded-full flex items-center justify-center mr-4 shadow-lg">
                                             <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
                                             </svg>
@@ -4083,7 +4075,7 @@ class PageSeeder extends Seeder
                                         <div>
                                             <h3 class="text-2xl font-bold text-red-900 mb-2">Failed Deliveries</h3>
                                             <p class="text-gray-800 leading-relaxed">
-                                                PressOnNail is <strong class="text-red-600">not responsible</strong> for packages delayed, lost, or returned due to incorrect addresses. Additional fees may apply to resend.
+                                                Blu Lavelle is <strong class="text-red-600">not responsible</strong> for packages delayed, lost, or returned due to incorrect addresses. Additional fees may apply to resend.
                                             </p>
                                         </div>
                                     </div>
@@ -4091,7 +4083,7 @@ class PageSeeder extends Seeder
                             </div>
 
                             <!-- Contact Section -->
-                            <div class="bg-gradient-to-r from-[#F0427C] via-[#f89192] to-[#d6386a] rounded-lg p-10 text-center text-white">
+                            <div class="bg-gradient-to-r from-[#0297FE] via-[#f89192] to-[#d6386a] rounded-lg p-10 text-center text-white">
                                 <div class="flex justify-center mb-6">
                                     <div class="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
                                         <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4103,14 +4095,14 @@ class PageSeeder extends Seeder
                                 <p class="text-xl text-pink-100 mb-6 max-w-3xl mx-auto">
                                     If your order hasn\'t arrived or you have concerns about your shipment, we\'re here to help!
                                 </p>
-                                <a href="mailto:support@blulavelle.com" class="inline-flex items-center px-10 py-4 bg-white text-[#F0427C] font-bold rounded-lg shadow-xl hover:shadow-2xl transition duration-200 text-xl">
+                                <a href="mailto:support@blulavelle.com" class="inline-flex items-center px-10 py-4 bg-white text-[#0297FE] font-bold rounded-lg shadow-xl hover:shadow-2xl transition duration-200 text-xl">
                                     <svg class="w-7 h-7 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                     </svg>
                                     Contact Customer Service
                                 </a>
                                 <p class="mt-6 text-pink-100 text-lg">
-                                    At PressOnNail, customer satisfaction is our priority. Thank you for choosing us!
+                                    At Blu Lavelle, customer satisfaction is our priority. Thank you for choosing us!
                                 </p>
                             </div>
                         </div>
@@ -4123,8 +4115,8 @@ class PageSeeder extends Seeder
                 'show_in_menu' => true,
                 'menu_title' => 'Shipping & Delivery',
                 'sort_order' => 13,
-                'meta_title' => 'Shipping & Delivery - PressOnNail Worldwide Shipping Information',
-                'meta_description' => 'Learn about PressOnNail shipping and delivery. Processing times, delivery times by product, shipping costs within USA, order tracking, and customs information.',
+                'meta_title' => 'Shipping & Delivery - Blu Lavelle Worldwide Shipping Information',
+                'meta_description' => 'Learn about Blu Lavelle shipping and delivery. Processing times, delivery times by product, shipping costs within USA, order tracking, and customs information.',
             ],
             [
                 'user_id' => $admin->id,
@@ -4132,12 +4124,12 @@ class PageSeeder extends Seeder
                 'slug' => 'order-tracking',
                 'content' => '<div class="max-w-4xl mx-auto py-10 px-4">
                     <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-                        <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white px-6 py-8 text-center">
+                        <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] text-white px-6 py-8 text-center">
                             <h1 class="text-4xl font-bold mb-2">Order Tracking</h1>
                             <p class="text-pink-100">Check your order status with your order ID and email</p>
                         </div>
                         <div class="p-6 space-y-6">
-                            <div class="bg-pink-50 border-l-4 border-[#F0427C] rounded-lg p-5">
+                            <div class="bg-pink-50 border-l-4 border-[#0297FE] rounded-lg p-5">
                                 <p class="text-gray-800 mb-2">Enter the <strong>Order ID</strong> and <strong>Email</strong> you used at checkout to track:</p>
                                 <ul class="list-disc list-inside text-gray-700 space-y-1">
                                     <li>Open your order confirmation email to copy the order ID</li>
@@ -4148,22 +4140,22 @@ class PageSeeder extends Seeder
                             <div class="bg-white border border-gray-200 rounded-lg p-5">
                                 <h2 class="text-xl font-semibold text-gray-900 mb-3">Can’t find your order?</h2>
                                 <p class="text-gray-700 mb-3">Contact support with your order ID and email so we can check quickly.</p>
-                                <a href="mailto:support@blulavelle.com" class="inline-flex items-center px-5 py-3 bg-[#F0427C] text-white rounded-lg font-semibold hover:bg-indigo-700">
+                                <a href="mailto:support@blulavelle.com" class="inline-flex items-center px-5 py-3 bg-[#0297FE] text-white rounded-lg font-semibold hover:bg-indigo-700">
                                     support@blulavelle.com
                                 </a>
                             </div>
                         </div>
                     </div>
                 </div>',
-                'excerpt' => 'Track your PressOnNail order status with Order ID and email.',
+                'excerpt' => 'Track your Blu Lavelle order status with Order ID and email.',
                 'status' => 'published',
                 'published_at' => now(),
                 'template' => 'default',
                 'show_in_menu' => true,
                 'menu_title' => 'Order Tracking',
                 'sort_order' => 14,
-                'meta_title' => 'Order Tracking - PressOnNail',
-                'meta_description' => 'Track PressOnNail orders using Order ID and email; get support if you cannot find your order.',
+                'meta_title' => 'Order Tracking - Blu Lavelle',
+                'meta_description' => 'Track Blu Lavelle orders using Order ID and email; get support if you cannot find your order.',
             ],
             [
                 'user_id' => $admin->id,
@@ -4195,20 +4187,20 @@ class PageSeeder extends Seeder
                                 </div>
                             </div>
                             <div class="text-center">
-                                <a href="mailto:support@blulavelle.com" class="inline-flex items-center px-6 py-3 bg-[#F0427C] text-white font-semibold rounded-lg hover:bg-[#d6386a]">support@blulavelle.com</a>
+                                <a href="mailto:support@blulavelle.com" class="inline-flex items-center px-6 py-3 bg-[#0297FE] text-white font-semibold rounded-lg hover:bg-[#d6386a]">support@blulavelle.com</a>
                             </div>
                         </div>
                     </div>
                 </div>',
-                'excerpt' => 'Information about PressOnNail secure payments: SSL, PCI compliance, and supported methods.',
+                'excerpt' => 'Information about Blu Lavelle secure payments: SSL, PCI compliance, and supported methods.',
                 'status' => 'published',
                 'published_at' => now(),
                 'template' => 'default',
                 'show_in_menu' => true,
                 'menu_title' => 'Secure Payments',
                 'sort_order' => 15,
-                'meta_title' => 'Secure Payments - PressOnNail',
-                'meta_description' => 'Learn how PressOnNail secures payments with SSL, PCI compliance, fraud protection, and supported methods.',
+                'meta_title' => 'Secure Payments - Blu Lavelle',
+                'meta_description' => 'Learn how Blu Lavelle secures payments with SSL, PCI compliance, fraud protection, and supported methods.',
             ],
             [
                 'user_id' => $admin->id,
@@ -4240,7 +4232,7 @@ class PageSeeder extends Seeder
                         </div>
                         <div class="p-6 text-center">
                             <p class="text-gray-800 mb-3">Can’t find the answer? Contact us now.</p>
-                            <a href="mailto:support@blulavelle.com" class="inline-flex items-center px-6 py-3 bg-[#F0427C] text-white font-semibold rounded-lg hover:bg-indigo-700">support@blulavelle.com</a>
+                            <a href="mailto:support@blulavelle.com" class="inline-flex items-center px-6 py-3 bg-[#0297FE] text-white font-semibold rounded-lg hover:bg-indigo-700">support@blulavelle.com</a>
                         </div>
                     </div>
                 </div>',
@@ -4251,8 +4243,8 @@ class PageSeeder extends Seeder
                 'show_in_menu' => true,
                 'menu_title' => 'Help Center',
                 'sort_order' => 16,
-                'meta_title' => 'Help Center - PressOnNail Support',
-                'meta_description' => 'Visit PressOnNail Help Center for FAQs, shipping info, refund policy, and contact options.',
+                'meta_title' => 'Help Center - Blu Lavelle Support',
+                'meta_description' => 'Visit Blu Lavelle Help Center for FAQs, shipping info, refund policy, and contact options.',
             ],
             [
                 'user_id' => $admin->id,
@@ -4262,7 +4254,7 @@ class PageSeeder extends Seeder
                     <div class="bg-white rounded-xl shadow-lg overflow-hidden">
                         <div class="bg-gradient-to-r from-gray-700 to-slate-900 text-white px-6 py-8 text-center">
                             <h1 class="text-4xl font-bold mb-2">Sitemap</h1>
-                            <p class="text-slate-200">All key pages on PressOnNail</p>
+                            <p class="text-slate-200">All key pages on Blu Lavelle</p>
                         </div>
                         <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <a class="block px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100" href="/about-us">About Us</a>
@@ -4282,7 +4274,7 @@ class PageSeeder extends Seeder
                             <a class="block px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100" href="/secure-payments">Secure Payments</a>
                         </div>
                         <div class="p-6 text-center text-gray-700">
-                            <p>Need more help? <a href="mailto:support@blulavelle.com" class="text-[#F0427C] font-semibold">support@blulavelle.com</a></p>
+                            <p>Need more help? <a href="mailto:support@blulavelle.com" class="text-[#0297FE] font-semibold">support@blulavelle.com</a></p>
                         </div>
                     </div>
                 </div>',
@@ -4293,13 +4285,62 @@ class PageSeeder extends Seeder
                 'show_in_menu' => true,
                 'menu_title' => 'Sitemap',
                 'sort_order' => 17,
-                'meta_title' => 'Sitemap - PressOnNail',
-                'meta_description' => 'Sitemap of PressOnNail including help, tracking, policies, and contact pages.',
+                'meta_title' => 'Sitemap - Blu Lavelle',
+                'meta_description' => 'Sitemap of Blu Lavelle including help, tracking, policies, and contact pages.',
             ],
         ];
 
         // Create pages
         foreach ($pages as $page) {
+            // Normalize brand color: replace all pink accents to primary blue (#0195FE)
+            if (!empty($page['content']) && is_string($page['content'])) {
+                $page['content'] = str_replace(
+                    [
+                        // Hex codes (legacy + current)
+                        '#F0427C',
+                        '#f0427c',
+                        '#d6386a',
+                        '#D6386A',
+                        '#f89192',
+                        '#F89192',
+                        '#0297FE',
+                        '#0195FE',
+                        // Layout widths (make pages wider)
+                        'max-w-4xl',
+                        'max-w-5xl',
+                        'max-w-6xl',
+                        'max-w-7xl',
+                        'text-pink-',
+                        'bg-pink-',
+                        'border-pink-',
+                        'from-pink-',
+                        'to-pink-',
+                        'via-pink-',
+                    ],
+                    [
+                        '#0195FE',
+                        '#0195FE',
+                        '#0195FE',
+                        '#0195FE',
+                        '#0195FE',
+                        '#0195FE',
+                        '#0195FE',
+                        '#0195FE',
+                        'max-w-screen-2xl',
+                        'max-w-screen-2xl',
+                        'max-w-screen-2xl',
+                        'max-w-screen-2xl',
+                        'text-sky-',
+                        'bg-sky-',
+                        'border-sky-',
+                        'from-sky-',
+                        'to-sky-',
+                        'via-sky-',
+                    ],
+                    $page['content']
+                );
+            }
+
             Page::create($page);
             $this->command->info("✓ Created page: {$page['title']}");
         }

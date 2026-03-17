@@ -24,7 +24,7 @@
     .size-badge {
         @apply flex flex-col items-center justify-center py-2 px-2.5 rounded-lg cursor-pointer transition-all duration-200;
         @apply border border-slate-200 bg-slate-50/80 text-slate-700;
-        @apply hover:border-[#F0427C]/40 hover:bg-pink-50/50;
+        @apply hover:border-[#7BC5ED]/40 hover:bg-[#BAE3F2]/10;
         min-height: 2.5rem;
         width: max-content;
         min-width: 2.25rem;
@@ -36,11 +36,11 @@
         @apply text-[9px] text-slate-500 mt-0.5 leading-tight text-center whitespace-nowrap;
     }
     .size-badge.active {
-        @apply border-[#F0427C] bg-[#fce7ef] text-[#F0427C];
-        box-shadow: 0 0 0 1px rgba(251, 123, 124, 0.15);
+        @apply border-[#7BC5ED] bg-[#BAE3F2]/10 text-[#7BC5ED];
+        box-shadow: 0 0 0 1px rgba(123, 197, 237, 0.25);
     }
     .size-badge.active .size-label {
-        @apply text-[#d6386a] font-semibold;
+        @apply text-[#7BC5ED] font-semibold;
     }
     .size-badge.active .size-mm {
         @apply text-slate-600;
@@ -48,17 +48,17 @@
     .shape-button {
         @apply flex items-center gap-2 py-2 px-2.5 rounded-lg cursor-pointer transition-all duration-200;
         @apply border border-slate-200 bg-slate-50/80;
-        @apply hover:border-[#F0427C]/40 hover:bg-pink-50/50;
+        @apply hover:border-[#7BC5ED]/40 hover:bg-[#BAE3F2]/10;
     }
     .shape-button .shape-icon-wrap {
         @apply size-7 rounded-md bg-white border border-slate-100 flex items-center justify-center shrink-0;
     }
     .shape-button.active {
-        @apply border-[#F0427C] bg-[#fce7ef];
-        box-shadow: 0 0 0 1px rgba(251, 123, 124, 0.15);
+        @apply border-[#7BC5ED] bg-[#BAE3F2]/10;
+        box-shadow: 0 0 0 1px rgba(123, 197, 237, 0.25);
     }
     .shape-button.active .shape-icon-wrap {
-        @apply border-[#F0427C]/30 bg-[#fce7ef];
+        @apply border-[#7BC5ED]/30 bg-[#BAE3F2]/10;
     }
     /* Nail shape chỉ chữ, không icon */
     .shape-button-text {

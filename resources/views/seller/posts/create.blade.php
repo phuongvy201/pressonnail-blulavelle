@@ -118,7 +118,7 @@
                         @error('published_at')<p class="text-red-500 text-sm mt-1">{{ $message }}</p>@enderror
                     </div>
 
-                    <button type="submit" class="w-full px-6 py-2 bg-[#F0427C] text-white rounded-lg hover:bg-[#d6386a]">
+                    <button type="submit" class="w-full px-6 py-2 bg-[#0297FE] text-white rounded-lg hover:bg-[#d6386a]">
                         Create Post
                     </button>
                 </div>
