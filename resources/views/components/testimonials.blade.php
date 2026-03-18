@@ -7,7 +7,7 @@
 @php
     $perSlide = 3;
     $totalToLoad = 9;
-    $bgSetting = \App\Support\Settings::get('theme.testimonials_bg', null);
+    $bgSetting = \App\Support\Settings::get('theme.testimonials_bg', config('theme.testimonials_bg'));
     $bgCustom = null;
     if (is_string($bgColor) && (str_starts_with(trim($bgColor), '#') || str_starts_with(trim($bgColor), 'rgb'))) {
         $bgCustom = trim($bgColor);

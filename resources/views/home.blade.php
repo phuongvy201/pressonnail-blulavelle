@@ -2,6 +2,7 @@
 
 @section('content')
 @php
+    // Nội dung các block bên dưới lưu trong DB (bảng content_blocks). Khi chỉnh qua admin inline-edit sẽ ghi đè; default ở đây chỉ dùng khi chưa có bản ghi.
     $currentCurrency = currency();
     $currencySymbol = currency_symbol();
     $hero = content_block('home.hero', [

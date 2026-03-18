@@ -18,12 +18,14 @@ class AnalyticsSettingsController extends Controller
             'tiktok_test_event_code' => config('services.tiktok.test_event_code'),
             'google_tag_manager_id' => config('services.google.tag_manager_id'),
             'google_ads_id' => config('services.google.ads_id'),
-            // Theme (fallbacks handled in views)
-            'header_bg' => null,
-            'header_border' => null,
-            'footer_faq_bg' => null,
-            'footer_bg' => null,
-            'testimonials_bg' => null,
+            // Theme (fallback từ config/theme.php khi DB trống)
+            'header_bg' => config('theme.header_bg'),
+            'header_border' => config('theme.header_border'),
+            'footer_faq_bg' => config('theme.footer_faq_bg'),
+            'footer_bg' => config('theme.footer_bg', '#242B3D'),
+            'testimonials_bg' => config('theme.testimonials_bg'),
+            'mail_logo_url' => config('theme.mail_logo_url'),
+            'mail_brand_name' => config('theme.mail_brand_name'),
         ];
 
         $settings = [
@@ -38,6 +40,8 @@ class AnalyticsSettingsController extends Controller
             'footer_faq_bg' => Settings::get('theme.footer_faq_bg', $defaults['footer_faq_bg']),
             'footer_bg' => Settings::get('theme.footer_bg', $defaults['footer_bg']),
             'testimonials_bg' => Settings::get('theme.testimonials_bg', $defaults['testimonials_bg']),
+            'mail_logo_url' => Settings::get('mail.logo_url', $defaults['mail_logo_url']),
+            'mail_brand_name' => Settings::get('mail.brand_name', $defaults['mail_brand_name']),
         ];
 
         return view('admin.settings.analytics', compact('settings', 'defaults'));
@@ -56,12 +60,21 @@ class AnalyticsSettingsController extends Controller
             'footer_faq_bg' => ['nullable', 'string', 'max:64'],
             'footer_bg' => ['nullable', 'string', 'max:64'],
             'testimonials_bg' => ['nullable', 'string', 'max:64'],
+            'mail_logo_url' => ['nullable', 'string', 'max:512'],
+            'mail_brand_name' => ['nullable', 'string', 'max:128'],
         ]);
 
         foreach ($validated as $key => $value) {
-            $namespace = in_array($key, ['header_bg', 'header_border', 'footer_faq_bg', 'footer_bg', 'testimonials_bg'], true)
-                ? 'theme'
-                : 'analytics';
+            $namespace = match (true) {
+                in_array($key, ['header_bg', 'header_border', 'footer_faq_bg', 'footer_bg', 'testimonials_bg'], true) => 'theme',
+                in_array($key, ['mail_logo_url', 'mail_brand_name'], true) => 'mail',
+                default => 'analytics',
+            };
+            if ($namespace === 'mail') {
+                $settingsKey = $key === 'mail_logo_url' ? 'mail.logo_url' : 'mail.brand_name';
+                Settings::set($settingsKey, $value !== null ? trim($value) : null);
+                continue;
+            }
             Settings::set("$namespace.$key", $value !== null ? trim($value) : null);
         }
 

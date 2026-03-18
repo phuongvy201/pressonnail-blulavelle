@@ -1,7 +1,7 @@
 <!-- Header Component - Responsive: logo + nav + search + cart + user -->
 @php
-    $headerBg = \App\Support\Settings::get('theme.header_bg', null);
-    $headerBorder = \App\Support\Settings::get('theme.header_border', null);
+    $headerBg = \App\Support\Settings::get('theme.header_bg', config('theme.header_bg'));
+    $headerBorder = \App\Support\Settings::get('theme.header_border', config('theme.header_border'));
     $headerBgCustom = (is_string($headerBg) && (str_starts_with(trim($headerBg), '#') || str_starts_with(trim($headerBg), 'rgb'))) ? trim($headerBg) : null;
     $headerBorderCustom = (is_string($headerBorder) && (str_starts_with(trim($headerBorder), '#') || str_starts_with(trim($headerBorder), 'rgb'))) ? trim($headerBorder) : null;
     $headerStyle = '';

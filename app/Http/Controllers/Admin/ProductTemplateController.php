@@ -100,9 +100,12 @@ class ProductTemplateController extends Controller
 
     /**
      * Store a newly created resource in storage.
+     * Trên EC2: request nhiều variant + file dễ bị timeout (lỗi 52). Tăng thời gian chạy và giảm log.
      */
     public function store(Request $request)
     {
+        set_time_limit(600); // 10 phút cho request có nhiều variant + upload S3
+
         $request->validate([
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
@@ -173,47 +176,51 @@ class ProductTemplateController extends Controller
             }
         }
 
-        // Handle template variants
+        // Handle template variants (bulk insert để giảm thời gian trên EC2 khi nhiều variant)
         if ($request->has('variants')) {
+            $variantRows = [];
+            $now = now();
+
             foreach ($request->variants as $index => $variantData) {
-                if (!empty($variantData['variant_name'])) {
-                    // Handle variant media upload
-                    $variantMediaUrls = [];
-
-                    // Debug logging
-                    Log::info("Processing variant {$index}: {$variantData['variant_name']}");
-                    Log::info("Checking for media file: variants.{$index}.media");
-                    Log::info("Has file: " . ($request->hasFile("variants.{$index}.media") ? 'yes' : 'no'));
-
-                    // Check if media file exists for this variant
-                    if ($request->hasFile("variants.{$index}.media")) {
-                        $file = $request->file("variants.{$index}.media");
-                        Log::info("File found: " . $file->getClientOriginalName());
-
-                        if ($file->isValid()) {
-                            $fileName = time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
-                            $filePath = Storage::disk('s3')->putFileAs('template-variants', $file, $fileName);
-                            $variantMediaUrls[] = 'https://s3.us-east-1.amazonaws.com/image.bluprinter/template-variants/' . $fileName;
-                            Log::info("File uploaded successfully: " . $fileName);
-                        }
-                    }
-
-                    $variantData['template_id'] = $template->id;
-                    $variantData['media'] = $variantMediaUrls;
-
-                    // Parse attributes from JSON string
-                    if (isset($variantData['attributes']) && !empty($variantData['attributes'])) {
-                        $attributes = json_decode($variantData['attributes'], true);
-                        $variantData['attributes'] = $attributes ?: [];
-                    } else {
-                        $variantData['attributes'] = [];
-                    }
-
-                    Log::info("Creating variant with media: " . json_encode($variantMediaUrls));
-                    Log::info("Creating variant with attributes: " . json_encode($variantData['attributes']));
-
-                    TemplateVariant::create($variantData);
+                if (empty($variantData['variant_name'])) {
+                    continue;
                 }
+
+                $variantMediaUrls = [];
+                if ($request->hasFile("variants.{$index}.media")) {
+                    $file = $request->file("variants.{$index}.media");
+                    if ($file->isValid()) {
+                        $fileName = time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
+                        Storage::disk('s3')->putFileAs('template-variants', $file, $fileName);
+                        $variantMediaUrls[] = 'https://s3.us-east-1.amazonaws.com/image.bluprinter/template-variants/' . $fileName;
+                    }
+                }
+
+                $attributes = [];
+                if (!empty($variantData['attributes'])) {
+                    $decoded = json_decode($variantData['attributes'], true);
+                    $attributes = is_array($decoded) ? $decoded : [];
+                }
+
+                $variantRows[] = [
+                    'template_id' => $template->id,
+                    'variant_name' => $variantData['variant_name'],
+                    'attributes' => json_encode($attributes),
+                    'media' => json_encode($variantMediaUrls),
+                    'price' => $variantData['price'] ?? null,
+                    'list_price' => $variantData['list_price'] ?? null,
+                    'quantity' => (int) ($variantData['quantity'] ?? 0),
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            if (!empty($variantRows)) {
+                TemplateVariant::withoutEvents(function () use ($variantRows) {
+                    collect($variantRows)->chunk(100)->each(function ($chunk) {
+                        TemplateVariant::insert($chunk->toArray());
+                    });
+                });
             }
         }
 
@@ -375,6 +382,9 @@ class ProductTemplateController extends Controller
             // Delete existing variants
             $productTemplate->variants()->delete();
 
+            $variantRows = [];
+            $now = now();
+
             foreach ($request->variants as $index => $variantData) {
                 if (!empty($variantData['variant_name'])) {
                     $variantMediaUrls = [];
@@ -396,23 +406,39 @@ class ProductTemplateController extends Controller
                         }
                     }
 
-                    $variantData['template_id'] = $productTemplate->id;
-                    $variantData['media'] = $variantMediaUrls;
-
                     // Parse attributes from JSON string
                     if (isset($variantData['attributes']) && !empty($variantData['attributes'])) {
                         $attributes = json_decode($variantData['attributes'], true);
-                        $variantData['attributes'] = $attributes ?: [];
+                        $attributes = is_array($attributes) ? $attributes : [];
                     } else {
-                        $variantData['attributes'] = [];
+                        $attributes = [];
                     }
 
-                    TemplateVariant::create($variantData);
-                    Log::info("Created variant: {$variantData['variant_name']}", [
+                    $variantRows[] = [
+                        'template_id' => $productTemplate->id,
+                        'variant_name' => $variantData['variant_name'],
+                        'attributes' => json_encode($attributes),
+                        'media' => json_encode($variantMediaUrls),
+                        'price' => $variantData['price'] ?? null,
+                        'list_price' => $variantData['list_price'] ?? null,
+                        'quantity' => (int) ($variantData['quantity'] ?? 0),
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+
+                    Log::info("Queued variant for insert: {$variantData['variant_name']}", [
                         'media_count' => count($variantMediaUrls),
-                        'attributes' => $variantData['attributes']
+                        'attributes' => $attributes
                     ]);
                 }
+            }
+
+            if (!empty($variantRows)) {
+                TemplateVariant::withoutEvents(function () use ($variantRows) {
+                    collect($variantRows)->chunk(100)->each(function ($chunk) {
+                        TemplateVariant::insert($chunk->toArray());
+                    });
+                });
             }
         } else {
             Log::info('No variants data in request - keeping existing variants');

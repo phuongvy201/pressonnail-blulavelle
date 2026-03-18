@@ -130,8 +130,11 @@
 
                 <div class="pt-2 border-t border-gray-100">
                     <h2 class="text-xl font-bold text-gray-900 mb-1">Theme colors</h2>
-                    <p class="text-sm text-gray-600 mb-5">
+                    <p class="text-sm text-gray-600 mb-2">
                         Nhập màu dạng <code>#RRGGBB</code> hoặc <code>rgb(...)</code>. Để trống sẽ dùng màu mặc định trong giao diện.
+                    </p>
+                    <p class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-5">
+                        <strong>Lưu vĩnh viễn:</strong> Màu đang lưu trong database. Để không mất khi cập nhật/deploy bản mới, chạy lệnh <code class="bg-amber-100 px-1 rounded">php artisan settings:export-theme</code> rồi commit file <code class="bg-amber-100 px-1 rounded">config/theme.php</code> lên git.
                     </p>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -198,6 +201,40 @@
                                 class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
                             >
                             @error('footer_bg')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-2 border-t border-gray-100">
+                    <h2 class="text-xl font-bold text-gray-900 mb-1">Mail branding (email layout)</h2>
+                    <p class="text-sm text-gray-600 mb-2">
+                        Logo và tên thương hiệu hiển thị trong header email. Để trống sẽ dùng logo mặc định và <code>APP_NAME</code>.
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="mail_logo_url" class="block text-sm font-semibold text-gray-900 mb-1">Logo URL (email)</label>
+                            <input
+                                type="text"
+                                name="mail_logo_url"
+                                id="mail_logo_url"
+                                value="{{ old('mail_logo_url', $settings['mail_logo_url']) }}"
+                                placeholder="VD: {{ asset('images/logo to.png') }}"
+                                class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
+                            >
+                            @error('mail_logo_url')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                            <p class="mt-2 text-xs text-gray-500">URL đầy đủ hoặc đường dẫn relative (vd: <code>/images/logo.png</code>).</p>
+                        </div>
+                        <div>
+                            <label for="mail_brand_name" class="block text-sm font-semibold text-gray-900 mb-1">Tên thương hiệu (alt text logo)</label>
+                            <input
+                                type="text"
+                                name="mail_brand_name"
+                                id="mail_brand_name"
+                                value="{{ old('mail_brand_name', $settings['mail_brand_name']) }}"
+                                placeholder="{{ $defaults['mail_brand_name'] ?: config('app.name') }}"
+                                class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
+                            >
+                            @error('mail_brand_name')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                         </div>
                     </div>
                 </div>

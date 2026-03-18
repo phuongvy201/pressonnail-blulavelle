@@ -5,7 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'Bluprinter') }} - Admin</title>
+    @php
+        $adminLogoUrl = \App\Support\Settings::get('mail.logo_url', config('theme.mail_logo_url'));
+        $adminBrandName = \App\Support\Settings::get('mail.brand_name', config('theme.mail_brand_name'));
+        if (empty($adminLogoUrl)) { $adminLogoUrl = asset('storage/images/logo (3).png'); }
+        if (empty($adminBrandName)) { $adminBrandName = config('app.name', 'Bluprinter'); }
+    @endphp
+    <title>{{ $adminBrandName }} - Admin</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
@@ -77,13 +83,13 @@
         <!-- Sidebar -->
         <div class="hidden lg:flex lg:flex-shrink-0">
             <div class="flex flex-col w-64 bg-white border-r border-gray-200 shadow-sm fixed left-0 top-0 h-screen overflow-y-auto sidebar-scroll z-40">
-                <!-- Logo -->
+                <!-- Logo (cùng nguồn Mail branding: Admin → Analytics Settings) -->
                 <div class="flex items-center h-16 px-6 border-b border-gray-200">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
                             <div class="w-10 h-10 overflow-hidden">
-                                <img src="{{ asset('storage/images/logo (3).png') }}" 
-                                     alt="Blu Lavelle Logo" 
+                                <img src="{{ $adminLogoUrl }}" 
+                                     alt="{{ e($adminBrandName) }} Logo" 
                                      class="w-full h-full object-contain"
                                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                 <!-- Fallback SVG if image fails to load -->
@@ -95,7 +101,7 @@
                             </div>
                         </div>
                         <div class="ml-3">
-                            <h1 class="text-lg font-bold text-gray-900">{{ config('app.name', 'Bluprinter') }}</h1>
+                            <h1 class="text-lg font-bold text-gray-900">{{ $adminBrandName }}</h1>
                             <p class="text-xs text-gray-500">Admin Panel</p>
                         </div>
                     </div>
@@ -445,8 +451,8 @@
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
                         <div class="w-8 h-8 overflow-hidden">
-                            <img src="{{ asset('storage/images/logo (3).png') }}" 
-                                 alt="Blu Lavelle Logo" 
+                            <img src="{{ $adminLogoUrl }}" 
+                                 alt="{{ e($adminBrandName) }} Logo" 
                                  class="w-full h-full object-contain"
                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                             <!-- Fallback SVG if image fails to load -->
@@ -458,7 +464,7 @@
                         </div>
                     </div>
                     <div class="ml-3">
-                        <h1 class="text-lg font-bold text-white">{{ config('app.name', 'Bluprinter') }}</h1>
+                        <h1 class="text-lg font-bold text-white">{{ $adminBrandName }}</h1>
                     </div>
                 </div>
                 <button @click="sidebarOpen = false" class="text-gray-400 hover:text-white">

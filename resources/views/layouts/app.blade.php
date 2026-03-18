@@ -230,15 +230,15 @@
 <body class="font-display antialiased bg-background-light text-slate-900">
     <!-- Promotional Banner -->
     @php
-        $promoBannerBg = \App\Support\Settings::get('site.promo_banner_bg');
+        $promoBannerBg = \App\Support\Settings::get('site.promo_banner_bg', config('theme.promo_banner_bg'));
         $promoBannerCustom = (is_string($promoBannerBg) && (str_starts_with(trim($promoBannerBg), '#') || str_starts_with(trim($promoBannerBg), 'rgb'))) ? trim($promoBannerBg) : null;
-        $footerFaqBg = \App\Support\Settings::get('theme.footer_faq_bg', null); // e.g. #ffffff
-        $footerBg = \App\Support\Settings::get('theme.footer_bg', null); // e.g. #242B3D
+        $footerFaqBg = \App\Support\Settings::get('theme.footer_faq_bg', config('theme.footer_faq_bg'));
+        $footerBg = \App\Support\Settings::get('theme.footer_bg', config('theme.footer_bg', '#242B3D'));
         $footerFaqBgCustom = (is_string($footerFaqBg) && (str_starts_with(trim($footerFaqBg), '#') || str_starts_with(trim($footerFaqBg), 'rgb'))) ? trim($footerFaqBg) : null;
         $footerBgCustom = (is_string($footerBg) && (str_starts_with(trim($footerBg), '#') || str_starts_with(trim($footerBg), 'rgb'))) ? trim($footerBg) : null;
     @endphp
     <div class="text-white text-center py-1.5 sm:py-2 px-3 sm:px-4 text-xs sm:text-sm font-bold tracking-wide {{ $promoBannerCustom ? '' : 'bg-primary promo-banner-animate' }}" @if($promoBannerCustom) style="background-color: {{ $promoBannerCustom }};" @endif>
-        {{ \App\Support\Settings::get('site.promo_banner', 'Free Shipping on Orders Over $100 • Premium Press-on Nails') }}
+        {{ \App\Support\Settings::get('site.promo_banner', config('theme.promo_banner', 'Free Shipping on Orders Over $100 • Premium Press-on Nails')) }}
     </div>
     @if($googleTagManagerId)
         <!-- Google Tag Manager (noscript) -->
