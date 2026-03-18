@@ -4288,6 +4288,114 @@ class PageSeeder extends Seeder
                 'meta_title' => 'Sitemap - Blu Lavelle',
                 'meta_description' => 'Sitemap of Blu Lavelle including help, tracking, policies, and contact pages.',
             ],
+            [
+                'user_id' => $admin->id,
+                'title' => 'Privacy Policy',
+                'slug' => 'privacy-policy',
+                'content' => '<div class="max-w-6xl mx-auto py-8 px-4">
+                    <div class="bg-white rounded-lg shadow-2xl overflow-hidden">
+                        <!-- Hero Header -->
+                        <div class="bg-gradient-to-r from-[#0297FE] via-[#f89192] to-[#d6386a] text-white px-8 py-12">
+                            <h1 class="text-5xl font-bold mb-4">Privacy Policy</h1>
+                            <p class="text-pink-100 text-xl mb-2">How Blu Lavelle collects, uses, and protects your information</p>
+                            <p class="text-pink-200 text-sm">Last updated: ' . now()->format('F d, Y') . '</p>
+                        </div>
+
+                        <div class="px-8 py-8 space-y-8">
+                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-l-4 border-[#0297FE] rounded-r-lg p-6">
+                                <p class="text-gray-800 leading-relaxed text-lg">
+                                    This Privacy Policy explains how <strong>Blu Lavelle</strong> (the “Site”, “we”, “us”) collects, uses, and shares your personal information when you visit
+                                    or make a purchase from the Site, create an account, contact support, or use any related services.
+                                </p>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="bg-white border border-pink-200 rounded-xl p-6">
+                                    <h2 class="text-2xl font-bold text-gray-900 mb-3">1. Information we collect</h2>
+                                    <ul class="list-disc list-inside text-gray-700 space-y-2">
+                                        <li><strong>Account info:</strong> name, email, phone number, password (stored in hashed form).</li>
+                                        <li><strong>Order info:</strong> shipping address, billing address, items purchased, and order history.</li>
+                                        <li><strong>Payment info:</strong> handled by payment providers; we don’t store full card numbers.</li>
+                                        <li><strong>Device data:</strong> IP address, browser type, and basic analytics about how you use the Site.</li>
+                                        <li><strong>Support messages:</strong> emails and messages you send to our support team.</li>
+                                    </ul>
+                                </div>
+
+                                <div class="bg-white border border-pink-200 rounded-xl p-6">
+                                    <h2 class="text-2xl font-bold text-gray-900 mb-3">2. How we use your information</h2>
+                                    <ul class="list-disc list-inside text-gray-700 space-y-2">
+                                        <li>To process orders, deliver products, and provide customer support.</li>
+                                        <li>To communicate with you about your order, account, or service updates.</li>
+                                        <li>To prevent fraud, abuse, and protect the security of our users and the Site.</li>
+                                        <li>To improve the Site experience, products, and services.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="bg-white border border-pink-200 rounded-xl p-6">
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3">3. Cookies & analytics</h2>
+                                <p class="text-gray-700 leading-relaxed mb-3">
+                                    We use cookies and similar technologies to keep the Site working, remember preferences, and understand usage patterns (e.g., analytics).
+                                </p>
+                                <p class="text-gray-700 leading-relaxed">
+                                    You can control cookies through your browser settings. Blocking some cookies may affect Site functionality.
+                                </p>
+                            </div>
+
+                            <div class="bg-white border border-pink-200 rounded-xl p-6">
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3">4. Sharing your information</h2>
+                                <p class="text-gray-700 leading-relaxed mb-3">
+                                    We may share information with trusted service providers (e.g., payment processors, shipping carriers, email/analytics providers) to operate the Site and fulfill orders.
+                                </p>
+                                <p class="text-gray-700 leading-relaxed">
+                                    We may also disclose information if required by law, to respond to legal requests, or to protect our rights and users.
+                                </p>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="bg-white border border-pink-200 rounded-xl p-6">
+                                    <h2 class="text-2xl font-bold text-gray-900 mb-3">5. Data retention</h2>
+                                    <p class="text-gray-700 leading-relaxed">
+                                        We retain personal information as long as necessary to provide services, comply with legal obligations, resolve disputes, and enforce our agreements.
+                                    </p>
+                                </div>
+
+                                <div class="bg-white border border-pink-200 rounded-xl p-6">
+                                    <h2 class="text-2xl font-bold text-gray-900 mb-3">6. Your rights</h2>
+                                    <p class="text-gray-700 leading-relaxed mb-3">
+                                        Depending on your location, you may have rights to access, correct, delete, or restrict certain processing of your personal information.
+                                    </p>
+                                    <p class="text-gray-700 leading-relaxed">
+                                        To request changes, contact us at <a class="text-[#0297FE] font-semibold underline hover:text-[#d6386a]" href="mailto:support@blulavelle.com">support@blulavelle.com</a>.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] rounded-lg p-8 text-center text-white">
+                                <h3 class="text-2xl font-bold mb-2">Contact</h3>
+                                <p class="text-pink-100 mb-4">Questions about privacy? We’re here to help.</p>
+                                <div class="flex flex-col sm:flex-row justify-center items-center gap-3">
+                                    <a href="mailto:support@blulavelle.com" class="inline-flex items-center px-8 py-3 bg-white text-[#0297FE] font-bold rounded-lg shadow-lg hover:shadow-xl transition duration-200">
+                                        support@blulavelle.com
+                                    </a>
+                                    <a href="/contact-us" class="inline-flex items-center px-8 py-3 bg-transparent border-2 border-white text-white font-bold rounded-lg hover:bg-white hover:text-[#0297FE] transition duration-200">
+                                        Contact Us
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>',
+                'excerpt' => 'Privacy policy explaining how Blu Lavelle collects, uses, and protects customer information.',
+                'status' => 'published',
+                'published_at' => now(),
+                'template' => 'default',
+                'show_in_menu' => true,
+                'menu_title' => 'Privacy Policy',
+                'sort_order' => 18,
+                'meta_title' => 'Privacy Policy - Blu Lavelle',
+                'meta_description' => 'Read Blu Lavelle Privacy Policy: what data we collect, how we use it, cookies, sharing, retention, and your rights.',
+            ],
         ];
 
         // Create pages

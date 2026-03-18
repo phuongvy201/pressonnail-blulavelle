@@ -13,7 +13,7 @@
         <!-- Logo -->
         <a href="{{ route('home') }}" class="flex items-center flex-shrink-0">
             <div class="max-w-[160px] max-h-[72px] sm:max-w-[190px] sm:max-h-[80px] md:max-w-[220px] md:max-h-[88px] lg:max-w-[260px] lg:max-h-[96px] overflow-hidden rounded flex items-center justify-center">
-                <img src="{{ asset('storage/images/logo (3).png') }}" alt="Blu Lavelle" class="w-auto h-auto max-w-full max-h-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <img src="{{ asset('images/logo/logo(3).png') }}" alt="Baby Blue" class="w-auto h-auto max-w-full max-h-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                 <div class="w-full h-full flex items-center justify-center text-primary" style="display: none;">
                     <svg class="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 lg:w-10 lg:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
                 </div>

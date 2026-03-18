@@ -355,7 +355,7 @@
                     {{-- Col 1: Logo, About, Operating entities, Follow us, Buttons, Badges --}}
                     <div class="lg:col-span-5 space-y-6">
                         <div class="flex items-center gap-3">
-                            <img src="{{ asset('storage/images/BABY BLUE.png') }}" alt="Baby Blue" class="h-20 sm:h-24 lg:h-28 w-auto object-contain">
+                            <img src="{{ asset('images/logo/BABYBLUE.png') }}" alt="Baby Blue" class="h-20 sm:h-24 lg:h-28 w-auto object-contain">
                         </div>
                         <p class="text-sm text-slate-400 leading-relaxed max-w-md">
                             Blulavelle.com is a global online marketplace where people come together to make, sell, buy, and collect unique items. There's no Blulavelle warehouse – just independent sellers selling the things they love. We make the whole process easy, helping you connect directly with makers to find something extraordinary.
