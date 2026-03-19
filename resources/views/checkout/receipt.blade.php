@@ -42,6 +42,9 @@
 <body class="bg-background-light text-slate-900 min-h-screen">
 @php
     $brand = config('app.name', 'PressOnNail');
+    $itemsSum = (float) ($order->items?->sum('total_price') ?? 0);
+    $orderSubtotal = (float) ($order->subtotal ?? 0);
+    $bulkDiscount = max(0, $itemsSum - $orderSubtotal);
 @endphp
 <div class="max-w-[850px] mx-auto p-6 md:p-12">
     {{-- Header / actions --}}
@@ -277,6 +280,12 @@
                             {{ \App\Services\CurrencyService::formatPrice($convertedSubtotal ?? $order->subtotal, $currency ?? 'USD') }}
                         </span>
                     </div>
+                    @if($bulkDiscount > 0)
+                    <div class="flex justify-between text-sm text-emerald-600">
+                        <span>{{ $locale === 'vi' ? 'Giảm theo số lượng' : 'Bulk discount' }}</span>
+                        <span class="font-medium">-{{ \App\Services\CurrencyService::formatPrice($bulkDiscount, $currency ?? 'USD') }}</span>
+                    </div>
+                    @endif
                     @if($order->promo_code && (float)($order->discount_amount ?? 0) > 0)
                     <div class="flex justify-between text-sm text-emerald-600">
                         <span>{{ $locale === 'vi' ? 'Mã giảm giá' : 'Promo' }} ({{ $order->promo_code }})</span>

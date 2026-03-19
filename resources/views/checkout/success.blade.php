@@ -8,6 +8,9 @@
     $orderDate = \Carbon\Carbon::parse($order->created_at);
     $estimatedStart = $orderDate->copy()->addDays(3);
     $estimatedEnd = $orderDate->copy()->addDays(5);
+    $itemsSum = (float) ($order->items?->sum('total_price') ?? 0);
+    $orderSubtotal = (float) ($order->subtotal ?? 0);
+    $bulkDiscount = max(0, $itemsSum - $orderSubtotal);
     $gaItems = $order->items->map(function($item, $index) {
         return [
             'item_id' => (string) $item->product_id,
@@ -160,6 +163,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     <div class="mt-8 pt-6 border-t border-slate-100 space-y-2">
                         <div class="flex justify-between text-slate-500"><span>Subtotal</span><span>{{ \App\Services\CurrencyService::formatPrice($convertedSubtotal ?? $order->subtotal, $currency ?? 'USD') }}</span></div>
+                        @if($bulkDiscount > 0)
+                        <div class="flex justify-between text-emerald-600"><span>Bulk discount</span><span>-{{ \App\Services\CurrencyService::formatPrice($bulkDiscount, $currency ?? 'USD') }}</span></div>
+                        @endif
                         @if($order->promo_code && (float)($order->discount_amount ?? 0) > 0)
                         <div class="flex justify-between text-emerald-600"><span>Promo ({{ $order->promo_code }})</span><span>-{{ \App\Services\CurrencyService::formatPrice($order->discount_amount, $currency ?? 'USD') }}</span></div>
                         @endif

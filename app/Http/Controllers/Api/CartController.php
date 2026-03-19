@@ -16,6 +16,26 @@ use Illuminate\Support\Facades\Log;
 
 class CartController extends Controller
 {
+    public function setDiscountMode(Request $request)
+    {
+        $request->validate([
+            'mode' => ['required', 'string', 'in:volume,promo'],
+        ]);
+
+        $mode = $request->input('mode');
+
+        if ($mode === 'volume') {
+            // Switching to volume discount means promo cannot stack; clear promo.
+            session()->forget(['applied_promo_code_id', 'applied_promo_code']);
+        }
+
+        session(['discount_mode' => $mode]);
+
+        return response()->json([
+            'success' => true,
+            'mode' => $mode,
+        ]);
+    }
     public function add(Request $request)
     {
         try {
@@ -144,6 +164,19 @@ class CartController extends Controller
             $totalPrice = $cartItems->sum(function ($item) {
                 return $item->getTotalPriceWithCustomizations();
             });
+            // Choose ONE discount mode: volume OR promo (freeship can stack with either).
+            $discountMode = session('discount_mode', 'volume');
+            if (session()->has('applied_promo_code_id')) {
+                $discountMode = 'promo';
+                session(['discount_mode' => 'promo']);
+            }
+
+            $bulkDiscountPercent = 0.0;
+            $bulkDiscount = 0.0;
+            if ($discountMode === 'volume') {
+                $bulkDiscountPercent = (float) Cart::getComboDiscountPercentForQty((int) $totalItems);
+                $bulkDiscount = $bulkDiscountPercent > 0 ? round((float) $totalPrice * ($bulkDiscountPercent / 100), 2) : 0.0;
+            }
 
             // Get currency and rate
             $currency = CurrencyService::getCurrencyForDomain() ?? 'USD';
@@ -168,6 +201,7 @@ class CartController extends Controller
             // Calculate summary (without tax)
             // Note: $totalPrice is already in the current currency (prices in cart are already converted)
             $subtotal = $totalPrice;
+            $subtotalAfterBulk = max(0, $subtotal - $bulkDiscount);
             $shipping = 0;
             $shippingDetails = null;
 
@@ -202,13 +236,16 @@ class CartController extends Controller
 
             // Subtotal is already in current currency
             $convertedSubtotal = $subtotal;
-            $subtotalUsd = $currency !== 'USD' ? $subtotal / $currencyRate : $subtotal;
+            $convertedSubtotalAfterBulk = $subtotalAfterBulk;
+            // Free shipping should be based on subtotal BEFORE combo discount (USD)
+            $subtotalUsdBeforeDiscount = $currency !== 'USD' ? $subtotal / $currencyRate : $subtotal;
+            $subtotalUsd = $currency !== 'USD' ? $subtotalAfterBulk / $currencyRate : $subtotalAfterBulk;
 
-            // Promo code discount (stored in session)
+            // Promo code discount (stored in session) - only when in promo mode
             $discount = 0.0;
             $appliedPromoCode = null;
             $promoId = session('applied_promo_code_id');
-            if ($promoId && $subtotalUsd > 0) {
+            if ($discountMode === 'promo' && $promoId && $subtotalUsd > 0) {
                 $promo = PromoCode::find($promoId);
                 if ($promo && $promo->isValidForSubtotal($subtotalUsd)) {
                     $discountUsd = $promo->calculateDiscountUsd($subtotalUsd);
@@ -216,11 +253,21 @@ class CartController extends Controller
                     $appliedPromoCode = $promo->code;
                 } else {
                     session()->forget(['applied_promo_code_id', 'applied_promo_code']);
+                    session(['discount_mode' => 'volume']);
+                    $discountMode = 'volume';
                 }
             }
 
-            $total = $convertedSubtotal - $discount + $convertedShipping;
+            $total = $convertedSubtotalAfterBulk - $discount + $convertedShipping;
             $convertedTotal = $total;
+
+            // Free shipping if subtotal BEFORE discount (USD) >= threshold
+            if ($subtotalUsdBeforeDiscount >= Cart::FREE_SHIPPING_THRESHOLD_USD) {
+                $shipping = 0;
+                $convertedShipping = 0;
+                $total = $convertedSubtotalAfterBulk - $discount + $convertedShipping;
+                $convertedTotal = $total;
+            }
 
             return response()->json([
                 'success' => true,
@@ -228,11 +275,18 @@ class CartController extends Controller
                 'total_items' => $totalItems,
                 'total_price' => $totalPrice,
                 'summary' => [
+                    'discount_mode' => $discountMode,
                     'subtotal' => $subtotal,
+                    'bulk_discount' => $bulkDiscount,
+                    'bulk_discount_percent' => $bulkDiscountPercent,
+                    'subtotal_after_bulk_discount' => $subtotalAfterBulk,
                     'shipping' => $shipping,
                     'discount' => $discount,
                     'total' => $total,
                     'converted_subtotal' => $convertedSubtotal,
+                    'converted_bulk_discount' => $bulkDiscount,
+                    'converted_bulk_discount_percent' => $bulkDiscountPercent,
+                    'converted_subtotal_after_bulk_discount' => $convertedSubtotalAfterBulk,
                     'converted_shipping' => $convertedShipping,
                     'converted_discount' => $discount,
                     'converted_total' => $convertedTotal,
@@ -302,6 +356,8 @@ class CartController extends Controller
         session([
             'applied_promo_code_id' => $promo->id,
             'applied_promo_code' => $promo->code,
+            // Promo cannot stack with volume discount; selecting promo mode.
+            'discount_mode' => 'promo',
         ]);
 
         return response()->json([
@@ -317,6 +373,8 @@ class CartController extends Controller
     public function removePromo()
     {
         session()->forget(['applied_promo_code_id', 'applied_promo_code']);
+        // When promo removed, default back to volume discount.
+        session(['discount_mode' => 'volume']);
         return response()->json(['success' => true, 'message' => 'Promo code removed.']);
     }
 

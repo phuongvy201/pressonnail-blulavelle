@@ -42,6 +42,24 @@ class CartController extends Controller
             return $item->getTotalPriceWithCustomizations();
         });
 
+        // Choose ONE discount mode: volume OR promo (freeship can stack with either).
+        $discountMode = session('discount_mode', 'volume');
+        if (session()->has('applied_promo_code_id')) {
+            $discountMode = 'promo';
+            session(['discount_mode' => 'promo']);
+        }
+
+        $bulkDiscountPercent = 0.0;
+        $bulkDiscount = 0.0;
+        if ($discountMode === 'volume') {
+            // Combo discount (quantity tiers) - applied on TOTAL cart quantity
+            $totalQty = (int) $cartItems->sum('quantity');
+            $bulkDiscountPercent = Cart::getComboDiscountPercentForQty($totalQty);
+            $bulkDiscount = $bulkDiscountPercent > 0 ? round((float) $subtotal * ($bulkDiscountPercent / 100), 2) : 0.0;
+        }
+
+        $subtotalAfterBulk = max(0, (float) $subtotal - (float) $bulkDiscount);
+
         // Get current domain and currency (for shipping and promo)
         $currentDomain = CurrencyService::getCurrentDomain();
         $currency = CurrencyService::getCurrencyForDomain() ?? 'USD';
@@ -136,12 +154,16 @@ class CartController extends Controller
             }
         }
 
-        // Promo code discount (session)
+        // Free shipping if subtotal BEFORE discount (USD) >= threshold
+        $baseSubtotalUsdBeforeDiscount = $currency !== 'USD' ? ((float) $subtotal / $currencyRate) : (float) $subtotal;
+        $shipping = $baseSubtotalUsdBeforeDiscount >= Cart::FREE_SHIPPING_THRESHOLD_USD ? 0 : $shipping;
+
+        // Promo code discount (session) - only when in promo mode
         $discount = 0.0;
         $appliedPromoCode = null;
         $promoId = session('applied_promo_code_id');
-        if ($promoId && $subtotal > 0) {
-            $subtotalUsd = $currency !== 'USD' ? $subtotal / $currencyRate : $subtotal;
+        if ($discountMode === 'promo' && $promoId && $subtotal > 0) {
+            $subtotalUsd = $currency !== 'USD' ? (float) $subtotal / $currencyRate : (float) $subtotal;
             $promo = PromoCode::find($promoId);
             if ($promo && $promo->isValidForSubtotal($subtotalUsd)) {
                 $discountUsd = $promo->calculateDiscountUsd($subtotalUsd);
@@ -149,10 +171,12 @@ class CartController extends Controller
                 $appliedPromoCode = $promo->code;
             } else {
                 session()->forget(['applied_promo_code_id', 'applied_promo_code']);
+                session(['discount_mode' => 'volume']);
+                $discountMode = 'volume';
             }
         }
 
-        $total = $subtotal - $discount + $shipping;
+        $total = $subtotalAfterBulk - $discount + $shipping;
 
         // Get current domain for shipping zone filtering (already retrieved above)
         // $currentDomain is already set from shipping calculation above
@@ -202,6 +226,10 @@ class CartController extends Controller
         return view('cart.index', compact(
             'cartItems',
             'subtotal',
+            'bulkDiscount',
+            'bulkDiscountPercent',
+            'subtotalAfterBulk',
+            'discountMode',
             'shipping',
             'discount',
             'appliedPromoCode',

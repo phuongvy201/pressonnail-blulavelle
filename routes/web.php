@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\CollectionController as AdminCollectionController
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\Admin\AnalyticsSettingsController;
+use App\Http\Controllers\Admin\BulkDiscountSettingsController;
 use App\Http\Controllers\Admin\ShopController as AdminShopController;
 use App\Http\Controllers\Admin\PageController as AdminPageController;
 use App\Http\Controllers\Seller\SellerDashboardController;
@@ -476,6 +477,7 @@ Route::prefix('api/cart')->middleware('web')->group(function () {
     Route::delete('/remove/{id}', [ApiCartController::class, 'remove'])->name('api.cart.remove');
     Route::delete('/clear', [ApiCartController::class, 'clear'])->name('api.cart.clear');
     Route::post('/sync', [ApiCartController::class, 'sync'])->name('api.cart.sync');
+    Route::post('/discount-mode', [ApiCartController::class, 'setDiscountMode'])->name('api.cart.discount-mode');
     Route::post('/apply-promo', [ApiCartController::class, 'applyPromo'])->name('api.cart.apply-promo');
     Route::post('/remove-promo', [ApiCartController::class, 'removePromo'])->name('api.cart.remove-promo');
 });
@@ -581,6 +583,10 @@ Route::middleware('auth')->group(function () {
         // Analytics settings
         Route::get('settings/analytics', [AnalyticsSettingsController::class, 'edit'])->name('settings.analytics.edit');
         Route::put('settings/analytics', [AnalyticsSettingsController::class, 'update'])->name('settings.analytics.update');
+
+        // Pricing settings: quantity/bulk discounts
+        Route::get('settings/bulk-discounts', [BulkDiscountSettingsController::class, 'edit'])->name('settings.bulk-discounts.edit');
+        Route::put('settings/bulk-discounts', [BulkDiscountSettingsController::class, 'update'])->name('settings.bulk-discounts.update');
 
         // Return Requests (Refund/Exchange)
         Route::get('returns', [AdminReturnRequestController::class, 'index'])->name('returns.index');

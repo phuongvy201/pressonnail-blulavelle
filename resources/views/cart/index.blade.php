@@ -9,6 +9,11 @@
     $currentCurrencyRate = currency_rate() ?? 1.0;
     $discount = $discount ?? 0;
     $appliedPromoCode = $appliedPromoCode ?? null;
+    // Combo discount (based on total cart quantity) - keep display consistent with cart popup
+    $bulkDiscountPercent = $bulkDiscountPercent ?? (\App\Models\Cart::getComboDiscountPercentForQty((int) $cartItems->sum('quantity')));
+    $bulkDiscount = $bulkDiscount ?? ((float) $bulkDiscountPercent > 0 ? round((float) $subtotal * ((float) $bulkDiscountPercent / 100), 2) : 0.0);
+    $subtotalAfterBulk = $subtotalAfterBulk ?? max(0, (float) $subtotal - (float) $bulkDiscount);
+    $discountMode = $discountMode ?? session('discount_mode', $appliedPromoCode ? 'promo' : 'volume');
 
     // Get all active shipping rates (domain column removed)
     $shippingRates = \App\Models\ShippingRate::where('is_active', true)
@@ -348,7 +353,7 @@
         }
     }
     
-    // Calculate base subtotal in USD for shipping (price đã gồm customization)
+    // Calculate base subtotal in USD for free-shipping (based on subtotal BEFORE discount)
     $baseSubtotal = 0;
     foreach ($cartItems as $item) {
         $itemPrice = (float) $item->price;
@@ -357,7 +362,7 @@
             : $itemPrice;
         $baseSubtotal += $basePrice * $item->quantity;
     }
-    $freeShippingThreshold = 100;
+    $freeShippingThreshold = 150;
     $freeShippingProgress = $baseSubtotal >= $freeShippingThreshold ? 100 : ($baseSubtotal / $freeShippingThreshold) * 100;
     $amountLeftForFreeShipping = max(0, $freeShippingThreshold - $baseSubtotal);
 @endphp
@@ -388,7 +393,7 @@
             <div class="mb-10">
                 <h2 class="text-3xl lg:text-4xl font-extrabold text-slate-900 mb-6">Your Shopping Bag</h2>
                 @php
-                    $freeShippingThreshold = 100;
+                    $freeShippingThreshold = 150;
                     $freeShippingProgress = $baseSubtotal >= $freeShippingThreshold ? 100 : ($baseSubtotal / $freeShippingThreshold) * 100;
                     $amountLeftForFreeShipping = max(0, $freeShippingThreshold - $baseSubtotal);
                 @endphp
@@ -491,10 +496,24 @@
                         <div class="bg-white p-8 rounded-xl border border-primary/20 shadow-xl shadow-primary/5">
                             <h3 class="text-xl font-extrabold text-slate-900 mb-6">Order Summary</h3>
                             <div class="space-y-4 mb-6">
+                                <div class="flex gap-2">
+                                    <button type="button" id="cart-mode-volume" class="flex-1 px-3 py-2 rounded-lg border text-xs font-bold transition-colors {{ $discountMode === 'volume' ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-primary/20 hover:bg-primary/5' }}">
+                                        Volume
+                                    </button>
+                                    <button type="button" id="cart-mode-promo" class="flex-1 px-3 py-2 rounded-lg border text-xs font-bold transition-colors {{ $discountMode === 'promo' ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-primary/20 hover:bg-primary/5' }}">
+                                        Promo code
+                                    </button>
+                                </div>
                                 <div class="flex justify-between text-sm">
                                     <span class="text-slate-500">Subtotal</span>
-                                    <span class="font-bold text-slate-900" id="cart-subtotal">{{ format_price((float) $subtotal) }}</span>
+                                    <span class="font-bold text-slate-900" id="cart-subtotal">{{ format_price((float) $subtotalAfterBulk) }}</span>
                                 </div>
+                                @if((float) ($bulkDiscountPercent ?? 0) > 0)
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-slate-500">Discount</span>
+                                    <span class="font-semibold text-emerald-600" id="cart-qty-discount-percent">-{{ number_format((float) $bulkDiscountPercent, 0) }}%</span>
+                                </div>
+                                @endif
                                 @if((count($zonesData) > 0) || (count($zonesWithCountries) > 0))
                                     <div class="mb-2">
                                         <label for="shipping-zone-select" class="block text-xs font-bold text-slate-400 mb-1 uppercase">Shipping to</label>
@@ -541,8 +560,8 @@
                                 <div>
                                     <label class="block text-xs font-bold text-slate-400 mb-2 uppercase" for="promo">Promo Code</label>
                                     <div class="flex gap-2">
-                                        <input class="flex-1 rounded-lg border border-primary/20 bg-slate-50 text-sm focus:ring-primary focus:border-primary px-3 py-2" id="promo" placeholder="Enter code" type="text" value="{{ $appliedPromoCode ? '' : '' }}" autocomplete="off">
-                                        <button type="button" id="promo-apply" class="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-primary transition-colors">Apply</button>
+                                        <input class="flex-1 rounded-lg border border-primary/20 bg-slate-50 text-sm focus:ring-primary focus:border-primary px-3 py-2 {{ $discountMode === 'volume' ? 'opacity-60 cursor-not-allowed' : '' }}" id="promo" placeholder="Enter code" type="text" value="{{ $appliedPromoCode ? '' : '' }}" autocomplete="off" {{ $discountMode === 'volume' ? 'disabled' : '' }}>
+                                        <button type="button" id="promo-apply" class="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-primary transition-colors {{ $discountMode === 'volume' ? 'opacity-60 cursor-not-allowed' : '' }}" {{ $discountMode === 'volume' ? 'disabled' : '' }}>Apply</button>
                                     </div>
                                     <p id="promo-message" class="mt-1.5 text-xs hidden"></p>
                                 </div>
@@ -624,6 +643,7 @@ const SELECTED_ZONE_VALUE = @json($selectedZoneValue);
 const BASE_SUBTOTAL = {{ $baseSubtotal }};
 const APPLY_PROMO_URL = '{{ route("api.cart.apply-promo") }}';
 const REMOVE_PROMO_URL = '{{ route("api.cart.remove-promo") }}';
+const DISCOUNT_MODE_URL = '{{ route("api.cart.discount-mode") }}';
 
 function showPromoMessage(text, isError) {
     const el = document.getElementById('promo-message');
@@ -668,6 +688,22 @@ document.getElementById('promo-remove') && document.getElementById('promo-remove
     .then(r => r.json())
     .then(data => { if (data.success) location.reload(); })
     .catch(() => location.reload());
+});
+
+document.getElementById('cart-mode-volume') && document.getElementById('cart-mode-volume').addEventListener('click', function() {
+    fetch(DISCOUNT_MODE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+        body: JSON.stringify({ mode: 'volume' })
+    }).then(() => location.reload()).catch(() => location.reload());
+});
+
+document.getElementById('cart-mode-promo') && document.getElementById('cart-mode-promo').addEventListener('click', function() {
+    fetch(DISCOUNT_MODE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+        body: JSON.stringify({ mode: 'promo' })
+    }).then(() => location.reload()).catch(() => location.reload());
 });
 
 function updateQuantity(cartItemId, newQuantity) {
@@ -1141,55 +1177,45 @@ function calculateShippingCost(cartItems, baseSubtotal, zoneId = null) {
             zoneName: null
         };
     }
-    
-    // Filter rates by zone if zoneId is provided
+
+    // ---- Match backend ShippingCalculator logic ----
+    // 1) Filter rates by zone (keep existing filtering approach)
     let availableRates = SHIPPING_RATES;
-    let currentZoneName = null; // Initialize zone name variable for use throughout function
-    
+    let currentZoneName = null;
+
     if (zoneId !== null) {
-        // Extract zone_id from value if format is "zone_id:country_code"
         let actualZoneId = zoneId;
         if (typeof zoneId === 'string' && zoneId.includes(':')) {
             actualZoneId = zoneId.split(':')[0];
         }
-        
-        // Determine zone name for display (set before filtering rates)
+
         if (typeof actualZoneId === 'string' && actualZoneId.startsWith('general_')) {
-            // Extract zone name from zoneId (e.g., 'general_euro' -> 'Euro')
-            currentZoneName = actualZoneId.replace('general_', '').split('_').map(word => 
+            currentZoneName = actualZoneId.replace('general_', '').split('_').map(word =>
                 word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
             ).join(' ');
         } else {
-            // Regular zone: get name from SHIPPING_ZONES
-            const parsedZoneId = typeof actualZoneId === 'string' && !isNaN(actualZoneId) 
-                ? parseInt(actualZoneId) 
+            const parsedZoneId = typeof actualZoneId === 'string' && !isNaN(actualZoneId)
+                ? parseInt(actualZoneId)
                 : actualZoneId;
             currentZoneName = SHIPPING_ZONES.find(z => z.id === parsedZoneId)?.name || null;
         }
-        
-        // Check if it's a general domain zone (starts with 'general_')
+
         if (typeof actualZoneId === 'string' && actualZoneId.startsWith('general_')) {
-            // Extract zone name from zoneId (e.g., 'general_euro' -> 'Euro')
-            const zoneName = actualZoneId.replace('general_', '').split('_').map(word => 
+            const zoneName = actualZoneId.replace('general_', '').split('_').map(word =>
                 word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
             ).join(' ');
-            
-            // Filter rates with null zone_id and matching zone_name
-            // Use flexible matching: normalize both zone names for comparison
             const normalizeZoneName = (name) => name ? name.toLowerCase().trim().replace(/\s+/g, ' ') : '';
             const normalizedZoneName = normalizeZoneName(zoneName);
-            
+
             availableRates = SHIPPING_RATES.filter(r => {
                 if (r.zone_id !== null) return false;
                 if (!r.zone_name) return false;
                 const normalizedRateZoneName = normalizeZoneName(r.zone_name);
-                return normalizedRateZoneName === normalizedZoneName || 
-                       normalizedRateZoneName.includes(normalizedZoneName) ||
-                       normalizedZoneName.includes(normalizedRateZoneName);
+                return normalizedRateZoneName === normalizedZoneName ||
+                    normalizedRateZoneName.includes(normalizedZoneName) ||
+                    normalizedZoneName.includes(normalizedRateZoneName);
             });
-            
-            // If no rates found with matching zone_name, fallback to all general domain rates (zone_id = null)
-            // This allows any general rate to be used when specific zone_name rates don't exist
+
             if (availableRates.length === 0) {
                 const allGeneralRates = SHIPPING_RATES.filter(r => r.zone_id === null);
                 if (allGeneralRates.length > 0) {
@@ -1197,15 +1223,10 @@ function calculateShippingCost(cartItems, baseSubtotal, zoneId = null) {
                 }
             }
         } else {
-            // Regular zone: filter by zone_id
-            // Parse to integer if it's a numeric string
-            const parsedZoneId = typeof actualZoneId === 'string' && !isNaN(actualZoneId) 
-                ? parseInt(actualZoneId) 
+            const parsedZoneId = typeof actualZoneId === 'string' && !isNaN(actualZoneId)
+                ? parseInt(actualZoneId)
                 : actualZoneId;
             availableRates = SHIPPING_RATES.filter(r => r.zone_id === parsedZoneId);
-            
-            // If no rates found for this specific zone, include general domain rates (zone_id = null) as fallback
-            // This allows general rates to be used when zone-specific rates don't exist
             if (availableRates.length === 0) {
                 const generalRates = SHIPPING_RATES.filter(r => r.zone_id === null);
                 if (generalRates.length > 0) {
@@ -1214,204 +1235,114 @@ function calculateShippingCost(cartItems, baseSubtotal, zoneId = null) {
             }
         }
     }
-    
-    // Group items by category
-    const itemsByCategory = {};
-    let totalItems = 0;
-    
-    cartItems.forEach(item => {
-        const product = item.product || {};
-        const categories = product.categories || [];
-        
-        // Get first category ID (primary category)
+
+    // 2) Prepare items, totalItems, and apply-first-item-to-most-expensive
+    const totalItems = cartItems.reduce((sum, it) => sum + (parseInt(it.quantity, 10) || 0), 0);
+    const totalValue = parseFloat(baseSubtotal) || 0; // USD
+
+    const itemsWithMeta = cartItems.map(it => {
+        const qty = parseInt(it.quantity, 10) || 0;
+        const unitPrice = parseFloat(it.price) || 0;
+        const unitUsd = (CURRENT_CURRENCY !== 'USD' && CURRENT_CURRENCY_RATE > 0) ? (unitPrice / CURRENT_CURRENCY_RATE) : unitPrice;
+        const categories = (it.product && it.product.categories) ? it.product.categories : [];
         let categoryId = null;
-        if (categories && categories.length > 0) {
+        if (Array.isArray(categories) && categories.length > 0) {
             const firstCategory = categories[0];
             categoryId = firstCategory.id || (typeof firstCategory === 'object' ? firstCategory.category_id : null);
         }
-        
-        // If no category, use null as key for general items
-        const key = categoryId || 'general';
-        
-        if (!itemsByCategory[key]) {
-            itemsByCategory[key] = {
-                categoryId: categoryId,
-                items: [],
-                quantity: 0
-            };
+        return { item: it, qty, unitUsd, categoryId };
+    }).sort((a, b) => (b.unitUsd || 0) - (a.unitUsd || 0));
+
+    const isApplicable = (r) => {
+        const minItemsOk = (!r.min_items || totalItems >= r.min_items);
+        const maxItemsOk = (!r.max_items || totalItems <= r.max_items);
+        const minValueOk = (!r.min_order_value || totalValue >= r.min_order_value);
+        const maxValueOk = (!r.max_order_value || totalValue <= r.max_order_value);
+        return minItemsOk && maxItemsOk && minValueOk && maxValueOk;
+    };
+
+    const pickRate = (categoryId) => {
+        // 1) Default rate for category
+        if (categoryId != null) {
+            const r1 = availableRates.find(r => r.category_id === categoryId && r.is_default && isApplicable(r));
+            if (r1) return r1;
         }
-        
-        itemsByCategory[key].items.push(item);
-        itemsByCategory[key].quantity += item.quantity;
-        totalItems += item.quantity;
-    });
-    
-    // Calculate shipping cost for each category group
+        // 2) Default general rate
+        const r2 = availableRates.find(r => r.category_id === null && r.is_default && isApplicable(r));
+        if (r2) return r2;
+        // 3) Category-specific (any)
+        if (categoryId != null) {
+            const r3 = availableRates.find(r => r.category_id === categoryId && isApplicable(r));
+            if (r3) return r3;
+        }
+        // 4) General rate
+        const r4 = availableRates.find(r => r.category_id === null && isApplicable(r));
+        if (r4) return r4;
+        // Fallbacks (ignore applicability)
+        if (categoryId != null) {
+            const r5 = availableRates.find(r => r.category_id === categoryId);
+            if (r5) return r5;
+        }
+        return availableRates.find(r => r.category_id === null) || availableRates[0] || null;
+    };
+
+    // 3) Compute shipping: only ONE first item uses first_item_cost (plus additional for remaining qty of same line),
+    // all remaining lines use additional_item_cost * qty. (matches backend)
     let totalShippingCost = 0;
+    let firstItemProcessed = false;
     let shippingRateUsed = null;
     let shippingName = null;
     let zoneName = null;
-    let allGroupsHaveRate = true;
-    
-    Object.values(itemsByCategory).forEach(group => {
-        const categoryId = group.categoryId;
-        const quantity = group.quantity;
-        
-        // Find shipping rate for this category
-        let rate = null;
-        
-        // First, try to find rate specific to this category with all conditions
-        if (categoryId) {
-            rate = availableRates.find(r => 
-                r.category_id === categoryId && 
-                (!r.min_items || quantity >= r.min_items) &&
-                (!r.max_items || quantity <= r.max_items) &&
-                (!r.min_order_value || baseSubtotal >= r.min_order_value) &&
-                (!r.max_order_value || baseSubtotal <= r.max_order_value)
-            );
-        }
-        
-        // If no category-specific rate with conditions, try category-specific rate without quantity/order value conditions
-        if (!rate && categoryId) {
-            rate = availableRates.find(r => r.category_id === categoryId);
-        }
-        
-        // If no category-specific rate, try general rate (category_id is null) with all conditions
-        if (!rate) {
-            rate = availableRates.find(r => 
-                r.category_id === null &&
-                (!r.min_items || quantity >= r.min_items) &&
-                (!r.max_items || quantity <= r.max_items) &&
-                (!r.min_order_value || baseSubtotal >= r.min_order_value) &&
-                (!r.max_order_value || baseSubtotal <= r.max_order_value)
-            );
-        }
-        
-        // If no general rate with conditions, try any general rate (category_id is null)
-        if (!rate) {
-            rate = availableRates.find(r => r.category_id === null);
-        }
-        
-        // If still no rate found, use default shipping rate (if it meets conditions and matches zone)
-        if (!rate && DEFAULT_SHIPPING_RATE) {
-            const defaultRate = DEFAULT_SHIPPING_RATE;
-            
-            // Extract actual zone ID for comparison
-            let actualZoneIdForComparison = zoneId;
-            if (zoneId !== null) {
-                if (typeof zoneId === 'string' && zoneId.includes(':')) {
-                    actualZoneIdForComparison = zoneId.split(':')[0];
-                }
-                // Parse to integer if it's a numeric string
-                if (typeof actualZoneIdForComparison === 'string' && !isNaN(actualZoneIdForComparison)) {
-                    actualZoneIdForComparison = parseInt(actualZoneIdForComparison);
-                }
+
+    for (const meta of itemsWithMeta) {
+        if (!meta.qty || meta.qty < 1) continue;
+        const rate = pickRate(meta.categoryId);
+        if (!rate) continue;
+
+        let lineShip = 0;
+        if (!firstItemProcessed) {
+            lineShip = (parseFloat(rate.first_item_cost) || 0);
+            if (meta.qty > 1) {
+                lineShip += (meta.qty - 1) * (parseFloat(rate.additional_item_cost) || 0);
             }
-            
-            // Check if default rate meets the conditions and zone
-            // Allow default rate if: zoneId is null OR default rate zone matches OR default rate is general (zone_id = null)
-            // If availableRates is empty, be more lenient with zone matching
-            let zoneMatches = false;
-            if (availableRates.length === 0) {
-                // When no rates exist for the zone, allow default rate regardless of zone (as final fallback)
-                zoneMatches = true;
-            } else {
-                // Normal zone matching when rates exist
-                zoneMatches = zoneId === null || 
-                             defaultRate.zone_id === actualZoneIdForComparison || 
-                             defaultRate.zone_id === null; // General domain rate can be used for any zone
-            }
-            
-            // When availableRates is empty, be more lenient with conditions (use default rate as last resort)
-            const meetsConditions = zoneMatches && (
-                availableRates.length === 0 
-                    ? true // When no rates available, use default rate regardless of quantity/order value conditions
-                    : (
-                        (!defaultRate.min_items || quantity >= defaultRate.min_items) &&
-                        (!defaultRate.max_items || quantity <= defaultRate.max_items) &&
-                        (!defaultRate.min_order_value || baseSubtotal >= defaultRate.min_order_value) &&
-                        (!defaultRate.max_order_value || baseSubtotal <= defaultRate.max_order_value)
-                    )
-            );
-            
-            if (meetsConditions) {
-                rate = defaultRate;
-            }
-        }
-        
-        // Priority 6: If still no rate, use first available rate from availableRates
-        if (!rate && availableRates.length > 0) {
-            rate = availableRates[0]; // Use first available rate
-        }
-        
-        // Priority 7: If still no rate, use first rate from all SHIPPING_RATES
-        if (!rate && SHIPPING_RATES.length > 0) {
-            rate = SHIPPING_RATES[0]; // Use first rate as final fallback
-        }
-        
-        // Always use a rate if available (never return unavailable)
-        if (rate) {
-            // Calculate cost for this group: first_item_cost + (quantity - 1) * additional_item_cost
-            const groupCost = rate.first_item_cost + (quantity - 1) * rate.additional_item_cost;
-            totalShippingCost += groupCost;
-            
-            // Store the rate used (prefer category-specific rate)
-            if (!shippingRateUsed || (categoryId && rate.category_id === categoryId)) {
-                shippingRateUsed = rate;
-                shippingName = rate.name;
-                zoneName = rate.zone_name;
-            }
+            firstItemProcessed = true;
         } else {
-            allGroupsHaveRate = false;
+            lineShip = meta.qty * (parseFloat(rate.additional_item_cost) || 0);
         }
-    });
-    
-    // If no rates found for any group, try to use default rate or first available rate
-    if (!allGroupsHaveRate || (totalShippingCost === 0 && !shippingRateUsed)) {
-        // Try to use default rate
-        if (DEFAULT_SHIPPING_RATE) {
-            const defaultRate = DEFAULT_SHIPPING_RATE;
-            const quantity = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
-            const groupCost = defaultRate.first_item_cost + (quantity - 1) * defaultRate.additional_item_cost;
-            totalShippingCost = groupCost;
-            shippingRateUsed = defaultRate;
-            shippingName = defaultRate.name;
-            zoneName = defaultRate.zone_name;
-        } else if (SHIPPING_RATES.length > 0) {
-            // Use first available rate
-            const firstRate = SHIPPING_RATES[0];
-            const quantity = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
-            const groupCost = firstRate.first_item_cost + (quantity - 1) * firstRate.additional_item_cost;
-            totalShippingCost = groupCost;
-            shippingRateUsed = firstRate;
-            shippingName = firstRate.name;
-            zoneName = firstRate.zone_name;
-        } else {
-            // Only return unavailable if absolutely no rates exist
-            return {
-                cost: 0,
-                costConverted: 0,
-                rate: null,
-                name: null,
-                zoneId: zoneId,
-                zoneName: currentZoneName,
-                available: false
-            };
+
+        totalShippingCost += lineShip;
+
+        // store first used rate for display
+        if (!shippingRateUsed) {
+            shippingRateUsed = rate;
+            shippingName = rate.name;
+            zoneName = rate.zone_name || currentZoneName;
         }
     }
-    
-    // Convert to current currency if needed
+
+    // absolute fallback if no rate chosen
+    if (!shippingRateUsed && DEFAULT_SHIPPING_RATE) {
+        const r = DEFAULT_SHIPPING_RATE;
+        const qty = totalItems || 0;
+        totalShippingCost = qty > 0
+            ? (parseFloat(r.first_item_cost) || 0) + Math.max(0, qty - 1) * (parseFloat(r.additional_item_cost) || 0)
+            : 0;
+        shippingRateUsed = r;
+        shippingName = r.name;
+        zoneName = r.zone_name || currentZoneName;
+    }
+
     const costConverted = CURRENT_CURRENCY !== 'USD' && CURRENT_CURRENCY_RATE > 0
         ? totalShippingCost * CURRENT_CURRENCY_RATE
         : totalShippingCost;
-    
+
     return {
-        cost: totalShippingCost, // Cost in USD
-        costConverted: costConverted, // Cost in current currency
+        cost: totalShippingCost,
+        costConverted,
         rate: shippingRateUsed,
         name: shippingName || 'Standard Shipping',
-        zoneId: zoneId,
-        zoneName: zoneName,
+        zoneId,
+        zoneName,
         available: true
     };
 }
@@ -1443,17 +1374,22 @@ function updateShippingZone(zoneId) {
     
     // Calculate base subtotal from cart items
     const baseSubtotal = calculateBaseSubtotal(cartItemsData);
+    const qualifiesFreeShip = (parseFloat(baseSubtotal) || 0) >= 150;
     
-    // Calculate shipping cost with new zone
-    const shippingInfo = calculateShippingCost(cartItemsData, baseSubtotal, zoneId);
-    const shippingCost = shippingInfo.costConverted;
+    // Calculate shipping cost with new zone (unless freeship)
+    const shippingInfo = qualifiesFreeShip ? { available: true, zoneName: null, name: 'Free Shipping' } : calculateShippingCost(cartItemsData, baseSubtotal, zoneId);
+    const shippingCost = qualifiesFreeShip ? 0 : shippingInfo.costConverted;
     
-    // Get current subtotal
-    const subtotalText = document.getElementById('cart-subtotal').textContent;
+    // Get current subtotal (already AFTER combo discount in UI)
+    const subtotalText = document.getElementById('cart-subtotal')?.textContent || '';
     const subtotal = parseFloat(subtotalText.replace(/[^0-9.-]/g, '')) || 0;
+
+    // Promo discount (if any) should be included in total like popup
+    const promoDiscountText = document.getElementById('cart-discount')?.textContent || '';
+    const promoDiscount = parseFloat(promoDiscountText.replace(/[^0-9.-]/g, '')) || 0; // already negative in UI
     
     // Calculate total
-    const total = subtotal + shippingCost;
+    const total = subtotal + shippingCost + promoDiscount;
     
     // Update shipping cost display
     const shippingCostEl = document.getElementById('shipping-cost');
@@ -1461,7 +1397,7 @@ function updateShippingZone(zoneId) {
     const totalEl = document.getElementById('cart-total');
     
     // Check if shipping is available
-    if (shippingInfo.available === false) {
+    if (shippingInfo.available === false && !qualifiesFreeShip) {
         if (shippingCostEl) {
             shippingCostEl.textContent = 'N/A';
             shippingCostEl.classList.add('text-red-600');
@@ -1478,7 +1414,11 @@ function updateShippingZone(zoneId) {
         }
         
         if (shippingLabelEl) {
-            shippingLabelEl.textContent = `Shipping${shippingInfo.zoneName ? ` (${shippingInfo.zoneName})` : shippingInfo.name ? ` (${shippingInfo.name})` : ''}`;
+            if (qualifiesFreeShip) {
+                shippingLabelEl.textContent = 'Free Shipping';
+            } else {
+                shippingLabelEl.textContent = `Shipping${shippingInfo.zoneName ? ` (${shippingInfo.zoneName})` : shippingInfo.name ? ` (${shippingInfo.name})` : ''}`;
+            }
             shippingLabelEl.classList.remove('text-red-600');
         }
     }
@@ -1540,17 +1480,22 @@ function initializeShippingCost() {
     
     // Calculate base subtotal from cart items
     const baseSubtotal = calculateBaseSubtotal(cartItemsData);
+    const qualifiesFreeShip = (parseFloat(baseSubtotal) || 0) >= 150;
     
     // Calculate and display shipping cost
-    const shippingInfo = calculateShippingCost(cartItemsData, baseSubtotal, selectedZoneId);
-    const shippingCost = shippingInfo.costConverted;
+    const shippingInfo = qualifiesFreeShip ? { available: true, zoneName: null, name: 'Free Shipping' } : calculateShippingCost(cartItemsData, baseSubtotal, selectedZoneId);
+    const shippingCost = qualifiesFreeShip ? 0 : shippingInfo.costConverted;
     
-    // Get current subtotal
-    const subtotalText = document.getElementById('cart-subtotal').textContent;
+    // Get current subtotal (already AFTER combo discount in UI)
+    const subtotalText = document.getElementById('cart-subtotal')?.textContent || '';
     const subtotal = parseFloat(subtotalText.replace(/[^0-9.-]/g, '')) || 0;
+
+    // Promo discount (if any) should be included in total like popup
+    const promoDiscountText = document.getElementById('cart-discount')?.textContent || '';
+    const promoDiscount = parseFloat(promoDiscountText.replace(/[^0-9.-]/g, '')) || 0; // already negative in UI
     
     // Calculate total
-    const total = subtotal + shippingCost;
+    const total = subtotal + shippingCost + promoDiscount;
     
     // Update displays
     const shippingCostEl = document.getElementById('shipping-cost');
@@ -1562,7 +1507,11 @@ function initializeShippingCost() {
     }
     
     if (shippingLabelEl) {
-        shippingLabelEl.textContent = `Shipping${shippingInfo.zoneName ? ` (${shippingInfo.zoneName})` : shippingInfo.name ? ` (${shippingInfo.name})` : ''}`;
+        if (qualifiesFreeShip) {
+            shippingLabelEl.textContent = 'Free Shipping';
+        } else {
+            shippingLabelEl.textContent = `Shipping${shippingInfo.zoneName ? ` (${shippingInfo.zoneName})` : shippingInfo.name ? ` (${shippingInfo.name})` : ''}`;
+        }
     }
     
     if (totalEl) {

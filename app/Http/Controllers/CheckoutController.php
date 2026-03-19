@@ -47,6 +47,8 @@ class CheckoutController extends Controller
 
         // Calculate totals
         $subtotal = 0;
+        $bulkDiscount = 0;
+        $bulkDiscountPercent = 0;
         $products = [];
 
         foreach ($cartItems as $item) {
@@ -60,6 +62,24 @@ class CheckoutController extends Controller
                 'total' => $itemTotal
             ];
         }
+
+        // Choose ONE discount mode: volume OR promo (freeship can stack with either).
+        $discountMode = session('discount_mode', 'volume');
+        if (session()->has('applied_promo_code_id')) {
+            $discountMode = 'promo';
+            session(['discount_mode' => 'promo']);
+        }
+
+        // Combo discount (quantity tiers) - applied on TOTAL cart quantity (only in volume mode)
+        if ($discountMode === 'volume') {
+            $totalQty = (int) $cartItems->sum('quantity');
+            $bulkDiscountPercent = Cart::getComboDiscountPercentForQty($totalQty);
+            $bulkDiscount = $bulkDiscountPercent > 0 ? round((float) $subtotal * ($bulkDiscountPercent / 100), 2) : 0.0;
+        } else {
+            $bulkDiscountPercent = 0.0;
+            $bulkDiscount = 0.0;
+        }
+        $subtotalAfterBulk = max(0, $subtotal - $bulkDiscount);
 
         // Get currency and rate first for shipping conversion
         $currency = CurrencyService::getCurrencyForDomain();
@@ -130,9 +150,9 @@ class CheckoutController extends Controller
         $originalShippingCostUSD = $shippingCostUSD ?? 0;
 
         // Apply freeship logic in checkout index view as well
-        // Check freeship based on base USD amount (100 USD)
+        // Check freeship based on base USD amount (150 USD) BEFORE discount
         $baseSubtotal = $currency !== 'USD' ? $subtotal / $currencyRate : $subtotal;
-        $qualifiesForFreeShipping = $baseSubtotal >= 100;
+        $qualifiesForFreeShipping = $baseSubtotal >= Cart::FREE_SHIPPING_THRESHOLD_USD;
         $originalShippingCost = $shippingCost;
         $shippingCost = $qualifiesForFreeShipping ? 0 : $originalShippingCost;
 
@@ -191,12 +211,12 @@ class CheckoutController extends Controller
             // Currency didn't change, shippingCost is already converted
             $convertedShipping = $shippingCost;
         }
-        // Promo code discount (from session – applied on cart page), use final currency
+        // Promo code discount (from session) - only in promo mode; based on subtotal BEFORE volume discount.
         $discount = 0.0;
         $appliedPromoCode = null;
-        $baseSubtotalForPromo = $currency !== 'USD' ? $subtotal / $currencyRate : $subtotal;
         $promoId = session('applied_promo_code_id');
-        if ($promoId && $baseSubtotalForPromo > 0) {
+        $baseSubtotalForPromo = $currency !== 'USD' ? $subtotal / $currencyRate : $subtotal;
+        if ($discountMode === 'promo' && $promoId && $baseSubtotalForPromo > 0) {
             $promo = PromoCode::find($promoId);
             if ($promo && $promo->isValidForSubtotal($baseSubtotalForPromo)) {
                 $discountUsd = $promo->calculateDiscountUsd($baseSubtotalForPromo);
@@ -206,11 +226,13 @@ class CheckoutController extends Controller
                 $appliedPromoCode = $promo->code;
             } else {
                 session()->forget(['applied_promo_code_id', 'applied_promo_code']);
+                session(['discount_mode' => 'volume']);
+                $discountMode = 'volume';
             }
         }
 
-        $total = $subtotal - $discount + $shippingCost;
-        $convertedTotal = $convertedSubtotal - $discount + $convertedShipping;
+        $total = $subtotalAfterBulk - $discount + $shippingCost;
+        $convertedTotal = $subtotalAfterBulk - $discount + $convertedShipping;
 
         // Log shipping calculation for debugging
         Log::info('🚚 CHECKOUT CONTROLLER - Shipping Calculation', [
@@ -221,6 +243,8 @@ class CheckoutController extends Controller
             'currencyRate' => $currencyRate,
             'currencyChanged' => $currencyChanged,
             'subtotal' => $subtotal,
+            'bulkDiscount' => $bulkDiscount,
+            'subtotalAfterBulk' => $subtotalAfterBulk,
             'convertedSubtotal' => $convertedSubtotal,
             'baseSubtotal' => $baseSubtotal,
             'qualifiesForFreeShipping' => $qualifiesForFreeShipping,
@@ -262,6 +286,10 @@ class CheckoutController extends Controller
             'products',
             'cartItems',
             'subtotal',
+            'bulkDiscount',
+            'bulkDiscountPercent',
+            'subtotalAfterBulk',
+            'discountMode',
             'shippingCost',
             'taxAmount',
             'discount',
@@ -540,7 +568,7 @@ class CheckoutController extends Controller
             // Check freeship based on base USD amount (100 USD)
             // Convert subtotal back to USD to check freeship threshold
             $baseSubtotalUSD = $orderCurrency !== 'USD' ? ($subtotal / $currencyRate) : $subtotal;
-            $qualifiesForFreeShipping = $baseSubtotalUSD >= 100;
+            $qualifiesForFreeShipping = $baseSubtotalUSD >= Cart::FREE_SHIPPING_THRESHOLD_USD;
 
             // Convert shipping cost from USD to order currency
             $convertedShippingCost = $orderCurrency !== 'USD'

@@ -238,7 +238,7 @@
         $footerBgCustom = (is_string($footerBg) && (str_starts_with(trim($footerBg), '#') || str_starts_with(trim($footerBg), 'rgb'))) ? trim($footerBg) : null;
     @endphp
     <div class="text-white text-center py-1.5 sm:py-2 px-3 sm:px-4 text-xs sm:text-sm font-bold tracking-wide {{ $promoBannerCustom ? '' : 'bg-primary promo-banner-animate' }}" @if($promoBannerCustom) style="background-color: {{ $promoBannerCustom }};" @endif>
-        {{ \App\Support\Settings::get('site.promo_banner', config('theme.promo_banner', 'Free Shipping on Orders Over $100 • Premium Press-on Nails')) }}
+        {{ \App\Support\Settings::get('site.promo_banner', config('theme.promo_banner', 'Free Shipping on Orders Over $150 • Premium Press-on Nails')) }}
     </div>
     @if($googleTagManagerId)
         <!-- Google Tag Manager (noscript) -->
@@ -514,72 +514,65 @@
                 <p class="mt-3 text-slate-600 font-medium">Your cart is empty</p>
                 <a href="{{ route('products.index') }}" class="inline-block mt-4 px-6 py-2.5 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition-opacity">Continue Shopping</a>
             </div>
-            {{-- Complete Your Look (upsell) --}}
-            <div id="cart-drawer-upsell" class="p-4 sm:p-6 border-t border-primary/10 hidden">
-                <p class="text-sm font-bold text-slate-900 mb-4 uppercase tracking-wider">Complete Your Look</p>
-                <div class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                    <a href="{{ route('products.index') }}" class="flex-shrink-0 w-36 p-3 rounded-xl bg-primary/5 border border-primary/10 hover:border-primary/30 transition-colors">
-                        <div class="h-24 w-full rounded-lg bg-slate-200 mb-2 overflow-hidden flex items-center justify-center">
-                            <span class="material-symbols-outlined text-4xl text-slate-400">inventory_2</span>
-                        </div>
-                        <p class="text-xs font-bold truncate text-slate-900">Accessories</p>
-                        <p class="text-xs text-primary font-bold">Shop now</p>
+            {{-- Footer: Subtotal, Discount, Shipping, Total, Promo, Buttons --}}
+            <div id="cart-drawer-footer" class="p-4 sm:p-6 border-t border-primary/10 bg-white hidden">
+                <div class="flex flex-col gap-3 mb-4">
+                    <div class="flex justify-between text-slate-500">
+                        <span>Subtotal</span>
+                        <span id="cart-drawer-subtotal">$0.00</span>
+                    </div>
+                    <div id="cart-drawer-qty-discount-row" class="flex justify-between text-slate-500 hidden">
+                        <span>Discount</span>
+                        <span id="cart-drawer-qty-discount-percent" class="text-emerald-600 font-semibold">-0%</span>
+                    </div>
+                    <div id="cart-drawer-discount-row" class="flex justify-between text-slate-500 hidden">
+                        <span>Discount</span>
+                        <span id="cart-drawer-discount" class="text-emerald-600 font-semibold">-$0.00</span>
+                    </div>
+                    <div id="cart-drawer-promo-code-row" class="text-xs text-slate-600 hidden">
+                        <span>Code: <strong id="cart-drawer-promo-code" class="text-primary"></strong></span>
+                        <button type="button" id="cart-drawer-promo-remove" class="text-primary hover:underline font-semibold ml-2">Remove</button>
+                    </div>
+                    <div class="flex justify-between text-slate-500">
+                        <span>Shipping</span>
+                        <span id="cart-drawer-shipping" class="text-primary font-medium">$0.00</span>
+                    </div>
+                    <div class="flex justify-between text-xl font-bold border-t border-primary/5 pt-3 text-slate-900">
+                        <span>Total</span>
+                        <span id="cart-drawer-total">$0.00</span>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-slate-400 mb-1.5 uppercase">Choose discount</label>
+                    <div class="flex gap-2 mb-2">
+                        <button type="button" id="cart-drawer-mode-volume" class="flex-1 px-3 py-2 rounded-lg border border-primary/20 bg-white text-slate-600 text-xs font-bold hover:bg-primary/5 transition-colors">
+                            Volume
+                        </button>
+                        <button type="button" id="cart-drawer-mode-promo" class="flex-1 px-3 py-2 rounded-lg border border-primary/20 bg-white text-slate-600 text-xs font-bold hover:bg-primary/5 transition-colors">
+                            Promo code
+                        </button>
+                    </div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1.5 uppercase">Promo Code</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="cart-drawer-promo-input" placeholder="Enter code" class="flex-1 rounded-lg border border-primary/20 bg-slate-50 text-sm px-3 py-2 focus:ring-primary focus:border-primary" autocomplete="off">
+                        <button type="button" id="cart-drawer-promo-apply" class="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-primary transition-colors shrink-0">Apply</button>
+                    </div>
+                    <p id="cart-drawer-promo-message" class="mt-1 text-xs hidden"></p>
+                </div>
+                <div class="flex flex-col gap-3">
+                    <a href="{{ route('checkout.index') }}" id="cart-drawer-checkout-btn" class="w-full py-4 bg-primary text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity uppercase tracking-widest text-sm">
+                        Checkout Now
+                        <span class="material-symbols-outlined text-sm">arrow_forward</span>
                     </a>
-                    <a href="{{ route('products.index', ['new' => 1]) }}" class="flex-shrink-0 w-36 p-3 rounded-xl bg-primary/5 border border-primary/10 hover:border-primary/30 transition-colors">
-                        <div class="h-24 w-full rounded-lg bg-slate-200 mb-2 overflow-hidden flex items-center justify-center">
-                            <span class="material-symbols-outlined text-4xl text-slate-400">star</span>
-                        </div>
-                        <p class="text-xs font-bold truncate text-slate-900">New Arrivals</p>
-                        <p class="text-xs text-primary font-bold">Shop now</p>
+                    <a href="{{ route('cart.index') }}" class="w-full py-4 border-2 border-primary text-primary font-bold rounded-xl hover:bg-primary/5 transition-colors uppercase tracking-widest text-sm text-center">
+                        View My Cart
                     </a>
                 </div>
-            </div>
-        </div>
-        {{-- Footer: Subtotal, Discount, Shipping, Total, Promo, Buttons --}}
-        <div id="cart-drawer-footer" class="p-4 sm:p-6 border-t border-primary/10 bg-white hidden">
-            <div class="flex flex-col gap-3 mb-4">
-                <div class="flex justify-between text-slate-500">
-                    <span>Subtotal</span>
-                    <span id="cart-drawer-subtotal">$0.00</span>
+                <div class="mt-4 flex justify-center gap-4 grayscale opacity-60">
+                    <span class="material-symbols-outlined text-2xl">credit_card</span>
+                    <span class="material-symbols-outlined text-2xl">account_balance</span>
+                    <span class="material-symbols-outlined text-2xl">payments</span>
                 </div>
-                <div id="cart-drawer-discount-row" class="flex justify-between text-slate-500 hidden">
-                    <span>Discount</span>
-                    <span id="cart-drawer-discount" class="text-emerald-600 font-semibold">-$0.00</span>
-                </div>
-                <div id="cart-drawer-promo-code-row" class="text-xs text-slate-600 hidden">
-                    <span>Code: <strong id="cart-drawer-promo-code" class="text-primary"></strong></span>
-                    <button type="button" id="cart-drawer-promo-remove" class="text-primary hover:underline font-semibold ml-2">Remove</button>
-                </div>
-                <div class="flex justify-between text-slate-500">
-                    <span>Shipping</span>
-                    <span id="cart-drawer-shipping" class="text-primary font-medium">$0.00</span>
-                </div>
-                <div class="flex justify-between text-xl font-bold border-t border-primary/5 pt-3 text-slate-900">
-                    <span>Total</span>
-                    <span id="cart-drawer-total">$0.00</span>
-                </div>
-            </div>
-            <div class="mb-4">
-                <label class="block text-xs font-bold text-slate-400 mb-1.5 uppercase">Promo Code</label>
-                <div class="flex gap-2">
-                    <input type="text" id="cart-drawer-promo-input" placeholder="Enter code" class="flex-1 rounded-lg border border-primary/20 bg-slate-50 text-sm px-3 py-2 focus:ring-primary focus:border-primary" autocomplete="off">
-                    <button type="button" id="cart-drawer-promo-apply" class="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-primary transition-colors shrink-0">Apply</button>
-                </div>
-                <p id="cart-drawer-promo-message" class="mt-1 text-xs hidden"></p>
-            </div>
-            <div class="flex flex-col gap-3">
-                <a href="{{ route('checkout.index') }}" id="cart-drawer-checkout-btn" class="w-full py-4 bg-primary text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity uppercase tracking-widest text-sm">
-                    Checkout Now
-                    <span class="material-symbols-outlined text-sm">arrow_forward</span>
-                </a>
-                <a href="{{ route('cart.index') }}" class="w-full py-4 border-2 border-primary text-primary font-bold rounded-xl hover:bg-primary/5 transition-colors uppercase tracking-widest text-sm text-center">
-                    View My Cart
-                </a>
-            </div>
-            <div class="mt-4 flex justify-center gap-4 grayscale opacity-60">
-                <span class="material-symbols-outlined text-2xl">credit_card</span>
-                <span class="material-symbols-outlined text-2xl">account_balance</span>
-                <span class="material-symbols-outlined text-2xl">payments</span>
             </div>
         </div>
     </div>
@@ -652,10 +645,11 @@
 
     <script>
     (function() {
-        var CART_DRAWER_FREE_SHIP_THRESHOLD = 100;
+        var CART_DRAWER_FREE_SHIP_THRESHOLD = 150;
         var CART_GET_URL = '{{ url("/api/cart/get") }}';
         var CART_APPLY_PROMO_URL = '{{ route("api.cart.apply-promo") }}';
         var CART_REMOVE_PROMO_URL = '{{ route("api.cart.remove-promo") }}';
+        var CART_DISCOUNT_MODE_URL = '{{ route("api.cart.discount-mode") }}';
         var CART_INDEX_URL = '{{ route("cart.index") }}';
         var CHECKOUT_URL = '{{ route("checkout.index") }}';
         var CURRENCY_SYMBOL = window.SITE_CURRENCY_SYMBOL || '$';
@@ -667,7 +661,6 @@
         function getEmptyEl() { return document.getElementById('cart-drawer-empty'); }
         function getFooterEl() { return document.getElementById('cart-drawer-footer'); }
         function getProgressWrap() { return document.getElementById('cart-drawer-progress-wrap'); }
-        function getUpsellEl() { return document.getElementById('cart-drawer-upsell'); }
 
         function formatPrice(amount) {
             var n = parseFloat(amount);
@@ -700,7 +693,12 @@
             var items = (data && data.cart_items) ? data.cart_items : [];
             var totalItems = (data && data.total_items) ? data.total_items : 0;
             var summary = (data && data.summary) ? data.summary : {};
-            var subtotal = summary.converted_subtotal != null ? summary.converted_subtotal : (data.total_price || 0);
+            var discountMode = summary.discount_mode || 'volume';
+            var subtotal = summary.converted_subtotal_after_bulk_discount != null
+                ? summary.converted_subtotal_after_bulk_discount
+                : (summary.converted_subtotal != null ? summary.converted_subtotal : (data.total_price || 0));
+            // Free shipping progress should be based on subtotal BEFORE discount
+            var progressSubtotal = summary.converted_subtotal != null ? summary.converted_subtotal : subtotal;
             var shipping = summary.converted_shipping != null ? summary.converted_shipping : (summary.shipping || 0);
             var total = summary.converted_total != null ? summary.converted_total : (subtotal + shipping);
 
@@ -710,7 +708,6 @@
             var emptyEl = getEmptyEl();
             var footerEl = getFooterEl();
             var progressWrap = getProgressWrap();
-            var upsellEl = getUpsellEl();
 
             if (!itemsEl) return;
 
@@ -719,13 +716,11 @@
                 if (emptyEl) emptyEl.classList.remove('hidden');
                 if (footerEl) footerEl.classList.add('hidden');
                 if (progressWrap) progressWrap.classList.add('hidden');
-                if (upsellEl) upsellEl.classList.add('hidden');
                 return;
             }
 
             if (emptyEl) emptyEl.classList.add('hidden');
             if (footerEl) footerEl.classList.remove('hidden');
-            if (upsellEl) upsellEl.classList.remove('hidden');
 
             var html = '';
             items.forEach(function(item) {
@@ -761,10 +756,52 @@
 
             var discount = summary.converted_discount != null ? parseFloat(summary.converted_discount) : 0;
             var appliedPromo = summary.applied_promo_code || '';
+            var qtyDiscountPercent = summary.converted_bulk_discount_percent != null
+                ? parseFloat(summary.converted_bulk_discount_percent)
+                : (summary.bulk_discount_percent != null ? parseFloat(summary.bulk_discount_percent) : 0);
+
+            // Disable promo input/apply when volume mode is selected
+            var promoInput = document.getElementById('cart-drawer-promo-input');
+            var promoApplyBtn = document.getElementById('cart-drawer-promo-apply');
+            if (promoInput && promoApplyBtn) {
+                var isPromoMode = discountMode === 'promo';
+                promoInput.disabled = !isPromoMode;
+                promoApplyBtn.disabled = !isPromoMode;
+                if (!isPromoMode) {
+                    promoInput.classList.add('opacity-60', 'cursor-not-allowed');
+                    promoApplyBtn.classList.add('opacity-60', 'cursor-not-allowed');
+                } else {
+                    promoInput.classList.remove('opacity-60', 'cursor-not-allowed');
+                    promoApplyBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+                }
+            }
+
+            // Reflect mode in UI
+            var modeVolBtn = document.getElementById('cart-drawer-mode-volume');
+            var modePromoBtn = document.getElementById('cart-drawer-mode-promo');
+            if (modeVolBtn && modePromoBtn) {
+                var base = 'flex-1 px-3 py-2 rounded-lg border text-xs font-bold hover:bg-primary/5 transition-colors';
+                if (discountMode === 'promo') {
+                    modePromoBtn.className = base + ' bg-primary text-white border-primary';
+                    modeVolBtn.className = base + ' bg-white text-slate-600 border-primary/20';
+                } else {
+                    modeVolBtn.className = base + ' bg-primary text-white border-primary';
+                    modePromoBtn.className = base + ' bg-white text-slate-600 border-primary/20';
+                }
+            }
 
             document.getElementById('cart-drawer-subtotal').textContent = formatPrice(subtotal);
+            var qtyDiscountRow = document.getElementById('cart-drawer-qty-discount-row');
             var discountRow = document.getElementById('cart-drawer-discount-row');
             var promoCodeRow = document.getElementById('cart-drawer-promo-code-row');
+            if (qtyDiscountRow) {
+                if (qtyDiscountPercent > 0) {
+                    qtyDiscountRow.classList.remove('hidden');
+                    document.getElementById('cart-drawer-qty-discount-percent').textContent = '-' + qtyDiscountPercent.toFixed(0) + '%';
+                } else {
+                    qtyDiscountRow.classList.add('hidden');
+                }
+            }
             if (discountRow) {
                 if (discount > 0) {
                     discountRow.classList.remove('hidden');
@@ -785,14 +822,14 @@
             document.getElementById('cart-drawer-shipping').textContent = formatPrice(shipping);
             document.getElementById('cart-drawer-total').textContent = formatPrice(total);
 
-            var needMore = Math.max(0, CART_DRAWER_FREE_SHIP_THRESHOLD - subtotal);
-            var pct = CART_DRAWER_FREE_SHIP_THRESHOLD > 0 ? Math.min(100, (subtotal / CART_DRAWER_FREE_SHIP_THRESHOLD) * 100) : 100;
+            var needMore = Math.max(0, CART_DRAWER_FREE_SHIP_THRESHOLD - progressSubtotal);
+            var pct = CART_DRAWER_FREE_SHIP_THRESHOLD > 0 ? Math.min(100, (progressSubtotal / CART_DRAWER_FREE_SHIP_THRESHOLD) * 100) : 100;
             var progressBar = document.getElementById('cart-drawer-progress-bar');
             var progressRatio = document.getElementById('cart-drawer-progress-ratio');
             var progressNote = document.getElementById('cart-drawer-progress-note');
             if (progressWrap) {
                 progressWrap.classList.remove('hidden');
-                if (progressRatio) progressRatio.textContent = formatPrice(Math.min(subtotal, CART_DRAWER_FREE_SHIP_THRESHOLD)) + ' / ' + formatPrice(CART_DRAWER_FREE_SHIP_THRESHOLD);
+                if (progressRatio) progressRatio.textContent = formatPrice(Math.min(progressSubtotal, CART_DRAWER_FREE_SHIP_THRESHOLD)) + ' / ' + formatPrice(CART_DRAWER_FREE_SHIP_THRESHOLD);
                 if (progressBar) progressBar.style.width = pct + '%';
                 if (progressNote) {
                     if (needMore > 0) {
@@ -943,6 +980,28 @@
                     .catch(function() { promoRemoveBtn.disabled = false; });
                 });
             }
+
+            // Discount mode toggle (volume vs promo)
+            var modeVolBtn = document.getElementById('cart-drawer-mode-volume');
+            var modePromoBtn = document.getElementById('cart-drawer-mode-promo');
+            function setMode(mode) {
+                fetch(CART_DISCOUNT_MODE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                    body: JSON.stringify({ mode: mode })
+                })
+                .then(function(r){ return r.json(); })
+                .then(function(res){
+                    if (res && res.success) {
+                        fetch(CART_GET_URL, { method: 'GET', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
+                            .then(function(rr){ return rr.json(); })
+                            .then(function(cartData){ if (cartData.success) renderCartDrawer(cartData); });
+                    }
+                })
+                .catch(function(){});
+            }
+            if (modeVolBtn) modeVolBtn.addEventListener('click', function(){ setMode('volume'); });
+            if (modePromoBtn) modePromoBtn.addEventListener('click', function(){ setMode('promo'); });
         });
     })();
     </script>

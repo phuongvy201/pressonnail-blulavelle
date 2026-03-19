@@ -274,9 +274,15 @@ const TIKTOK_CHECKOUT_VALUE = {{ $checkoutTotal }};
 const CHECKOUT_CURRENCY = '{{ $currency ?? "USD" }}';
 const CHECKOUT_CURRENCY_RATE = {{ $currencyRate ?? 1.0 }};
 const CHECKOUT_BASE_TOTAL = {{ $total }};
+// Subtotal should be BEFORE combo discount (display + client-side calculations)
 const CHECKOUT_CONVERTED_SUBTOTAL = {{ $convertedSubtotal ?? $subtotal }};
 const CHECKOUT_CONVERTED_TOTAL = {{ $convertedTotal ?? $total }};
 const CHECKOUT_DISCOUNT = {{ $discount ?? 0 }};
+const CHECKOUT_BULK_DISCOUNT = {{ $bulkDiscount ?? 0 }};
+const CHECKOUT_SUBTOTAL_AFTER_BULK = {{ $subtotalAfterBulk ?? ($convertedSubtotal ?? $subtotal) }};
+const CHECKOUT_BULK_DISCOUNT_PERCENT = {{ $bulkDiscountPercent ?? 0 }};
+const CHECKOUT_DISCOUNT_MODE = @json($discountMode ?? 'volume');
+const CHECKOUT_DISCOUNT_MODE_URL = @json(route('api.cart.discount-mode'));
 const CHECKOUT_CURRENCY_SYMBOL = @json(\App\Services\CurrencyService::getCurrencySymbol($currency ?? 'USD'));
 const SHIPPING_RATES = @json($shippingRatesData);
 const SHIPPING_RATES_BY_ZONE = @json($shippingRatesByZone);
@@ -286,6 +292,7 @@ const COUNTRY_TO_ZONE_MAP = @json($countryToZoneMap);
 const DEFAULT_SHIPPING_RATE = @json($defaultShippingRateData);
 const DEFAULT_SHIPPING_ZONE_ID = @json($defaultShippingRate ? $defaultShippingRate->shipping_zone_id : null);
 const CHECKOUT_BASE_SUBTOTAL = {{ $baseSubtotal }};
+const CHECKOUT_FREE_SHIP_THRESHOLD_USD = 150;
 
 document.addEventListener('DOMContentLoaded', function() {
     // Event tracking được xử lý bởi GTM thông qua dataLayer
@@ -1248,12 +1255,26 @@ function buildCheckoutCustomizationInputs(customizations) {
 
                     <!-- Order Totals -->
                     <div class="border-t border-primary/10 pt-4 space-y-3">
+                        <div class="flex gap-2">
+                            <button type="button" id="checkout-mode-volume" class="flex-1 px-3 py-2 rounded-lg border text-xs font-bold transition-colors {{ ($discountMode ?? 'volume') === 'volume' ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-primary/20 hover:bg-primary/5' }}">
+                                Volume
+                            </button>
+                            <button type="button" id="checkout-mode-promo" class="flex-1 px-3 py-2 rounded-lg border text-xs font-bold transition-colors {{ ($discountMode ?? 'volume') === 'promo' ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-primary/20 hover:bg-primary/5' }}">
+                                Promo code
+                            </button>
+                        </div>
                         <div class="flex justify-between text-slate-600">
                             <span>Subtotal</span>
                             <span class="subtotal-display" id="checkout-subtotal">
                                 {{ \App\Services\CurrencyService::formatPrice($subtotal, $currency ?? 'USD') }}
                             </span>
                         </div>
+                        @if(($bulkDiscount ?? 0) > 0)
+                        <div class="flex justify-between text-emerald-600" id="checkout-bulk-row">
+                            <span>Discount{{ ($bulkDiscountPercent ?? 0) > 0 ? ' (-' . number_format((float)$bulkDiscountPercent, 0) . '%)' : '' }}</span>
+                            <span class="bulk-discount-display" id="checkout-bulk-discount">-{{ \App\Services\CurrencyService::formatPrice($bulkDiscount ?? 0, $currency ?? 'USD') }}</span>
+                        </div>
+                        @endif
                         @if(!empty($appliedPromoCode) && ($discount ?? 0) > 0)
                         <div class="flex justify-between text-emerald-600" id="checkout-promo-row">
                             <span>Promo ({{ $appliedPromoCode }})</span>
@@ -1811,6 +1832,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Calculate total amount for PayPal
                         // Subtotal is already in current currency
                         const subtotal = parseFloat(CHECKOUT_CONVERTED_SUBTOTAL || CHECKOUT_BASE_SUBTOTAL || '{{ $subtotal }}');
+                        const comboDiscount = parseFloat(CHECKOUT_BULK_DISCOUNT || 0);
                         const discount = parseFloat(CHECKOUT_DISCOUNT || 0);
                         const tax = parseFloat('{{ $taxAmount }}');
                         const tip = parseFloat(document.getElementById('tip_amount')?.value || 0);
@@ -1821,7 +1843,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         // Convert tip from USD to current currency
                         const convertedTip = convertFromUSD(tip, currentCurrency);
-                        const total = subtotal - discount + tax + convertedTip + shippingCost;
+                        const total = subtotal - comboDiscount - discount + tax + convertedTip + shippingCost;
                         
                         // Build description from product SKUs
                         const skuList = [];
@@ -2300,6 +2322,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Calculate total amount
             // Subtotal is already in current currency
             const subtotal = parseFloat(CHECKOUT_CONVERTED_SUBTOTAL || CHECKOUT_BASE_SUBTOTAL || '{{ $subtotal }}');
+            const comboDiscount = parseFloat(CHECKOUT_BULK_DISCOUNT || 0);
             const discount = parseFloat(CHECKOUT_DISCOUNT || 0);
             const tax = parseFloat('{{ $taxAmount }}');
             const tip = parseFloat(document.getElementById('tip_amount')?.value || 0);
@@ -2310,7 +2333,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Convert tip from USD to current currency
             const convertedTip = convertFromUSD(tip, currentCurrency);
-            const total = subtotal - discount + tax + convertedTip + shippingCost;
+            const total = subtotal - comboDiscount - discount + tax + convertedTip + shippingCost;
             
             // Create Payment Intent on server
             console.log('📝 Creating Payment Intent...');
@@ -2449,12 +2472,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Validate minimum order amount for Stripe
         if (selectedPaymentMethod === 'stripe') {
             const subtotal = parseFloat(CHECKOUT_CONVERTED_SUBTOTAL || '{{ $subtotal }}');
+            const comboDiscount = parseFloat(CHECKOUT_BULK_DISCOUNT || 0);
             const discount = parseFloat(CHECKOUT_DISCOUNT || 0);
             const shippingCostEl = document.getElementById('checkout-shipping-cost');
             const shippingCost = shippingCostEl ? parseFloat(shippingCostEl.textContent.replace(/[^0-9.-]/g, '')) || 0 : 0;
             const tip = parseFloat(document.getElementById('tip_amount')?.value || 0);
             const convertedTip = typeof convertFromUSD === 'function' ? convertFromUSD(tip, CHECKOUT_CURRENCY) : tip;
-            const total = subtotal - discount + shippingCost + convertedTip;
+            const total = subtotal - comboDiscount - discount + shippingCost + convertedTip;
             
             if (total < 0.5) {
                 showToast('error', 'Minimum Order Amount', 
@@ -2689,6 +2713,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateTotal() {
         // Subtotal is already in current currency, no need to convert
         const subtotal = parseFloat(CHECKOUT_CONVERTED_SUBTOTAL || CHECKOUT_BASE_SUBTOTAL || '{{ $subtotal }}');
+        const comboDiscount = parseFloat(CHECKOUT_BULK_DISCOUNT || 0);
         const discount = parseFloat(CHECKOUT_DISCOUNT || 0);
         const tip = selectedTipAmount;
         
@@ -2705,7 +2730,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('💰 updateTotal - Shipping cost from display:', shippingCost, 'text:', shippingText);
         }
         
-        const total = subtotal - discount + convertedTip + shippingCost;
+        const total = subtotal - comboDiscount - discount + convertedTip + shippingCost;
         
         console.log('💰 updateTotal calculation:', {
             subtotal: subtotal,
@@ -3372,6 +3397,27 @@ document.addEventListener('DOMContentLoaded', function() {
         const shippingLabelEl = document.getElementById('checkout-shipping-label');
         const shippingCostInput = document.getElementById('shipping_cost');
         const shippingZoneIdInput = document.getElementById('shipping_zone_id');
+
+        // Free shipping: based on subtotal BEFORE discount (USD)
+        const qualifiesFreeShip = (Number(CHECKOUT_BASE_SUBTOTAL) || 0) >= (Number(CHECKOUT_FREE_SHIP_THRESHOLD_USD) || 150);
+        if (qualifiesFreeShip) {
+            if (shippingCostEl) {
+                shippingCostEl.textContent = formatPrice(0, CHECKOUT_CURRENCY);
+                shippingCostEl.classList.remove('text-red-600');
+            }
+            if (shippingLabelEl) {
+                shippingLabelEl.textContent = 'Free Shipping';
+                shippingLabelEl.classList.remove('text-red-600');
+            }
+            if (shippingCostInput) {
+                shippingCostInput.value = '0';
+            }
+            if (shippingZoneIdInput) {
+                shippingZoneIdInput.value = zoneId || '';
+            }
+            updateTotal();
+            return;
+        }
         
         // Check if shipping is available
         if (shippingInfo.available === false) {
@@ -3415,6 +3461,29 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update total - this will recalculate the total with new shipping cost
         updateTotal();
     }
+
+    // Discount mode toggle (volume vs promo) - server-side recalculates and page reloads.
+    (function () {
+        var btnVol = document.getElementById('checkout-mode-volume');
+        var btnPromo = document.getElementById('checkout-mode-promo');
+        if (!btnVol || !btnPromo) return;
+
+        function setMode(mode) {
+            var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+            fetch(CHECKOUT_DISCOUNT_MODE_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                body: JSON.stringify({ mode: mode })
+            }).then(function () {
+                window.location.reload();
+            }).catch(function () {
+                window.location.reload();
+            });
+        }
+
+        btnVol.addEventListener('click', function () { setMode('volume'); });
+        btnPromo.addEventListener('click', function () { setMode('promo'); });
+    })();
     
     /**
      * Get zone ID from country code
