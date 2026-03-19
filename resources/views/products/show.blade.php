@@ -88,6 +88,11 @@
             ? $galleryItems[0]['url']
             : ($galleryItems[0]['poster'] ?? null))
         : null;
+    // Fallback poster cho video (đặc biệt trên EC2 khi FFmpeg/poster không tạo được)
+    $fallbackPosterUrl = collect($galleryItems)->firstWhere('type', 'image')['url'] ?? null;
+    $fallbackPosterUrl = $fallbackPosterUrl ?: (is_string($primaryImageUrl) && !preg_match('/\.(mp4|webm|ogg|mov|avi)$/i', $primaryImageUrl) ? $primaryImageUrl : null);
+    // Inline SVG placeholder (không phụ thuộc file trong public/)
+    $fallbackPosterUrl = $fallbackPosterUrl ?: "data:image/svg+xml;charset=UTF-8," . rawurlencode('<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"800\" height=\"800\" viewBox=\"0 0 800 800\"><rect width=\"800\" height=\"800\" fill=\"#f1f5f9\"/><path d=\"M250 520l90-110 80 100 70-80 130 160H250z\" fill=\"#cbd5e1\"/><circle cx=\"320\" cy=\"310\" r=\"44\" fill=\"#cbd5e1\"/><text x=\"50%\" y=\"92%\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"28\" fill=\"#94a3b8\">No preview</text></svg>');
     $firstMediaIsVideo = isset($galleryItems[0]) && $galleryItems[0]['type'] === 'video';
     $reviewsCount = $product->getTotalReviews();
     $averageRating = $product->getAverageRating();
@@ -169,7 +174,7 @@
                                     @php
                                         $mainPoster = $galleryItems[0]['poster'] ?? null;
                                         if ($mainPoster && preg_match('/\.(mp4|webm|ogg|mov|avi)$/i', $mainPoster)) { $mainPoster = null; }
-                                        $mainPoster = $mainPoster ?: $primaryImageUrl;
+                                        $mainPoster = $mainPoster ?: $fallbackPosterUrl;
                                     @endphp
                                     <video id="product-main-video" class="w-full h-full object-cover" controls playsinline poster="{{ $mainPoster }}" src="{{ $galleryItems[0]['url'] }}"></video>
                                     <img alt="{{ $product->name }}" class="w-full h-full object-cover hidden" id="product-main-image" src="">
@@ -217,7 +222,7 @@
                                             @php
                                                 $thumbPoster = $item['poster'] ?? null;
                                                 if ($thumbPoster && preg_match('/\.(mp4|webm|ogg|mov|avi)$/i', $thumbPoster)) { $thumbPoster = null; }
-                                                $thumbPoster = $thumbPoster ?: ($primaryImageUrl ?: null);
+                                                $thumbPoster = $thumbPoster ?: $fallbackPosterUrl;
                                             @endphp
                                             <img class="w-full h-full object-cover" src="{{ $thumbPoster }}" alt="">
                                             <span class="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">

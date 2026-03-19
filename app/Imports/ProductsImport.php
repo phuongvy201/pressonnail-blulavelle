@@ -5,6 +5,7 @@ namespace App\Imports;
 use App\Models\Product;
 use App\Models\ProductTemplate;
 use App\Models\ProductVariant;
+use App\Services\VideoThumbnailService;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -181,11 +182,11 @@ class ProductsImport implements
                     usleep($delay);
 
                     // Retry video download up to 5 times with exponential backoff
-                    $s3Url = null;
+                    $videoMediaItem = null;
                     $maxVideoRetries = 5;
                     for ($retry = 1; $retry <= $maxVideoRetries; $retry++) {
-                        $s3Url = $this->downloadAndUploadToS3($videoUrl, 'products', $retry, $maxVideoRetries);
-                        if ($s3Url) {
+                        $videoMediaItem = $this->downloadUploadVideoAndPosterToS3($videoUrl, $retry, $maxVideoRetries);
+                        if ($videoMediaItem) {
                             break; // Success, exit retry loop
                         }
 
@@ -199,9 +200,9 @@ class ProductsImport implements
                         }
                     }
 
-                    if ($s3Url) {
-                        $mediaUrls[] = $s3Url;
-                        Log::info("Successfully uploaded video to S3 for product: {$productName}");
+                    if ($videoMediaItem) {
+                        $mediaUrls[] = $videoMediaItem;
+                        Log::info("Successfully uploaded video + poster to S3 for product: {$productName}");
                     } else {
                         // Log warning but don't fail the entire import
                         Log::warning("Failed to upload video to S3 after {$maxVideoRetries} attempts for product: {$productName}, URL: " . Str::limit($videoUrl, 100));
@@ -1067,6 +1068,182 @@ class ProductsImport implements
                 'trace' => $e->getTraceAsString()
             ]);
             return null;
+        }
+    }
+
+    /**
+     * Download video, upload lên S3 và tạo poster (thumbnail) bằng FFmpeg rồi upload poster lên S3.
+     * Trả về item dạng ['type'=>'video','url'=>...,'poster'=>...]
+     */
+    protected function downloadUploadVideoAndPosterToS3(string $url, int $retryAttempt = 1, int $maxRetries = 3): ?array
+    {
+        $tempFile = null;
+        $posterRelative = null;
+
+        try {
+            // Download (reuse headers + retry style giống downloadAndUploadToS3)
+            $internalMaxRetries = 3;
+            $response = null;
+            $lastError = null;
+
+            Log::info("Downloading video (attempt {$retryAttempt}/{$maxRetries}): {$url}");
+
+            for ($attempt = 1; $attempt <= $internalMaxRetries; $attempt++) {
+                try {
+                    $response = Http::timeout(120)
+                        ->withHeaders([
+                            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                            'Accept' => 'video/*,*/*;q=0.8',
+                            'Accept-Language' => 'en-US,en;q=0.9',
+                            'Referer' => parse_url($url, PHP_URL_SCHEME) . '://' . parse_url($url, PHP_URL_HOST),
+                            'Connection' => 'keep-alive',
+                            'Accept-Encoding' => 'gzip, deflate, br',
+                            'Cache-Control' => 'no-cache',
+                        ])
+                        ->withOptions([
+                            'allow_redirects' => true,
+                            'max_redirects' => 5,
+                            'verify' => false,
+                            'curl' => [
+                                CURLOPT_TCP_KEEPALIVE => 1,
+                                CURLOPT_TCP_KEEPIDLE => 30,
+                                CURLOPT_TCP_KEEPINTVL => 10,
+                                CURLOPT_FRESH_CONNECT => true,
+                                CURLOPT_FORBID_REUSE => true,
+                                CURLOPT_CONNECTTIMEOUT => 30,
+                                CURLOPT_TIMEOUT => 120,
+                                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                                CURLOPT_SSL_VERIFYPEER => false,
+                                CURLOPT_SSL_VERIFYHOST => false,
+                            ],
+                        ])
+                        ->get($url);
+
+                    if ($response->successful()) {
+                        break;
+                    }
+
+                    $lastError = "HTTP {$response->status()}";
+                    if ($attempt < $internalMaxRetries) {
+                        $baseDelay = pow(2, $attempt) * 1000000;
+                        $jitter = rand(500000, 1000000);
+                        usleep($baseDelay + $jitter);
+                    }
+                } catch (\Illuminate\Http\Client\ConnectionException $e) {
+                    $lastError = $e->getMessage();
+                    if ($attempt < $internalMaxRetries) {
+                        $baseDelay = pow(2, $attempt) * 1000000;
+                        $jitter = rand(500000, 1000000);
+                        usleep($baseDelay + $jitter);
+                    }
+                }
+            }
+
+            if (!$response || !$response->successful()) {
+                Log::warning("Failed to download video after {$internalMaxRetries} internal attempts: {$url}, Last error: {$lastError}");
+                return null;
+            }
+
+            $fileContent = $response->body();
+            if (empty($fileContent)) {
+                Log::warning("Empty video content from URL: {$url}");
+                return null;
+            }
+
+            $contentType = $response->header('Content-Type');
+            $fileSize = strlen($fileContent);
+            if ($fileSize > (50 * 1024 * 1024)) {
+                Log::warning("Video too large from URL: {$url}, Size: " . round($fileSize / 1024 / 1024, 2) . "MB");
+                return null;
+            }
+            if ($fileSize < 1024) {
+                Log::warning("Video too small (likely invalid) from URL: {$url}, Size: {$fileSize} bytes");
+                return null;
+            }
+
+            // Determine extension
+            $extension = pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION);
+            $extension = $extension ? strtolower(explode('?', $extension)[0]) : '';
+            if (!$extension && $contentType) {
+                $extension = $this->getExtensionFromContentType(strtolower(explode(';', $contentType)[0]));
+            }
+            if (!$extension) {
+                $extension = 'mp4';
+            }
+
+            // Write to temp file
+            $tempFile = tempnam(sys_get_temp_dir(), 'import_video_');
+            if ($tempFile === false) {
+                Log::error("Failed to create temp video file for: {$url}");
+                return null;
+            }
+
+            // Ensure extension matches file name for some ffmpeg builds
+            $tempFileWithExt = $tempFile . '.' . $extension;
+            if (@rename($tempFile, $tempFileWithExt)) {
+                $tempFile = $tempFileWithExt;
+            }
+
+            $bytesWritten = file_put_contents($tempFile, $fileContent);
+            if ($bytesWritten === false || $bytesWritten === 0) {
+                Log::error("Failed to write video to temp file for: {$url}");
+                return null;
+            }
+
+            // Upload video to S3
+            $fileName = time() . '_' . Str::random(10) . '.' . $extension;
+            $disk = Storage::disk('s3');
+            $fileObject = new File($tempFile);
+            $filePath = $disk->putFileAs('products', $fileObject, $fileName);
+            if (!$filePath) {
+                Log::error("Failed to upload video to S3 for: {$url}");
+                return null;
+            }
+            $videoS3Url = 'https://s3.us-east-1.amazonaws.com/image.bluprinter/' . $filePath;
+
+            // Generate poster locally using FFmpeg
+            $thumbnailService = app(VideoThumbnailService::class);
+            $posterRelative = $thumbnailService->generatePoster($tempFile, 5);
+            $posterS3Url = null;
+
+            if ($posterRelative) {
+                $posterAbs = Storage::disk('local')->path($posterRelative);
+                if (is_file($posterAbs)) {
+                    $posterFileName = pathinfo($fileName, PATHINFO_FILENAME) . '_poster.jpg';
+                    $posterKey = 'products/posters/' . $posterFileName;
+                    $contents = @file_get_contents($posterAbs);
+                    if ($contents !== false && $contents !== '') {
+                        $disk->put($posterKey, $contents);
+                        $posterS3Url = 'https://s3.us-east-1.amazonaws.com/image.bluprinter/' . $posterKey;
+                    }
+                }
+            }
+
+            // Always return video item; poster can be null (frontend fallback)
+            return [
+                'type' => 'video',
+                'url' => $videoS3Url,
+                'poster' => $posterS3Url,
+            ];
+        } catch (\Throwable $e) {
+            Log::error("downloadUploadVideoAndPosterToS3 failed: {$url}", [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return null;
+        } finally {
+            // Cleanup temp video
+            if ($tempFile && file_exists($tempFile)) {
+                @unlink($tempFile);
+            }
+            // Cleanup temp poster (disk local)
+            if ($posterRelative) {
+                try {
+                    app(VideoThumbnailService::class)->deleteTempPoster($posterRelative);
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+            }
         }
     }
 

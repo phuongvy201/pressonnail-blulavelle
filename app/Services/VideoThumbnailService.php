@@ -5,8 +5,8 @@ namespace App\Services;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use ProtoneMedia\LaravelFFMpeg\Support\FFMpeg;
-use ProtoneMedia\LaravelFFMpeg\FFMpeg\ImageFormat;
+use FFMpeg\Coordinate\TimeCode;
+use FFMpeg\FFMpeg;
 
 /**
  * Tạo ảnh preview (poster) từ video bằng FFmpeg.
@@ -42,34 +42,29 @@ class VideoThumbnailService
         $relativePath = self::TEMP_POSTER_DIR . '/' . uniqid('poster_', true) . '.jpg';
 
         try {
-            if ($video instanceof UploadedFile) {
-                FFMpeg::open($video)
-                    ->getFrameFromSeconds($atSeconds)
-                    ->export()
-                    ->inFormat(new ImageFormat)
-                    ->toDisk('local')
-                    ->save($relativePath);
-            } else {
-                // Path tuyệt đối: mở từ filesystem tạm (file đã download về)
-                $path = $video;
-                if (!is_file($path)) {
-                    Log::warning('VideoThumbnailService: file not found', ['path' => $path]);
-                    return null;
-                }
-                $dir = dirname($path);
-                $name = basename($path);
-                $disk = Storage::build([
-                    'driver' => 'local',
-                    'root' => $dir,
-                ]);
-                FFMpeg::fromFilesystem($disk)
-                    ->open($name)
-                    ->getFrameFromSeconds($atSeconds)
-                    ->export()
-                    ->inFormat(new ImageFormat)
-                    ->toDisk('local')
-                    ->save($relativePath);
+            $ffmpeg = FFMpeg::create([
+                'ffmpeg.binaries' => config('services.ffmpeg.binaries', 'ffmpeg'),
+                'ffprobe.binaries' => config('services.ffmpeg.ffprobe', 'ffprobe'),
+                'timeout' => (int) config('services.ffmpeg.timeout', 3600),
+                'ffmpeg.threads' => (int) config('services.ffmpeg.threads', 12),
+            ]);
+
+            $videoPath = $video instanceof UploadedFile ? $video->getRealPath() : $video;
+            if (!$videoPath || !is_file($videoPath)) {
+                Log::warning('VideoThumbnailService: file not found', ['path' => $videoPath]);
+                return null;
             }
+
+            $absoluteOutputPath = Storage::disk('local')->path($relativePath);
+            $outputDir = dirname($absoluteOutputPath);
+            if (!is_dir($outputDir)) {
+                @mkdir($outputDir, 0775, true);
+            }
+
+            $ffmpeg
+                ->open($videoPath)
+                ->frame(TimeCode::fromSeconds((int) max(0, floor($atSeconds))))
+                ->save($absoluteOutputPath);
 
             return $relativePath;
         } catch (\Throwable $e) {
