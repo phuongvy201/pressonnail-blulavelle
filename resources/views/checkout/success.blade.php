@@ -4,7 +4,7 @@
 
 @section('content')
 @php
-    $primary = '#f0427c';
+    $primary = '#059669';
     $orderDate = \Carbon\Carbon::parse($order->created_at);
     $estimatedStart = $orderDate->copy()->addDays(3);
     $estimatedEnd = $orderDate->copy()->addDays(5);
@@ -69,11 +69,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-<div class="min-h-screen bg-[#f8f6f6] text-slate-900" style="font-family: 'Plus Jakarta Sans', sans-serif;">
+<div class="min-h-screen bg-emerald-50/80 text-slate-900" style="font-family: 'Plus Jakarta Sans', sans-serif;">
     <main class="flex-1 px-4 md:px-10 lg:px-16 py-8 max-w-[1200px] mx-auto w-full">
         {{-- Success header (giống code.html) --}}
         <div class="flex flex-col items-center text-center mb-10">
-            <div class="w-20 h-20 rounded-full flex items-center justify-center mb-6" style="background: rgba(240,66,124,.1);">
+            <div class="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-emerald-100">
                 <svg class="w-12 h-12" style="color: {{ $primary }};" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="mt-8 pt-6 border-t border-slate-100 space-y-2">
                         <div class="flex justify-between text-slate-500"><span>Subtotal</span><span>{{ \App\Services\CurrencyService::formatPrice($convertedSubtotal ?? $order->subtotal, $currency ?? 'USD') }}</span></div>
                         @if($bulkDiscount > 0)
-                        <div class="flex justify-between text-emerald-600"><span>Bulk discount</span><span>-{{ \App\Services\CurrencyService::formatPrice($bulkDiscount, $currency ?? 'USD') }}</span></div>
+                        <div class="flex justify-between text-emerald-600 font-medium"><span>Volume discount</span><span>-{{ \App\Services\CurrencyService::formatPrice($bulkDiscount, $currency ?? 'USD') }}</span></div>
                         @endif
                         @if($order->promo_code && (float)($order->discount_amount ?? 0) > 0)
                         <div class="flex justify-between text-emerald-600"><span>Promo ({{ $order->promo_code }})</span><span>-{{ \App\Services\CurrencyService::formatPrice($order->discount_amount, $currency ?? 'USD') }}</span></div>
@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
                         What Happens Next?
                     </h3>
-                    <div class="relative space-y-8 pl-8 before:content-[''] before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-[#f0427c]/30">
+                    <div class="relative space-y-8 pl-8 before:content-[''] before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-emerald-400/40">
                         <div class="relative">
                             <div class="absolute -left-8 top-0.5 w-6 h-6 rounded-full flex items-center justify-center border-4 border-white shadow-sm" style="background: {{ $primary }};">
                                 <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
@@ -224,7 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
 
-                <div class="p-6 rounded-xl border shadow-sm" style="background: rgba(240,66,124,.05); border-color: rgba(240,66,124,.2);">
+                <div class="p-6 rounded-xl border border-emerald-200 shadow-sm bg-emerald-50/80">
                     <h3 class="text-lg font-bold mb-4 flex items-center gap-2" style="color: {{ $primary }};">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                         Estimated Delivery

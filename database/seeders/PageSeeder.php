@@ -819,55 +819,6 @@ class PageSeeder extends Seeder
             ],
             [
                 'user_id' => $admin->id,
-                'title' => 'Intellectual Property Policy',
-                'slug' => 'intellectual-property-policy',
-                'content' => '<div class="max-w-5xl mx-auto py-10 px-4">
-                    <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-                        <div class="bg-gradient-to-r from-[#0297FE] via-[#f89192] to-[#d6386a] text-white px-8 py-12 text-center">
-                            <h1 class="text-5xl font-bold mb-3">Intellectual Property Policy</h1>
-                            <p class="text-pink-100 text-lg">Copyright, trademarks, and reporting infringement</p>
-                            <p class="text-pink-200 text-sm mt-2">Last updated: ' . now()->format('F d, Y') . '</p>
-                        </div>
-
-                        <div class="px-8 py-10 space-y-6">
-                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-l-4 border-[#0297FE] rounded-r-lg p-6">
-                                <p class="text-gray-800 leading-relaxed text-lg">
-                                    Trang này được giữ để tương thích với các link cũ. Nội dung “Intellectual Property Policy” hiện được trình bày tại trang:
-                                    <a href="/our-intellectual-property-policy" class="text-[#0297FE] font-semibold underline hover:text-[#d6386a]">Our Intellectual Property Policy</a>.
-                                </p>
-                            </div>
-
-                            <div class="bg-white border border-pink-200 rounded-xl p-6">
-                                <h2 class="text-2xl font-bold text-gray-900 mb-3">Report an infringement</h2>
-                                <p class="text-gray-700 leading-relaxed mb-4">
-                                    Nếu bạn cho rằng quyền sở hữu trí tuệ của bạn bị xâm phạm, vui lòng gửi thông tin chi tiết (URL liên quan, bằng chứng sở hữu, thông tin liên hệ)
-                                    về địa chỉ email pháp lý:
-                                    <a href="mailto:legal@blulavelle.com" class="text-[#0297FE] font-semibold underline hover:text-[#d6386a]">legal@blulavelle.com</a>.
-                                </p>
-                                <div class="flex flex-col sm:flex-row gap-3">
-                                    <a href="/our-intellectual-property-policy" class="inline-flex items-center justify-center px-6 py-3 bg-[#0297FE] hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-md transition duration-200">
-                                        View full policy
-                                    </a>
-                                    <a href="/dmca" class="inline-flex items-center justify-center px-6 py-3 bg-white border-2 border-[#0297FE] text-[#0297FE] hover:bg-pink-50 font-semibold rounded-lg transition duration-200">
-                                        DMCA & IP policy
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>',
-                'excerpt' => 'Intellectual property policy landing page (legacy URL) linking to the full IP policy and DMCA procedures.',
-                'status' => 'published',
-                'published_at' => now(),
-                'template' => 'default',
-                'show_in_menu' => false,
-                'menu_title' => 'IP Policy',
-                'sort_order' => 999,
-                'meta_title' => 'Intellectual Property Policy - Blu Lavelle',
-                'meta_description' => 'Learn about Blu Lavelle intellectual property policy and how to report infringement. Full policy and DMCA procedures available.',
-            ],
-            [
-                'user_id' => $admin->id,
                 'title' => 'Returns & Exchanges Policy',
                 'slug' => 'returns-exchanges-policy',
                 'content' => '<div class="max-w-6xl mx-auto py-8 px-4">
@@ -1892,7 +1843,7 @@ class PageSeeder extends Seeder
                                                 </div>
                                             </div>
                                             <h3 class="text-xl font-bold text-gray-800 mb-2">Phone</h3>
-                                            <a href="tel:0767383676" class="text-[#0297FE] hover:text-pink-800 font-semibold text-lg">0767 383 676</a>
+                                            <a href="tel:0767383676" class="text-[#0297FE] hover:text-pink-800 font-semibold text-lg">+12053899573</a>
                                         </div>
 
                                         <div class="bg-white rounded-lg p-6 shadow-lg text-center border-2 border-pink-200 hover:border-purple-400 transition duration-200">
@@ -2004,7 +1955,7 @@ class PageSeeder extends Seeder
                                                 <h3 class="text-xl font-bold text-gray-800">United Kingdom</h3>
                                             </div>
                                             <div class="bg-pink-50 rounded-lg p-4">
-                                                <p class="font-bold text-pink-900 mb-2">Blu Lavelle LTD</p>
+                                                <p class="font-bold text-pink-900 mb-2">Bluprinter LTD</p>
                                                 <p class="text-gray-700 text-sm mb-2">
                                                     <strong>Company Number:</strong> 16342615
                                                 </p>
@@ -2023,7 +1974,7 @@ class PageSeeder extends Seeder
                                                 <h3 class="text-xl font-bold text-gray-800">United States</h3>
                                             </div>
                                             <div class="bg-red-50 rounded-lg p-4">
-                                                <p class="font-bold text-red-900 mb-2">Blu Lavelle LLC</p>
+                                                <p class="font-bold text-red-900 mb-2">Bluprinter LLC</p>
                                                 <p class="text-gray-700 text-sm">
                                                     5900 BALCONES DR STE 100<br>
                                                     AUSTIN, TX 78731<br>
@@ -2186,7 +2137,7 @@ class PageSeeder extends Seeder
                                             </div>
                                         </div>
                                         <div class="bg-pink-50 rounded-lg p-4">
-                                            <p class="font-bold text-pink-900 mb-2">Blu Lavelle LTD</p>
+                                            <p class="font-bold text-pink-900 mb-2">Bluprinter LTD</p>
                                             <p class="text-gray-700 mb-2">
                                                 <strong>Company Number:</strong> 16342615
                                             </p>
@@ -2252,7 +2203,7 @@ class PageSeeder extends Seeder
                                             </div>
                                         </div>
                                         <div class="bg-pink-50 rounded-lg p-4">
-                                            <p class="font-bold text-pink-900 mb-2">Blu Lavelle LLC</p>
+                                            <p class="font-bold text-pink-900 mb-2">Bluprinter LLC</p>
                                             <p class="text-gray-700">
                                                 5900 BALCONES DR STE 100<br>
                                                 AUSTIN, TX 78731<br>

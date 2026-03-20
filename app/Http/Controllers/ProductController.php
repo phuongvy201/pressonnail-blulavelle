@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
-use App\Models\Category;
+use App\Models\Collection;
 use App\Models\Shop;
 use App\Models\ShippingRate;
 use App\Models\ShippingZone;
@@ -26,8 +26,13 @@ class ProductController extends Controller
         $query = Product::with(['shop', 'template.category', 'variants'])
             ->availableForDisplay();
 
-        // Filter by category
-        if ($request->filled('category')) {
+        // Filter by collection (supports new query param: collection_id)
+        if ($request->filled('collection_id')) {
+            $query->whereHas('collections', function ($q) use ($request) {
+                $q->where('collections.id', $request->collection_id);
+            });
+        } elseif ($request->filled('category')) {
+            // Backward compatibility (older links may still use category)
             $query->whereHas('template', function ($q) use ($request) {
                 $q->where('category_id', $request->category);
             });
@@ -94,7 +99,10 @@ class ProductController extends Controller
         $products = $query->paginate(20)->withQueryString();
 
         // Get filter data
-        $categories = Category::whereNull('parent_id')->with('children')->get();
+        $collections = Collection::active()
+            ->where('admin_approved', true)
+            ->orderBy('name', 'asc')
+            ->get();
         $shops = Shop::where('shop_status', 'active')->get();
 
         // Get breadcrumb data
@@ -103,8 +111,14 @@ class ProductController extends Controller
             ['name' => 'Products', 'url' => route('products.index')]
         ];
 
-        if ($request->filled('category')) {
-            $category = Category::find($request->category);
+        if ($request->filled('collection_id')) {
+            $collection = Collection::find($request->collection_id);
+            if ($collection) {
+                $breadcrumbs[] = ['name' => $collection->name, 'url' => route('products.index', ['collection_id' => $collection->id])];
+            }
+        } elseif ($request->filled('category')) {
+            // Backward compatibility
+            $category = \App\Models\Category::find($request->category);
             if ($category) {
                 $breadcrumbs[] = ['name' => $category->name, 'url' => route('products.index', ['category' => $category->id])];
             }
@@ -122,7 +136,7 @@ class ProductController extends Controller
             }
         }
 
-        return view('products.index', compact('products', 'categories', 'shops', 'breadcrumbs', 'recentlyViewedProducts'));
+        return view('products.index', compact('products', 'collections', 'shops', 'breadcrumbs', 'recentlyViewedProducts'));
     }
 
     /**

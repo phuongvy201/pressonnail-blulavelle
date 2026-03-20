@@ -65,20 +65,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     <form method="GET" action="{{ route('products.index') }}" id="filter-form" class="p-5 lg:p-0 overflow-y-auto lg:overflow-visible">
                 @if(request('search'))<input type="hidden" name="search" value="{{ request('search') }}">@endif
-                {{-- Category --}}
+                {{-- Collection --}}
                 <div>
-                    <h3 class="text-xs font-extrabold uppercase tracking-widest text-slate-400 mb-3">Category</h3>
+                    <h3 class="text-xs font-extrabold uppercase tracking-widest text-slate-400 mb-3">Collection</h3>
                     <div class="space-y-2">
                         <label class="flex items-center gap-3 cursor-pointer rounded-xl px-3 py-2 hover:bg-slate-50 transition-colors">
-                            <input type="radio" name="category" value="" class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"
-                                {{ !request()->filled('category') ? 'checked' : '' }}>
+                            <input type="radio" name="collection_id" value="" class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"
+                                {{ !request()->filled('collection_id') ? 'checked' : '' }}>
                             <span class="text-sm font-semibold text-slate-800">All</span>
                         </label>
-                        @foreach($categories as $cat)
+                        @foreach($collections as $collection)
                         <label class="flex items-center gap-3 cursor-pointer rounded-xl px-3 py-2 hover:bg-slate-50 transition-colors">
-                            <input type="radio" name="category" value="{{ $cat->id }}" class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"
-                                {{ request('category') == $cat->id ? 'checked' : '' }}>
-                            <span class="text-sm font-semibold text-slate-800">{{ $cat->name }}</span>
+                            <input type="radio" name="collection_id" value="{{ $collection->id }}" class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"
+                                {{ request('collection_id') == $collection->id ? 'checked' : '' }}>
+                            <span class="text-sm font-semibold text-slate-800">{{ $collection->name }}</span>
                         </label>
                         @endforeach
                     </div>
@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <input type="hidden" name="sort" id="sort-input" value="{{ request('sort', 'newest') }}">
                 <div class="mt-7 lg:mt-6 grid grid-cols-1 gap-2 lg:block">
                     <button type="submit" class="w-full px-4 py-3 bg-primary text-white rounded-xl font-extrabold hover:opacity-90 transition-opacity">Apply Filters</button>
-                @if(request()->hasAny(['category', 'shop', 'sort']))
+                @if(request()->hasAny(['collection_id', 'category', 'shop', 'sort']))
                     <a href="{{ route('products.index') }}" class="block text-center text-sm font-bold text-slate-600 hover:text-primary transition-colors py-2">Clear All</a>
                 @endif
                 </div>
@@ -234,13 +234,13 @@ document.addEventListener('DOMContentLoaded', function() {
             form.submit();
         });
     }
-    // Single category: use first checked only (GET can have one category)
-    var categoryChecks = form && form.querySelectorAll('input[name="category"]');
-    if (categoryChecks && categoryChecks.length) {
-        categoryChecks.forEach(function(cb) {
+    // Single collection: use first checked only (GET can have one collection)
+    var collectionChecks = form && form.querySelectorAll('input[name="collection_id"]');
+    if (collectionChecks && collectionChecks.length) {
+        collectionChecks.forEach(function(cb) {
             cb.addEventListener('change', function() {
                 if (this.checked) {
-                    categoryChecks.forEach(function(c) { if (c !== cb) c.checked = false; });
+                    collectionChecks.forEach(function(c) { if (c !== cb) c.checked = false; });
                 }
                 form.submit();
             });

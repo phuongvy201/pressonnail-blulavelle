@@ -13,9 +13,9 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: "#f0427c",
-                        "background-light": "#f8f6f6",
-                        "background-dark": "#221610",
+                        primary: "#059669",
+                        "background-light": "#ecfdf5",
+                        "background-dark": "#064e3b",
                     },
                     fontFamily: {
                         display: ["Public Sans", "system-ui", "sans-serif"],
@@ -281,9 +281,9 @@
                         </span>
                     </div>
                     @if($bulkDiscount > 0)
-                    <div class="flex justify-between text-sm text-emerald-600">
-                        <span>{{ $locale === 'vi' ? 'Giảm theo số lượng' : 'Bulk discount' }}</span>
-                        <span class="font-medium">-{{ \App\Services\CurrencyService::formatPrice($bulkDiscount, $currency ?? 'USD') }}</span>
+                    <div class="flex justify-between text-sm text-emerald-600 font-medium">
+                        <span>{{ $locale === 'vi' ? 'Giảm theo số lượng' : 'Volume discount' }}</span>
+                        <span>-{{ \App\Services\CurrencyService::formatPrice($bulkDiscount, $currency ?? 'USD') }}</span>
                     </div>
                     @endif
                     @if($order->promo_code && (float)($order->discount_amount ?? 0) > 0)

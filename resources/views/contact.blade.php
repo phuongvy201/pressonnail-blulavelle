@@ -6,10 +6,10 @@
     <div class="max-w-7xl mx-auto py-16 px-4 sm:py-24 sm:px-6 lg:px-8">
         <div class="text-center">
             <h1 class="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
-                Liên hệ với chúng tôi
+                Contact Us
             </h1>
             <p class="mt-6 max-w-3xl mx-auto text-xl text-blue-100">
-                Chúng tôi luôn sẵn sàng lắng nghe và hỗ trợ bạn
+                We’re here to help. Get in touch with us through any of the channels below. We’re available worldwide to support your needs.
             </p>
         </div>
     </div>
@@ -22,10 +22,10 @@
             <!-- Contact Form -->
             <div class="lg:col-span-1">
                 <h2 class="text-2xl font-extrabold text-gray-900 sm:text-3xl">
-                    Gửi tin nhắn cho chúng tôi
+                    Send us a message
                 </h2>
                 <p class="mt-3 text-lg text-gray-500">
-                    Điền thông tin bên dưới và chúng tôi sẽ liên hệ lại với bạn trong thời gian sớm nhất.
+                    Have a question, need assistance, or just want to say hello? We’re here to help. Fill out the form and we’ll get back to you as soon as possible.
                 </p>
 
                 @if(session('success'))
@@ -47,7 +47,7 @@
                     @csrf
                     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <div>
-                            <label for="name" class="block text-sm font-medium text-gray-700">Họ và tên *</label>
+                            <label for="name" class="block text-sm font-medium text-gray-700">Full name *</label>
                             <input type="text" name="name" id="name" required value="{{ old('name') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('name') border-red-300 @enderror">
                             @error('name')
                                 <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
@@ -63,21 +63,21 @@
                     </div>
                     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <div>
-                            <label for="phone" class="block text-sm font-medium text-gray-700">Số điện thoại *</label>
+                            <label for="phone" class="block text-sm font-medium text-gray-700">Phone *</label>
                             <input type="tel" name="phone" id="phone" required value="{{ old('phone') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('phone') border-red-300 @enderror">
                             @error('phone')
                                 <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
                         <div>
-                            <label for="subject" class="block text-sm font-medium text-gray-700">Chủ đề *</label>
+                            <label for="subject" class="block text-sm font-medium text-gray-700">Subject *</label>
                             <select name="subject" id="subject" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('subject') border-red-300 @enderror">
-                                <option value="">Chọn chủ đề</option>
-                                <option value="tư vấn dịch vụ" {{ old('subject') == 'tư vấn dịch vụ' ? 'selected' : '' }}>Tư vấn dịch vụ</option>
-                                <option value="báo giá" {{ old('subject') == 'báo giá' ? 'selected' : '' }}>Báo giá</option>
-                                <option value="khiếu nại" {{ old('subject') == 'khiếu nại' ? 'selected' : '' }}>Khiếu nại</option>
-                                <option value="hợp tác" {{ old('subject') == 'hợp tác' ? 'selected' : '' }}>Hợp tác</option>
-                                <option value="khác" {{ old('subject') == 'khác' ? 'selected' : '' }}>Khác</option>
+                                <option value="">Choose a subject</option>
+                                <option value="tư vấn dịch vụ" {{ old('subject') == 'tư vấn dịch vụ' ? 'selected' : '' }}>Service inquiry</option>
+                                <option value="báo giá" {{ old('subject') == 'báo giá' ? 'selected' : '' }}>Pricing / Quote</option>
+                                <option value="khiếu nại" {{ old('subject') == 'khiếu nại' ? 'selected' : '' }}>Complaint</option>
+                                <option value="hợp tác" {{ old('subject') == 'hợp tác' ? 'selected' : '' }}>Partnership</option>
+                                <option value="khác" {{ old('subject') == 'khác' ? 'selected' : '' }}>Other</option>
                             </select>
                             @error('subject')
                                 <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
@@ -85,15 +85,15 @@
                         </div>
                     </div>
                     <div>
-                        <label for="message" class="block text-sm font-medium text-gray-700">Tin nhắn *</label>
-                        <textarea name="message" id="message" rows="4" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('message') border-red-300 @enderror" placeholder="Mô tả chi tiết về yêu cầu của bạn...">{{ old('message') }}</textarea>
+                        <label for="message" class="block text-sm font-medium text-gray-700">Message *</label>
+                        <textarea name="message" id="message" rows="4" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('message') border-red-300 @enderror" placeholder="Describe your request in detail...">{{ old('message') }}</textarea>
                         @error('message')
                             <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
                     <div>
                         <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
-                            Gửi tin nhắn
+                            Send message
                         </button>
                     </div>
                 </form>
@@ -102,10 +102,10 @@
             <!-- Contact Information -->
             <div class="mt-12 lg:mt-0 lg:col-span-1">
                 <h2 class="text-2xl font-extrabold text-gray-900 sm:text-3xl">
-                    Thông tin liên hệ
+                    Contact Information
                 </h2>
                 <p class="mt-3 text-lg text-gray-500">
-                    Chúng tôi luôn sẵn sàng hỗ trợ bạn qua nhiều kênh liên lạc khác nhau.
+                    We’re always ready to help you through multiple contact channels.
                 </p>
 
                 <div class="mt-8 space-y-6">
@@ -119,9 +119,13 @@
                             </div>
                         </div>
                         <div class="ml-4">
-                            <h3 class="text-lg font-medium text-gray-900">Điện thoại</h3>
-                            <p class="mt-1 text-base text-gray-500">0123 456 789</p>
-                            <p class="mt-1 text-base text-gray-500">0987 654 321</p>
+                            <h3 class="text-lg font-medium text-gray-900">Phone</h3>
+                            <p class="mt-1 text-base text-gray-500">
+                                <a href="tel:+18563782798" class="text-blue-700 hover:underline">+1 856-378-2798</a>
+                            </p>
+                            <p class="mt-1 text-base text-gray-500">
+                                WhatsApp / iMessage: <a href="tel:+18563782798" class="text-blue-700 hover:underline">+1 856-378-2798</a>
+                            </p>
                         </div>
                     </div>
 
@@ -136,8 +140,9 @@
                         </div>
                         <div class="ml-4">
                             <h3 class="text-lg font-medium text-gray-900">Email</h3>
-                            <p class="mt-1 text-base text-gray-500">info@bluprinter.com</p>
-                            <p class="mt-1 text-base text-gray-500">support@bluprinter.com</p>
+                            <p class="mt-1 text-base text-gray-500">
+                                <a href="mailto:admin@blulavelle.com" class="text-blue-700 hover:underline">admin@blulavelle.com</a>
+                            </p>
                         </div>
                     </div>
 
@@ -152,11 +157,13 @@
                             </div>
                         </div>
                         <div class="ml-4">
-                            <h3 class="text-lg font-medium text-gray-900">Địa chỉ</h3>
+                            <h3 class="text-lg font-medium text-gray-900">Address</h3>
                             <p class="mt-1 text-base text-gray-500">
-                                123 Đường ABC, Phường XYZ<br>
-                                Quận 1, TP. Hồ Chí Minh<br>
-                                Việt Nam
+                                Our Global Offices:<br>
+                                United Kingdom (Bluprinter LTD): 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ<br>
+                                Vietnam (HM FULFILL COMPANY LIMITED): 63/9Đ Ap Chanh 1, Tan Xuan, Hoc Mon, Ho Chi Minh City, 700000<br>
+                                Hong Kong (BLUE STAR TRADING LIMITED): RM C, 6/F, WORLD TRUST TOWER, 50 STANLEY STREET, CENTRAL<br>
+                                United States (Bluprinter LLC): 5900 BALCONES DR STE 100, AUSTIN, TX 78731
                             </p>
                         </div>
                     </div>
@@ -171,27 +178,12 @@
                             </div>
                         </div>
                         <div class="ml-4">
-                            <h3 class="text-lg font-medium text-gray-900">Giờ làm việc</h3>
-                            <p class="mt-1 text-base text-gray-500">Thứ 2 - Thứ 6: 8:00 - 18:00</p>
-                            <p class="mt-1 text-base text-gray-500">Thứ 7: 8:00 - 12:00</p>
-                            <p class="mt-1 text-base text-gray-500">Chủ nhật: Nghỉ</p>
+                            <h3 class="text-lg font-medium text-gray-900">Availability</h3>
+                            <p class="mt-1 text-base text-gray-500">We’re available worldwide to support your needs.</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Map Placeholder -->
-                <div class="mt-8">
-                    <div class="bg-gray-200 rounded-lg h-64 flex items-center justify-center">
-                        <div class="text-center">
-                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                            </svg>
-                            <p class="mt-2 text-sm text-gray-500">Bản đồ Google Maps</p>
-                            <p class="text-xs text-gray-400">Tích hợp bản đồ thực tế tại đây</p>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -202,10 +194,10 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center">
             <h2 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-                Câu hỏi thường gặp
+                Frequently Asked Questions
             </h2>
             <p class="mt-4 max-w-2xl mx-auto text-xl text-gray-500">
-                Những câu hỏi phổ biến về dịch vụ của chúng tôi
+                Common questions about contacting our support team.
             </p>
         </div>
 
@@ -213,31 +205,28 @@
             <div class="space-y-8">
                 <!-- FAQ 1 -->
                 <div class="bg-white rounded-lg shadow-md p-6">
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">Thời gian giao hàng là bao lâu?</h3>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">How can I contact you?</h3>
                     <p class="text-gray-600">
-                        Thời gian giao hàng tùy thuộc vào loại sản phẩm và số lượng. Thông thường, 
-                        các đơn hàng trong thành phố sẽ được giao trong vòng 24-48 giờ. 
-                        Đơn hàng số lượng lớn có thể mất 3-5 ngày làm việc.
+                        Reach out to us anytime using the contact options below:
+                        Email <a href="mailto:admin@blulavelle.com" class="text-blue-700 hover:underline">admin@blulavelle.com</a>
+                        and Phone/WhatsApp/iMessage <a href="tel:+18563782798" class="text-blue-700 hover:underline">+1 856-378-2798</a>.
                     </p>
                 </div>
 
                 <!-- FAQ 2 -->
                 <div class="bg-white rounded-lg shadow-md p-6">
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">Có hỗ trợ thiết kế không?</h3>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Where are your offices located?</h3>
                     <p class="text-gray-600">
-                        Có, chúng tôi có đội ngũ thiết kế chuyên nghiệp sẵn sàng hỗ trợ bạn tạo ra 
-                        những sản phẩm in ấn đẹp mắt và phù hợp với nhu cầu. 
-                        Chi phí thiết kế sẽ được báo giá riêng tùy theo độ phức tạp.
+                        We have global offices in the United Kingdom, Vietnam, Hong Kong, and the United States.
                     </p>
                 </div>
 
                 <!-- FAQ 3 -->
                 <div class="bg-white rounded-lg shadow-md p-6">
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">Có giảm giá cho đơn hàng số lượng lớn không?</h3>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">What help can I get?</h3>
                     <p class="text-gray-600">
-                        Có, chúng tôi có chính sách giảm giá đặc biệt cho các đơn hàng số lượng lớn. 
-                        Mức giảm giá sẽ tùy thuộc vào số lượng và loại sản phẩm. 
-                        Liên hệ trực tiếp để được báo giá chi tiết.
+                        Have a question, need assistance, or just want to say hello? We’re here to help.
+                        Fill out the form above and share what you need, and we’ll respond as soon as possible.
                     </p>
                 </div>
             </div>

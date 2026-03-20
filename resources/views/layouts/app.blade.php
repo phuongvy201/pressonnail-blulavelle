@@ -365,8 +365,8 @@
                             <ul class="text-xs text-slate-400 space-y-1.5 leading-relaxed">
                                 <li><strong class="text-slate-300">HM FULFILL COMPANY LIMITED</strong> — 63/9D, Ap Chanh 1, Tan Xuan, Hoc Mon, Ho Chi Minh City 700000, Vietnam</li>
                                 <li><strong class="text-slate-300">BLUE STAR TRADING LIMITED</strong> — RM C, G/F, WORLD TRUST TOWER, 50 STANLEY STREET, CENTRAL HONG KONG</li>
-                                <li><strong class="text-slate-300">Blulavelle LTD (UK)</strong> — Company Number 16342015, 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom</li>
-                                <li><strong class="text-slate-300">Blulavelle LLC (US)</strong> — 5900 BALCONES DR STE 100, AUSTIN, TX 78731, USA</li>
+                                <li><strong class="text-slate-300">Bluprinter LTD (UK)</strong> — Company Number 16342015, 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom</li>
+                                <li><strong class="text-slate-300">Bluprinter LLC (US)</strong> — 5900 BALCONES DR STE 100, AUSTIN, TX 78731, USA</li>
                             </ul>
                         </div>
                         <div>
@@ -398,9 +398,25 @@
                                 Bulk Order
                             </a>
                         </div>
-                        <div class="flex gap-3 items-center">
-                            <span class="inline-flex items-center px-3 py-1.5 rounded bg-emerald-600/20 text-emerald-400 text-xs font-bold">DMCA</span>
-                            <span class="inline-flex items-center px-3 py-1.5 rounded bg-white/10 text-slate-300 text-xs font-bold"><a href="https://www.dmca.com/Protection/Status.aspx?id=7afce096-ea62-47a0-8c3b-a3fbd663bf4d&refurl=https%3a%2f%2fbluprinter.com%2f&rlo=true">Trustpilot</span></a>
+                        <div class="mt-4 flex flex-col items-center gap-3">
+                            <div class="flex items-center gap-3">
+                                <a href="https://www.dmca.com/Protection/Status.aspx?ID=1318f147-a17c-4b0f-bdf2-18feb5c80ce7" title="DMCA.com Protection Status" class="dmca-badge">
+                                    <img src="https://images.dmca.com/Badges/dmca_protected_sml_120l.png?ID=1318f147-a17c-4b0f-bdf2-18feb5c80ce7" alt="DMCA.com Protection Status" />
+                                </a>
+                            </div>
+                            <script src="https://images.dmca.com/Badges/DMCABadgeHelper.min.js"></script>
+
+                            {{-- Trustpilot under DMCA (aligned left) --}}
+                            <div class="w-full flex justify-center">
+                                <!-- TrustBox script -->
+                                <script type="text/javascript" src="//widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js" async></script>
+                                <!-- End TrustBox script -->
+                                <!-- TrustBox widget - Review Collector -->
+                                <div class="trustpilot-widget" data-locale="en-US" data-template-id="56278e9abfbbba0bdcd568bc" data-businessunit-id="69bbca5b55f930c84ceb4c7c" data-style-height="52px" data-style-width="240px" data-token="2205e5b0-423d-4add-81c9-dcf2ebc35317">
+                                    <a href="https://www.trustpilot.com/review/blulavelle.com" target="_blank" rel="noopener">Trustpilot</a>
+                                </div>
+                                <!-- End TrustBox widget -->
+                            </div>
                         </div>
                     </div>
 
@@ -428,7 +444,7 @@
                                 <li><a href="{{ route('page.show', 'refund-policy') }}" class="text-slate-400 hover:text-primary transition-colors">Refund Policy</a></li>
                                 <li><a href="{{ route('page.show', 'returns-exchanges-policy') }}" class="text-slate-400 hover:text-primary transition-colors">Returns & Exchanges Policy</a></li>
                                 <li><a href="{{ route('page.show', 'dmca') }}" class="text-slate-400 hover:text-primary transition-colors">DMCA</a></li>
-                                <li><a href="{{ route('page.show', 'intellectual-property-policy') }}" class="text-slate-400 hover:text-primary transition-colors">Our Intellectual Property Policy</a></li>
+                                <li><a href="our-intellectual-property-policy" class="text-slate-400 hover:text-primary transition-colors">Our Intellectual Property Policy</a></li>
                             </ul>
                         </div>
                         <div>
@@ -476,6 +492,7 @@
                         <span class="material-symbols-outlined text-2xl text-slate-400">payments</span>
                     </div>
                 </div>
+
             </div>
         </footer>
     </div>
