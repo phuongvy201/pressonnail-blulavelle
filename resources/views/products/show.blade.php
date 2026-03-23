@@ -172,6 +172,19 @@
     if (!$gtagPrimaryCategory && $product->collections && $product->collections->isNotEmpty()) {
         $gtagPrimaryCategory = $product->collections->first()->name;
     }
+
+    // Combo (volume) discount rules for preview on this page.
+    // Real discount application happens in cart based on TOTAL quantity in cart.
+    $bulkDiscountRules = [];
+    $bulkDiscountRaw = \App\Support\Settings::get('pricing.bulk_discounts');
+    if (is_string($bulkDiscountRaw) && $bulkDiscountRaw !== '') {
+        $decoded = json_decode($bulkDiscountRaw, true);
+        $bulkDiscountRules = is_array($decoded) ? $decoded : [];
+    } elseif (is_array($bulkDiscountRaw)) {
+        $bulkDiscountRules = $bulkDiscountRaw;
+    }
+
+    $volumeDiscountPreviewPercent = \App\Models\Cart::getComboDiscountPercentForQty(1);
 @endphp
 
 <div class="min-h-screen bg-[#f8f6f6] font-display">
@@ -328,6 +341,37 @@
                         @endif
                         <span id="product-price-note" class="text-sm font-bold text-[#0297FE] hidden"></span>
                     </div>
+                    @php
+                        $tiersUi = collect($bulkDiscountRules)->filter(function($r) {
+                            return !empty($r['min_qty']) && !empty($r['percent']);
+                        })->sortBy('min_qty')->values()->take(3)->all();
+                    @endphp
+                    @if(!empty($tiersUi))
+                        <div class="mt-2 bg-[#0297FE]/10 border border-[#0297FE]/20 rounded-2xl p-3">
+                            <div class="text-center text-xs font-extrabold text-[#0297FE]">
+                                Buy More, Save More
+                            </div>
+                            <div class="mt-2 grid grid-cols-3 gap-1.5">
+                                @foreach($tiersUi as $tier)
+                                    @php
+                                        $minQty = (int) ($tier['min_qty'] ?? 0);
+                                        $percent = (float) ($tier['percent'] ?? 0);
+                                    @endphp
+                                    @if($minQty > 0 && $percent > 0)
+                                        <div class="bg-white/80 border border-[#0297FE]/20 rounded-xl px-2 py-2 flex flex-col items-center justify-center">
+                                            <div class="text-[10px] font-extrabold tracking-widest text-[#0297FE] uppercase">
+                                                BUY {{ $minQty }}
+                                            </div>
+                                            <div class="text-sm font-extrabold text-slate-900">
+                                                {{ number_format($percent, 0) }}% OFF
+                                            </div>
+                                        </div>
+                                    @endif
+                                @endforeach
+                            </div>
+                            <p id="volume-discount-dynamic-message" class="mt-2 text-center text-xs font-semibold text-[#0297FE] hidden"></p>
+                        </div>
+                    @endif
                 </div>
 
                 {{-- Toast thông báo (thay alert) --}}
@@ -419,11 +463,11 @@
                     <div class="space-y-2">
                         <label class="text-xs font-semibold text-slate-700 uppercase tracking-wide" for="product-quantity">Quantity</label>
                         <div class="flex items-center gap-2 w-fit">
-                            <button type="button" id="qty-minus" class="w-10 h-10 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Giảm số lượng">
+                            <button type="button" id="qty-minus" class="w-10 h-10 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Decrease quantity">
                                 <span class="material-symbols-outlined text-xl">remove</span>
                             </button>
                             <input type="number" id="product-quantity" name="quantity" min="1" max="99" value="1" class="w-16 text-center py-2 text-sm font-medium border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#0297FE]/30 focus:border-[#0297FE]">
-                            <button type="button" id="qty-plus" class="w-10 h-10 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Tăng số lượng">
+                            <button type="button" id="qty-plus" class="w-10 h-10 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Increase quantity">
                                 <span class="material-symbols-outlined text-xl">add</span>
                             </button>
                         </div>
@@ -782,6 +826,74 @@ document.addEventListener('DOMContentLoaded', function() {
     var PRODUCT_VARIANTS = @json($variantsForJs);
     var CURRENCY_CODE = @json($currentCurrency);
     var CURRENCY_SYMBOL = @json($currencySymbol);
+    var BULK_DISCOUNT_RULES = @json($bulkDiscountRules);
+
+    function getComboDiscountPercentPreview(qty) {
+        var q = parseInt(qty, 10) || 0;
+        if (q < 1 || !Array.isArray(BULK_DISCOUNT_RULES) || BULK_DISCOUNT_RULES.length === 0) return 0;
+        var best = 0;
+        BULK_DISCOUNT_RULES.forEach(function (rule) {
+            var minQty = parseInt(rule.min_qty, 10) || 0;
+            var percent = parseFloat(rule.percent) || 0;
+            if (minQty > 0 && q >= minQty) best = Math.max(best, percent);
+        });
+        best = Math.max(0, Math.min(95, best));
+        return best;
+    }
+
+    function getNextDiscountTier(qty) {
+        if (!Array.isArray(BULK_DISCOUNT_RULES) || BULK_DISCOUNT_RULES.length === 0) return null;
+
+        var q = parseInt(qty, 10) || 0;
+        if (q < 1) return null;
+
+        // Sort ascending by min_qty
+        var sorted = BULK_DISCOUNT_RULES.slice().sort(function(a, b) {
+            return (parseInt(a.min_qty, 10) || 0) - (parseInt(b.min_qty, 10) || 0);
+        });
+
+        for (var i = 0; i < sorted.length; i++) {
+            var minQty = parseInt(sorted[i].min_qty, 10) || 0;
+            if (minQty > 0 && q < minQty) {
+                return {
+                    min_qty: minQty,
+                    percent: parseFloat(sorted[i].percent) || 0
+                };
+            }
+        }
+
+        return null;
+    }
+
+    function updateVolumeDiscountDynamicMessage() {
+        var qtyEl = document.getElementById('product-quantity');
+        var el = document.getElementById('volume-discount-dynamic-message');
+        if (!qtyEl || !el) return;
+
+        var qty = parseInt(qtyEl.value, 10) || 1;
+
+        if (!Array.isArray(BULK_DISCOUNT_RULES) || BULK_DISCOUNT_RULES.length === 0) {
+            el.classList.add('hidden');
+            return;
+        }
+
+        var nextTier = getNextDiscountTier(qty);
+        var currentPercent = getComboDiscountPercentPreview(qty);
+
+        if (nextTier) {
+            var more = nextTier.min_qty - qty;
+            more = Math.max(1, more);
+            var nextPercent = parseFloat(nextTier.percent) || 0;
+
+            el.textContent = 'Add ' + more + ' more to get ' + nextPercent.toFixed(0) + '% OFF';
+        } else if (currentPercent > 0) {
+            el.textContent = 'You\'re currently getting ' + currentPercent.toFixed(0) + '% OFF';
+        } else {
+            el.textContent = 'Choose a quantity to unlock combo discounts!';
+        }
+
+        el.classList.remove('hidden');
+    }
 
     var toastTimeout = null;
     function showToast(message, type) {
@@ -916,15 +1028,20 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('qty-minus') && document.getElementById('qty-minus').addEventListener('click', function() {
             var n = Math.max(1, parseInt(qtyEl.value, 10) - 1);
             qtyEl.value = n;
+            updateVolumeDiscountDynamicMessage();
         });
         document.getElementById('qty-plus') && document.getElementById('qty-plus').addEventListener('click', function() {
             var n = Math.min(99, (parseInt(qtyEl.value, 10) || 1) + 1);
             qtyEl.value = n;
+            updateVolumeDiscountDynamicMessage();
         });
         qtyEl.addEventListener('change', function() {
             var n = Math.min(99, Math.max(1, parseInt(qtyEl.value, 10) || 1));
             qtyEl.value = n;
+            updateVolumeDiscountDynamicMessage();
         });
+
+        updateVolumeDiscountDynamicMessage();
     }
 
     function getMatchingVariant(selectedSize, selectedShape) {
