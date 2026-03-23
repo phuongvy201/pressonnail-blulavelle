@@ -41,14 +41,17 @@ document.addEventListener('DOMContentLoaded', function() {
         window.dispatchEvent(new CustomEvent('cartUpdated'));
     }
     if (typeof dataLayer !== 'undefined') {
+        dataLayer.push({ ecommerce: null });
         dataLayer.push({
-            'event': 'purchase',
-            'currency': '{{ $currency ?? "USD" }}',
-            'transaction_id': '{{ $order->order_number }}',
-            'value': Number('{{ $order->total_amount }}'),
-            'tax': Number('{{ $order->tax_amount }}'),
-            'shipping': Number('{{ $order->shipping_cost }}'),
-            items: @json($gaItems)
+            event: 'purchase',
+            ecommerce: {
+                currency: '{{ $currency ?? "USD" }}',
+                transaction_id: '{{ $order->order_number }}',
+                value: Number('{{ $order->total_amount }}') || 0,
+                tax: Number('{{ $order->tax_amount }}') || 0,
+                shipping: Number('{{ $order->shipping_cost }}') || 0,
+                items: @json($gaItems)
+            }
         });
     }
     if (typeof window !== 'undefined' && window.ttq) {

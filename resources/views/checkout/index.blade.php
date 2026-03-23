@@ -294,15 +294,21 @@ const DEFAULT_SHIPPING_ZONE_ID = @json($defaultShippingRate ? $defaultShippingRa
 const CHECKOUT_BASE_SUBTOTAL = {{ $baseSubtotal }};
 const CHECKOUT_FREE_SHIP_THRESHOLD_USD = 150;
 
+// GA4 ecommerce items shared across multiple checkout events.
+window.PRESSONNail_CHECKOUT_GA4_ITEMS = @json($gtagItems);
+
 document.addEventListener('DOMContentLoaded', function() {
     // Event tracking được xử lý bởi GTM thông qua dataLayer
     if (typeof dataLayer !== 'undefined') {
-        const checkoutItems = @json($gtagItems);
+        const checkoutItems = window.PRESSONNail_CHECKOUT_GA4_ITEMS || [];
+        dataLayer.push({ ecommerce: null });
         dataLayer.push({
-            'event': 'begin_checkout',
-            'currency': '{{ $currency ?? "USD" }}',
-            'value': {{ $convertedTotal ?? $checkoutTotal }},
-            'items': checkoutItems
+            event: 'begin_checkout',
+            ecommerce: {
+                currency: '{{ $currency ?? "USD" }}',
+                value: Number({{ $convertedTotal ?? $checkoutTotal }}) || 0,
+                items: checkoutItems
+            }
         });
         console.log('✅ GTM: begin_checkout tracked', {
             items: checkoutItems.length,
@@ -2160,6 +2166,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         console.log('💳 Payment method changed:', selectedRadio ? selectedRadio.value : 'none');
+
+        if (selectedRadio) {
+            const paymentType = selectedRadio.value === 'paypal'
+                ? 'PayPal'
+                : (selectedRadio.value === 'stripe' ? 'Stripe' : selectedRadio.value);
+            if (typeof window !== 'undefined' && typeof window.__PRESSONNailTrackAddPaymentInfo === 'function') {
+                window.__PRESSONNailTrackAddPaymentInfo(paymentType);
+            }
+        }
         
         if (selectedRadio && selectedRadio.value === 'paypal') {
             console.log('🔧 PayPal selected - initializing buttons');
@@ -3379,6 +3394,60 @@ document.addEventListener('DOMContentLoaded', function() {
      * Update shipping cost display
      * Similar to updateShippingZone in cart/index.blade.php
      */
+    function __pressonGetCheckoutTotalValue() {
+        const totalEl = document.getElementById('checkout-total') || document.querySelector('.total-display');
+        if (!totalEl) return 0;
+        const raw = (totalEl.textContent || '').trim();
+        return parseFloat(raw.replace(/[^0-9.-]/g, '')) || 0;
+    }
+
+    window.__PRESSONNailLastShippingTier = window.__PRESSONNailLastShippingTier ?? null;
+    window.__PRESSONNailTrackAddShippingInfo = function(shippingTier) {
+        if (typeof dataLayer === 'undefined') return;
+        if (!shippingTier) return;
+
+        // Prevent duplicate pushes when user triggers multiple recalculations.
+        if (window.__PRESSONNailLastShippingTier === shippingTier) return;
+        window.__PRESSONNailLastShippingTier = shippingTier;
+
+        const items = window.PRESSONNail_CHECKOUT_GA4_ITEMS || [];
+        const totalValue = __pressonGetCheckoutTotalValue();
+
+        dataLayer.push({ ecommerce: null });
+        dataLayer.push({
+            event: 'add_shipping_info',
+            ecommerce: {
+                currency: '{{ $currency ?? "USD" }}',
+                value: Number(totalValue) || 0,
+                shipping_tier: shippingTier,
+                items
+            }
+        });
+    };
+
+    window.__PRESSONNailLastPaymentType = window.__PRESSONNailLastPaymentType ?? null;
+    window.__PRESSONNailTrackAddPaymentInfo = function(paymentType) {
+        if (typeof dataLayer === 'undefined') return;
+        if (!paymentType) return;
+
+        if (window.__PRESSONNailLastPaymentType === paymentType) return;
+        window.__PRESSONNailLastPaymentType = paymentType;
+
+        const items = window.PRESSONNail_CHECKOUT_GA4_ITEMS || [];
+        const totalValue = __pressonGetCheckoutTotalValue();
+
+        dataLayer.push({ ecommerce: null });
+        dataLayer.push({
+            event: 'add_payment_info',
+            ecommerce: {
+                currency: '{{ $currency ?? "USD" }}',
+                value: Number(totalValue) || 0,
+                payment_type: paymentType,
+                items
+            }
+        });
+    };
+
     function updateCheckoutShippingDisplay(zoneId = null) {
         console.log('🔄 updateCheckoutShippingDisplay called with zoneId:', zoneId);
         
@@ -3416,6 +3485,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 shippingZoneIdInput.value = zoneId || '';
             }
             updateTotal();
+            window.__PRESSONNailTrackAddShippingInfo(shippingLabelEl ? shippingLabelEl.textContent.trim() : 'Free Shipping');
             return;
         }
         
@@ -3460,6 +3530,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update total - this will recalculate the total with new shipping cost
         updateTotal();
+        window.__PRESSONNailTrackAddShippingInfo(shippingLabelEl ? shippingLabelEl.textContent.trim() : shippingInfo.name || 'Shipping');
     }
 
     // Discount mode toggle (volume vs promo) - server-side recalculates and page reloads.

@@ -13,31 +13,6 @@
         <div class="flex items-center justify-between mb-4 flex-wrap gap-4">
             <h1 class="text-2xl font-bold text-gray-900">Google Analytics</h1>
             <div class="flex items-center gap-4 flex-wrap">
-                <!-- Domain Selector -->
-                @if(count($availableDomains) > 1)
-                    <div class="flex items-center gap-2">
-                        <label class="text-sm font-medium text-gray-700">Domain:</label>
-                        <select 
-                            x-model="selectedDomain" 
-                            @change="updateFilters()"
-                            class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                        >
-                            @foreach($availableDomains as $domain)
-                                <option value="{{ $domain }}" {{ $selectedDomain === $domain ? 'selected' : '' }}>
-                                    {{ $domain }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                @else
-                    <div class="flex items-center gap-2">
-                        <label class="text-sm font-medium text-gray-700">Domain:</label>
-                        <span class="px-4 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 text-gray-700">
-                            {{ $selectedDomain ?? ($availableDomains[0] ?? 'N/A') }}
-                        </span>
-                    </div>
-                @endif
-                
                 <!-- Days Selector -->
                 <select 
                     x-model="days" 
@@ -709,7 +684,7 @@
                                             {{ number_format($domain['users'] ?? 0) }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <a href="?tab=domains&domain={{ urlencode($domain['domain'] ?? '') }}&days={{ $days }}&selected_domain={{ $selectedDomain ?? $availableDomains[0] ?? '' }}" 
+                                            <a href="?tab=domains&domain={{ urlencode($domain['domain'] ?? '') }}&days={{ $days }}" 
                                                class="text-blue-600 hover:text-blue-900">
                                                 Xem chi tiết
                                             </a>
@@ -734,7 +709,6 @@ function analyticsDashboard() {
     return {
         activeTab: '{{ $tab }}',
         days: {{ $days }},
-        selectedDomain: '{{ $selectedDomain ?? ($availableDomains[0] ?? '') }}',
         filter: '{{ $filter }}',
         searchChannel: '',
         
@@ -761,7 +735,6 @@ function analyticsDashboard() {
             const params = new URLSearchParams({
                 tab: this.activeTab,
                 days: this.days,
-                selected_domain: this.selectedDomain,
             });
             
             if (this.activeTab === 'acquisition' && this.filter !== 'all') {

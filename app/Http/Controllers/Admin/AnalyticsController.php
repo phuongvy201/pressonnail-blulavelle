@@ -9,11 +9,10 @@ use Illuminate\Http\Request;
 class AnalyticsController extends Controller
 {
     private AnalyticsService $analyticsService;
-    private ?string $selectedDomain = null;
 
     public function __construct()
     {
-        // Không khởi tạo service ở đây, sẽ khởi tạo trong ind  exex() dựa trên selected_domain
+        // Không khởi tạo service ở đây, sẽ khởi tạo trong index()
     }
 
     public function index(Request $request)
@@ -22,49 +21,19 @@ class AnalyticsController extends Controller
         $tab = $request->get('tab', 'acquisition');
         $filter = $request->get('filter', 'all'); // All, Organic Search, Paid Search, Direct, Social, Referrals, Display, Email, Other
 
-        // Lấy danh sách domain đã cấu hình trong database
-        $availableDomains = \App\Models\DomainAnalyticsConfig::getAllDomains();
-
-        // Check if no domain is configured
-        if (empty($availableDomains)) {
-            return redirect()->route('admin.dashboard')
-                ->with('error', 'No domain is configured for analytics.');
-        }
-
-        // Get the domain selected from the request
-        $selectedDomainParam = $request->get('selected_domain');
-
-        // Only accept domain from database, not allow default
-        if ($selectedDomainParam === 'default' || $selectedDomainParam === '' || $selectedDomainParam === null) {
-            // If no domain is selected, use the first domain in the list
-            $selectedDomain = $availableDomains[0];
-        } else {
-            // Check if the domain exists in the database
-            if (!in_array($selectedDomainParam, $availableDomains)) {
-                return redirect()->route('admin.analytics.index')
-                    ->with('error', 'Invalid domain. Domain must be configured in the database.');
-            }
-            $selectedDomain = $selectedDomainParam;
-        }
-
-        $this->selectedDomain = $selectedDomain;
-        $this->analyticsService = AnalyticsService::forDomain($selectedDomain);
+        // Single-domain mode: dùng cấu hình GA4 chung, không chọn domain.
+        $this->analyticsService = AnalyticsService::forDomain(null);
 
         // Check if the service is not initialized (due to no config)
         if (!$this->analyticsService->isInitialized()) {
             return redirect()->route('admin.dashboard')
-                ->with('error', "Domain '{$selectedDomain}' is not fully configured for analytics.");
+                ->with('error', 'Google Analytics chưa được cấu hình đầy đủ (property_id / credentials).');
         }
-
-        $displayDomain = $selectedDomain;
 
         $data = [
             'days' => $days,
             'tab' => $tab,
             'filter' => $filter,
-            'selectedDomain' => $selectedDomain,
-            'displayDomain' => $displayDomain,
-            'availableDomains' => $availableDomains,
         ];
 
         // Common data for all tabs

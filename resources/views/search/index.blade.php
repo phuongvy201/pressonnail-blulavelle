@@ -15,6 +15,23 @@
         })
         ->filter(fn($item) => !empty($item['content_id']) && !empty($item['content_name']))
         ->values();
+    $searchGtagItems = collect($products ?? [])
+        ->take(24)
+        ->values()
+        ->map(function ($product, $index) {
+            $categoryName = optional(($product->categories ?? collect())->first())->name
+                ?? optional(($product->collections ?? collect())->first())->name;
+
+            return [
+                'item_id' => $product->sku ?? $product->id,
+                'item_name' => $product->name,
+                'item_category' => $categoryName,
+                'price' => round((float) ($product->price ?? $product->base_price ?? 0), 2),
+                'quantity' => 1,
+                'index' => $index + 1,
+            ];
+        })
+        ->all();
     $popularSearches = ['Almond', 'French Tip', 'Matte', 'Glitter', 'Coffin', 'Short Nails'];
 @endphp
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -30,6 +47,19 @@ document.addEventListener('DOMContentLoaded', function() {
         var tiktokPayload = { contents: {!! $tiktokSearchContents->isEmpty() ? '[]' : $tiktokSearchContents->toJson(JSON_UNESCAPED_UNICODE) !!}, value: 0, currency: 'USD' };
         @if($query) tiktokPayload.search_string = {!! json_encode($query) !!}; @endif
         window.ttq.track('Search', tiktokPayload);
+    }
+    if (typeof dataLayer !== 'undefined') {
+        @if($query)
+        dataLayer.push({ event: 'search', search_term: @json($query) });
+        @endif
+        dataLayer.push({ ecommerce: null });
+        dataLayer.push({
+            event: 'view_item_list',
+            ecommerce: {
+                item_list_name: 'Search Results',
+                items: @json($searchGtagItems)
+            }
+        });
     }
 });
 </script>

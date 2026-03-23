@@ -645,6 +645,98 @@ const APPLY_PROMO_URL = '{{ route("api.cart.apply-promo") }}';
 const REMOVE_PROMO_URL = '{{ route("api.cart.remove-promo") }}';
 const DISCOUNT_MODE_URL = '{{ route("api.cart.discount-mode") }}';
 
+function buildGaCartItems() {
+    return (cartItemsData || []).map((item, index) => {
+        const quantity = parseInt(item.quantity, 10) || 1;
+        const unitPrice = parseFloat(item.price) || 0;
+        const product = item.product || {};
+        const categories = Array.isArray(product.categories) ? product.categories : [];
+        const firstCategory = categories.length ? categories[0] : null;
+        const categoryName = firstCategory && typeof firstCategory === 'object' ? (firstCategory.name || null) : null;
+
+        const gaItem = {
+            item_id: String(product.sku || product.id || item.product_id || item.id || (index + 1)),
+            item_name: product.name || `Cart Item ${index + 1}`,
+            price: Number(unitPrice.toFixed(2)),
+            quantity
+        };
+
+        if (categoryName) {
+            gaItem.item_category = categoryName;
+        }
+
+        const variantAttrs = item.selected_variant && item.selected_variant.attributes
+            ? Object.values(item.selected_variant.attributes).filter(Boolean)
+            : [];
+        if (variantAttrs.length > 0) {
+            gaItem.item_variant = variantAttrs.join(' / ');
+        }
+
+        return gaItem;
+    });
+}
+
+function trackViewCart() {
+    if (typeof dataLayer === 'undefined') return;
+    const items = buildGaCartItems();
+    if (!items.length) return;
+
+    const value = Number(
+        items.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * (parseInt(item.quantity, 10) || 1)), 0).toFixed(2)
+    );
+
+    dataLayer.push({ ecommerce: null });
+    dataLayer.push({
+        event: 'view_cart',
+        ecommerce: {
+            currency: CURRENT_CURRENCY || 'USD',
+            value,
+            items
+        }
+    });
+}
+
+function trackRemoveFromCart(cartItemId) {
+    if (typeof dataLayer === 'undefined') return;
+    const item = (cartItemsData || []).find(it => String(it.id) === String(cartItemId));
+    if (!item) return;
+
+    const product = item.product || {};
+    const categories = Array.isArray(product.categories) ? product.categories : [];
+    const firstCategory = categories.length ? categories[0] : null;
+    const categoryName = firstCategory && typeof firstCategory === 'object' ? (firstCategory.name || null) : null;
+    const unitPrice = parseFloat(item.price) || 0;
+    const quantity = parseInt(item.quantity, 10) || 1;
+
+    const gaItem = {
+        item_id: String(product.sku || product.id || item.product_id || item.id),
+        item_name: product.name || 'Cart Item',
+        price: Number(unitPrice.toFixed(2)),
+        quantity
+    };
+
+    if (categoryName) {
+        gaItem.item_category = categoryName;
+    }
+
+    const variantAttrs = item.selected_variant && item.selected_variant.attributes
+        ? Object.values(item.selected_variant.attributes).filter(Boolean)
+        : [];
+    if (variantAttrs.length > 0) {
+        gaItem.item_variant = variantAttrs.join(' / ');
+    }
+
+    dataLayer.push({ ecommerce: null });
+    dataLayer.push({
+        event: 'remove_from_cart',
+        ecommerce: {
+            currency: CURRENT_CURRENCY || 'USD',
+            value: Number((unitPrice * quantity).toFixed(2)),
+            items: [gaItem]
+        }
+    });
+}
+
 function showPromoMessage(text, isError) {
     const el = document.getElementById('promo-message');
     if (!el) return;
@@ -733,6 +825,8 @@ function updateQuantity(cartItemId, newQuantity) {
 
 function removeFromCart(cartItemId) {
     if (!confirm('Are you sure you want to remove this item?')) return;
+
+    trackRemoveFromCart(cartItemId);
     
     fetch(`/api/cart/remove/${cartItemId}`, {
         method: 'DELETE',
@@ -1521,6 +1615,7 @@ function initializeShippingCost() {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
+    trackViewCart();
     initializeShippingCost();
 });
 </script>

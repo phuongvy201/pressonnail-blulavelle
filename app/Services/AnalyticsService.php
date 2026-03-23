@@ -14,7 +14,7 @@ use Google\Analytics\Data\V1beta\OrderBy\DimensionOrderBy;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
-use App\Models\DomainAnalyticsConfig;
+use App\Support\Settings;
 use Exception;
 
 class AnalyticsService
@@ -25,33 +25,34 @@ class AnalyticsService
 
     public function __construct(?string $domain = null)
     {
-        // Chỉ sử dụng domain từ database, không dùng default config
-        if (!$domain) {
-            return;
-        }
-
-        // Lấy config từ database
-        $config = DomainAnalyticsConfig::getForDomain($domain);
-
-        if (!$config) {
-            return;
-        }
-
         $this->domain = $domain;
-        $this->propertyId = $config->property_id;
-        $credentialsFile = $config->credentials_file;
+        $credentialsPath = null;
 
-        // Nếu là file trong storage, lấy đường dẫn tuyệt đối
-        if ($credentialsFile && Storage::exists($credentialsFile)) {
-            $credentialsPath = Storage::path($credentialsFile);
-        } else {
-            Log::error("File credentials không tồn tại trong storage: {$credentialsFile}");
-            return;
+        // Single-domain mode: lấy GA4 config từ Settings (UI), fallback về config/services.php (.env).
+        $this->propertyId = (string) (Settings::get(
+            'analytics.google_analytics_property_id',
+            config('services.google.analytics.property_id')
+        ) ?? '');
+
+        $configuredCredentialsPath = Settings::get(
+            'analytics.google_analytics_credentials_path',
+            config('services.google.analytics.credentials_path')
+        );
+
+        if (!empty($configuredCredentialsPath)) {
+            $credentialsPath = (string) $configuredCredentialsPath;
         }
 
         if (!$this->propertyId) {
             Log::error('Google Analytics Property ID chưa được cấu hình');
             return;
+        }
+
+        // Hỗ trợ cả đường dẫn tuyệt đối và đường dẫn tương đối trong storage/app.
+        if ($credentialsPath && !file_exists($credentialsPath)) {
+            if (Storage::exists($credentialsPath)) {
+                $credentialsPath = Storage::path($credentialsPath);
+            }
         }
 
         if (!$credentialsPath || !file_exists($credentialsPath)) {

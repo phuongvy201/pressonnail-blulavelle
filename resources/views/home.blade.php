@@ -96,6 +96,19 @@ document.addEventListener('DOMContentLoaded', function() {
         ->orderBy('created_at', 'desc')
         ->limit(8)
         ->get();
+    $homeGtagItems = $bestsellers->values()->map(function ($product, $index) {
+        $categoryName = optional(($product->categories ?? collect())->first())->name
+            ?? optional(($product->collections ?? collect())->first())->name;
+
+        return [
+            'item_id' => $product->sku ?? $product->id,
+            'item_name' => $product->name,
+            'item_category' => $categoryName,
+            'price' => round((float) ($product->price ?? $product->base_price ?? 0), 2),
+            'quantity' => 1,
+            'index' => $index + 1,
+        ];
+    })->all();
     $featuredCollections = \App\Models\Collection::where('status', 'active')
         ->where('admin_approved', true)
         ->where('featured', true)
@@ -132,6 +145,20 @@ document.addEventListener('DOMContentLoaded', function() {
         ['key' => 'bg_color', 'label' => 'Màu nền section (HEX) – để trống dùng mặc định', 'type' => 'text'],
     ];
 @endphp
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof dataLayer !== 'undefined') {
+        dataLayer.push({ ecommerce: null });
+        dataLayer.push({
+            event: 'view_item_list',
+            ecommerce: {
+                item_list_name: 'Home Bestsellers',
+                items: @json($homeGtagItems)
+            }
+        });
+    }
+});
+</script>
 
 <!-- Why Choose Our Press-on Nails? -->
 <section class="px-4 sm:px-6 lg:px-20 py-12 sm:py-16 md:py-20 lg:py-24 bg-slate-50" data-content-block="home.why_choose" @if(!empty($whyChoose['bg_color'])) style="background-color: {{ $whyChoose['bg_color'] }};" @endif>

@@ -30,6 +30,7 @@
         $metaPixelId = \App\Support\Settings::get('analytics.meta_pixel_id', config('services.meta.pixel_id'));
         $tiktokPixelId = \App\Support\Settings::get('analytics.tiktok_pixel_id', config('services.tiktok.pixel_id'));
         $googleTagManagerId = \App\Support\Settings::get('analytics.google_tag_manager_id', config('services.google.tag_manager_id'));
+        $googleAdsId = \App\Support\Settings::get('analytics.google_ads_id', config('services.google.ads_id'));
         
         // Currency configuration - available in all views
         $siteCurrency = currency();
@@ -54,6 +55,15 @@
         'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
         })(window,document,'script','dataLayer','{{ $googleTagManagerId }}');</script>
         <!-- End Google Tag Manager -->
+    @endif
+
+    @if($googleAdsId)
+        <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id={{ $googleAdsId }}"></script>
+        <script>
+            gtag('js', new Date());
+            gtag('config', '{{ $googleAdsId }}');
+        </script>
     @endif
     
     
@@ -246,6 +256,7 @@
         height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <!-- End Google Tag Manager (noscript) -->
     @endif
+
     
     <div class="min-h-screen">
         <!-- Header Component -->
@@ -514,7 +525,7 @@
             <div id="cart-drawer-progress-wrap" class="p-4 sm:p-6 bg-primary/5 border-b border-primary/10 hidden">
                 <div class="flex justify-between items-center mb-2">
                     <p class="text-sm font-semibold text-slate-700">Free Shipping Progress</p>
-                    <p id="cart-drawer-progress-ratio" class="text-sm font-bold text-primary">$0.00 / $100.00</p>
+                    <p id="cart-drawer-progress-ratio" class="text-sm font-bold text-primary">$0.00 / $150.00</p>
                 </div>
                 <div class="h-2.5 w-full bg-primary/10 rounded-full overflow-hidden">
                     <div id="cart-drawer-progress-bar" class="h-full bg-primary rounded-full transition-all duration-500" style="width: 0%;"></div>
@@ -670,7 +681,9 @@
         var CART_INDEX_URL = '{{ route("cart.index") }}';
         var CHECKOUT_URL = '{{ route("checkout.index") }}';
         var CURRENCY_SYMBOL = window.SITE_CURRENCY_SYMBOL || '$';
+        var SITE_CURRENCY = window.SITE_CURRENCY || 'USD';
         var csrfToken = document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').content;
+        var cartDrawerItemsCache = [];
 
         function getDrawer() { return document.getElementById('cart-drawer'); }
         function getBackdrop() { return document.getElementById('cart-drawer-backdrop'); }
@@ -706,8 +719,46 @@
             return parts.length ? parts.join(' | ') : '';
         }
 
+        function trackCartDrawerRemoveFromCart(cartItemId) {
+            if (typeof dataLayer === 'undefined') return;
+            var item = (cartDrawerItemsCache || []).find(function(it) { return String(it.id) === String(cartItemId); });
+            if (!item) return;
+
+            var product = item.product || {};
+            var categories = Array.isArray(product.categories) ? product.categories : [];
+            var firstCategory = categories.length ? categories[0] : null;
+            var categoryName = firstCategory && typeof firstCategory === 'object' ? (firstCategory.name || null) : null;
+            var quantity = parseInt(item.quantity, 10) || 1;
+            var unitPrice = parseFloat(item.price) || 0;
+
+            var gaItem = {
+                item_id: String(product.sku || product.id || item.product_id || item.id),
+                item_name: product.name || 'Cart Item',
+                price: Number(unitPrice.toFixed(2)),
+                quantity: quantity
+            };
+
+            if (categoryName) gaItem.item_category = categoryName;
+
+            var variantAttrs = item.selected_variant && item.selected_variant.attributes
+                ? Object.values(item.selected_variant.attributes).filter(Boolean)
+                : [];
+            if (variantAttrs.length > 0) gaItem.item_variant = variantAttrs.join(' / ');
+
+            dataLayer.push({ ecommerce: null });
+            dataLayer.push({
+                event: 'remove_from_cart',
+                ecommerce: {
+                    currency: SITE_CURRENCY,
+                    value: Number((unitPrice * quantity).toFixed(2)),
+                    items: [gaItem]
+                }
+            });
+        }
+
         function renderCartDrawer(data) {
             var items = (data && data.cart_items) ? data.cart_items : [];
+            cartDrawerItemsCache = items;
             var totalItems = (data && data.total_items) ? data.total_items : 0;
             var summary = (data && data.summary) ? data.summary : {};
             var discountMode = summary.discount_mode || 'volume';
@@ -869,7 +920,12 @@
                     if (!id) return;
                     fetch('/api/cart/remove/' + id, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
                         .then(function(r) { return r.json(); })
-                        .then(function(res) { if (res.success) fetchAndOpenDrawer(); });
+                        .then(function(res) {
+                            if (res.success) {
+                                trackCartDrawerRemoveFromCart(id);
+                                fetchAndOpenDrawer();
+                            }
+                        });
                 });
             });
             document.querySelectorAll('.cart-drawer-qty-minus').forEach(function(btn) {

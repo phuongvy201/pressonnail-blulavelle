@@ -27,7 +27,14 @@ document.addEventListener('DOMContentLoaded', function() {
         fbq('track', 'ViewContent', { content_type: 'product_list', content_name: 'All Products' });
     }
     if (typeof dataLayer !== 'undefined') {
-        dataLayer.push({ 'event': 'view_item_list', 'item_list_name': 'All Products', 'items': @json($gtagItems) });
+        dataLayer.push({ ecommerce: null });
+        dataLayer.push({
+            event: 'view_item_list',
+            ecommerce: {
+                item_list_name: 'All Products',
+                items: @json($gtagItems)
+            }
+        });
     }
 });
 </script>

@@ -18,6 +18,9 @@ class AnalyticsSettingsController extends Controller
             'tiktok_test_event_code' => config('services.tiktok.test_event_code'),
             'google_tag_manager_id' => config('services.google.tag_manager_id'),
             'google_ads_id' => config('services.google.ads_id'),
+            // GA4 (Google Analytics 4)
+            'google_analytics_property_id' => config('services.google.analytics.property_id'),
+            'google_analytics_credentials_path' => config('services.google.analytics.credentials_path'),
             // Theme (fallback từ config/theme.php khi DB trống)
             'header_bg' => config('theme.header_bg'),
             'header_border' => config('theme.header_border'),
@@ -34,6 +37,9 @@ class AnalyticsSettingsController extends Controller
             'tiktok_test_event_code' => Settings::get('analytics.tiktok_test_event_code', $defaults['tiktok_test_event_code']),
             'google_tag_manager_id' => Settings::get('analytics.google_tag_manager_id', $defaults['google_tag_manager_id']),
             'google_ads_id' => Settings::get('analytics.google_ads_id', $defaults['google_ads_id']),
+            // GA4 (Google Analytics 4)
+            'google_analytics_property_id' => Settings::get('analytics.google_analytics_property_id', $defaults['google_analytics_property_id']),
+            'google_analytics_credentials_path' => Settings::get('analytics.google_analytics_credentials_path', $defaults['google_analytics_credentials_path']),
             // Theme colors (HEX/rgb... validated loosely; view will safely apply)
             'header_bg' => Settings::get('theme.header_bg', $defaults['header_bg']),
             'header_border' => Settings::get('theme.header_border', $defaults['header_border']),
@@ -55,6 +61,10 @@ class AnalyticsSettingsController extends Controller
             'tiktok_test_event_code' => ['nullable', 'string', 'max:64'],
             'google_tag_manager_id' => ['nullable', 'string', 'max:64'],
             'google_ads_id' => ['nullable', 'string', 'max:64'],
+            // GA4 (Google Analytics 4)
+            'google_analytics_property_id' => ['nullable', 'string', 'max:64'],
+            'google_analytics_credentials_path' => ['nullable', 'string', 'max:512'],
+            'google_analytics_credentials' => ['nullable', 'file', 'max:10240', 'mimetypes:application/json,text/plain,application/octet-stream'],
             'header_bg' => ['nullable', 'string', 'max:64'],
             'header_border' => ['nullable', 'string', 'max:64'],
             'footer_faq_bg' => ['nullable', 'string', 'max:64'],
@@ -63,6 +73,15 @@ class AnalyticsSettingsController extends Controller
             'mail_logo_url' => ['nullable', 'string', 'max:512'],
             'mail_brand_name' => ['nullable', 'string', 'max:128'],
         ]);
+
+        // If user uploaded a GA4 credentials JSON, store it into storage/app and persist the relative path.
+        if ($request->hasFile('google_analytics_credentials')) {
+            $file = $request->file('google_analytics_credentials');
+            if ($file && $file->isValid()) {
+                $storedPath = $file->storeAs('analytics/google-analytics', 'google-analytics-credentials-' . time() . '.json');
+                $validated['google_analytics_credentials_path'] = $storedPath;
+            }
+        }
 
         foreach ($validated as $key => $value) {
             $namespace = match (true) {

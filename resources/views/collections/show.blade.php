@@ -4,12 +4,37 @@
 @section('meta_description', $collection->meta_description ?? $collection->description)
 
 @section('content')
+@php
+    $collectionGtagItems = collect($products->items())
+        ->values()
+        ->map(function ($product, $index) use ($collection) {
+            return [
+                'item_id' => $product->sku ?? $product->id,
+                'item_name' => $product->name,
+                'item_category' => $collection->name,
+                'price' => round((float) ($product->price ?? $product->base_price ?? 0), 2),
+                'quantity' => 1,
+                'index' => $index + 1,
+            ];
+        })
+        ->all();
+@endphp
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof fbq !== 'undefined') {
         fbq('track', 'ViewContent', {
             content_name: '{{ addslashes($collection->name) }}',
             content_type: 'product_group'
+        });
+    }
+    if (typeof dataLayer !== 'undefined') {
+        dataLayer.push({ ecommerce: null });
+        dataLayer.push({
+            event: 'view_item_list',
+            ecommerce: {
+                item_list_name: @json($collection->name),
+                items: @json($collectionGtagItems)
+            }
         });
     }
 });

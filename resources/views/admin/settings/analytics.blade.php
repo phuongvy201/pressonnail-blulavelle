@@ -22,7 +22,7 @@
         @endif
 
         <div class="bg-white shadow-md rounded-2xl overflow-hidden">
-            <form method="POST" action="{{ route('admin.settings.analytics.update') }}" class="p-6 space-y-8">
+            <form method="POST" action="{{ route('admin.settings.analytics.update') }}" class="p-6 space-y-8" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
 
@@ -125,6 +125,66 @@
                         <p class="mt-2 text-xs text-gray-500">
                             Ví dụ: <code>{{ $defaults['google_ads_id'] }}</code>
                         </p>
+                    </div>
+
+                    {{-- GA4 --}}
+                    <div>
+                        <label for="google_analytics_property_id" class="block text-sm font-semibold text-gray-900 mb-1">
+                            GA4 Property ID
+                        </label>
+                        <input
+                            type="text"
+                            name="google_analytics_property_id"
+                            id="google_analytics_property_id"
+                            value="{{ old('google_analytics_property_id', $settings['google_analytics_property_id']) }}"
+                            placeholder="{{ $defaults['google_analytics_property_id'] }}"
+                            class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
+                        >
+                        @error('google_analytics_property_id')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                        <p class="mt-2 text-xs text-gray-500">
+                            Ví dụ: <code>G-XXXXXXXXXX</code> (lưu để trang Analytics đọc cấu hình GA4).
+                        </p>
+                    </div>
+
+                    <div>
+                        <label for="google_analytics_credentials" class="block text-sm font-semibold text-gray-900 mb-1">
+                            GA4 Credentials JSON (Google Cloud)
+                        </label>
+                        <input
+                            type="file"
+                            name="google_analytics_credentials"
+                            id="google_analytics_credentials"
+                            accept=".json,application/json"
+                            class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
+                        >
+                        @error('google_analytics_credentials')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                        <p class="mt-2 text-xs text-gray-500">
+                            Hoặc dùng field path bên dưới (nếu file đã nằm sẵn trong `storage/app`).
+                        </p>
+
+                        <div class="mt-3">
+                            <label for="google_analytics_credentials_path" class="block text-sm font-semibold text-gray-900 mb-1">
+                                Credentials path (storage/app)
+                            </label>
+                            <input
+                                type="text"
+                                name="google_analytics_credentials_path"
+                                id="google_analytics_credentials_path"
+                                value="{{ old('google_analytics_credentials_path', $settings['google_analytics_credentials_path']) }}"
+                                placeholder="{{ $defaults['google_analytics_credentials_path'] }}"
+                                class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
+                            >
+                            @error('google_analytics_credentials_path')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                            <p class="mt-2 text-xs text-gray-500">
+                                Ví dụ: <code>analytics/google-analytics-credentials-1699999999.json</code>.
+                            </p>
+                        </div>
                     </div>
                 </div>
 

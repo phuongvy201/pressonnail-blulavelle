@@ -15,7 +15,7 @@ return [
     'footer_faq_bg' => null,
     'footer_bg' => '#242B3D',
     'testimonials_bg' => null,
-    'promo_banner' => 'Free Shipping on Orders Over $100 • Premium Press-on Nails',
+    'promo_banner' => 'Free Shipping on Orders Over $150 • Premium Press-on Nails',
     'promo_banner_bg' => null,
 
     // Mail layout (logo & brand trong email)

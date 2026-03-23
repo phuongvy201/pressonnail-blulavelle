@@ -1,4 +1,4 @@
-@props(['product', 'showQuickView' => true])
+@props(['product', 'showQuickView' => true, 'itemListName' => null])
 
 @php
     $media = $product->getEffectiveMedia();
@@ -17,9 +17,23 @@
     $discountPercent = $onSale ? round((($originalPriceUsd - $currentPriceUsd) / $originalPriceUsd) * 100) : 0;
     $avgRating = method_exists($product, 'getAverageRating') ? $product->getAverageRating() : 0;
     $reviewsCount = method_exists($product, 'getTotalReviews') ? $product->getTotalReviews() : 0;
+    $primaryCategory = optional(($product->categories ?? collect())->first())->name
+        ?? optional(($product->collections ?? collect())->first())->name;
+    $gaSelectItemPayload = [
+        'item_id' => $product->sku ?? $product->id,
+        'item_name' => $product->name,
+        'item_category' => $primaryCategory,
+        'price' => round((float) ($product->price ?? ($product->template->base_price ?? 0)), 2),
+        'quantity' => 1,
+    ];
 @endphp
 
-<div class="group bg-white rounded-xl overflow-hidden transition-all duration-300 shadow-md hover:shadow-2xl hover:shadow-gray-300/50 border border-gray-100 hover:border-gray-200">
+<div
+    class="group bg-white rounded-xl overflow-hidden transition-all duration-300 shadow-md hover:shadow-2xl hover:shadow-gray-300/50 border border-gray-100 hover:border-gray-200"
+    data-ga-select-item
+    data-ga-item='@json($gaSelectItemPayload)'
+    data-ga-list-name="{{ $itemListName ?: 'Product List' }}"
+>
     <!-- Image wrapper: zoom + Quick View overlay -->
     <div class="relative aspect-square overflow-hidden bg-gray-100">
         @if($imageUrl)
@@ -37,6 +51,7 @@
         {{-- Overlay: Quick View button (nền tối nhẹ, nút màu hồng) --}}
         @if($showQuickView)
             <a href="{{ route('products.show', $product->slug) }}"
+               data-ga-select-item-link
                class="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-all duration-300">
                 <span class="inline-flex items-center gap-2 px-5 py-3 bg-primary-dark text-white font-semibold rounded-full shadow-xl transform translate-y-3 group-hover:translate-y-0 transition-transform duration-300 hover:bg-primary">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -64,7 +79,7 @@
     {{-- Info --}}
     <div class="p-3 sm:p-4">
         <h3 class="font-semibold text-gray-900 mb-1 line-clamp-2 group-hover:text-[#005366] transition-colors text-sm sm:text-base">
-            <a href="{{ route('products.show', $product->slug) }}" class="block">
+            <a href="{{ route('products.show', $product->slug) }}" class="block" data-ga-select-item-link>
                 {{ Str::limit($product->name, 50) }}
             </a>
         </h3>
@@ -90,3 +105,38 @@
         </div>
     </div>
 </div>
+
+@once
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('click', function (event) {
+        var link = event.target.closest('[data-ga-select-item-link]');
+        if (!link) return;
+
+        var card = link.closest('[data-ga-select-item]');
+        if (!card) return;
+
+        if (card.dataset.gaTracked === '1') return;
+        card.dataset.gaTracked = '1';
+
+        if (typeof dataLayer === 'undefined') return;
+
+        var item = {};
+        try {
+            item = JSON.parse(card.getAttribute('data-ga-item') || '{}');
+        } catch (e) {
+            item = {};
+        }
+
+        dataLayer.push({ ecommerce: null });
+        dataLayer.push({
+            event: 'select_item',
+            ecommerce: {
+                item_list_name: card.getAttribute('data-ga-list-name') || 'Product List',
+                items: [item]
+            }
+        });
+    }, { passive: true });
+});
+</script>
+@endonce
