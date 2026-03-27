@@ -8,6 +8,8 @@ use App\Models\Shop;
 use App\Models\ShippingRate;
 use App\Models\ShippingZone;
 use App\Models\RecentProductView;
+use App\Models\OrderItem;
+use App\Models\Review;
 use App\Services\TikTokEventsService;
 use App\Services\CurrencyService;
 use Illuminate\Support\Facades\Auth;
@@ -235,6 +237,26 @@ class ProductController extends Controller
 
         $this->trackTikTokViewContent($request, $product);
 
+        $hasCompletedOrderForReview = false;
+        $canSubmitReview = false;
+        $userExistingReview = null;
+        if (Auth::check()) {
+            $userId = Auth::id();
+            $hasCompletedOrderForReview = OrderItem::query()
+                ->where('product_id', $product->id)
+                ->whereHas('order', function ($q) use ($userId) {
+                    $q->where('user_id', $userId)
+                        ->whereIn('status', ['completed', 'delivered']);
+                })
+                ->exists();
+            $userExistingReview = Review::query()
+                ->where('product_id', $product->id)
+                ->where('user_id', $userId)
+                ->latest()
+                ->first();
+            $canSubmitReview = $hasCompletedOrderForReview && !$userExistingReview;
+        }
+
         return view('products.show', compact(
             'product',
             'relatedProducts',
@@ -245,8 +267,65 @@ class ProductController extends Controller
             'shippingZones',
             'defaultZone',
             'availableZones',
-            'categoryId'
+            'categoryId',
+            'hasCompletedOrderForReview',
+            'canSubmitReview',
+            'userExistingReview'
         ));
+    }
+
+    /**
+     * Customer submits a review for a purchased product.
+     */
+    public function storeReview(Request $request, string $slug)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            abort(403);
+        }
+
+        $product = Product::query()
+            ->where('slug', $slug)
+            ->firstOrFail();
+
+        $hasCompletedOrderForReview = OrderItem::query()
+            ->where('product_id', $product->id)
+            ->whereHas('order', function ($q) use ($user) {
+                $q->where('user_id', $user->id)
+                    ->whereIn('status', ['completed', 'delivered']);
+            })
+            ->exists();
+        if (!$hasCompletedOrderForReview) {
+            return back()->with('error', 'You can submit a review only after completing an order that includes this product.');
+        }
+
+        $alreadyReviewed = Review::query()
+            ->where('product_id', $product->id)
+            ->where('user_id', $user->id)
+            ->exists();
+        if ($alreadyReviewed) {
+            return back()->with('error', 'You have already submitted a review for this product.');
+        }
+
+        $validated = $request->validate([
+            'rating' => 'required|integer|min:1|max:5',
+            'title' => 'nullable|string|max:120',
+            'review_text' => 'required|string|max:2000',
+        ]);
+
+        Review::create([
+            'product_id' => $product->id,
+            'user_id' => $user->id,
+            'customer_name' => (string) ($user->name ?? 'Customer'),
+            'customer_email' => (string) ($user->email ?? ''),
+            'rating' => (int) $validated['rating'],
+            'title' => $validated['title'] ?? null,
+            'review_text' => $validated['review_text'],
+            'is_verified_purchase' => true,
+            'is_approved' => true,
+        ]);
+
+        return back()->with('success', 'Thank you! Your review has been submitted successfully.');
     }
 
     /**

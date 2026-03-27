@@ -73,4 +73,30 @@ class Review extends Model
     {
         return !is_null($this->user_id);
     }
+
+    /**
+     * Resolve image URL for frontend display.
+     * Supports absolute URLs and relative storage paths.
+     */
+    public function getImageUrlForDisplayAttribute(): ?string
+    {
+        $value = is_string($this->image_url) ? trim($this->image_url) : '';
+        if ($value === '') {
+            return null;
+        }
+
+        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://') || str_starts_with($value, 'data:')) {
+            return $value;
+        }
+
+        if (str_starts_with($value, '/storage/')) {
+            return asset(ltrim($value, '/'));
+        }
+
+        if (str_starts_with($value, 'storage/')) {
+            return asset($value);
+        }
+
+        return asset('storage/' . ltrim($value, '/'));
+    }
 }

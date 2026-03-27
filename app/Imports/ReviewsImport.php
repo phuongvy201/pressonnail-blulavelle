@@ -57,7 +57,8 @@ class ReviewsImport implements ToModel, WithHeadingRow, WithValidation, SkipsEmp
             'review_text' => trim((string) ($row['review_text'] ?? '')) ?: null,
             'image_url' => $imageUrl,
             'title' => trim((string) ($row['title'] ?? '')) ?: null,
-            'is_verified_purchase' => $this->parseBool($row['is_verified_purchase'] ?? true),
+            // Luôn mặc định verified theo yêu cầu.
+            'is_verified_purchase' => true,
             'is_approved' => $this->parseBool($row['is_approved'] ?? true),
         ]);
 
@@ -419,11 +420,31 @@ class ReviewsImport implements ToModel, WithHeadingRow, WithValidation, SkipsEmp
         if (is_bool($value)) {
             return $value;
         }
-        $v = is_string($value) ? strtolower(trim($value)) : $value;
-        if ($v === '' || $v === null) {
+
+        if ($value === null) {
             return true;
         }
-        return in_array($v, [1, '1', 'yes', 'true', 'y'], true);
+
+        // Excel reader ở các môi trường có thể trả về int, float, numeric string (vd: 1, 1.0, "1", "1.0")
+        if (is_numeric($value)) {
+            return ((float) $value) > 0;
+        }
+
+        $v = strtolower(trim((string) $value));
+        if ($v === '') {
+            return true;
+        }
+
+        if (in_array($v, ['1', '1.0', 'yes', 'true', 'y', 'on'], true)) {
+            return true;
+        }
+
+        if (in_array($v, ['0', '0.0', 'no', 'false', 'n', 'off'], true)) {
+            return false;
+        }
+
+        // Giữ hành vi an toàn: giá trị lạ thì mặc định true (như trước).
+        return true;
     }
 
     public function rules(): array

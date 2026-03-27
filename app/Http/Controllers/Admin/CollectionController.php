@@ -19,7 +19,9 @@ class CollectionController extends Controller
     {
         $user = auth()->user();
 
-        // Admin xem tất cả collections, Seller chỉ xem collections của shop mình
+        // Admin xem tất cả collections.
+        // Seller xem collections của shop mình + collections do admin tạo
+        // để có thể đưa sản phẩm vào các collection chung này.
         $collectionsQuery = Collection::with(['user', 'shop', 'products']);
 
         if ($user->hasRole('admin')) {
@@ -28,21 +30,24 @@ class CollectionController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->paginate(12);
         } else {
-            // Seller chỉ thấy collections của shop mình
-            if ($user->hasShop()) {
-                $collections = $collectionsQuery->where('shop_id', $user->shop->id)
-                    ->orderBy('sort_order')
-                    ->orderBy('created_at', 'desc')
-                    ->paginate(12);
-            } else {
-                $collections = new LengthAwarePaginator(
-                    [],
-                    0,
-                    12,
-                    1,
-                    ['path' => request()->url(), 'query' => request()->query()]
-                );
-            }
+            $collectionsQuery->where(function ($q) use ($user) {
+                if ($user->hasShop()) {
+                    $q->where('shop_id', $user->shop->id);
+                }
+
+                $q->orWhere(function ($adminCollections) {
+                    $adminCollections
+                        ->whereHas('user.roles', function ($roleQuery) {
+                            $roleQuery->where('name', 'admin');
+                        })
+                        ->where('admin_approved', true);
+                });
+            });
+
+            $collections = $collectionsQuery
+                ->orderBy('sort_order')
+                ->orderBy('created_at', 'desc')
+                ->paginate(12);
         }
 
         return view('admin.collections.index', compact('collections'));
@@ -212,10 +217,41 @@ class CollectionController extends Controller
         $collection->update($data);
 
         // Update products
-        if ($request->has('products')) {
-            $collection->products()->sync($request->products);
+        if (auth()->user()->hasRole('admin')) {
+            // Admin có thể sync toàn bộ.
+            if ($request->has('products')) {
+                $collection->products()->sync($request->products);
+            } else {
+                $collection->products()->detach();
+            }
         } else {
-            $collection->products()->detach();
+            // Seller chỉ quản lý sản phẩm của chính họ trong collection.
+            $allowedProductIds = Product::query()
+                ->where('user_id', auth()->id())
+                ->pluck('id')
+                ->map(fn($id) => (int) $id)
+                ->all();
+
+            $submittedIds = collect($request->input('products', []))
+                ->map(fn($id) => (int) $id)
+                ->filter(fn($id) => in_array($id, $allowedProductIds, true))
+                ->values()
+                ->all();
+
+            $existingSellerProductIds = $collection->products()
+                ->where('products.user_id', auth()->id())
+                ->pluck('products.id')
+                ->map(fn($id) => (int) $id)
+                ->all();
+
+            if (!empty($submittedIds)) {
+                $collection->products()->syncWithoutDetaching($submittedIds);
+            }
+
+            $toDetach = array_values(array_diff($existingSellerProductIds, $submittedIds));
+            if (!empty($toDetach)) {
+                $collection->products()->detach($toDetach);
+            }
         }
 
         return redirect()->route('admin.collections.index')
@@ -228,7 +264,7 @@ class CollectionController extends Controller
     public function destroy(Collection $collection)
     {
         // Check permissions
-        if (!$collection->canEdit()) {
+        if (!$collection->canDelete()) {
             abort(403, 'You do not have permission to delete this collection.');
         }
 

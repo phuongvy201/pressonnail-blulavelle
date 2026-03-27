@@ -177,6 +177,34 @@ class Collection extends Model
     public function canEdit($user = null): bool
     {
         $user = $user ?? auth()->user();
+        if (!$user) {
+            return false;
+        }
+
+        // Admin có toàn quyền.
+        if ($user->hasRole('admin')) {
+            return true;
+        }
+
+        // Seller được quyền chỉnh sửa collection để thêm/sắp xếp sản phẩm của mình.
+        if ($user->hasRole('seller')) {
+            return true;
+        }
+
+        // Chủ sở hữu collection.
+        return $this->user_id === $user->id;
+    }
+
+    /**
+     * Delete permission should remain strict to avoid accidental shared data loss.
+     */
+    public function canDelete($user = null): bool
+    {
+        $user = $user ?? auth()->user();
+        if (!$user) {
+            return false;
+        }
+
         return $user->hasRole('admin') || $this->user_id === $user->id;
     }
 

@@ -203,15 +203,17 @@
                     </button>
                 </form>
                 
-                <form action="{{ route('admin.collections.destroy', $collection) }}" method="POST" class="inline"
-                      onsubmit="return confirm('Are you sure you want to delete this collection? This action cannot be undone.')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" 
-                            class="inline-flex items-center px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition">
-                        🗑️ Delete Collection
-                    </button>
-                </form>
+                @if($collection->canDelete())
+                    <form action="{{ route('admin.collections.destroy', $collection) }}" method="POST" class="inline"
+                          onsubmit="return confirm('Are you sure you want to delete this collection? This action cannot be undone.')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" 
+                                class="inline-flex items-center px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition">
+                            🗑️ Delete Collection
+                        </button>
+                    </form>
+                @endif
             </div>
         </div>
     @endif

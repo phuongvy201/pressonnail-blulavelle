@@ -582,6 +582,180 @@
             </div>
         </div>
 
+        @if($reviewsCount > 0)
+        <div id="customer-reviews" class="mt-12 space-y-6">
+            @php
+                $displayReviews = $product->approvedReviews ?? collect();
+                $reviewPhotos = $displayReviews->filter(function ($r) {
+                    return !empty($r->image_url_for_display);
+                })->values();
+            @endphp
+            <div class="rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
+                <div class="mb-5">
+                    <h3 class="text-2xl font-extrabold text-slate-900">Reviews for this item ({{ $reviewsCount }})</h3>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-4 mb-6">
+                    <div class="flex items-center gap-1 text-amber-400">
+                        @for($i = 1; $i <= 5; $i++)
+                            @if($i <= floor($averageRating))
+                                <span class="material-symbols-outlined text-lg fill-current">star</span>
+                            @elseif($i - 0.5 <= $averageRating)
+                                <span class="material-symbols-outlined text-lg fill-current">star_half</span>
+                            @else
+                                <span class="material-symbols-outlined text-lg text-slate-200">star</span>
+                            @endif
+                        @endfor
+                    </div>
+                    <p class="text-3xl font-light text-slate-900 leading-none">
+                        {{ number_format($averageRating, 1) }}<span class="text-lg text-slate-500">/5</span>
+                    </p>
+                    <span class="text-sm text-slate-500">({{ $reviewsCount }} {{ $reviewsCount === 1 ? 'review' : 'reviews' }})</span>
+                </div>
+
+                @if($displayReviews->isNotEmpty())
+                    <div class="divide-y divide-slate-200">
+                        @foreach($displayReviews as $review)
+                            <article class="py-4">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <div class="flex items-center text-amber-400">
+                                                @for($i = 1; $i <= 5; $i++)
+                                                    <span class="material-symbols-outlined text-base {{ $i <= (int) $review->rating ? 'fill-current' : 'text-slate-200' }}">star</span>
+                                                @endfor
+                                            </div>
+                                            <span class="text-xs font-semibold text-slate-500">{{ (int) $review->rating }}</span>
+                                            @if($review->is_verified_purchase)
+                                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                    <span class="material-symbols-outlined text-xs">verified</span>
+                                                    This item
+                                                </span>
+                                            @endif
+                                        </div>
+                                        @if(!empty($review->title))
+                                            <p class="text-sm font-semibold text-slate-900">{{ $review->title }}</p>
+                                        @endif
+                                        @if(!empty($review->review_text))
+                                            <p class="mt-1 text-sm text-slate-700 leading-relaxed">{{ $review->review_text }}</p>
+                                        @endif
+                                    </div>
+
+                                    <div class="shrink-0 text-right min-w-[120px]">
+                                        <p class="text-xs font-semibold text-slate-900 truncate">{{ $review->display_name }}</p>
+                                        <p class="text-xs text-slate-500 mt-0.5">{{ $review->created_at?->format('M d, Y') }}</p>
+                                        @if(!empty($review->image_url_for_display))
+                                            <img
+                                                src="{{ $review->image_url_for_display }}"
+                                                alt="Review image by {{ $review->display_name }}"
+                                                class="mt-2 ml-auto w-14 h-14 rounded-md border border-slate-200 object-cover"
+                                                loading="lazy"
+                                                onerror="this.style.display='none';"
+                                            >
+                                        @endif
+                                    </div>
+                                </div>
+                            </article>
+                        @endforeach
+                    </div>
+
+                    @if($reviewsCount > $displayReviews->count())
+                        <div class="pt-5 flex justify-center">
+                            <button type="button" class="px-5 py-2 text-sm font-semibold rounded-full border border-slate-300 text-slate-700 hover:bg-slate-50 transition">
+                                View all reviews for this item
+                            </button>
+                        </div>
+                    @endif
+                @else
+                    <p class="text-sm text-slate-500">There are no reviews for this product yet.</p>
+                @endif
+
+                @if($reviewPhotos->isNotEmpty())
+                    <div class="mt-8">
+                        <h4 class="text-sm font-bold text-slate-900 mb-3">Photos from reviews</h4>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                            @foreach($reviewPhotos->take(10) as $photoReview)
+                                <img
+                                    src="{{ $photoReview->image_url_for_display }}"
+                                    alt="Photo from review by {{ $photoReview->display_name }}"
+                                    class="w-full aspect-square rounded-lg border border-slate-200 object-cover"
+                                    loading="lazy"
+                                    onerror="this.style.display='none';"
+                                >
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            </div>
+
+            <div class="rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
+                <h3 class="text-lg font-extrabold text-slate-900 mb-4">Write a Review</h3>
+
+                @if(session('success'))
+                    <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 px-4 py-3 text-sm font-medium">
+                        {{ session('success') }}
+                    </div>
+                @endif
+                @if(session('error'))
+                    <div class="mb-4 rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm font-medium">
+                        {{ session('error') }}
+                    </div>
+                @endif
+                @if($errors->any())
+                    <div class="mb-4 rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                        <ul class="list-disc ml-5 space-y-1">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                @guest
+                    <p class="text-sm text-slate-600">
+                        Please <a href="{{ route('login') }}" class="text-[#0297FE] font-semibold hover:underline">log in</a> to submit a review.
+                    </p>
+                @else
+                    @if($canSubmitReview ?? false)
+                        <form action="{{ route('products.reviews.store', $product->slug) }}#customer-reviews" method="POST" class="space-y-4">
+                            @csrf
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">Rating</label>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    @for($i = 1; $i <= 5; $i++)
+                                        <label class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 hover:border-[#0297FE]/50 cursor-pointer">
+                                            <input type="radio" name="rating" value="{{ $i }}" class="accent-[#0297FE]" {{ (int) old('rating', 5) === $i ? 'checked' : '' }}>
+                                            <span class="text-sm font-medium text-slate-700">{{ $i }}★</span>
+                                        </label>
+                                    @endfor
+                                </div>
+                            </div>
+                            <div>
+                                <label for="review-title" class="block text-sm font-semibold text-slate-700 mb-1">Title (optional)</label>
+                                <input id="review-title" type="text" name="title" value="{{ old('title') }}" maxlength="120"
+                                       class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#0297FE]/30 focus:border-[#0297FE]"
+                                       placeholder="Example: Beautiful set and long-lasting">
+                            </div>
+                            <div>
+                                <label for="review-text" class="block text-sm font-semibold text-slate-700 mb-1">Your review</label>
+                                <textarea id="review-text" name="review_text" rows="4" required maxlength="2000"
+                                          class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#0297FE]/30 focus:border-[#0297FE]"
+                                          placeholder="Share your experience with this product...">{{ old('review_text') }}</textarea>
+                            </div>
+                            <button type="submit" class="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-[#0297FE] text-white text-sm font-bold hover:opacity-90 transition">
+                                Submit Review
+                            </button>
+                        </form>
+                    @elseif($userExistingReview ?? false)
+                        <p class="text-sm text-slate-600">You have already submitted a review for this product. Thank you!</p>
+                    @else
+                        <p class="text-sm text-slate-600">You can submit a review after completing an order that includes this product.</p>
+                    @endif
+                @endguest
+            </div>
+        </div>
+        @endif
+
         {{-- Full width: Video, Recently Viewed --}}
         <div class="mt-12 space-y-12">
             @if($product->template && $product->template->media && count($product->template->media) > 0)

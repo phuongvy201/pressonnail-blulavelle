@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div id="mobile-filter-overlay" class="fixed inset-0 bg-black/40 z-40 hidden lg:hidden"></div>
 
         {{-- Sidebar filters --}}
-        <aside id="filter-drawer" class="fixed inset-0 z-50 hidden lg:static lg:z-auto lg:block w-full lg:w-64 flex-shrink-0">
+        <aside id="filter-drawer" class="fixed inset-0 z-50 hidden lg:z-auto lg:block lg:sticky lg:top-24 lg:self-start w-full lg:w-64 flex-shrink-0">
             <div class="h-full lg:h-auto flex items-end lg:items-stretch">
                 <div class="w-full bg-white rounded-t-3xl lg:rounded-none shadow-2xl lg:shadow-none border-t border-slate-200 lg:border-0 max-h-[85vh] lg:max-h-none overflow-hidden flex flex-col lg:block">
                     {{-- Mobile header --}}

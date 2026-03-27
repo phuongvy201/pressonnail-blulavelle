@@ -18,7 +18,7 @@
                 @if(auth()->user()->hasRole('admin'))
                     Review and approve collections from all shops
                 @else
-                    Organize your products into collections for better customer experience
+                    Manage your collections and use admin collections to organize your products better
                 @endif
             </p>
         </div>
@@ -105,6 +105,11 @@
                             {{ $collection->name }}
                         </h3>
                         <p class="text-sm text-gray-500">{{ $collection->slug }}</p>
+                        @if(!auth()->user()->hasRole('admin') && optional($collection->user)->hasRole('admin'))
+                            <span class="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                Admin Collection
+                            </span>
+                        @endif
                     </div>
                     @if(auth()->user()->hasRole('admin'))
                         <div class="flex items-center space-x-2 text-xs text-gray-400">
@@ -183,15 +188,17 @@
                                 </button>
                             </form>
                             
-                            <form action="{{ route('admin.collections.destroy', $collection) }}" method="POST" class="inline"
-                                  onsubmit="return confirm('Are you sure you want to delete this collection?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" 
-                                        class="p-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition">
-                                    🗑️
-                                </button>
-                            </form>
+                            @if($collection->canDelete())
+                                <form action="{{ route('admin.collections.destroy', $collection) }}" method="POST" class="inline"
+                                      onsubmit="return confirm('Are you sure you want to delete this collection?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" 
+                                            class="p-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition">
+                                        🗑️
+                                    </button>
+                                </form>
+                            @endif
                         @endif
                     </div>
                 </div>

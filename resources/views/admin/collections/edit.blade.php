@@ -265,14 +265,20 @@
                                             <input type="checkbox" class="product-checkbox w-4 h-4 text-purple-600 focus:ring-purple-500 rounded" 
                                                    value="{{ $product->id }}" 
                                                    data-name="{{ $product->name }}"
+                                                   data-image="{{ $product->primary_image ?? '' }}"
                                                    data-price="{{ number_format($product->getEffectivePrice(), 2) }}"
                                                    {{ in_array($product->id, old('products', $collection->products->pluck('id')->toArray())) ? 'checked' : '' }}
                                                    onchange="updateSelectedProducts()">
                                         </td>
                                         <td class="px-4 py-3">
                                             <div class="flex items-center">
-                                                <div class="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center text-lg mr-3">
-                                                    📦
+                                                <div class="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center text-lg mr-3 overflow-hidden">
+                                                    @if(!empty($product->primary_image))
+                                                        <img src="{{ $product->primary_image }}" alt="{{ $product->name }}" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                        <span class="w-full h-full items-center justify-center text-lg hidden">📦</span>
+                                                    @else
+                                                        <span class="w-full h-full flex items-center justify-center text-lg">📦</span>
+                                                    @endif
                                                 </div>
                                                 <div>
                                                     <div class="text-sm font-medium text-gray-900">{{ $product->name }}</div>
@@ -480,8 +486,10 @@
                     const checkbox = document.querySelector(`.product-checkbox[value="${productId}"]`);
                     if (checkbox) {
                         const badge = document.createElement('div');
-                        badge.className = 'inline-flex items-center px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm';
+                        badge.className = 'inline-flex items-center px-2.5 py-1 bg-purple-100 text-purple-800 rounded-full text-sm';
+                        const imageUrl = checkbox.getAttribute('data-image');
                         badge.innerHTML = `
+                            ${imageUrl ? `<img src="${imageUrl}" alt="${checkbox.getAttribute('data-name')}" class="w-6 h-6 rounded-full object-cover mr-2 border border-purple-200" onerror="this.remove();">` : `<span class="w-6 h-6 mr-2 rounded-full bg-purple-200 inline-flex items-center justify-center text-xs">📦</span>`}
                             <span>${checkbox.getAttribute('data-name')} - $${checkbox.getAttribute('data-price')}</span>
                             <button type="button" onclick="removeProduct(${productId})" class="ml-2 text-purple-600 hover:text-purple-800">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

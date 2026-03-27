@@ -6,7 +6,7 @@
         <!-- Back Button -->
         <div class="mb-6">
             <a href="{{ route('customer.orders.index') }}" 
-               class="inline-flex items-center text-[#F0427C] hover:text-[#d6386a] transition">
+               class="inline-flex items-center text-[#0195FE] hover:text-[#017fda] transition">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                 </svg>

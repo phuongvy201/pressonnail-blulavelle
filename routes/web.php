@@ -59,6 +59,7 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 Route::get('/products/recently-viewed', [ProductController::class, 'recentlyViewedFragment'])->name('products.recently-viewed');
 Route::get('/products/{slug}', [ProductController::class, 'show'])->name('products.show');
+Route::post('/products/{slug}/reviews', [ProductController::class, 'storeReview'])->middleware('auth')->name('products.reviews.store');
 Route::post('/products/calculate-shipping', [ProductController::class, 'calculateShippingCost'])->name('products.calculate-shipping');
 Route::get('/shops/{shop}', [App\Http\Controllers\ShopController::class, 'show'])->name('shops.show');
 

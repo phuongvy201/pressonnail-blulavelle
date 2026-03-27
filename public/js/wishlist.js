@@ -352,6 +352,10 @@ class WishlistManager {
      * Show message to user
      */
     showMessage(message, type = "success") {
+        if (typeof window !== "undefined" && typeof window.appNotify === "function") {
+            window.appNotify(message, type);
+            return;
+        }
         // Create message element
         const messageEl = document.createElement("div");
         messageEl.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 ${

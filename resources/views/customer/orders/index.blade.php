@@ -2,7 +2,7 @@
 
 @section('content')
 @php
-    $primary = '#f0427c';
+    $primary = '#0195FE';
 @endphp
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
@@ -23,7 +23,7 @@
 
                         <a href="{{ route('customer.orders.index') }}"
                            class="flex items-center gap-3 px-4 py-3 rounded-lg text-white shadow-lg transition-all"
-                           style="background: {{ $primary }}; box-shadow: 0 12px 30px rgba(240,66,124,.18);">
+                           style="background: {{ $primary }}; box-shadow: 0 12px 30px rgba(1,149,254,.18);">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
                             <span class="font-medium text-sm">My Orders</span>
                         </a>
@@ -144,7 +144,7 @@
                         <div class="space-y-6">
                             @foreach($orders as $order)
                                 <div class="bg-white border border-black/5 rounded-xl overflow-hidden shadow-sm">
-                                    <div class="p-4 md:p-6 border-b border-black/5 flex flex-wrap justify-between items-center gap-4" style="background: rgba(240,66,124,.06);">
+                                    <div class="p-4 md:p-6 border-b border-black/5 flex flex-wrap justify-between items-center gap-4" style="background: rgba(1,149,254,.06);">
                                         <div class="flex flex-wrap gap-6">
                                             <div class="flex flex-col">
                                                 <span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Order ID</span>
@@ -216,17 +216,50 @@
                                             </div>
                                         @endif
 
-                                        <div class="flex flex-wrap gap-3 pt-4 border-t border-black/5">
+                                        @php
+                                            $canReviewOrder = in_array($order->status, ['completed', 'delivered']);
+                                            $reviewableItems = $order->items->filter(function ($it) {
+                                                return $it->product && !empty($it->product->slug);
+                                            })->take(3);
+                                        @endphp
+
+                                        <div class="pt-4 border-t border-black/5 space-y-3">
+                                            <div class="rounded-lg border border-black/5 bg-[#f8f6f6] px-3 py-2.5">
+                                                @if($canReviewOrder)
+                                                    <p class="text-xs font-semibold text-slate-700">
+                                                        Order completed. You can review your purchased products here:
+                                                    </p>
+                                                    @if($reviewableItems->isNotEmpty())
+                                                        <div class="mt-2 flex flex-wrap gap-2">
+                                                            @foreach($reviewableItems as $reviewItem)
+                                                                <a href="{{ route('products.show', $reviewItem->product->slug) }}#customer-reviews"
+                                                                   class="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-bold border border-black/10 bg-white text-slate-700 hover:bg-black/5 transition-colors">
+                                                                    Review {{ \Illuminate\Support\Str::limit($reviewItem->product_name, 24) }}
+                                                                </a>
+                                                            @endforeach
+                                                        </div>
+                                                    @else
+                                                        <p class="mt-1 text-xs text-slate-500">No reviewable products found in this order.</p>
+                                                    @endif
+                                                @else
+                                                    <p class="text-xs font-semibold text-slate-600">
+                                                        Review this order here after it is marked as completed.
+                                                    </p>
+                                                @endif
+                                            </div>
+
+                                            <div class="flex flex-wrap gap-3">
                                             <a href="{{ route('customer.orders.show', $order->order_number) }}"
                                                class="px-4 py-2 rounded-lg text-white text-xs font-bold transition-all"
-                                               style="background: {{ $primary }}; box-shadow: 0 12px 30px rgba(240,66,124,.18);">
+                                               style="background: {{ $primary }}; box-shadow: 0 12px 30px rgba(1,149,254,.18);">
                                                 View Details
                                             </a>
                                             <a href="{{ route('products.index') }}"
                                                class="px-4 py-2 rounded-lg text-xs font-bold transition-all"
-                                               style="background: rgba(240,66,124,.10); color: {{ $primary }};">
+                                               style="background: rgba(1,149,254,.10); color: {{ $primary }};">
                                                 Continue Shopping
                                             </a>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -238,7 +271,7 @@
                         </div>
                     @else
                         <div class="bg-white rounded-xl shadow-sm border border-dashed border-black/10 p-12 text-center">
-                            <div class="size-20 mx-auto mb-6 rounded-full flex items-center justify-center" style="background: rgba(240,66,124,.10); color: {{ $primary }};">
+                            <div class="size-20 mx-auto mb-6 rounded-full flex items-center justify-center" style="background: rgba(1,149,254,.10); color: {{ $primary }};">
                                 <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
                             </div>
                             <h3 class="text-xl font-bold text-slate-900 mb-2">
@@ -264,7 +297,7 @@
                                 @endif
                                 <a href="{{ route('products.index') }}"
                                    class="px-8 py-3 rounded-xl text-white font-bold transition-all"
-                                   style="background: {{ $primary }}; box-shadow: 0 12px 30px rgba(240,66,124,.18);">
+                                   style="background: {{ $primary }}; box-shadow: 0 12px 30px rgba(1,149,254,.18);">
                                     Continue Shopping
                                 </a>
                             </div>
