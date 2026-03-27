@@ -246,6 +246,7 @@
         $footerBg = \App\Support\Settings::get('theme.footer_bg', config('theme.footer_bg', '#242B3D'));
         $footerFaqBgCustom = (is_string($footerFaqBg) && (str_starts_with(trim($footerFaqBg), '#') || str_starts_with(trim($footerFaqBg), 'rgb'))) ? trim($footerFaqBg) : null;
         $footerBgCustom = (is_string($footerBg) && (str_starts_with(trim($footerBg), '#') || str_starts_with(trim($footerBg), 'rgb'))) ? trim($footerBg) : null;
+        $footerFaq = content_block('layout.footer_faq', footer_faq_block_defaults());
     @endphp
     <div class="text-white text-center py-1.5 sm:py-2 px-3 sm:px-4 text-xs sm:text-sm font-bold tracking-wide {{ $promoBannerCustom ? '' : 'bg-primary promo-banner-animate' }}" @if($promoBannerCustom) style="background-color: {{ $promoBannerCustom }};" @endif>
         {{ \App\Support\Settings::get('site.promo_banner', config('theme.promo_banner', 'Free Shipping on Orders Over $150 • Premium Press-on Nails')) }}
@@ -298,61 +299,66 @@
             @yield('content')
         </main>
 
-        <!-- FAQ Section (Minimalist Footer) -->
-        <section class="px-4 sm:px-6 lg:px-20 py-10 sm:py-14 lg:py-20 bg-white" id="footer-faq" @if($footerFaqBgCustom) style="background-color: {{ $footerFaqBgCustom }};" @endif>
+        <!-- FAQ Section (Minimalist Footer) — nội dung: layout.footer_faq (content_block) -->
+        <section class="px-4 sm:px-6 lg:px-20 py-10 sm:py-14 lg:py-20 bg-white" id="footer-faq" data-content-block="layout.footer_faq" @if($footerFaqBgCustom) style="background-color: {{ $footerFaqBgCustom }};" @endif>
             <div class="max-w-3xl mx-auto">
-                <h2 class="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 text-center mb-8 sm:mb-12">Frequently Asked Questions</h2>
+                @if(isset($canEdit) && $canEdit && isset($editMode) && $editMode)
+                <div class="flex justify-end mb-2">
+                    <button type="button" class="inline-edit-trigger px-3 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-lg hover:opacity-90" data-block="layout.footer_faq">Chỉnh sửa FAQ</button>
+                </div>
+                @endif
+                <h2 class="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 text-center mb-8 sm:mb-12" data-content-field="section_heading">{{ $footerFaq['section_heading'] ?? 'Your Questions, Answered' }}</h2>
                 <div class="space-y-3 sm:space-y-4">
                     <!-- FAQ Item 1 (Active) -->
                     <div class="footer-faq-item bg-white rounded-xl border-2 border-primary/30 overflow-hidden shadow-sm" data-open="true">
                         <button type="button" class="footer-faq-btn w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-5 lg:py-6 flex items-center justify-between text-left text-slate-900 gap-3 sm:gap-4">
-                            <span class="font-bold text-sm sm:text-base">Where can I wear press-on nails?</span>
+                            <span class="font-bold text-sm sm:text-base" data-content-field="q1">{{ $footerFaq['q1'] ?? '' }}</span>
                             <span class="footer-faq-icon flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-slate-200">
                                 <svg class="footer-faq-icon-remove w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
                                 <svg class="footer-faq-icon-add w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                             </span>
                         </button>
                         <div class="footer-faq-content px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 text-slate-600 text-xs sm:text-sm leading-relaxed space-y-4">
-                            <p>Our press-on nails are perfect for everyday wear—work, events, travel, or at home. They're durable and water-resistant, so you can shower, wash hands, and do light tasks. For best longevity, avoid prolonged soaking or heavy manual work while wearing them.</p>
+                            <p data-content-field="a1">{{ $footerFaq['a1'] ?? '' }}</p>
                         </div>
                     </div>
                     <!-- FAQ Item 2 -->
                     <div class="footer-faq-item bg-white rounded-xl border border-slate-200 overflow-hidden">
                         <button type="button" class="footer-faq-btn w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-5 lg:py-6 flex items-center justify-between text-left text-slate-900 gap-3 sm:gap-4">
-                            <span class="font-bold text-sm sm:text-base">How long do press-on nails last?</span>
+                            <span class="font-bold text-sm sm:text-base" data-content-field="q2">{{ $footerFaq['q2'] ?? '' }}</span>
                             <span class="footer-faq-icon flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-slate-200">
                                 <svg class="footer-faq-icon-remove w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
                                 <svg class="footer-faq-icon-add w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                             </span>
                         </button>
                         <div class="footer-faq-content hidden px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 text-slate-600 text-xs sm:text-sm leading-relaxed">
-                            <p>With proper application and care, our press-on nails can last up to 1–2 weeks. Reusable sets can be worn multiple times. Avoid excessive water exposure and use gloves for cleaning to extend wear.</p>
+                            <p data-content-field="a2">{{ $footerFaq['a2'] ?? '' }}</p>
                         </div>
                     </div>
                     <!-- FAQ Item 3 -->
                     <div class="footer-faq-item bg-white rounded-xl border border-slate-200 overflow-hidden">
                         <button type="button" class="footer-faq-btn w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-5 lg:py-6 flex items-center justify-between text-left text-slate-900 gap-3 sm:gap-4">
-                            <span class="font-bold text-sm sm:text-base">How do I apply and remove them?</span>
+                            <span class="font-bold text-sm sm:text-base" data-content-field="q3">{{ $footerFaq['q3'] ?? '' }}</span>
                             <span class="footer-faq-icon flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-slate-200">
                                 <svg class="footer-faq-icon-remove w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
                                 <svg class="footer-faq-icon-add w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                             </span>
                         </button>
                         <div class="footer-faq-content hidden px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 text-slate-600 text-xs sm:text-sm leading-relaxed">
-                            <p>Clean and dry your nails, choose the right size, apply the adhesive tab or glue, then press firmly for a few seconds. To remove, gently lift from the sides or soak in warm soapy water. Never force or rip them off to protect your natural nails.</p>
+                            <p data-content-field="a3">{{ $footerFaq['a3'] ?? '' }}</p>
                         </div>
                     </div>
                     <!-- FAQ Item 4 -->
                     <div class="footer-faq-item bg-white rounded-xl border border-slate-200 overflow-hidden">
                         <button type="button" class="footer-faq-btn w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-5 lg:py-6 flex items-center justify-between text-left text-slate-900 gap-3 sm:gap-4">
-                            <span class="font-bold text-sm sm:text-base">Do you offer returns or refunds?</span>
+                            <span class="font-bold text-sm sm:text-base" data-content-field="q4">{{ $footerFaq['q4'] ?? '' }}</span>
                             <span class="footer-faq-icon flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-slate-200">
                                 <svg class="footer-faq-icon-remove w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
                                 <svg class="footer-faq-icon-add w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                             </span>
                         </button>
                         <div class="footer-faq-content hidden px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 text-slate-600 text-xs sm:text-sm leading-relaxed">
-                            <p>Yes. We offer exchange or money-back guarantee for eligible orders. Please see our <a href="{{ route('page.show', 'returns-exchanges-policy') }}" class="text-primary hover:underline">Returns & Exchanges Policy</a> for details and timeframes.</p>
+                            <p data-content-field="a4">{{ $footerFaq['a4'] ?? '' }}</p>
                         </div>
                     </div>
                 </div>

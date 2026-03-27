@@ -119,6 +119,14 @@ document.addEventListener('DOMContentLoaded', function() {
     $whyChoose = content_block('home.why_choose', [
         'title' => 'Why Choose Our Press-on Nails?',
         'bg_color' => null,
+        'card1_title' => 'Salon Quality',
+        'card1_body' => 'Durable, non-chipping, and high-gloss finish that lasts up to 2 weeks.',
+        'card2_title' => 'Reusable',
+        'card2_body' => 'Sustainable beauty that can be worn multiple times with proper care.',
+        'card3_title' => 'Easy Application',
+        'card3_body' => 'Apply in less than 10 minutes with our professional adhesive kits.',
+        'card4_title' => 'Custom Designs',
+        'card4_body' => 'Unique hand-painted looks designed by top global nail artists.',
     ]);
     $bestsellersBlock = content_block('home.bestsellers', [
         'heading' => 'Shop Our Bestsellers',
@@ -133,6 +141,14 @@ document.addEventListener('DOMContentLoaded', function() {
     $whyChooseSchema = [
         ['key' => 'title', 'label' => 'Tiêu đề', 'type' => 'text'],
         ['key' => 'bg_color', 'label' => 'Màu nền section (HEX, vd: #f8fafc) – để trống dùng mặc định', 'type' => 'text'],
+        ['key' => 'card1_title', 'label' => 'Thẻ 1 — tiêu đề', 'type' => 'text'],
+        ['key' => 'card1_body', 'label' => 'Thẻ 1 — mô tả', 'type' => 'textarea'],
+        ['key' => 'card2_title', 'label' => 'Thẻ 2 — tiêu đề', 'type' => 'text'],
+        ['key' => 'card2_body', 'label' => 'Thẻ 2 — mô tả', 'type' => 'textarea'],
+        ['key' => 'card3_title', 'label' => 'Thẻ 3 — tiêu đề', 'type' => 'text'],
+        ['key' => 'card3_body', 'label' => 'Thẻ 3 — mô tả', 'type' => 'textarea'],
+        ['key' => 'card4_title', 'label' => 'Thẻ 4 — tiêu đề', 'type' => 'text'],
+        ['key' => 'card4_body', 'label' => 'Thẻ 4 — mô tả', 'type' => 'textarea'],
     ];
     $bestsellersSchema = [
         ['key' => 'heading', 'label' => 'Tiêu đề', 'type' => 'text'],
@@ -176,29 +192,29 @@ document.addEventListener('DOMContentLoaded', function () {
             <div class="w-12 h-12 sm:w-14 sm:h-14 bg-primary/10 rounded-lg sm:rounded-xl flex items-center justify-center text-primary mb-4 sm:mb-6 group-hover:bg-primary group-hover:text-white transition-all flex-shrink-0">
                 <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
             </div>
-            <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-slate-900">Salon Quality</h3>
-            <p class="text-slate-600 text-sm sm:text-base leading-relaxed">Durable, non-chipping, and high-gloss finish that lasts up to 2 weeks.</p>
+            <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-slate-900" data-content-field="card1_title">{{ $whyChoose['card1_title'] ?? 'Salon Quality' }}</h3>
+            <p class="text-slate-600 text-sm sm:text-base leading-relaxed" data-content-field="card1_body">{{ $whyChoose['card1_body'] ?? '' }}</p>
         </div>
         <div class="bg-white p-5 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-sm border border-primary/5 hover:border-primary/30 transition-all group flex flex-col">
             <div class="w-12 h-12 sm:w-14 sm:h-14 bg-primary/10 rounded-lg sm:rounded-xl flex items-center justify-center text-primary mb-4 sm:mb-6 group-hover:bg-primary group-hover:text-white transition-all flex-shrink-0">
                 <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
             </div>
-            <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-slate-900">Reusable</h3>
-            <p class="text-slate-600 text-sm sm:text-base leading-relaxed">Sustainable beauty that can be worn multiple times with proper care.</p>
+            <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-slate-900" data-content-field="card2_title">{{ $whyChoose['card2_title'] ?? 'Reusable' }}</h3>
+            <p class="text-slate-600 text-sm sm:text-base leading-relaxed" data-content-field="card2_body">{{ $whyChoose['card2_body'] ?? '' }}</p>
         </div>
         <div class="bg-white p-5 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-sm border border-primary/5 hover:border-primary/30 transition-all group flex flex-col">
             <div class="w-12 h-12 sm:w-14 sm:h-14 bg-primary/10 rounded-lg sm:rounded-xl flex items-center justify-center text-primary mb-4 sm:mb-6 group-hover:bg-primary group-hover:text-white transition-all flex-shrink-0">
                 <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
             </div>
-            <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-slate-900">Easy Application</h3>
-            <p class="text-slate-600 text-sm sm:text-base leading-relaxed">Apply in less than 10 minutes with our professional adhesive kits.</p>
+            <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-slate-900" data-content-field="card3_title">{{ $whyChoose['card3_title'] ?? 'Easy Application' }}</h3>
+            <p class="text-slate-600 text-sm sm:text-base leading-relaxed" data-content-field="card3_body">{{ $whyChoose['card3_body'] ?? '' }}</p>
         </div>
         <div class="bg-white p-5 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-sm border border-primary/5 hover:border-primary/30 transition-all group flex flex-col">
             <div class="w-12 h-12 sm:w-14 sm:h-14 bg-primary/10 rounded-lg sm:rounded-xl flex items-center justify-center text-primary mb-4 sm:mb-6 group-hover:bg-primary group-hover:text-white transition-all flex-shrink-0">
                 <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z"></path></svg>
             </div>
-            <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-slate-900">Custom Designs</h3>
-            <p class="text-slate-600 text-sm sm:text-base leading-relaxed">Unique hand-painted looks designed by top global nail artists.</p>
+            <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-slate-900" data-content-field="card4_title">{{ $whyChoose['card4_title'] ?? 'Custom Designs' }}</h3>
+            <p class="text-slate-600 text-sm sm:text-base leading-relaxed" data-content-field="card4_body">{{ $whyChoose['card4_body'] ?? '' }}</p>
         </div>
     </div>
 </section>
@@ -445,6 +461,9 @@ document.addEventListener('DOMContentLoaded', function () {
 @endif
 
 @if(isset($canEdit) && $canEdit && isset($editMode) && $editMode)
+@php
+    $footerFaqBlock = content_block('layout.footer_faq', footer_faq_block_defaults());
+@endphp
 <!-- Modal chỉnh sửa nội dung -->
 <div id="inline-edit-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 p-4" aria-modal="true" role="dialog">
     <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
@@ -475,10 +494,12 @@ window.CONTENT_BLOCK_SCHEMAS = {
     'home.collections': @json($collectionsSchema),
     'home.see_it_in_action': @json($seeItSchema),
     'home.indulge': @json($indulgeSchema),
+    'layout.footer_faq': @json(footer_faq_block_schema()),
 };
 window.CONTENT_BLOCK_DATA = window.CONTENT_BLOCK_DATA || {};
 window.CONTENT_BLOCK_DATA['home.see_it_in_action'] = @json($seeItBlock);
 window.CONTENT_BLOCK_DATA['home.indulge'] = @json($indulgeDataForEdit);
+window.CONTENT_BLOCK_DATA['layout.footer_faq'] = @json($footerFaqBlock);
 </script>
 @endif
 
