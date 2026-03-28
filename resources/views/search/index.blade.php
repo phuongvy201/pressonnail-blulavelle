@@ -4,7 +4,11 @@
 
 @section('content')
 @php
-    $tiktokSearchContents = collect($products ?? [])
+    // Paginator::toArray() khi bọc bằng collect() sẽ tạo collection lẫn current_page (int) → lỗi "id on int"
+    $productsForTracking = ($products ?? null) instanceof \Illuminate\Contracts\Pagination\Paginator
+        ? collect($products->items())
+        : collect($products ?? []);
+    $tiktokSearchContents = $productsForTracking
         ->take(5)
         ->map(function ($product) {
             return [
@@ -15,7 +19,7 @@
         })
         ->filter(fn($item) => !empty($item['content_id']) && !empty($item['content_name']))
         ->values();
-    $searchGtagItems = collect($products ?? [])
+    $searchGtagItems = $productsForTracking
         ->take(24)
         ->values()
         ->map(function ($product, $index) {

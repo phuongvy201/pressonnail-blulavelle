@@ -67,6 +67,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             <span class="material-symbols-outlined text-lg">favorite</span>
                             {{ number_format($stats['favorited']) }} Favorited
                         </span>
+                        @if(($shopReviewsCount ?? 0) > 0)
+                        <a href="{{ route('shops.reviews', $shop->shop_slug) }}" class="flex items-center gap-1.5 text-primary font-semibold hover:underline">
+                            <span class="material-symbols-outlined text-lg">star</span>
+                            {{ number_format($shopReviewsAvg ?? 0, 1) }} · {{ number_format($shopReviewsCount) }} reviews
+                        </a>
+                        @endif
                     </div>
                 </div>
 

@@ -168,7 +168,7 @@ class ProductController extends Controller
 
         // Per-page selection
         $perPage = (int) $request->input('per_page', 12);
-        $allowedPerPage = [12, 25, 50, 100];
+        $allowedPerPage = [12, 25, 50, 100, 200, 500];
         if (!in_array($perPage, $allowedPerPage, true)) {
             $perPage = 12;
         }

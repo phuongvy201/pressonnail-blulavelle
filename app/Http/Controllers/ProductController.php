@@ -257,6 +257,43 @@ class ProductController extends Controller
             $canSubmitReview = $hasCompletedOrderForReview && !$userExistingReview;
         }
 
+        // Review nổi bật của shop: ưu tiên sản phẩm khác; nếu không có thì cùng shop nhưng không trùng review đã list phía trên
+        $shopSpotlightReviews = collect();
+        if ($product->shop_id) {
+            $alreadyListedReviewIds = $product->approvedReviews->pluck('id')->filter()->all();
+            $shopSpotlightReviews = Review::query()
+                ->approved()
+                ->whereHas('product', function ($q) use ($product) {
+                    $q->where('shop_id', $product->shop_id)
+                        ->where('id', '!=', $product->id);
+                })
+                ->with(['product' => function ($q) {
+                    $q->select('id', 'name', 'slug');
+                }])
+                ->orderByDesc('show_on_home')
+                ->orderByDesc('rating')
+                ->orderByDesc('created_at')
+                ->limit(8)
+                ->get();
+
+            if ($shopSpotlightReviews->isEmpty()) {
+                $shopSpotlightReviews = Review::query()
+                    ->approved()
+                    ->whereHas('product', function ($q) use ($product) {
+                        $q->where('shop_id', $product->shop_id);
+                    })
+                    ->when($alreadyListedReviewIds !== [], fn ($q) => $q->whereNotIn('id', $alreadyListedReviewIds))
+                    ->with(['product' => function ($q) {
+                        $q->select('id', 'name', 'slug');
+                    }])
+                    ->orderByDesc('show_on_home')
+                    ->orderByDesc('rating')
+                    ->orderByDesc('created_at')
+                    ->limit(8)
+                    ->get();
+            }
+        }
+
         return view('products.show', compact(
             'product',
             'relatedProducts',
@@ -270,7 +307,8 @@ class ProductController extends Controller
             'categoryId',
             'hasCompletedOrderForReview',
             'canSubmitReview',
-            'userExistingReview'
+            'userExistingReview',
+            'shopSpotlightReviews'
         ));
     }
 

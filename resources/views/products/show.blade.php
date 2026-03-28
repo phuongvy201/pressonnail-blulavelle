@@ -648,7 +648,7 @@
                                             <img
                                                 src="{{ $review->image_url_for_display }}"
                                                 alt="Review image by {{ $review->display_name }}"
-                                                class="mt-2 ml-auto w-14 h-14 rounded-md border border-slate-200 object-cover"
+                                                class="mt-2 ml-auto w-14 h-14 rounded-md border border-slate-200 object-cover cursor-pointer js-review-photo-trigger hover:ring-2 hover:ring-[#0297FE]/40 transition-shadow"
                                                 loading="lazy"
                                                 onerror="this.style.display='none';"
                                             >
@@ -678,7 +678,7 @@
                                 <img
                                     src="{{ $photoReview->image_url_for_display }}"
                                     alt="Photo from review by {{ $photoReview->display_name }}"
-                                    class="w-full aspect-square rounded-lg border border-slate-200 object-cover"
+                                    class="w-full aspect-square rounded-lg border border-slate-200 object-cover cursor-pointer js-review-photo-trigger hover:ring-2 hover:ring-[#0297FE]/40 transition-shadow"
                                     loading="lazy"
                                     onerror="this.style.display='none';"
                                 >
@@ -756,6 +756,52 @@
         </div>
         @endif
 
+        @if($product->shop && isset($shopSpotlightReviews) && $shopSpotlightReviews->isNotEmpty())
+        <div class="mt-12 rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
+            <div class="mb-5 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+                <div>
+                    <h3 class="text-xl font-extrabold text-slate-900">Featured reviews from {{ $product->shop->shop_name }}</h3>
+                    <p class="text-sm text-slate-500 mt-1">What customers say about other products from this shop</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-3 shrink-0 justify-end">
+                    <a href="{{ route('shops.reviews', $product->shop->shop_slug ?? $product->shop->id) }}" class="text-sm font-semibold text-[#0297FE] hover:underline">All shop reviews</a>
+                    <a href="{{ route('shops.show', $product->shop->shop_slug ?? $product->shop->id) }}" class="text-sm font-semibold text-slate-600 hover:text-[#0297FE] hover:underline">Visit shop</a>
+                </div>
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                @foreach($shopSpotlightReviews as $sReview)
+                <article class="rounded-xl border border-slate-100 bg-slate-50/80 p-4 flex flex-col h-full">
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <div class="flex items-center text-amber-400 min-w-0">
+                            @for($i = 1; $i <= 5; $i++)
+                                <span class="material-symbols-outlined text-base {{ $i <= (int) $sReview->rating ? 'fill-current' : 'text-slate-200' }}">star</span>
+                            @endfor
+                        </div>
+                        @if($sReview->product)
+                            <a href="{{ route('products.show', $sReview->product->slug) }}" class="text-xs font-semibold text-[#0297FE] hover:underline truncate max-w-[55%] text-right" title="{{ $sReview->product->name }}">{{ Str::limit($sReview->product->name, 42) }}</a>
+                        @endif
+                    </div>
+                    @if(!empty($sReview->title))
+                        <p class="text-sm font-semibold text-slate-900 line-clamp-2">{{ $sReview->title }}</p>
+                    @endif
+                    @if(!empty($sReview->review_text))
+                        <p class="mt-1 text-sm text-slate-700 leading-relaxed line-clamp-4">{{ $sReview->review_text }}</p>
+                    @endif
+                    <div class="mt-auto pt-3 flex items-center justify-between gap-2 text-xs text-slate-500">
+                        <span class="font-semibold text-slate-800 truncate">{{ $sReview->display_name }}</span>
+                        <span>{{ $sReview->created_at?->format('M j, Y') }}</span>
+                    </div>
+                    @if(!empty($sReview->image_url_for_display))
+                        <div class="mt-3">
+                            <img src="{{ $sReview->image_url_for_display }}" alt="" class="w-full max-h-32 object-cover rounded-lg border border-slate-200 cursor-pointer js-review-photo-trigger hover:ring-2 hover:ring-[#0297FE]/40 transition-shadow" loading="lazy" onerror="this.style.display='none';">
+                        </div>
+                    @endif
+                </article>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
         {{-- Full width: Video, Recently Viewed --}}
         <div class="mt-12 space-y-12">
             @if($product->template && $product->template->media && count($product->template->media) > 0)
@@ -796,6 +842,18 @@
     </div>
 </div>
 
+{{-- Review image lightbox (same behavior as shops/reviews). No backdrop-blur: blur on fixed layers flickers when body scroll locks. --}}
+<div id="review-image-modal" class="review-image-modal-root fixed inset-0 z-[110] hidden flex items-center justify-center p-2 sm:p-3" role="dialog" aria-modal="true" aria-labelledby="review-image-modal-title">
+    <div class="absolute inset-0 review-image-modal-backdrop" data-review-image-modal-close aria-hidden="true"></div>
+    <p id="review-image-modal-title" class="sr-only">Review photo</p>
+    <button type="button" class="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 w-11 h-11 rounded-full bg-white/95 border border-slate-200 shadow-lg flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-colors" data-review-image-modal-close aria-label="Close">
+        <span class="material-symbols-outlined text-2xl">close</span>
+    </button>
+    <div class="relative z-10 w-full max-w-[min(100vw-0.5rem,1600px)] max-h-[96vh] flex items-center justify-center pointer-events-none px-1">
+        <img id="review-image-modal-img" src="" alt="Review photo" class="pointer-events-auto max-h-[min(94vh,94dvh)] w-auto max-w-full object-contain rounded-xl shadow-2xl ring-1 ring-white/10">
+    </div>
+</div>
+
 <style>
 /* Hide scrollbar but keep scroll (gallery thumbnails) */
 .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -822,6 +880,14 @@ button.wishlist-btn.in-wishlist { color: #0297FE; }
 }
 .add-to-cart-btn .add-to-cart-icon {
     stroke: currentColor;
+}
+/* Review lightbox: solid overlay (no backdrop-filter) + stable layer to avoid flicker */
+.review-image-modal-backdrop {
+    background: rgba(15, 23, 42, 0.92);
+}
+.review-image-modal-root {
+    isolation: isolate;
+    contain: layout style;
 }
 </style>
 
@@ -1382,6 +1448,42 @@ document.addEventListener('DOMContentLoaded', function() {
         ids = ids.slice(0, 20);
         localStorage.setItem('recentlyViewedIds', JSON.stringify(ids));
     } catch (e) {}
+
+    var reviewImgModal = document.getElementById('review-image-modal');
+    var reviewImgModalEl = document.getElementById('review-image-modal-img');
+    function openReviewImageModal(src) {
+        if (!reviewImgModal || !reviewImgModalEl || !src) return;
+        reviewImgModalEl.src = src;
+        reviewImgModal.classList.remove('hidden');
+        var sb = window.innerWidth - document.documentElement.clientWidth;
+        if (sb > 0) {
+            document.body.style.paddingRight = sb + 'px';
+        }
+        document.body.style.overflow = 'hidden';
+    }
+    function closeReviewImageModal() {
+        if (!reviewImgModal || !reviewImgModalEl) return;
+        reviewImgModal.classList.add('hidden');
+        reviewImgModalEl.removeAttribute('src');
+        document.body.style.paddingRight = '';
+        document.body.style.overflow = '';
+    }
+    document.addEventListener('click', function(e) {
+        var trigger = e.target.closest('.js-review-photo-trigger');
+        if (trigger && trigger.tagName === 'IMG' && trigger.src) {
+            e.preventDefault();
+            openReviewImageModal(trigger.currentSrc || trigger.src);
+            return;
+        }
+        if (e.target.closest('[data-review-image-modal-close]')) {
+            closeReviewImageModal();
+        }
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && reviewImgModal && !reviewImgModal.classList.contains('hidden')) {
+            closeReviewImageModal();
+        }
+    });
 });
 </script>
 @endsection

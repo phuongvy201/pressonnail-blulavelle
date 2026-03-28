@@ -90,7 +90,7 @@
                 <!-- Per Page -->
                 <div class="w-28">
                     <select name="per_page" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
-                        @foreach([12,25,50,100] as $size)
+                        @foreach([12, 25, 50, 100, 200, 500] as $size)
                             <option value="{{ $size }}" {{ (int)request('per_page', $perPage ?? 12) === $size ? 'selected' : '' }}>
                                 {{ $size }}/page
                             </option>
@@ -562,9 +562,9 @@
                         <td class="px-6 py-4 whitespace-nowrap text-center">
                             <div class="flex items-center justify-center space-x-2">
                                 <!-- View -->
-                                <a href="{{ route('admin.products.show', $product) }}" 
+                                <a href="{{ route('products.show', $product->slug) }}"
                                    class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                                   title="View Details">
+                                   title="Xem trang sản phẩm (cửa hàng)">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>

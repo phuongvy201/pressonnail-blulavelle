@@ -41,6 +41,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Cache\RateLimiting\Limit;
 use App\Http\Controllers\Customer\ReturnRequestController;
+use App\Http\Controllers\ReviewListingController;
 
 RateLimiter::for('register', function (Request $request) {
     return Limit::perMinute(5)->by($request->ip());
@@ -62,6 +63,8 @@ Route::get('/products/{slug}', [ProductController::class, 'show'])->name('produc
 Route::post('/products/{slug}/reviews', [ProductController::class, 'storeReview'])->middleware('auth')->name('products.reviews.store');
 Route::post('/products/calculate-shipping', [ProductController::class, 'calculateShippingCost'])->name('products.calculate-shipping');
 Route::get('/shops/{shop}', [App\Http\Controllers\ShopController::class, 'show'])->name('shops.show');
+Route::get('/shops/{shop}/reviews', [App\Http\Controllers\ShopController::class, 'reviews'])->name('shops.reviews');
+Route::get('/reviews', [ReviewListingController::class, 'index'])->name('reviews.public');
 
 // GMC API - Public (no authentication required, no CSRF)
 Route::post('/api/gmc/delete-product', [AdminProductController::class, 'deleteProductFromGMC'])->name('api.gmc.delete-product');

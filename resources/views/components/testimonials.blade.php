@@ -3,8 +3,11 @@
     'rating' => '4.8/5',
     'reviews' => null,
     'bgColor' => null,
+    /** URL trang tất cả review nền tảng (mặc định route reviews.public) */
+    'allReviewsUrl' => null,
 ])
 @php
+    $allReviewsHref = $allReviewsUrl ?? route('reviews.public');
     $perSlide = 3;
     $totalToLoad = 9;
     $bgSetting = \App\Support\Settings::get('theme.testimonials_bg', config('theme.testimonials_bg'));
@@ -36,7 +39,14 @@
             @endfor
             <span class="ml-2 font-bold text-slate-900">{{ $rating }}</span>
         </div>
-        <h2 class="text-3xl lg:text-5xl font-black text-slate-900 mb-16">{{ $title }}</h2>
+        <h2 class="text-3xl lg:text-5xl font-black text-slate-900 mb-4">{{ $title }}</h2>
+        <div class="mb-10 sm:mb-14">
+            <a href="{{ $allReviewsHref }}"
+               class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold text-[#0297FE] border-2 border-[#0297FE]/35 bg-white hover:bg-[#0297FE]/8 transition-colors shadow-sm">
+                View all reviews
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </a>
+        </div>
         @if(isset($cards))
             <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
                 {{ $cards }}
