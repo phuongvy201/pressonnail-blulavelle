@@ -143,9 +143,23 @@ class ProductController extends Controller
             $shops = Shop::orderBy('shop_name', 'asc')->get();
         }
 
+        // Giống CollectionController@index: admin xem tất cả; seller xem collection của shop
+        // + collection do admin tạo và đã duyệt (để filter và bulk "Thêm vào collection").
         $collectionsQuery = Collection::orderBy('name', 'asc');
         if (!$user->hasRole('admin')) {
-            $collectionsQuery->where('user_id', $user->id);
+            $collectionsQuery->where(function ($q) use ($user) {
+                if ($user->hasShop()) {
+                    $q->where('shop_id', $user->shop->id);
+                }
+
+                $q->orWhere(function ($adminCollections) {
+                    $adminCollections
+                        ->whereHas('user.roles', function ($roleQuery) {
+                            $roleQuery->where('name', 'admin');
+                        })
+                        ->where('admin_approved', true);
+                });
+            });
         }
         $collections = $collectionsQuery->get();
 
