@@ -21,6 +21,12 @@
                     Manage your collections and use admin collections to organize your products better
                 @endif
             </p>
+            <p class="mt-2 text-sm">
+                <a href="{{ route('admin.products.index') }}" class="text-indigo-600 hover:text-indigo-800 font-medium underline underline-offset-2">
+                    Thêm nhiều sản phẩm vào collection cùng lúc
+                </a>
+                <span class="text-gray-500">— vào Products, chọn ô bên trái rồi «Thêm vào collection».</span>
+            </p>
         </div>
         <div class="mt-4 sm:mt-0 flex items-center space-x-4">
             <span class="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-lg font-semibold">

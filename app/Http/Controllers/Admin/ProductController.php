@@ -78,7 +78,14 @@ class ProductController extends Controller
         $user = auth()->user();
 
         // Admin xem tất cả products; Seller xem products do mình tạo HOẶC thuộc shop của mình (kể cả khi admin tạo rồi gán shop)
-        $productsQuery = Product::with(['template.category', 'template.user', 'user', 'shop', 'variants', 'collections']);
+        $productsQuery = Product::with([
+            'template.category',
+            'template.user',
+            'user',
+            'shop',
+            'variants',
+            'collections:id,name,slug',
+        ]);
 
         if (!$user->hasRole('admin')) {
             $productsQuery->where(function ($q) use ($user) {
@@ -849,6 +856,67 @@ class ProductController extends Controller
 
             return back()->with('error', $message);
         }
+    }
+
+    /**
+     * Gắn hàng loạt sản phẩm đã chọn vào một collection (manual).
+     */
+    public function bulkAddToCollection(Request $request)
+    {
+        $request->validate([
+            'collection_id' => 'required|exists:collections,id',
+            'product_ids' => 'required|array|min:1',
+            'product_ids.*' => 'exists:products,id',
+        ]);
+
+        $user = auth()->user();
+        $collection = Collection::findOrFail($request->collection_id);
+
+        if (! $collection->canEdit($user)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bạn không có quyền chỉnh sửa collection này.',
+            ], 403);
+        }
+
+        if ($collection->type !== 'manual') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Chỉ có thể thêm sản phẩm vào collection kiểu thủ công (Manual).',
+            ], 422);
+        }
+
+        $products = Product::whereIn('id', $request->product_ids)->get();
+        $allowedIds = [];
+        foreach ($products as $product) {
+            if ($product->canEdit($user)) {
+                $allowedIds[] = $product->id;
+            }
+        }
+
+        $allowedIds = array_values(array_unique($allowedIds));
+
+        if ($allowedIds === []) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không có sản phẩm hợp lệ hoặc bạn không có quyền thêm các sản phẩm đã chọn.',
+            ], 422);
+        }
+
+        $collection->products()->syncWithoutDetaching($allowedIds);
+
+        $skipped = count($request->product_ids) - count($allowedIds);
+        $msg = 'Đã thêm '.count($allowedIds).' sản phẩm vào collection «'.$collection->name.'».';
+        if ($skipped > 0) {
+            $msg .= ' ('.$skipped.' sản phẩm bỏ qua do không có quyền.)';
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $msg,
+            'attached' => count($allowedIds),
+            'skipped' => $skipped,
+        ]);
     }
 
     /**

@@ -7,6 +7,7 @@ use App\Models\Collection;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -22,7 +23,8 @@ class CollectionController extends Controller
         // Admin xem tất cả collections.
         // Seller xem collections của shop mình + collections do admin tạo
         // để có thể đưa sản phẩm vào các collection chung này.
-        $collectionsQuery = Collection::with(['user', 'shop', 'products']);
+        $collectionsQuery = Collection::with(['user', 'shop'])
+            ->withCount(['products as linked_products_count']);
 
         if ($user->hasRole('admin')) {
             $collections = $collectionsQuery->orderBy('admin_approved', 'asc')
@@ -49,6 +51,8 @@ class CollectionController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->paginate(12);
         }
+
+        $this->attachCollectionProductPreviews($collections);
 
         return view('admin.collections.index', compact('collections'));
     }
@@ -350,6 +354,31 @@ class CollectionController extends Controller
         ]);
 
         return back()->with('success', "Collection '{$collection->name}' rejected with notes. ❌");
+    }
+
+    /**
+     * Gắn tối đa 8 sản phẩm (theo sort_order trên pivot) cho mỗi collection trên trang index.
+     */
+    protected function attachCollectionProductPreviews(LengthAwarePaginator $collections): void
+    {
+        $ids = $collections->pluck('id')->all();
+        if ($ids === []) {
+            return;
+        }
+
+        $rows = DB::table('product_collection as pc')
+            ->join('products as p', 'p.id', '=', 'pc.product_id')
+            ->whereIn('pc.collection_id', $ids)
+            ->orderBy('pc.collection_id')
+            ->orderBy('pc.sort_order')
+            ->select('pc.collection_id', 'p.id as product_id', 'p.name', 'p.slug', 'p.status')
+            ->get();
+
+        $grouped = $rows->groupBy('collection_id')->map(fn ($g) => $g->take(8)->values());
+
+        foreach ($collections as $collection) {
+            $collection->setRelation('preview_products', $grouped->get($collection->id, collect()));
+        }
     }
 
     /**

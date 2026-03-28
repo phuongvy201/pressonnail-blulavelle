@@ -3,6 +3,9 @@
 @section('title', 'Products Management')
 
 @section('content')
+@php
+    $manualCollections = ($collections ?? collect())->filter(fn ($c) => $c->type === 'manual');
+@endphp
 <div class="space-y-6 w-full max-w-full overflow-x-hidden">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -10,22 +13,34 @@
             <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Products</h1>
             <p class="mt-1 text-sm text-gray-600">Manage products created from templates</p>
         </div>
-        <div class="mt-4 sm:mt-0 flex items-center space-x-3">
+        <div class="mt-4 sm:mt-0 flex flex-wrap items-center gap-3">
             <!-- Bulk Delete Button (Hidden by default) -->
             <button id="bulkDeleteBtn" onclick="confirmBulkDelete()" 
                     style="display: none;"
-                    class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors shadow-md">
+                    class="inline-flex items-center whitespace-nowrap shrink-0 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors shadow-md">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                 </svg>
                 Delete Selected (<span id="selectedCount">0</span>)
             </button>
+
+            @if($manualCollections->isNotEmpty())
+            <button type="button" id="bulkAddToCollectionBtn" onclick="openBulkAddToCollectionModal()"
+                    style="display: none;"
+                    class="inline-flex items-center whitespace-nowrap shrink-0 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors shadow-md"
+                    title="Thêm các sản phẩm đã chọn vào một collection (Manual)">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
+                Thêm vào collection (<span id="collectionBulkSelectedCount">0</span>)
+            </button>
+            @endif
             
             @if(($availableGmcConfigs ?? collect())->isNotEmpty())
             <!-- Feed to GMC Button (Hidden by default) -->
             <button id="feedToGMCBtn" onclick="feedToGMC()" 
                     style="display: none;"
-                    class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-md">
+                    class="inline-flex items-center whitespace-nowrap shrink-0 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-md">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                 </svg>
@@ -36,7 +51,7 @@
             <!-- Export to Meta Button (Hidden by default) -->
             <button id="exportToMetaBtn" onclick="exportToMeta()" 
                     style="display: none;"
-                    class="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors shadow-md"
+                    class="inline-flex items-center whitespace-nowrap shrink-0 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors shadow-md"
                     title="Export selected products to Meta Commerce Catalog format (CSV)">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -44,16 +59,16 @@
                 Export to Meta (<span id="metaSelectedCount">0</span>)
             </button>
             
-            <a href="{{ route('admin.products.import') }}" 
-               class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-md">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <a id="headerImportProductsBtn" href="{{ route('admin.products.import') }}" 
+               class="inline-flex items-center whitespace-nowrap shrink-0 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-md">
+                <svg class="w-5 h-5 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                 </svg>
                 Import Products
             </a>
-            <a href="{{ route('admin.products.create') }}" 
-               class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors shadow-md">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <a id="headerAddProductBtn" href="{{ route('admin.products.create') }}" 
+               class="inline-flex items-center whitespace-nowrap shrink-0 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors shadow-md">
+                <svg class="w-5 h-5 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                 </svg>
                 Add New Product
@@ -218,7 +233,7 @@
         <div class="overflow-x-auto overflow-y-auto max-h-[calc(100vh-280px)] scrollbar-custom" 
              id="productsTableContainer"
              style="overscroll-behavior: contain;">
-            <table class="min-w-[1400px] w-full divide-y divide-gray-200" style="table-layout: auto;">
+            <table class="min-w-[1580px] w-full divide-y divide-gray-200" style="table-layout: auto;">
                 <thead class="bg-gradient-to-r from-gray-50 to-gray-100 sticky top-0 z-10 shadow-sm">
                     <tr>
                         <th class="px-6 py-4 text-center" style="min-width: 60px;">
@@ -248,6 +263,14 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                 </svg>
                                 <span>Template</span>
+                            </div>
+                        </th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider" style="min-width: 220px;">
+                            <div class="flex items-center space-x-2">
+                                <svg class="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                                </svg>
+                                <span>Collections</span>
                             </div>
                         </th>
                         @if(auth()->user()->hasRole('admin'))
@@ -406,6 +429,23 @@
                                     </span>
                                 </div>
                             </div>
+                        </td>
+
+                        <!-- Collections -->
+                        <td class="px-6 py-4 align-top">
+                            @if($product->collections->isNotEmpty())
+                                <div class="flex flex-col gap-1.5" style="max-width: 240px;">
+                                    @foreach($product->collections as $col)
+                                        <a href="{{ route('admin.collections.show', $col) }}"
+                                           class="inline-flex items-center w-fit max-w-full px-2 py-1 rounded-md text-xs font-medium bg-cyan-50 text-cyan-900 border border-cyan-200 hover:bg-cyan-100 transition-colors truncate"
+                                           title="{{ $col->name }}">
+                                            <span class="truncate">{{ Str::limit($col->name, 28) }}</span>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            @else
+                                <span class="text-xs text-gray-400 italic">Chưa có collection</span>
+                            @endif
                         </td>
                         
                         <!-- Shop (Admin only) -->
@@ -667,6 +707,36 @@
     @endif
 </div>
 
+@if($manualCollections->isNotEmpty())
+<!-- Bulk add to collection modal -->
+<div id="bulkAddToCollectionModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden z-50 transition-opacity">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all">
+            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-t-2xl p-6">
+                <h3 class="text-xl font-bold text-white">Thêm vào collection</h3>
+                <p class="text-indigo-100 text-sm mt-1">Áp dụng cho các sản phẩm đã tích chọn (collection kiểu Manual)</p>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label for="bulkCollectionSelect" class="block text-sm font-medium text-gray-700 mb-1">Chọn collection</label>
+                    <select id="bulkCollectionSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                        <option value="">— Chọn collection —</option>
+                        @foreach($manualCollections as $col)
+                            <option value="{{ $col->id }}">{{ $col->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <p class="text-xs text-gray-500">Sản phẩm đã có trong collection sẽ được giữ nguyên (không bị xóa khỏi collection khác).</p>
+            </div>
+            <div class="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end gap-3">
+                <button type="button" onclick="closeBulkAddToCollectionModal()" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Hủy</button>
+                <button type="button" onclick="submitBulkAddToCollection()" id="bulkAddToCollectionSubmit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Thêm</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
 <!-- Bulk Delete Confirmation Modal -->
 <div id="bulkDeleteModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden z-50 transition-opacity">
     <div class="flex items-center justify-center min-h-screen p-4">
@@ -842,24 +912,35 @@ function toggleSelectAll(checkbox) {
 function updateBulkDeleteButton() {
     const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
     const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    const bulkAddToCollectionBtn = document.getElementById('bulkAddToCollectionBtn');
     const feedToGMCBtn = document.getElementById('feedToGMCBtn');
     const exportToMetaBtn = document.getElementById('exportToMetaBtn');
     const selectedCount = document.getElementById('selectedCount');
     const gmcSelectedCount = document.getElementById('gmcSelectedCount');
     const metaSelectedCount = document.getElementById('metaSelectedCount');
+    const collectionBulkSelectedCount = document.getElementById('collectionBulkSelectedCount');
     const selectAllCheckbox = document.getElementById('selectAll');
+    const headerImportProductsBtn = document.getElementById('headerImportProductsBtn');
+    const headerAddProductBtn = document.getElementById('headerAddProductBtn');
     
     if (checkedBoxes.length > 0) {
         bulkDeleteBtn.style.display = 'inline-flex';
+        if (bulkAddToCollectionBtn) bulkAddToCollectionBtn.style.display = 'inline-flex';
         if (feedToGMCBtn) feedToGMCBtn.style.display = 'inline-flex';
         exportToMetaBtn.style.display = 'inline-flex';
         selectedCount.textContent = checkedBoxes.length;
         gmcSelectedCount.textContent = checkedBoxes.length;
         metaSelectedCount.textContent = checkedBoxes.length;
+        if (collectionBulkSelectedCount) collectionBulkSelectedCount.textContent = checkedBoxes.length;
+        if (headerImportProductsBtn) headerImportProductsBtn.style.display = 'none';
+        if (headerAddProductBtn) headerAddProductBtn.style.display = 'none';
     } else {
         bulkDeleteBtn.style.display = 'none';
+        if (bulkAddToCollectionBtn) bulkAddToCollectionBtn.style.display = 'none';
         if (feedToGMCBtn) feedToGMCBtn.style.display = 'none';
         exportToMetaBtn.style.display = 'none';
+        if (headerImportProductsBtn) headerImportProductsBtn.style.display = 'inline-flex';
+        if (headerAddProductBtn) headerAddProductBtn.style.display = 'inline-flex';
     }
     
     // Update "Select All" checkbox state
@@ -911,6 +992,74 @@ function closeBulkDeleteModal() {
     setTimeout(() => {
         modal.classList.add('hidden');
     }, 200);
+}
+
+function openBulkAddToCollectionModal() {
+    const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+        showNoSelectionModalForCollection();
+        return;
+    }
+    const modal = document.getElementById('bulkAddToCollectionModal');
+    if (!modal) return;
+    const sel = document.getElementById('bulkCollectionSelect');
+    if (sel) sel.selectedIndex = 0;
+    modal.classList.remove('hidden');
+}
+
+function closeBulkAddToCollectionModal() {
+    const modal = document.getElementById('bulkAddToCollectionModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function showNoSelectionModalForCollection() {
+    alert('Vui lòng chọn ít nhất một sản phẩm.');
+}
+
+async function submitBulkAddToCollection() {
+    const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
+    const productIds = Array.from(checkedBoxes).map(cb => cb.value);
+    const collectionId = document.getElementById('bulkCollectionSelect')?.value;
+    if (!collectionId) {
+        alert('Vui lòng chọn collection.');
+        return;
+    }
+    const submitBtn = document.getElementById('bulkAddToCollectionSubmit');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Đang xử lý...';
+    }
+    try {
+        const response = await fetch('{{ route("admin.products.bulk-add-to-collection") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                collection_id: collectionId,
+                product_ids: productIds
+            })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (response.ok && data.success) {
+            alert(data.message || 'Đã thêm vào collection.');
+            closeBulkAddToCollectionModal();
+            window.location.reload();
+        } else {
+            alert(data.message || 'Không thể thêm vào collection.');
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Có lỗi xảy ra. Vui lòng thử lại.');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Thêm';
+        }
+    }
 }
 
 async function submitBulkDelete() {
@@ -1051,6 +1200,10 @@ document.addEventListener('click', function(event) {
     const modal = document.getElementById('bulkDeleteModal');
     if (modal && event.target === modal) {
         closeBulkDeleteModal();
+    }
+    const colModal = document.getElementById('bulkAddToCollectionModal');
+    if (colModal && event.target === colModal) {
+        closeBulkAddToCollectionModal();
     }
 });
 

@@ -127,8 +127,8 @@ class ProductsImport implements
                 $imageKey = 'image_' . $i;
                 if (!empty($row[$imageKey])) {
                     $imageUrl = trim($row[$imageKey]);
-                    // Validate URL format
-                    if (!filter_var($imageUrl, FILTER_VALIDATE_URL)) {
+                    // URL thường hoặc link Google Drive (xử lý trong downloadAndUploadToS3)
+                    if (! filter_var($imageUrl, FILTER_VALIDATE_URL) && ! $this->isGoogleDriveUrl($imageUrl)) {
                         $this->errors[] = "Row " . ($productName ?: 'Unknown') . ": Invalid URL for image_{$i}: {$imageUrl}";
                         continue;
                     }
@@ -173,8 +173,7 @@ class ProductsImport implements
             // Process video - with retry mechanism
             if (!empty($row['video_url'])) {
                 $videoUrl = trim($row['video_url']);
-                // Validate URL format
-                if (!filter_var($videoUrl, FILTER_VALIDATE_URL)) {
+                if (! filter_var($videoUrl, FILTER_VALIDATE_URL) && ! $this->isGoogleDriveUrl($videoUrl)) {
                     $this->errors[] = "Row " . ($productName ?: 'Unknown') . ": Invalid URL for video: {$videoUrl}";
                 } else {
                     // Add delay before video download with random jitter
@@ -330,15 +329,15 @@ class ProductsImport implements
             'description' => 'nullable|string',
             'quantity' => 'nullable|integer|min:0',
             'status' => 'nullable|in:active,inactive,draft',
-            'image_1' => 'nullable|url',
-            'image_2' => 'nullable|url',
-            'image_3' => 'nullable|url',
-            'image_4' => 'nullable|url',
-            'image_5' => 'nullable|url',
-            'image_6' => 'nullable|url',
-            'image_7' => 'nullable|url',
-            'image_8' => 'nullable|url',
-            'video_url' => 'nullable|url',
+            'image_1' => 'nullable|string|max:2048',
+            'image_2' => 'nullable|string|max:2048',
+            'image_3' => 'nullable|string|max:2048',
+            'image_4' => 'nullable|string|max:2048',
+            'image_5' => 'nullable|string|max:2048',
+            'image_6' => 'nullable|string|max:2048',
+            'image_7' => 'nullable|string|max:2048',
+            'image_8' => 'nullable|string|max:2048',
+            'video_url' => 'nullable|string|max:2048',
         ];
     }
 
@@ -795,6 +794,200 @@ class ProductsImport implements
         return $attributes;
     }
 
+    protected function isGoogleDriveUrl(string $url): bool
+    {
+        return str_contains($url, 'drive.google.com');
+    }
+
+    /**
+     * Lấy file ID từ link chia sẻ Google Drive.
+     * Hỗ trợ: /file/d/FILE_ID/view, ?id=FILE_ID, /open?id=FILE_ID, /uc?id=FILE_ID
+     */
+    protected function getGoogleDriveFileId(string $url): ?string
+    {
+        if (preg_match('#/file/d/([a-zA-Z0-9_-]+)#', $url, $m)) {
+            return $m[1];
+        }
+        $parsed = parse_url($url);
+        if (isset($parsed['query'])) {
+            parse_str($parsed['query'], $q);
+            if (!empty($q['id'])) {
+                return $q['id'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Tải file từ Google Drive (link share). Xử lý trang xác nhận virus scan.
+     *
+     * @param  bool  $forVideo  true: tối đa $maxBytes (video), nhận diện mp4/mov/...; false: ảnh tối đa $maxBytes
+     * @return array{content: string, extension: string}|null
+     */
+    protected function downloadFromGoogleDrive(string $shareUrl, int $maxBytes, bool $forVideo = false): ?array
+    {
+        $fileId = $this->getGoogleDriveFileId($shareUrl);
+        if ($fileId === null) {
+            Log::warning('ProductsImport: không parse được file ID từ Google Drive URL', ['url' => $shareUrl]);
+
+            return null;
+        }
+
+        $downloadUrl = 'https://drive.google.com/uc?export=download&id='.$fileId;
+
+        try {
+            $response = Http::timeout(90)->withHeaders([
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            ])->get($downloadUrl);
+
+            if (! $response->successful()) {
+                Log::warning('ProductsImport: Google Drive request không thành công', ['file_id' => $fileId, 'status' => $response->status()]);
+
+                return null;
+            }
+
+            $body = $response->body();
+
+            $confirm = null;
+            if (preg_match('#confirm=([0-9A-Za-z_-]+)#', $body, $m)) {
+                $confirm = $m[1];
+            } elseif (preg_match('#name="confirm"\s+value="([^"]+)"#', $body, $m)) {
+                $confirm = $m[1];
+            }
+            if ($confirm !== null) {
+                $downloadUrl = 'https://drive.google.com/uc?export=download&id='.$fileId.'&confirm='.$confirm;
+                $response = Http::timeout(90)->withHeaders([
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                ])->get($downloadUrl);
+                if (! $response->successful()) {
+                    return null;
+                }
+                $body = $response->body();
+            }
+
+            if (str_starts_with(trim($body), '<!') || str_starts_with(strtolower(trim($body)), '<html')) {
+                Log::warning('ProductsImport: Google Drive trả về HTML thay vì file (có thể link chưa public)', ['file_id' => $fileId]);
+
+                return null;
+            }
+
+            if (strlen($body) === 0 || strlen($body) > $maxBytes) {
+                Log::warning('ProductsImport: Google Drive file rỗng hoặc vượt giới hạn kích thước', ['file_id' => $fileId, 'max' => $maxBytes]);
+
+                return null;
+            }
+
+            $extension = $forVideo ? 'mp4' : 'jpg';
+
+            $contentDisposition = $response->header('Content-Disposition');
+            if ($contentDisposition && preg_match('#filename[*]?=(?:UTF-8\'\')?["\']?[^"\']*\.([a-z0-9]+)#i', $contentDisposition, $m)) {
+                $ext = strtolower($m[1]);
+                if ($forVideo) {
+                    if (in_array($ext, ['mp4', 'mpeg', 'mov', 'avi', 'webm', 'mkv'], true)) {
+                        $extension = in_array($ext, ['mpeg', 'mkv'], true) ? 'mp4' : $ext;
+                    }
+                } elseif (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
+                    $extension = $ext === 'jpeg' ? 'jpg' : $ext;
+                }
+            }
+
+            $contentTypeHeader = $response->header('Content-Type');
+            if ($contentTypeHeader) {
+                $ct = strtolower(explode(';', $contentTypeHeader)[0]);
+                if (! $forVideo && preg_match('#image/(jpeg|jpg|png|gif|webp)#i', $contentTypeHeader, $m)) {
+                    $ext = strtolower($m[1]);
+                    $extension = $ext === 'jpeg' ? 'jpg' : $ext;
+                } elseif ($forVideo && (str_starts_with($ct, 'video/') || $ct === 'application/octet-stream')) {
+                    $mapped = $this->getExtensionFromContentType($ct);
+                    if ($mapped !== 'jpg' || str_starts_with($ct, 'video/')) {
+                        $extension = in_array($mapped, ['jpg', 'jpeg'], true) ? 'mp4' : $mapped;
+                    }
+                }
+            }
+
+            if ($forVideo) {
+                $detected = $this->detectExtensionFromContent($body);
+                if (in_array($detected, ['mp4', 'mov'], true)) {
+                    $extension = $detected;
+                }
+            } else {
+                $detected = $this->detectExtensionFromContent($body);
+                if (in_array($detected, ['jpg', 'png', 'gif', 'webp'], true)) {
+                    $extension = $detected;
+                }
+            }
+
+            return ['content' => $body, 'extension' => $extension];
+        } catch (\Throwable $e) {
+            Log::warning('ProductsImport: lỗi tải Google Drive', ['url' => $shareUrl, 'error' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Upload nội dung file (ảnh) đã tải về lên S3 thư mục products — cùng format URL với ProductController.
+     */
+    protected function uploadProductImageContentToS3(string $fileContent, string $extension): ?string
+    {
+        $extension = strtolower(explode('?', $extension)[0]);
+        if (! in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
+            $extension = 'jpg';
+        }
+        if ($extension === 'jpeg') {
+            $extension = 'jpg';
+        }
+
+        $fileSize = strlen($fileContent);
+        if ($fileSize < 100 || $fileSize > 10 * 1024 * 1024) {
+            Log::warning('ProductsImport: nội dung ảnh không hợp lệ (kích thước)', ['size' => $fileSize]);
+
+            return null;
+        }
+
+        $disk = Storage::disk('s3');
+        if (! $disk) {
+            Log::error('S3 disk not configured');
+
+            return null;
+        }
+
+        $s3Config = config('filesystems.disks.s3');
+        if (empty($s3Config['key']) || empty($s3Config['secret']) || empty($s3Config['bucket'])) {
+            Log::error('S3 credentials not configured properly');
+
+            return null;
+        }
+
+        $fileName = time().'_'.Str::random(10).'.'.$extension;
+        $tempFile = tempnam(sys_get_temp_dir(), 'import_media_');
+        if ($tempFile === false) {
+            return null;
+        }
+
+        try {
+            if (file_put_contents($tempFile, $fileContent) === false) {
+                return null;
+            }
+            $fileObject = new File($tempFile);
+            $filePath = $disk->putFileAs('products', $fileObject, $fileName);
+            if ($filePath && ! empty($filePath)) {
+                return 'https://s3.us-east-1.amazonaws.com/image.bluprinter/'.$filePath;
+            }
+
+            return null;
+        } catch (\Throwable $e) {
+            Log::error('ProductsImport: uploadProductImageContentToS3', ['error' => $e->getMessage()]);
+
+            return null;
+        } finally {
+            if (isset($tempFile) && file_exists($tempFile)) {
+                @unlink($tempFile);
+            }
+        }
+    }
+
     /**
      * Download file from URL and upload to S3
      * 
@@ -807,7 +1000,16 @@ class ProductsImport implements
     protected function downloadAndUploadToS3(string $url, string $folder = 'products', int $retryAttempt = 1, int $maxRetries = 3): ?string
     {
         try {
-            // Validate URL
+            if ($this->isGoogleDriveUrl($url)) {
+                $gd = $this->downloadFromGoogleDrive($url, 10 * 1024 * 1024, false);
+                if ($gd === null) {
+                    return null;
+                }
+
+                return $this->uploadProductImageContentToS3($gd['content'], $gd['extension']);
+            }
+
+            // Validate URL (non-Drive)
             if (!filter_var($url, FILTER_VALIDATE_URL)) {
                 Log::warning("Invalid URL format: {$url}");
                 return null;
@@ -1072,6 +1274,51 @@ class ProductsImport implements
     }
 
     /**
+     * Upload file video tạm lên S3, tạo poster bằng FFmpeg.
+     *
+     * @return array{media: array{type: string, url: string, poster: ?string}, poster_relative: ?string}|null
+     */
+    protected function finalizeVideoUploadToS3(string $tempFile, string $extension, string $url): ?array
+    {
+        $fileName = time().'_'.Str::random(10).'.'.$extension;
+        $disk = Storage::disk('s3');
+        $fileObject = new File($tempFile);
+        $filePath = $disk->putFileAs('products', $fileObject, $fileName);
+        if (! $filePath) {
+            Log::error("Failed to upload video to S3 for: {$url}");
+
+            return null;
+        }
+        $videoS3Url = 'https://s3.us-east-1.amazonaws.com/image.bluprinter/'.$filePath;
+
+        $thumbnailService = app(VideoThumbnailService::class);
+        $posterRelative = $thumbnailService->generatePoster($tempFile, 5);
+        $posterS3Url = null;
+
+        if ($posterRelative) {
+            $posterAbs = Storage::disk('local')->path($posterRelative);
+            if (is_file($posterAbs)) {
+                $posterFileName = pathinfo($fileName, PATHINFO_FILENAME).'_poster.jpg';
+                $posterKey = 'products/posters/'.$posterFileName;
+                $contents = @file_get_contents($posterAbs);
+                if ($contents !== false && $contents !== '') {
+                    $disk->put($posterKey, $contents);
+                    $posterS3Url = 'https://s3.us-east-1.amazonaws.com/image.bluprinter/'.$posterKey;
+                }
+            }
+        }
+
+        return [
+            'media' => [
+                'type' => 'video',
+                'url' => $videoS3Url,
+                'poster' => $posterS3Url,
+            ],
+            'poster_relative' => $posterRelative,
+        ];
+    }
+
+    /**
      * Download video, upload lên S3 và tạo poster (thumbnail) bằng FFmpeg rồi upload poster lên S3.
      * Trả về item dạng ['type'=>'video','url'=>...,'poster'=>...]
      */
@@ -1081,6 +1328,50 @@ class ProductsImport implements
         $posterRelative = null;
 
         try {
+            if ($this->isGoogleDriveUrl($url)) {
+                $gd = $this->downloadFromGoogleDrive($url, 50 * 1024 * 1024, true);
+                if ($gd === null) {
+                    Log::warning("ProductsImport: không tải được video từ Google Drive: {$url}");
+
+                    return null;
+                }
+                $fileContent = $gd['content'];
+                $extension = $gd['extension'];
+                if (strlen($fileContent) < 1024) {
+                    Log::warning("Video too small (likely invalid) from Google Drive: {$url}");
+
+                    return null;
+                }
+
+                $tempFile = tempnam(sys_get_temp_dir(), 'import_video_');
+                if ($tempFile === false) {
+                    Log::error("Failed to create temp video file for: {$url}");
+
+                    return null;
+                }
+                $tempFileWithExt = $tempFile.'.'.$extension;
+                if (@rename($tempFile, $tempFileWithExt)) {
+                    $tempFile = $tempFileWithExt;
+                }
+                $bytesWritten = file_put_contents($tempFile, $fileContent);
+                if ($bytesWritten === false || $bytesWritten === 0) {
+                    Log::error("Failed to write video to temp file for: {$url}");
+                    if (file_exists($tempFile)) {
+                        @unlink($tempFile);
+                    }
+
+                    return null;
+                }
+
+                $done = $this->finalizeVideoUploadToS3($tempFile, $extension, $url);
+                if ($done === null) {
+                    return null;
+                }
+                $posterRelative = $done['poster_relative'];
+
+                return $done['media'];
+            }
+
             // Download (reuse headers + retry style giống downloadAndUploadToS3)
             $internalMaxRetries = 3;
             $response = null;
@@ -1190,41 +1481,13 @@ class ProductsImport implements
                 return null;
             }
 
-            // Upload video to S3
-            $fileName = time() . '_' . Str::random(10) . '.' . $extension;
-            $disk = Storage::disk('s3');
-            $fileObject = new File($tempFile);
-            $filePath = $disk->putFileAs('products', $fileObject, $fileName);
-            if (!$filePath) {
-                Log::error("Failed to upload video to S3 for: {$url}");
+            $done = $this->finalizeVideoUploadToS3($tempFile, $extension, $url);
+            if ($done === null) {
                 return null;
             }
-            $videoS3Url = 'https://s3.us-east-1.amazonaws.com/image.bluprinter/' . $filePath;
+            $posterRelative = $done['poster_relative'];
 
-            // Generate poster locally using FFmpeg
-            $thumbnailService = app(VideoThumbnailService::class);
-            $posterRelative = $thumbnailService->generatePoster($tempFile, 5);
-            $posterS3Url = null;
-
-            if ($posterRelative) {
-                $posterAbs = Storage::disk('local')->path($posterRelative);
-                if (is_file($posterAbs)) {
-                    $posterFileName = pathinfo($fileName, PATHINFO_FILENAME) . '_poster.jpg';
-                    $posterKey = 'products/posters/' . $posterFileName;
-                    $contents = @file_get_contents($posterAbs);
-                    if ($contents !== false && $contents !== '') {
-                        $disk->put($posterKey, $contents);
-                        $posterS3Url = 'https://s3.us-east-1.amazonaws.com/image.bluprinter/' . $posterKey;
-                    }
-                }
-            }
-
-            // Always return video item; poster can be null (frontend fallback)
-            return [
-                'type' => 'video',
-                'url' => $videoS3Url,
-                'poster' => $posterS3Url,
-            ];
+            return $done['media'];
         } catch (\Throwable $e) {
             Log::error("downloadUploadVideoAndPosterToS3 failed: {$url}", [
                 'error' => $e->getMessage(),
