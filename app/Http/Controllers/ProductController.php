@@ -273,7 +273,7 @@ class ProductController extends Controller
                 ->orderByDesc('show_on_home')
                 ->orderByDesc('rating')
                 ->orderByDesc('created_at')
-                ->limit(8)
+                ->limit(9)
                 ->get();
 
             if ($shopSpotlightReviews->isEmpty()) {
@@ -289,7 +289,7 @@ class ProductController extends Controller
                     ->orderByDesc('show_on_home')
                     ->orderByDesc('rating')
                     ->orderByDesc('created_at')
-                    ->limit(8)
+                    ->limit(9)
                     ->get();
             }
         }

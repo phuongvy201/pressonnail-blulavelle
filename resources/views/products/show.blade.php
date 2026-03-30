@@ -583,20 +583,20 @@
         </div>
 
         @if($reviewsCount > 0)
-        <div id="customer-reviews" class="mt-12 space-y-6">
+        <div id="customer-reviews" class="mt-8 sm:mt-12 space-y-4 sm:space-y-6 min-w-0">
             @php
                 $displayReviews = $product->approvedReviews ?? collect();
                 $reviewPhotos = $displayReviews->filter(function ($r) {
                     return !empty($r->image_url_for_display);
                 })->values();
             @endphp
-            <div class="rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
-                <div class="mb-5">
-                    <h3 class="text-2xl font-extrabold text-slate-900">Reviews for this item ({{ $reviewsCount }})</h3>
+            <div class="rounded-2xl bg-white p-4 sm:p-6 shadow-sm border border-slate-100 min-w-0 overflow-hidden">
+                <div class="mb-4 sm:mb-5">
+                    <h3 class="text-lg sm:text-2xl font-extrabold text-slate-900 leading-snug break-words">Reviews for this item ({{ $reviewsCount }})</h3>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-4 mb-6">
-                    <div class="flex items-center gap-1 text-amber-400">
+                <div class="flex flex-wrap items-center gap-3 sm:gap-4 mb-5 sm:mb-6">
+                    <div class="flex items-center gap-0.5 sm:gap-1 text-amber-400 shrink-0">
                         @for($i = 1; $i <= 5; $i++)
                             @if($i <= floor($averageRating))
                                 <span class="material-symbols-outlined text-lg fill-current">star</span>
@@ -607,48 +607,55 @@
                             @endif
                         @endfor
                     </div>
-                    <p class="text-3xl font-light text-slate-900 leading-none">
-                        {{ number_format($averageRating, 1) }}<span class="text-lg text-slate-500">/5</span>
+                    <p class="text-2xl sm:text-3xl font-light text-slate-900 leading-none tabular-nums">
+                        {{ number_format($averageRating, 1) }}<span class="text-base sm:text-lg text-slate-500">/5</span>
                     </p>
-                    <span class="text-sm text-slate-500">({{ $reviewsCount }} {{ $reviewsCount === 1 ? 'review' : 'reviews' }})</span>
+                    <span class="text-xs sm:text-sm text-slate-500 w-full sm:w-auto basis-full sm:basis-auto">({{ $reviewsCount }} {{ $reviewsCount === 1 ? 'review' : 'reviews' }})</span>
                 </div>
 
                 @if($displayReviews->isNotEmpty())
-                    <div class="divide-y divide-slate-200">
+                    {{-- Mobile: kéo ngang để xem từng review; sm+: danh sách dọc --}}
+                    <div
+                        class="flex flex-row sm:flex-col gap-4 sm:gap-0 overflow-x-auto sm:overflow-visible overscroll-x-contain snap-x snap-mandatory sm:snap-none scroll-smooth pb-2 sm:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0 sm:divide-y sm:divide-slate-200 touch-pan-x sm:touch-auto no-scrollbar"
+                        role="region"
+                        aria-label="Danh sách đánh giá — vuốt ngang trên điện thoại"
+                    >
                         @foreach($displayReviews as $review)
-                            <article class="py-4">
-                                <div class="flex items-start justify-between gap-4">
+                            <article class="snap-start shrink-0 w-[min(88vw,340px)] sm:w-full sm:shrink rounded-xl border border-slate-100 bg-slate-50/90 p-4 shadow-sm sm:rounded-none sm:border-0 sm:bg-transparent sm:shadow-none sm:p-0 sm:py-4">
+                                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 min-w-0">
                                     <div class="min-w-0 flex-1">
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <div class="flex items-center text-amber-400">
+                                        <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
+                                            <div class="flex items-center text-amber-400 shrink-0">
                                                 @for($i = 1; $i <= 5; $i++)
                                                     <span class="material-symbols-outlined text-base {{ $i <= (int) $review->rating ? 'fill-current' : 'text-slate-200' }}">star</span>
                                                 @endfor
                                             </div>
                                             <span class="text-xs font-semibold text-slate-500">{{ (int) $review->rating }}</span>
                                             @if($review->is_verified_purchase)
-                                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                    <span class="material-symbols-outlined text-xs">verified</span>
-                                                    This item
+                                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 max-w-full">
+                                                    <span class="material-symbols-outlined text-xs shrink-0">verified</span>
+                                                    <span class="whitespace-nowrap">This item</span>
                                                 </span>
                                             @endif
                                         </div>
                                         @if(!empty($review->title))
-                                            <p class="text-sm font-semibold text-slate-900">{{ $review->title }}</p>
+                                            <p class="text-sm font-semibold text-slate-900 break-words">{{ $review->title }}</p>
                                         @endif
                                         @if(!empty($review->review_text))
-                                            <p class="mt-1 text-sm text-slate-700 leading-relaxed">{{ $review->review_text }}</p>
+                                            <p class="mt-1 text-sm text-slate-700 leading-relaxed break-words">{{ $review->review_text }}</p>
                                         @endif
                                     </div>
 
-                                    <div class="shrink-0 text-right min-w-[120px]">
-                                        <p class="text-xs font-semibold text-slate-900 truncate">{{ $review->display_name }}</p>
-                                        <p class="text-xs text-slate-500 mt-0.5">{{ $review->created_at?->format('M d, Y') }}</p>
+                                    <div class="shrink-0 flex flex-row sm:flex-col items-center sm:items-end gap-3 sm:gap-0 sm:text-right w-full sm:w-auto sm:min-w-[120px] border-t border-slate-100 pt-3 sm:border-t-0 sm:pt-0">
+                                        <div class="min-w-0 flex-1 sm:flex-none text-left sm:text-right">
+                                            <p class="text-xs font-semibold text-slate-900 break-words">{{ $review->display_name }}</p>
+                                            <p class="text-xs text-slate-500 mt-0.5">{{ $review->created_at?->format('M d, Y') }}</p>
+                                        </div>
                                         @if(!empty($review->image_url_for_display))
                                             <img
                                                 src="{{ $review->image_url_for_display }}"
                                                 alt="Review image by {{ $review->display_name }}"
-                                                class="mt-2 ml-auto w-14 h-14 rounded-md border border-slate-200 object-cover cursor-pointer js-review-photo-trigger hover:ring-2 hover:ring-[#0297FE]/40 transition-shadow"
+                                                class="w-14 h-14 sm:mt-2 sm:ml-auto rounded-md border border-slate-200 object-cover cursor-pointer js-review-photo-trigger hover:ring-2 hover:ring-[#0297FE]/40 transition-shadow shrink-0"
                                                 loading="lazy"
                                                 onerror="this.style.display='none';"
                                             >
@@ -658,10 +665,13 @@
                             </article>
                         @endforeach
                     </div>
+                    @if($displayReviews->count() > 1)
+                    <p class="sm:hidden text-center text-[11px] text-slate-400 mt-1 mb-0">← Vuốt để xem thêm →</p>
+                    @endif
 
                     @if($reviewsCount > $displayReviews->count())
                         <div class="pt-5 flex justify-center">
-                            <button type="button" class="px-5 py-2 text-sm font-semibold rounded-full border border-slate-300 text-slate-700 hover:bg-slate-50 transition">
+                            <button type="button" class="w-full sm:w-auto px-5 py-2.5 sm:py-2 text-sm font-semibold rounded-full border border-slate-300 text-slate-700 hover:bg-slate-50 transition touch-manipulation">
                                 View all reviews for this item
                             </button>
                         </div>
@@ -671,14 +681,15 @@
                 @endif
 
                 @if($reviewPhotos->isNotEmpty())
-                    <div class="mt-8">
+                    <div class="mt-6 sm:mt-8">
                         <h4 class="text-sm font-bold text-slate-900 mb-3">Photos from reviews</h4>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                        {{-- Mobile: cuộn ngang; md+: lưới --}}
+                        <div class="flex md:grid md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none scroll-smooth pb-2 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 no-scrollbar touch-pan-x md:touch-auto">
                             @foreach($reviewPhotos->take(10) as $photoReview)
                                 <img
                                     src="{{ $photoReview->image_url_for_display }}"
                                     alt="Photo from review by {{ $photoReview->display_name }}"
-                                    class="w-full aspect-square rounded-lg border border-slate-200 object-cover cursor-pointer js-review-photo-trigger hover:ring-2 hover:ring-[#0297FE]/40 transition-shadow"
+                                    class="shrink-0 snap-start w-[min(42vw,160px)] aspect-square md:w-full rounded-lg border border-slate-200 object-cover cursor-pointer js-review-photo-trigger hover:ring-2 hover:ring-[#0297FE]/40 transition-shadow"
                                     loading="lazy"
                                     onerror="this.style.display='none';"
                                 >
@@ -688,8 +699,8 @@
                 @endif
             </div>
 
-            <div class="rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
-                <h3 class="text-lg font-extrabold text-slate-900 mb-4">Write a Review</h3>
+            <div class="rounded-2xl bg-white p-4 sm:p-6 shadow-sm border border-slate-100 min-w-0 overflow-hidden">
+                <h3 class="text-base sm:text-lg font-extrabold text-slate-900 mb-4">Write a Review</h3>
 
                 @if(session('success'))
                     <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 px-4 py-3 text-sm font-medium">
@@ -721,11 +732,11 @@
                             @csrf
                             <div>
                                 <label class="block text-sm font-semibold text-slate-700 mb-2">Rating</label>
-                                <div class="flex items-center gap-2 flex-wrap">
+                                <div class="flex items-stretch gap-1.5 sm:gap-2 flex-wrap">
                                     @for($i = 1; $i <= 5; $i++)
-                                        <label class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 hover:border-[#0297FE]/50 cursor-pointer">
-                                            <input type="radio" name="rating" value="{{ $i }}" class="accent-[#0297FE]" {{ (int) old('rating', 5) === $i ? 'checked' : '' }}>
-                                            <span class="text-sm font-medium text-slate-700">{{ $i }}★</span>
+                                        <label class="inline-flex flex-1 min-w-[2.75rem] sm:flex-initial sm:min-w-0 justify-center items-center gap-1 px-2 py-2 sm:px-3 sm:py-2 rounded-lg border border-slate-200 hover:border-[#0297FE]/50 cursor-pointer touch-manipulation">
+                                            <input type="radio" name="rating" value="{{ $i }}" class="accent-[#0297FE] shrink-0" {{ (int) old('rating', 5) === $i ? 'checked' : '' }}>
+                                            <span class="text-xs sm:text-sm font-medium text-slate-700 whitespace-nowrap">{{ $i }}★</span>
                                         </label>
                                     @endfor
                                 </div>
@@ -742,7 +753,7 @@
                                           class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#0297FE]/30 focus:border-[#0297FE]"
                                           placeholder="Share your experience with this product...">{{ old('review_text') }}</textarea>
                             </div>
-                            <button type="submit" class="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-[#0297FE] text-white text-sm font-bold hover:opacity-90 transition">
+                            <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-3 sm:py-2.5 rounded-lg bg-[#0297FE] text-white text-sm font-bold hover:opacity-90 transition touch-manipulation">
                                 Submit Review
                             </button>
                         </form>
@@ -757,47 +768,129 @@
         @endif
 
         @if($product->shop && isset($shopSpotlightReviews) && $shopSpotlightReviews->isNotEmpty())
-        <div class="mt-12 rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
-            <div class="mb-5 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
-                <div>
-                    <h3 class="text-xl font-extrabold text-slate-900">Featured reviews from {{ $product->shop->shop_name }}</h3>
-                    <p class="text-sm text-slate-500 mt-1">What customers say about other products from this shop</p>
+        @php
+            $spotlightPerSlide = 3;
+            $spotlightSlides = $shopSpotlightReviews->chunk($spotlightPerSlide)->values();
+            $spotlightSlideTotal = $spotlightSlides->count();
+        @endphp
+        <div class="mt-8 sm:mt-12 rounded-2xl bg-white p-4 sm:p-6 shadow-sm border border-slate-100 min-w-0 overflow-hidden">
+            <div class="mb-4 sm:mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-2">
+                <div class="min-w-0">
+                    <h3 class="text-lg sm:text-xl font-extrabold text-slate-900 leading-snug break-words">Featured reviews from {{ $product->shop->shop_name }}</h3>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-1">What customers say about other products from this shop</p>
                 </div>
-                <div class="flex flex-wrap items-center gap-3 shrink-0 justify-end">
-                    <a href="{{ route('shops.reviews', $product->shop->shop_slug ?? $product->shop->id) }}" class="text-sm font-semibold text-[#0297FE] hover:underline">All shop reviews</a>
-                    <a href="{{ route('shops.show', $product->shop->shop_slug ?? $product->shop->id) }}" class="text-sm font-semibold text-slate-600 hover:text-[#0297FE] hover:underline">Visit shop</a>
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-2 shrink-0 justify-start sm:justify-end">
+                    <a href="{{ route('shops.reviews', $product->shop->shop_slug ?? $product->shop->id) }}" class="text-sm font-semibold text-[#0297FE] hover:underline touch-manipulation">All shop reviews</a>
+                    <a href="{{ route('shops.show', $product->shop->shop_slug ?? $product->shop->id) }}" class="text-sm font-semibold text-slate-600 hover:text-[#0297FE] hover:underline touch-manipulation">Visit shop</a>
                 </div>
             </div>
-            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                @foreach($shopSpotlightReviews as $sReview)
-                <article class="rounded-xl border border-slate-100 bg-slate-50/80 p-4 flex flex-col h-full">
-                    <div class="flex items-start justify-between gap-2 mb-2">
-                        <div class="flex items-center text-amber-400 min-w-0">
-                            @for($i = 1; $i <= 5; $i++)
-                                <span class="material-symbols-outlined text-base {{ $i <= (int) $sReview->rating ? 'fill-current' : 'text-slate-200' }}">star</span>
-                            @endfor
+            {{-- Mobile & tablet: cuộn ngang toàn bộ review shop --}}
+            <div class="lg:hidden -mx-4 px-4 pb-1" role="region" aria-label="Đánh giá nổi bật từ shop — vuốt ngang">
+                <div class="flex gap-3 overflow-x-auto overscroll-x-contain snap-x snap-mandatory scroll-smooth pb-2 no-scrollbar touch-pan-x">
+                    @foreach($shopSpotlightReviews as $sReview)
+                    <article class="snap-start shrink-0 w-[min(88vw,340px)] max-w-[340px] rounded-xl border border-slate-100 bg-slate-50/80 p-4 flex flex-col h-full min-h-0 min-w-0">
+                        <div class="flex flex-col gap-2 mb-2 sm:flex-row sm:items-start sm:justify-between">
+                            <div class="flex items-center text-amber-400 min-w-0 shrink-0">
+                                @for($i = 1; $i <= 5; $i++)
+                                    <span class="material-symbols-outlined text-base {{ $i <= (int) $sReview->rating ? 'fill-current' : 'text-slate-200' }}">star</span>
+                                @endfor
+                            </div>
+                            @if($sReview->product)
+                                <a href="{{ route('products.show', $sReview->product->slug) }}" class="text-xs font-semibold text-[#0297FE] hover:underline line-clamp-2 break-words w-full" title="{{ $sReview->product->name }}">{{ Str::limit($sReview->product->name, 42) }}</a>
+                            @endif
                         </div>
-                        @if($sReview->product)
-                            <a href="{{ route('products.show', $sReview->product->slug) }}" class="text-xs font-semibold text-[#0297FE] hover:underline truncate max-w-[55%] text-right" title="{{ $sReview->product->name }}">{{ Str::limit($sReview->product->name, 42) }}</a>
+                        @if(!empty($sReview->title))
+                            <p class="text-sm font-semibold text-slate-900 line-clamp-2">{{ $sReview->title }}</p>
                         @endif
-                    </div>
-                    @if(!empty($sReview->title))
-                        <p class="text-sm font-semibold text-slate-900 line-clamp-2">{{ $sReview->title }}</p>
-                    @endif
-                    @if(!empty($sReview->review_text))
-                        <p class="mt-1 text-sm text-slate-700 leading-relaxed line-clamp-4">{{ $sReview->review_text }}</p>
-                    @endif
-                    <div class="mt-auto pt-3 flex items-center justify-between gap-2 text-xs text-slate-500">
-                        <span class="font-semibold text-slate-800 truncate">{{ $sReview->display_name }}</span>
-                        <span>{{ $sReview->created_at?->format('M j, Y') }}</span>
-                    </div>
-                    @if(!empty($sReview->image_url_for_display))
-                        <div class="mt-3">
-                            <img src="{{ $sReview->image_url_for_display }}" alt="" class="w-full max-h-32 object-cover rounded-lg border border-slate-200 cursor-pointer js-review-photo-trigger hover:ring-2 hover:ring-[#0297FE]/40 transition-shadow" loading="lazy" onerror="this.style.display='none';">
+                        @if(!empty($sReview->review_text))
+                            <p class="mt-1 text-sm text-slate-700 leading-relaxed line-clamp-4">{{ $sReview->review_text }}</p>
+                        @endif
+                        <div class="mt-auto pt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs text-slate-500">
+                            <span class="font-semibold text-slate-800 truncate min-w-0 max-w-[65%]">{{ $sReview->display_name }}</span>
+                            <span class="shrink-0">{{ $sReview->created_at?->format('M j, Y') }}</span>
                         </div>
-                    @endif
-                </article>
-                @endforeach
+                        @if(!empty($sReview->image_url_for_display))
+                            <div class="mt-3">
+                                <img src="{{ $sReview->image_url_for_display }}" alt="" class="w-full max-h-32 object-cover rounded-lg border border-slate-200 cursor-pointer js-review-photo-trigger hover:ring-2 hover:ring-[#0297FE]/40 transition-shadow" loading="lazy" onerror="this.style.display='none';">
+                            </div>
+                        @endif
+                    </article>
+                    @endforeach
+                </div>
+                @if($shopSpotlightReviews->count() > 1)
+                <p class="text-center text-[11px] text-slate-400 mt-1">← Vuốt để xem thêm →</p>
+                @endif
+            </div>
+            <div class="relative min-w-0 hidden lg:block" id="shop-spotlight-carousel">
+                <div class="overflow-hidden">
+                    <div class="shop-spotlight-slides flex transition-transform duration-300 ease-out" style="width: {{ $spotlightSlideTotal * 100 }}%">
+                        @foreach($spotlightSlides as $slideReviews)
+                        <div class="shop-spotlight-slide flex-shrink-0 px-0 sm:px-2" style="width: {{ 100 / $spotlightSlideTotal }}%">
+                            <div class="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                @foreach($slideReviews as $sReview)
+                                <article class="rounded-xl border border-slate-100 bg-slate-50/80 p-3 sm:p-4 flex flex-col h-full min-h-0 min-w-0">
+                                    <div class="flex flex-col gap-2 mb-2 sm:flex-row sm:items-start sm:justify-between">
+                                        <div class="flex items-center text-amber-400 min-w-0 shrink-0">
+                                            @for($i = 1; $i <= 5; $i++)
+                                                <span class="material-symbols-outlined text-base {{ $i <= (int) $sReview->rating ? 'fill-current' : 'text-slate-200' }}">star</span>
+                                            @endfor
+                                        </div>
+                                        @if($sReview->product)
+                                            <a href="{{ route('products.show', $sReview->product->slug) }}" class="text-xs font-semibold text-[#0297FE] hover:underline line-clamp-2 sm:truncate sm:max-w-[55%] sm:text-right w-full sm:w-auto break-words" title="{{ $sReview->product->name }}">{{ Str::limit($sReview->product->name, 42) }}</a>
+                                        @endif
+                                    </div>
+                                    @if(!empty($sReview->title))
+                                        <p class="text-sm font-semibold text-slate-900 line-clamp-2">{{ $sReview->title }}</p>
+                                    @endif
+                                    @if(!empty($sReview->review_text))
+                                        <p class="mt-1 text-sm text-slate-700 leading-relaxed line-clamp-4">{{ $sReview->review_text }}</p>
+                                    @endif
+                                    <div class="mt-auto pt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs text-slate-500">
+                                        <span class="font-semibold text-slate-800 truncate min-w-0 max-w-[65%] sm:max-w-none">{{ $sReview->display_name }}</span>
+                                        <span class="shrink-0">{{ $sReview->created_at?->format('M j, Y') }}</span>
+                                    </div>
+                                    @if(!empty($sReview->image_url_for_display))
+                                        <div class="mt-3">
+                                            <img src="{{ $sReview->image_url_for_display }}" alt="" class="w-full max-h-32 object-cover rounded-lg border border-slate-200 cursor-pointer js-review-photo-trigger hover:ring-2 hover:ring-[#0297FE]/40 transition-shadow" loading="lazy" onerror="this.style.display='none';">
+                                        </div>
+                                    @endif
+                                </article>
+                                @endforeach
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+                @if($spotlightSlideTotal > 1)
+                <div class="flex justify-center items-center gap-3 sm:gap-4 mt-6 sm:mt-8 px-1">
+                    <button type="button" class="shop-spotlight-prev touch-manipulation inline-flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full border-2 border-slate-300 text-slate-600 hover:bg-slate-100 hover:border-slate-400 transition-colors shrink-0" aria-label="Previous reviews">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    </button>
+                    <span class="text-sm font-medium text-slate-600 shop-spotlight-pagination">1 / {{ $spotlightSlideTotal }}</span>
+                    <button type="button" class="shop-spotlight-next touch-manipulation inline-flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full border-2 border-slate-300 text-slate-600 hover:bg-slate-100 hover:border-slate-400 transition-colors shrink-0" aria-label="Next reviews">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                </div>
+                <script>
+                (function() {
+                    var root = document.getElementById('shop-spotlight-carousel');
+                    if (!root) return;
+                    var slidesEl = root.querySelector('.shop-spotlight-slides');
+                    var total = {{ $spotlightSlideTotal }};
+                    var current = 0;
+                    var paginationEl = root.querySelector('.shop-spotlight-pagination');
+                    function go(idx) {
+                        current = Math.max(0, Math.min(idx, total - 1));
+                        if (slidesEl) slidesEl.style.transform = 'translateX(-' + (current * (100 / total)) + '%)';
+                        if (paginationEl) paginationEl.textContent = (current + 1) + ' / ' + total;
+                    }
+                    var prev = root.querySelector('.shop-spotlight-prev');
+                    var next = root.querySelector('.shop-spotlight-next');
+                    if (prev) prev.addEventListener('click', function() { go(current === 0 ? total - 1 : current - 1); });
+                    if (next) next.addEventListener('click', function() { go(current === total - 1 ? 0 : current + 1); });
+                })();
+                </script>
+                @endif
             </div>
         </div>
         @endif
