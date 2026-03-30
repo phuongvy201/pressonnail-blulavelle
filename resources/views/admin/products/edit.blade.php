@@ -279,7 +279,7 @@
         <div class="bg-white shadow rounded-lg">
             <div class="px-6 py-4 border-b border-gray-200">
                 <h3 class="text-lg font-medium text-gray-900">Product Media</h3>
-                <p class="text-sm text-gray-600">Upload new media or keep existing</p>
+                <p class="text-sm text-gray-600">Upload new media or keep existing. Mỗi lần chọn &quot;Choose Files&quot; sẽ thêm file vào danh sách mới (không thay thế). Kéo thả file vào ô bên dưới cũng được cộng thêm.</p>
             </div>
             <div class="p-6">
                 @if($product->media && count($product->media) > 0)
@@ -328,12 +328,18 @@
                 </div>
                 @endif
 
-                <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors bg-gray-50">
-                    <input type="file" id="media" name="media[]" multiple accept="image/*,video/*" class="hidden" onchange="handleMediaFiles(this.files)">
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors bg-gray-50"
+                     id="product-media-drop-zone"
+                     ondrop="handleNewMediaDrop(event)"
+                     ondragover="handleNewMediaDragOver(event)"
+                     ondragleave="handleNewMediaDragLeave(event)">
+                    <input type="file" id="media" name="media[]" multiple accept="image/*,video/*" class="hidden"
+                           onchange="handleMediaFiles(this.files); this.value='';">
                     <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                     </svg>
                     <p class="text-lg font-semibold text-gray-700 mb-2">Upload New Media</p>
+                    <p class="text-sm text-gray-500 mb-4">Kéo thả file vào đây hoặc chọn nhiều lần &quot;Choose Files&quot; để thêm dần.</p>
                     <button type="button" onclick="document.getElementById('media').click()" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
                         Choose Files
                     </button>
@@ -342,8 +348,9 @@
                 <div id="media-preview" class="mt-6 hidden">
                     <div class="flex items-center justify-between mb-2">
                         <h5 class="text-sm font-semibold text-gray-700">New Files Selected</h5>
-                        <span class="text-xs text-gray-500 italic">Có thể kéo để sắp xếp thứ tự tải lên</span>
+                        <span class="text-xs text-gray-500 italic">Kéo để sắp xếp</span>
                     </div>
+                    <p class="text-xs text-gray-500 mb-2">Ảnh chọn sau nằm cuối danh sách. Kéo thả ô để đổi thứ tự.</p>
                     <div id="media-preview-list" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
                 </div>
             </div>
@@ -367,12 +374,44 @@
 let selectedMediaFiles = [];
 let draggedElement = null;
 
+function handleNewMediaDragOver(event) {
+    event.preventDefault();
+    event.currentTarget.classList.add('border-purple-400', 'bg-purple-50');
+}
+
+function handleNewMediaDragLeave(event) {
+    event.preventDefault();
+    event.currentTarget.classList.remove('border-purple-400', 'bg-purple-50');
+}
+
+function handleNewMediaDrop(event) {
+    event.preventDefault();
+    event.currentTarget.classList.remove('border-purple-400', 'bg-purple-50');
+    const files = Array.from(event.dataTransfer.files || []);
+    handleMediaFiles(files);
+}
+
 function handleMediaFiles(files) {
-    const timestamp = Date.now();
-    selectedMediaFiles = Array.from(files).map((file, index) => ({
-        file,
-        id: `${timestamp}-${index}-${file.name.replace(/\s+/g, '_')}`
-    }));
+    const incoming = Array.from(files || []);
+    if (incoming.length === 0) {
+        return;
+    }
+    let uid = Date.now();
+    incoming.forEach((file) => {
+        const dup = selectedMediaFiles.some(
+            (item) =>
+                item.file.name === file.name &&
+                item.file.size === file.size &&
+                item.file.lastModified === file.lastModified
+        );
+        if (!dup) {
+            uid += 1;
+            selectedMediaFiles.push({
+                file,
+                id: `nf-${uid}-${file.name.replace(/\s+/g, '_')}`
+            });
+        }
+    });
     refreshMediaInput();
     displayMediaPreview();
 }
@@ -403,18 +442,26 @@ function displayMediaPreview() {
     selectedMediaFiles.forEach((item) => {
         const { file, id } = item;
         const previewItem = document.createElement('div');
-        previewItem.className = 'media-preview-item relative bg-white rounded-lg border-2 border-gray-200 p-2 cursor-move';
+        previewItem.className =
+            'media-preview-item relative bg-white rounded-lg border-2 border-gray-200 p-2 cursor-grab active:cursor-grabbing select-none';
         previewItem.dataset.fileId = id;
         previewItem.setAttribute('draggable', 'true');
-        
+        previewItem.title = 'Kéo để đổi thứ tự';
+
         if (file.type.startsWith('image/')) {
+            previewItem.innerHTML = `
+                <div class="aspect-square rounded-lg bg-gray-100 flex items-center justify-center min-h-[5rem] mb-2">
+                    <span class="text-xs text-gray-400">Đang tải…</span>
+                </div>
+            `;
+            previewList.appendChild(previewItem);
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 previewItem.innerHTML = `
-                    <img src="${e.target.result}" class="w-full aspect-square object-cover rounded-lg mb-2">
+                    <img src="${e.target.result}" class="w-full aspect-square object-cover rounded-lg mb-2" alt="">
                     <p class="text-xs text-gray-700 truncate">${file.name}</p>
-                    <button type="button" onclick="removeMediaFile('${id}')" 
-                            class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full hover:bg-red-600">×</button>
+                    <button type="button" draggable="false" onclick="removeMediaFile('${id}')"
+                            class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full hover:bg-red-600 z-10">×</button>
                 `;
             };
             reader.readAsDataURL(file);
@@ -426,9 +473,10 @@ function displayMediaPreview() {
                     </svg>
                 </div>
                 <p class="text-xs text-gray-700 truncate">${file.name}</p>
-                <button type="button" onclick="removeMediaFile('${id}')" 
-                        class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full hover:bg-red-600">×</button>
+                <button type="button" draggable="false" onclick="removeMediaFile('${id}')"
+                        class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full hover:bg-red-600 z-10">×</button>
             `;
+            previewList.appendChild(previewItem);
         } else {
             previewItem.innerHTML = `
                 <div class="aspect-square rounded-lg bg-gray-100 flex items-center justify-center mb-2">
@@ -437,12 +485,11 @@ function displayMediaPreview() {
                     </svg>
                 </div>
                 <p class="text-xs text-gray-700 truncate">${file.name}</p>
-                <button type="button" onclick="removeMediaFile('${id}')" 
-                        class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full hover:bg-red-600">×</button>
+                <button type="button" draggable="false" onclick="removeMediaFile('${id}')"
+                        class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full hover:bg-red-600 z-10">×</button>
             `;
+            previewList.appendChild(previewItem);
         }
-        
-        previewList.appendChild(previewItem);
     });
     
     initDragAndDrop('#media-preview-list', '.media-preview-item', syncSelectedFilesWithPreview);
@@ -475,6 +522,10 @@ function initDragAndDrop(containerSelector, itemSelector, onDropCallback = null)
         item.dataset.dragBound = '1';
         
         item.addEventListener('dragstart', (event) => {
+            if (event.target.closest && event.target.closest('button')) {
+                event.preventDefault();
+                return;
+            }
             draggedElement = item;
             item.classList.add('opacity-60');
             event.dataTransfer.effectAllowed = 'move';

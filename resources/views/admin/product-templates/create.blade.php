@@ -236,6 +236,7 @@
                         </svg>
                         Selected Files (<span id="template-file-count">0</span>):
                     </h5>
+                    <p class="text-xs text-gray-500 mb-3">Ảnh chọn sau nằm cuối danh sách. Kéo thả từng ô để đổi thứ tự.</p>
                     <div id="template-media-preview-list" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                         <!-- Preview items will be added here -->
                     </div>
@@ -1765,14 +1766,107 @@ function handleTemplateMediaDrop(event) {
 }
 
 function handleTemplateMediaFiles(files) {
-    templateMediaFiles = Array.from(files);
-    
-    // Update the actual file input
+    const incoming = Array.from(files || []);
+    if (incoming.length === 0) {
+        return;
+    }
+
+    // Gộp với file đã chọn trước đó (Choose Files lần 2+ hoặc kéo thêm) — không ghi đè
+    const merged = templateMediaFiles.slice();
+    incoming.forEach((file) => {
+        const dup = merged.some(
+            (f) =>
+                f.name === file.name &&
+                f.size === file.size &&
+                f.lastModified === file.lastModified
+        );
+        if (!dup) {
+            merged.push(file);
+        }
+    });
+    templateMediaFiles = merged;
+
+    syncTemplateMediaFilesToInput();
+    displayTemplateMediaPreview();
+}
+
+function syncTemplateMediaFilesToInput() {
     const input = document.getElementById('media');
+    if (!input) {
+        return;
+    }
     const dt = new DataTransfer();
-    templateMediaFiles.forEach(file => dt.items.add(file));
+    templateMediaFiles.forEach((file) => dt.items.add(file));
     input.files = dt.files;
-    
+}
+
+let templateMediaDragFromIndex = null;
+
+function finalizeTemplateMediaPreviewItem(el, index, enableDrag) {
+    el.dataset.templateMediaIndex = String(index);
+    if (!enableDrag) {
+        el.draggable = false;
+        return;
+    }
+    el.draggable = true;
+    el.classList.add('cursor-grab', 'active:cursor-grabbing', 'select-none');
+    el.title = 'Kéo để đổi thứ tự';
+    el.addEventListener('dragstart', templateMediaPreviewDragStart);
+    el.addEventListener('dragover', templateMediaPreviewDragOver);
+    el.addEventListener('dragleave', templateMediaPreviewDragLeave);
+    el.addEventListener('drop', templateMediaPreviewDrop);
+    el.addEventListener('dragend', templateMediaPreviewDragEnd);
+}
+
+function templateMediaPreviewDragStart(e) {
+    if (e.target.closest('button')) {
+        e.preventDefault();
+        return;
+    }
+    templateMediaDragFromIndex = parseInt(e.currentTarget.dataset.templateMediaIndex, 10);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(templateMediaDragFromIndex));
+    e.currentTarget.classList.add('opacity-60', 'ring-2', 'ring-blue-400');
+}
+
+function templateMediaPreviewDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    e.currentTarget.classList.add('ring-2', 'ring-blue-500', 'border-blue-400');
+}
+
+function templateMediaPreviewDragLeave(e) {
+    e.currentTarget.classList.remove('ring-2', 'ring-blue-500', 'border-blue-400');
+}
+
+function templateMediaPreviewDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const from = templateMediaDragFromIndex;
+    const to = parseInt(e.currentTarget.dataset.templateMediaIndex, 10);
+    e.currentTarget.classList.remove('ring-2', 'ring-blue-500', 'border-blue-400');
+    if (from === null || Number.isNaN(from) || Number.isNaN(to) || from === to) {
+        return;
+    }
+    reorderTemplateMediaFiles(from, to);
+}
+
+function templateMediaPreviewDragEnd(e) {
+    e.currentTarget.classList.remove('opacity-60', 'ring-2', 'ring-blue-400');
+    document.querySelectorAll('#template-media-preview-list .template-media-preview-item').forEach((el) => {
+        el.classList.remove('ring-2', 'ring-blue-500', 'border-blue-400');
+    });
+    templateMediaDragFromIndex = null;
+}
+
+function reorderTemplateMediaFiles(fromIndex, toIndex) {
+    const arr = templateMediaFiles;
+    if (fromIndex < 0 || fromIndex >= arr.length || toIndex < 0 || toIndex >= arr.length) {
+        return;
+    }
+    const [moved] = arr.splice(fromIndex, 1);
+    arr.splice(toIndex, 0, moved);
+    syncTemplateMediaFilesToInput();
     displayTemplateMediaPreview();
 }
 
@@ -1792,19 +1886,28 @@ function displayTemplateMediaPreview(mediaData = null) {
     previewContainer.classList.remove('hidden');
     fileCount.textContent = filesToDisplay.length;
     previewList.innerHTML = '';
-    
+
+    const itemBaseClass =
+        'relative bg-white rounded-lg border-2 border-gray-200 p-2 shadow-sm hover:shadow-md transition-shadow template-media-preview-item';
+
     filesToDisplay.forEach((file, index) => {
         const previewItem = document.createElement('div');
-        previewItem.className = 'relative bg-white rounded-lg border-2 border-gray-200 p-2 shadow-sm hover:shadow-md transition-shadow';
-        
-        // Check if it's a URL (string) or File object
+        const enableDrag = !mediaData && typeof file !== 'string';
+
         const isUrl = typeof file === 'string';
-        const isVideo = isUrl ? file.includes('.mp4') || file.includes('.mov') || file.includes('.avi') : file.type.startsWith('video/');
-        const isImage = isUrl ? file.includes('.jpg') || file.includes('.jpeg') || file.includes('.png') || file.includes('.gif') : file.type.startsWith('image/');
-        
+        const isVideo = isUrl
+            ? file.includes('.mp4') || file.includes('.mov') || file.includes('.avi')
+            : file.type.startsWith('video/');
+        const isImage = isUrl
+            ? file.includes('.jpg') ||
+              file.includes('.jpeg') ||
+              file.includes('.png') ||
+              file.includes('.gif')
+            : file.type.startsWith('image/');
+
         if (isImage) {
             if (isUrl) {
-                // Handle URL (restored from old data)
+                previewItem.className = itemBaseClass;
                 previewItem.innerHTML = `
                     <div class="aspect-square rounded-lg overflow-hidden mb-2 bg-gray-100">
                         <img src="${file}" alt="Media" class="w-full h-full object-cover">
@@ -1813,7 +1916,7 @@ function displayTemplateMediaPreview(mediaData = null) {
                         <p class="text-xs font-medium text-gray-700 truncate">Image</p>
                         <p class="text-xs text-gray-500">Restored</p>
                     </div>
-                    <button type="button" onclick="removeTemplateMediaFile(${index})" 
+                    <button type="button" draggable="false" onclick="removeTemplateMediaFile(${index})"
                             class="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -1824,10 +1927,17 @@ function displayTemplateMediaPreview(mediaData = null) {
                     </div>
                 `;
                 previewList.appendChild(previewItem);
+                finalizeTemplateMediaPreviewItem(previewItem, index, false);
             } else {
-                // Handle File object
+                previewItem.className = itemBaseClass;
+                previewItem.innerHTML = `
+                    <div class="aspect-square rounded-lg overflow-hidden mb-2 bg-gray-100 flex items-center justify-center min-h-[5rem]">
+                        <span class="text-xs text-gray-400">Đang tải…</span>
+                    </div>
+                `;
+                previewList.appendChild(previewItem);
                 const reader = new FileReader();
-                reader.onload = function(e) {
+                reader.onload = function (e) {
                     previewItem.innerHTML = `
                         <div class="aspect-square rounded-lg overflow-hidden mb-2 bg-gray-100">
                             <img src="${e.target.result}" alt="${file.name}" class="w-full h-full object-cover">
@@ -1836,7 +1946,7 @@ function displayTemplateMediaPreview(mediaData = null) {
                             <p class="text-xs font-medium text-gray-700 truncate" title="${file.name}">${file.name}</p>
                             <p class="text-xs text-gray-500">${(file.size / 1024 / 1024).toFixed(2)} MB</p>
                         </div>
-                        <button type="button" onclick="removeTemplateMediaFile(${index})" 
+                        <button type="button" draggable="false" onclick="removeTemplateMediaFile(${index})"
                                 class="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -1846,13 +1956,13 @@ function displayTemplateMediaPreview(mediaData = null) {
                             Image
                         </div>
                     `;
-                    previewList.appendChild(previewItem);
+                    finalizeTemplateMediaPreviewItem(previewItem, index, enableDrag);
                 };
                 reader.readAsDataURL(file);
             }
         } else if (isVideo) {
             if (isUrl) {
-                // Handle URL (restored from old data)
+                previewItem.className = itemBaseClass;
                 previewItem.innerHTML = `
                     <div class="aspect-square rounded-lg overflow-hidden mb-2 bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
                         <video class="w-full h-full object-cover" controls>
@@ -1863,7 +1973,7 @@ function displayTemplateMediaPreview(mediaData = null) {
                         <p class="text-xs font-medium text-gray-700 truncate">Video</p>
                         <p class="text-xs text-gray-500">Restored</p>
                     </div>
-                    <button type="button" onclick="removeTemplateMediaFile(${index})" 
+                    <button type="button" draggable="false" onclick="removeTemplateMediaFile(${index})"
                             class="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -1874,8 +1984,9 @@ function displayTemplateMediaPreview(mediaData = null) {
                     </div>
                 `;
                 previewList.appendChild(previewItem);
+                finalizeTemplateMediaPreviewItem(previewItem, index, false);
             } else {
-                // Handle File object
+                previewItem.className = itemBaseClass;
                 previewItem.innerHTML = `
                     <div class="aspect-square rounded-lg overflow-hidden mb-2 bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
                         <svg class="w-12 h-12 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1887,7 +1998,7 @@ function displayTemplateMediaPreview(mediaData = null) {
                         <p class="text-xs font-medium text-gray-700 truncate" title="${file.name}">${file.name}</p>
                         <p class="text-xs text-gray-500">${(file.size / 1024 / 1024).toFixed(2)} MB</p>
                     </div>
-                    <button type="button" onclick="removeTemplateMediaFile(${index})" 
+                    <button type="button" draggable="false" onclick="removeTemplateMediaFile(${index})"
                             class="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -1898,10 +2009,11 @@ function displayTemplateMediaPreview(mediaData = null) {
                     </div>
                 `;
                 previewList.appendChild(previewItem);
+                finalizeTemplateMediaPreviewItem(previewItem, index, enableDrag);
             }
         } else {
             if (isUrl) {
-                // Handle URL (restored from old data)
+                previewItem.className = itemBaseClass;
                 previewItem.innerHTML = `
                     <div class="aspect-square rounded-lg overflow-hidden mb-2 bg-gray-100 flex items-center justify-center">
                         <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1912,7 +2024,7 @@ function displayTemplateMediaPreview(mediaData = null) {
                         <p class="text-xs font-medium text-gray-700 truncate">File</p>
                         <p class="text-xs text-gray-500">Restored</p>
                     </div>
-                    <button type="button" onclick="removeTemplateMediaFile(${index})" 
+                    <button type="button" draggable="false" onclick="removeTemplateMediaFile(${index})"
                             class="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -1923,8 +2035,9 @@ function displayTemplateMediaPreview(mediaData = null) {
                     </div>
                 `;
                 previewList.appendChild(previewItem);
+                finalizeTemplateMediaPreviewItem(previewItem, index, false);
             } else {
-                // Handle File object
+                previewItem.className = itemBaseClass;
                 previewItem.innerHTML = `
                     <div class="aspect-square rounded-lg overflow-hidden mb-2 bg-gray-100 flex items-center justify-center">
                         <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1935,7 +2048,7 @@ function displayTemplateMediaPreview(mediaData = null) {
                         <p class="text-xs font-medium text-gray-700 truncate" title="${file.name}">${file.name}</p>
                         <p class="text-xs text-gray-500">${(file.size / 1024 / 1024).toFixed(2)} MB</p>
                     </div>
-                    <button type="button" onclick="removeTemplateMediaFile(${index})" 
+                    <button type="button" draggable="false" onclick="removeTemplateMediaFile(${index})"
                             class="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -1946,6 +2059,7 @@ function displayTemplateMediaPreview(mediaData = null) {
                     </div>
                 `;
                 previewList.appendChild(previewItem);
+                finalizeTemplateMediaPreviewItem(previewItem, index, enableDrag);
             }
         }
     });
@@ -1953,13 +2067,7 @@ function displayTemplateMediaPreview(mediaData = null) {
 
 function removeTemplateMediaFile(index) {
     templateMediaFiles.splice(index, 1);
-    
-    // Update the actual file input
-    const input = document.getElementById('media');
-                const dt = new DataTransfer();
-    templateMediaFiles.forEach(file => dt.items.add(file));
-    input.files = dt.files;
-    
+    syncTemplateMediaFilesToInput();
     displayTemplateMediaPreview();
 }
 

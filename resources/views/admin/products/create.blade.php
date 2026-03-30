@@ -337,7 +337,7 @@
                     </svg>
                     Product Media (Optional)
                 </h3>
-                <p class="text-sm text-gray-600">Upload custom media or leave empty to use template media</p>
+                <p class="text-sm text-gray-600">Upload custom media or leave empty to use template media. Mỗi lần chọn &quot;Choose Files&quot; sẽ thêm ảnh/video vào danh sách đã chọn (không thay thế).</p>
             </div>
             <div class="p-6">
                 <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors bg-gray-50" 
@@ -351,7 +351,7 @@
                            multiple
                            accept="image/*,video/*"
                            class="hidden"
-                           onchange="handleMediaFiles(this.files)">
+                           onchange="handleMediaFiles(this.files); this.value='';">
                     
                     <div class="space-y-4">
                         <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -549,14 +549,23 @@ function handleMediaDrop(event) {
     handleMediaFiles(files);
 }
 
-function handleMediaFiles(files) {
-    selectedMediaFiles = Array.from(files);
-    
+/** Gán lại input#media từ mảng selectedMediaFiles (DataTransfer hỗ trợ gửi nhiều file đã gom). */
+function syncMediaFileInput() {
     const input = document.getElementById('media');
     const dt = new DataTransfer();
-    selectedMediaFiles.forEach(file => dt.items.add(file));
+    selectedMediaFiles.forEach(function (file) {
+        dt.items.add(file);
+    });
     input.files = dt.files;
-    
+}
+
+function handleMediaFiles(files) {
+    const incoming = Array.from(files || []);
+    if (incoming.length === 0) {
+        return;
+    }
+    selectedMediaFiles = selectedMediaFiles.concat(incoming);
+    syncMediaFileInput();
     displayMediaPreview();
 }
 
@@ -648,13 +657,7 @@ function handleMediaDrop(e) {
         selectedMediaFiles.splice(draggedMediaIndex, 1);
         selectedMediaFiles.splice(targetIndex, 0, draggedFile);
         
-        // Update file input
-        const input = document.getElementById('media');
-        const dt = new DataTransfer();
-        selectedMediaFiles.forEach(file => dt.items.add(file));
-        input.files = dt.files;
-        
-        // Redisplay preview with new order
+        syncMediaFileInput();
         displayMediaPreview();
     }
 }
@@ -674,12 +677,7 @@ function updateMediaOrder() {
 
 function removeMediaFile(index) {
     selectedMediaFiles.splice(index, 1);
-    
-    const input = document.getElementById('media');
-    const dt = new DataTransfer();
-    selectedMediaFiles.forEach(file => dt.items.add(file));
-    input.files = dt.files;
-    
+    syncMediaFileInput();
     displayMediaPreview();
     updateMediaOrder();
 }

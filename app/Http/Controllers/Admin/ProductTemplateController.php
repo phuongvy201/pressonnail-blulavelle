@@ -453,9 +453,21 @@ class ProductTemplateController extends Controller
      */
     public function clone(ProductTemplate $productTemplate)
     {
+        $user = auth()->user();
+
+        // Giống edit/destroy: chỉ admin hoặc chủ template mới được clone
+        if (!$user->hasRole('admin') && $productTemplate->user_id !== $user->id) {
+            abort(403, 'Unauthorized action. You can only clone your own templates.');
+        }
+
+        $productTemplate->load(['attributes', 'variants']);
+
         // Create new template with copied data
         $newTemplate = $productTemplate->replicate();
         $newTemplate->name = $productTemplate->name . ' (Copy)';
+        // replicate() giữ user_id của bản gốc — không khớp với store() (luôn gán auth()->id()).
+        // Bản sao phải thuộc người đang clone để seller có quyền edit/update.
+        $newTemplate->user_id = $user->id;
         $newTemplate->save();
 
         // Clone attributes
@@ -468,10 +480,11 @@ class ProductTemplateController extends Controller
 
         // Clone variants with attributes
         foreach ($productTemplate->variants as $variant) {
-            $newVariant = $newTemplate->variants()->create([
+            $newTemplate->variants()->create([
                 'variant_name' => $variant->variant_name,
                 'attributes' => $variant->attributes, // Clone attributes
                 'price' => $variant->price,
+                'list_price' => $variant->list_price,
                 'quantity' => $variant->quantity,
                 'media' => $variant->media,
             ]);
