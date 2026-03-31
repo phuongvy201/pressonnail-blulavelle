@@ -351,7 +351,7 @@
                            multiple
                            accept="image/*,video/*"
                            class="hidden"
-                           onchange="handleMediaFiles(this.files); this.value='';">
+                           onchange="handleMediaFiles(this.files);">
                     
                     <div class="space-y-4">
                         <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

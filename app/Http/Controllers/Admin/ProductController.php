@@ -11,6 +11,7 @@ use App\Models\Category;
 use App\Models\Collection;
 use App\Models\GmcConfig;
 use App\Services\GoogleMerchantCenterService;
+use App\Services\OpenAIService;
 use App\Services\VideoThumbnailService;
 use Exception;
 use Illuminate\Http\Request;
@@ -30,13 +31,19 @@ class ProductController extends Controller
      * Upload một file media (ảnh hoặc video) lên S3. Video thì tạo poster bằng FFmpeg.
      * Trả về URL string hoặc ['type'=>'video','url'=>...,'poster'=>...].
      */
-    protected function uploadOneProductMediaFile($file): string|array|null
+    protected function uploadOneProductMediaFile($file, string $baseSlug, int $index, ?int $timestamp = null): string|array|null
     {
         if (!$file->isValid()) {
             return null;
         }
         try {
-            $fileName = time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
+            $timestamp = $timestamp ?? time();
+            $safeSlug = Str::slug($baseSlug);
+            if ($safeSlug === '') {
+                $safeSlug = 'product';
+            }
+            $ext = strtolower((string) $file->getClientOriginalExtension());
+            $fileName = $safeSlug . '-' . $timestamp . '-' . str_pad((string) $index, 2, '0', STR_PAD_LEFT) . '.' . $ext;
             $filePath = Storage::disk('s3')->putFileAs('products', $file, $fileName);
             if (!$filePath) {
                 return null;
@@ -48,7 +55,7 @@ class ProductController extends Controller
                 $posterUrl = null;
                 $posterPath = $thumbnailService->generatePoster($file, 1);
                 if ($posterPath) {
-                    $posterFileName = pathinfo($fileName, PATHINFO_FILENAME) . '_poster.jpg';
+                    $posterFileName = pathinfo($fileName, PATHINFO_FILENAME) . '-poster.jpg';
                     $contents = Storage::disk('local')->get($posterPath);
                     if ($contents) {
                         Storage::disk('s3')->put('products/posters/' . $posterFileName, $contents);
@@ -322,15 +329,36 @@ class ProductController extends Controller
                 }
 
                 $mediaUrls = [];
+                $uploadTs = time();
+                $i = 1;
                 foreach ($mediaFiles as $file) {
-                    $item = $this->uploadOneProductMediaFile($file);
+                    $item = $this->uploadOneProductMediaFile($file, (string) $data['slug'], $i, $uploadTs);
                     if ($item !== null) {
                         $mediaUrls[] = $item;
                     }
+                    $i++;
                 }
                 if (!empty($mediaUrls)) {
                     $data['media'] = $mediaUrls;
                 }
+            }
+
+            // Auto-generate meta_keywords via AI (best-effort; never block product creation)
+            try {
+                if (empty($data['meta_keywords']) && !empty($data['name'])) {
+                    /** @var OpenAIService $ai */
+                    $ai = app(OpenAIService::class);
+                    $keywords = $ai->extractKeywords((string) $data['name']);
+                    if (!empty($keywords)) {
+                        $data['meta_keywords'] = implode(', ', $keywords);
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('AI keyword generation failed during product create (continuing).', [
+                    'product_name' => $data['name'] ?? null,
+                    'exception' => get_class($e),
+                    'message' => $e->getMessage(),
+                ]);
             }
 
             $product = Product::create($data);
@@ -472,6 +500,7 @@ class ProductController extends Controller
                 'sku' => $this->generateUniqueSKU(),
                 'price' => $product->price,
                 'description' => $product->description,
+                'meta_keywords' => $product->meta_keywords,
                 'media' => $product->media, // Copy media array
                 'quantity' => $product->quantity,
                 'status' => 'draft', // Set to draft by default
@@ -613,11 +642,15 @@ class ProductController extends Controller
 
             // Handle uploaded media (ảnh + video; video có poster từ FFmpeg)
             if ($request->hasFile('media')) {
+                $uploadTs = time();
+                $startIndex = count($orderedExistingMedia) + 1;
+                $i = 0;
                 foreach ($request->file('media') as $file) {
-                    $item = $this->uploadOneProductMediaFile($file);
+                    $item = $this->uploadOneProductMediaFile($file, (string) ($data['slug'] ?? $product->slug ?? 'product'), $startIndex + $i, $uploadTs);
                     if ($item !== null) {
                         $orderedExistingMedia[] = $item;
                     }
+                    $i++;
                 }
             }
 

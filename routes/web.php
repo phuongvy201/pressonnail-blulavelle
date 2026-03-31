@@ -54,6 +54,7 @@ use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\SellerApplicationController;
 use App\Http\Controllers\Admin\SellerApplicationAdminController;
 use App\Http\Controllers\Admin\ReturnRequestController as AdminReturnRequestController;
+use App\Http\Controllers\TestController;
 
 // Public routes
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -789,9 +790,10 @@ Route::get('/newsletter/status', [NewsletterController::class, 'status'])->name(
 Route::get('/test-variant-removal-page', function () {
     return view('test-variant-removal');
 })->name('test.variant.removal.page');
-
 // Load auth routes first to avoid conflicts with catch-all route
 require __DIR__ . '/auth.php';
+
+Route::get('/test-keywords', [TestController::class, 'test']);
 
 // Page routes - Must be at the end to avoid conflicts
 Route::get('/{slug}', [PageController::class, 'show'])->name('pages.show')->where('slug', '^(?!admin|api|dashboard|cart|checkout|wishlist|search|collections|products|category|shops|blog|login|register|password|email|verification|logout|seller|newsletter|verify-email).*$');

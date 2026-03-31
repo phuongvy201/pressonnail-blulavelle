@@ -244,6 +244,7 @@ class Product extends Model
         'price',
         'list_price',
         'description',
+        'meta_keywords',
         'media',
         'quantity',
         'status',

@@ -5,6 +5,7 @@ namespace App\Imports;
 use App\Models\Product;
 use App\Models\ProductTemplate;
 use App\Models\ProductVariant;
+use App\Services\OpenAIService;
 use App\Services\VideoThumbnailService;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Concerns\ToModel;
@@ -119,6 +120,18 @@ class ProductsImport implements
             // Use custom description if provided, otherwise use template description
             $description = !empty($row['description']) ? $row['description'] : $template->description;
 
+            // Generate unique slug early (needed for deterministic media naming)
+            $baseSlug = Str::slug($productName);
+            $slug = $baseSlug !== '' ? $baseSlug : 'product';
+            $counter = 1;
+            while (Product::where('slug', $slug)->exists()) {
+                $slug = ($baseSlug !== '' ? $baseSlug : 'product') . '-' . $counter;
+                $counter++;
+            }
+
+            // One timestamp per product import row so all media share same timestamp
+            $uploadTs = time();
+
             // Collect and upload media to S3 (up to 8 images + 1 video)
             $mediaUrls = [];
 
@@ -144,7 +157,7 @@ class ProductsImport implements
                     $s3Url = null;
                     $maxImageRetries = 5;
                     for ($retry = 1; $retry <= $maxImageRetries; $retry++) {
-                        $s3Url = $this->downloadAndUploadToS3($imageUrl, 'products', $retry, $maxImageRetries);
+                        $s3Url = $this->downloadAndUploadToS3($imageUrl, 'products', $retry, $maxImageRetries, $slug, $i, $uploadTs);
                         if ($s3Url) {
                             break; // Success, exit retry loop
                         }
@@ -184,7 +197,8 @@ class ProductsImport implements
                     $videoMediaItem = null;
                     $maxVideoRetries = 5;
                     for ($retry = 1; $retry <= $maxVideoRetries; $retry++) {
-                        $videoMediaItem = $this->downloadUploadVideoAndPosterToS3($videoUrl, $retry, $maxVideoRetries);
+                        // Use index 9 for video by convention (after 8 images)
+                        $videoMediaItem = $this->downloadUploadVideoAndPosterToS3($videoUrl, $retry, $maxVideoRetries, $slug, 9, $uploadTs);
                         if ($videoMediaItem) {
                             break; // Success, exit retry loop
                         }
@@ -229,17 +243,6 @@ class ProductsImport implements
                 return null;
             }
 
-            // Generate unique slug to avoid duplicates
-            $baseSlug = Str::slug($productName);
-            $slug = $baseSlug;
-            $counter = 1;
-
-            // Check if slug already exists and make it unique
-            while (Product::where('slug', $slug)->exists()) {
-                $slug = $baseSlug . '-' . $counter;
-                $counter++;
-            }
-
             // Create product with error handling for duplicates
             // IMPORTANT: Never set 'id' - let database auto-increment
             try {
@@ -259,6 +262,23 @@ class ProductsImport implements
 
                 // Ensure 'id' is not in the data (even if somehow included)
                 unset($productData['id']);
+
+                // Generate meta keywords via AI (best-effort; never fail import)
+                try {
+                    /** @var OpenAIService $ai */
+                    $ai = app(OpenAIService::class);
+                    $keywords = $ai->extractKeywords($productName);
+                    if (!empty($keywords)) {
+                        $productData['meta_keywords'] = implode(', ', $keywords);
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('ProductsImport: AI keyword generation failed (continuing import).', [
+                        'product_name' => $productName,
+                        'template_id' => $templateId,
+                        'exception' => get_class($e),
+                        'message' => $e->getMessage(),
+                    ]);
+                }
 
                 // Create product - variants will be created after import completes
                 $product = new Product($productData);
@@ -929,7 +949,13 @@ class ProductsImport implements
     /**
      * Upload nội dung file (ảnh) đã tải về lên S3 thư mục products — cùng format URL với ProductController.
      */
-    protected function uploadProductImageContentToS3(string $fileContent, string $extension): ?string
+    protected function uploadProductImageContentToS3(
+        string $fileContent,
+        string $extension,
+        ?string $baseSlug = null,
+        ?int $index = null,
+        ?int $timestamp = null
+    ): ?string
     {
         $extension = strtolower(explode('?', $extension)[0]);
         if (! in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
@@ -960,7 +986,16 @@ class ProductsImport implements
             return null;
         }
 
-        $fileName = time().'_'.Str::random(10).'.'.$extension;
+        if (is_string($baseSlug) && $baseSlug !== '' && is_int($index) && $index > 0 && is_int($timestamp) && $timestamp > 0) {
+            $safeSlug = Str::slug($baseSlug);
+            if ($safeSlug === '') {
+                $safeSlug = 'product';
+            }
+            $fileName = $safeSlug . '-' . $timestamp . '-' . str_pad((string) $index, 2, '0', STR_PAD_LEFT) . '.' . $extension;
+        } else {
+            // Legacy behavior
+            $fileName = time().'_'.Str::random(10).'.'.$extension;
+        }
         $tempFile = tempnam(sys_get_temp_dir(), 'import_media_');
         if ($tempFile === false) {
             return null;
@@ -997,7 +1032,15 @@ class ProductsImport implements
      * @param int $maxRetries Maximum retries (for logging)
      * @return string|null S3 URL or null on failure
      */
-    protected function downloadAndUploadToS3(string $url, string $folder = 'products', int $retryAttempt = 1, int $maxRetries = 3): ?string
+    protected function downloadAndUploadToS3(
+        string $url,
+        string $folder = 'products',
+        int $retryAttempt = 1,
+        int $maxRetries = 3,
+        ?string $baseSlug = null,
+        ?int $index = null,
+        ?int $timestamp = null
+    ): ?string
     {
         try {
             if ($this->isGoogleDriveUrl($url)) {
@@ -1006,7 +1049,7 @@ class ProductsImport implements
                     return null;
                 }
 
-                return $this->uploadProductImageContentToS3($gd['content'], $gd['extension']);
+                return $this->uploadProductImageContentToS3($gd['content'], $gd['extension'], $baseSlug, $index, $timestamp);
             }
 
             // Validate URL (non-Drive)
@@ -1159,8 +1202,15 @@ class ProductsImport implements
             $extension = explode('?', $extension)[0];
             $extension = strtolower($extension);
 
-            // Generate unique filename - same format as ProductController
-            $fileName = time() . '_' . Str::random(10) . '.' . $extension;
+            if (is_string($baseSlug) && $baseSlug !== '' && is_int($index) && $index > 0 && is_int($timestamp) && $timestamp > 0) {
+                $safeSlug = Str::slug($baseSlug);
+                if ($safeSlug === '') {
+                    $safeSlug = 'product';
+                }
+                $fileName = $safeSlug . '-' . $timestamp . '-' . str_pad((string) $index, 2, '0', STR_PAD_LEFT) . '.' . $extension;
+            } else {
+                $fileName = time() . '_' . Str::random(10) . '.' . $extension;
+            }
 
             // Upload to S3 - use same method as ProductController
             $disk = Storage::disk('s3');
@@ -1278,9 +1328,24 @@ class ProductsImport implements
      *
      * @return array{media: array{type: string, url: string, poster: ?string}, poster_relative: ?string}|null
      */
-    protected function finalizeVideoUploadToS3(string $tempFile, string $extension, string $url): ?array
+    protected function finalizeVideoUploadToS3(
+        string $tempFile,
+        string $extension,
+        string $url,
+        ?string $baseSlug = null,
+        ?int $index = null,
+        ?int $timestamp = null
+    ): ?array
     {
-        $fileName = time().'_'.Str::random(10).'.'.$extension;
+        if (is_string($baseSlug) && $baseSlug !== '' && is_int($index) && $index > 0 && is_int($timestamp) && $timestamp > 0) {
+            $safeSlug = Str::slug($baseSlug);
+            if ($safeSlug === '') {
+                $safeSlug = 'product';
+            }
+            $fileName = $safeSlug . '-' . $timestamp . '-' . str_pad((string) $index, 2, '0', STR_PAD_LEFT) . '.' . $extension;
+        } else {
+            $fileName = time().'_'.Str::random(10).'.'.$extension;
+        }
         $disk = Storage::disk('s3');
         $fileObject = new File($tempFile);
         $filePath = $disk->putFileAs('products', $fileObject, $fileName);
@@ -1298,7 +1363,7 @@ class ProductsImport implements
         if ($posterRelative) {
             $posterAbs = Storage::disk('local')->path($posterRelative);
             if (is_file($posterAbs)) {
-                $posterFileName = pathinfo($fileName, PATHINFO_FILENAME).'_poster.jpg';
+                $posterFileName = pathinfo($fileName, PATHINFO_FILENAME).'-poster.jpg';
                 $posterKey = 'products/posters/'.$posterFileName;
                 $contents = @file_get_contents($posterAbs);
                 if ($contents !== false && $contents !== '') {
@@ -1322,7 +1387,14 @@ class ProductsImport implements
      * Download video, upload lên S3 và tạo poster (thumbnail) bằng FFmpeg rồi upload poster lên S3.
      * Trả về item dạng ['type'=>'video','url'=>...,'poster'=>...]
      */
-    protected function downloadUploadVideoAndPosterToS3(string $url, int $retryAttempt = 1, int $maxRetries = 3): ?array
+    protected function downloadUploadVideoAndPosterToS3(
+        string $url,
+        int $retryAttempt = 1,
+        int $maxRetries = 3,
+        ?string $baseSlug = null,
+        ?int $index = null,
+        ?int $timestamp = null
+    ): ?array
     {
         $tempFile = null;
         $posterRelative = null;
@@ -1363,7 +1435,7 @@ class ProductsImport implements
                     return null;
                 }
 
-                $done = $this->finalizeVideoUploadToS3($tempFile, $extension, $url);
+                $done = $this->finalizeVideoUploadToS3($tempFile, $extension, $url, $baseSlug, $index, $timestamp);
                 if ($done === null) {
                     return null;
                 }
@@ -1481,7 +1553,7 @@ class ProductsImport implements
                 return null;
             }
 
-            $done = $this->finalizeVideoUploadToS3($tempFile, $extension, $url);
+            $done = $this->finalizeVideoUploadToS3($tempFile, $extension, $url, $baseSlug, $index, $timestamp);
             if ($done === null) {
                 return null;
             }

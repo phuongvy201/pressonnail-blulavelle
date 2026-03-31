@@ -20,6 +20,7 @@
         "league/flysystem-aws-s3-v3": "^3.29",
         "lianlian_acquiring/sdkv3": "^1.0",
         "maatwebsite/excel": "^3.1",
+        "orhanerday/open-ai": "^5.3",
         "paypal/rest-api-sdk-php": "^1.6",
         "pbmedia/laravel-ffmpeg": "^8.9",
         "php-ffmpeg/php-ffmpeg": "^1.4",
