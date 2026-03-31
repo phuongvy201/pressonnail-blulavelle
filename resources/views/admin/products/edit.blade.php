@@ -333,14 +333,20 @@
                      ondrop="handleNewMediaDrop(event)"
                      ondragover="handleNewMediaDragOver(event)"
                      ondragleave="handleNewMediaDragLeave(event)">
-                    <input type="file" id="media" name="media[]" multiple accept="image/*,video/*" class="hidden"
+                    <!--
+                      IMPORTANT:
+                      - `media-picker` is only for selecting files, and is safe to clear after each pick.
+                      - `media` is the actual input that will be submitted to backend (`name="media[]"`).
+                    -->
+                    <input type="file" id="media-picker" multiple accept="image/*,video/*" class="hidden"
                            onchange="handleMediaFiles(this.files); this.value='';">
+                    <input type="file" id="media" name="media[]" multiple accept="image/*,video/*" class="hidden">
                     <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                     </svg>
                     <p class="text-lg font-semibold text-gray-700 mb-2">Upload New Media</p>
                     <p class="text-sm text-gray-500 mb-4">Kéo thả file vào đây hoặc chọn nhiều lần &quot;Choose Files&quot; để thêm dần.</p>
-                    <button type="button" onclick="document.getElementById('media').click()" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                    <button type="button" onclick="document.getElementById('media-picker').click()" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
                         Choose Files
                     </button>
                 </div>
