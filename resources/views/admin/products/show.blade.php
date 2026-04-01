@@ -94,6 +94,60 @@
                 </div>
             </div>
 
+            <!-- Size Guide -->
+            <div class="rounded-lg overflow-hidden shadow border border-gray-200 border-l-4" style="border-left-color: #0195FE;">
+                <div class="px-6 py-4 border-b border-gray-200" style="background: linear-gradient(90deg, rgba(1, 149, 254, 0.12) 0%, #f9fafb 55%);">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white shadow-sm" style="background-color: #0195FE;">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                </svg>
+                            </span>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900">Size Guide</h3>
+                                <p class="text-sm text-gray-600">Reference chart (mm). Numbers in parentheses are sample tip numbers.</p>
+                            </div>
+                        </div>
+                        <a href="{{ route('sizing-kit.index') }}#size-chart"
+                           class="inline-flex items-center text-sm font-semibold hover:underline shrink-0"
+                           style="color: #0195FE;">
+                            Full sizing guide
+                            <svg class="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                        </a>
+                    </div>
+                </div>
+                <div class="bg-white p-6">
+                    <div class="overflow-x-auto rounded-lg border border-gray-200">
+                        <table class="min-w-full text-left text-sm">
+                            <thead>
+                                <tr class="text-white" style="background-color: #0195FE;">
+                                    <th class="px-4 py-3 font-semibold uppercase tracking-wide text-xs">Preset</th>
+                                    <th class="px-4 py-3 font-semibold uppercase tracking-wide text-xs">Thumb</th>
+                                    <th class="px-4 py-3 font-semibold uppercase tracking-wide text-xs">Index</th>
+                                    <th class="px-4 py-3 font-semibold uppercase tracking-wide text-xs">Middle</th>
+                                    <th class="px-4 py-3 font-semibold uppercase tracking-wide text-xs">Ring</th>
+                                    <th class="px-4 py-3 font-semibold uppercase tracking-wide text-xs">Pinky</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 bg-white">
+                                @foreach($sizeChartTable as $row)
+                                <tr class="transition-colors hover:bg-[#0195FE]/10">
+                                    <td class="px-4 py-3 font-bold whitespace-nowrap" style="color: #0195FE;">{{ $row['preset'] }}</td>
+                                    <td class="px-4 py-3 text-gray-700 whitespace-nowrap">{{ $row['thumb']['mm'] }}mm ({{ $row['thumb']['num'] }})</td>
+                                    <td class="px-4 py-3 text-gray-700 whitespace-nowrap">{{ $row['index']['mm'] }}mm ({{ $row['index']['num'] }})</td>
+                                    <td class="px-4 py-3 text-gray-700 whitespace-nowrap">{{ $row['middle']['mm'] }}mm ({{ $row['middle']['num'] }})</td>
+                                    <td class="px-4 py-3 text-gray-700 whitespace-nowrap">{{ $row['ring']['mm'] }}mm ({{ $row['ring']['num'] }})</td>
+                                    <td class="px-4 py-3 text-gray-700 whitespace-nowrap">{{ $row['pinky']['mm'] }}mm ({{ $row['pinky']['num'] }})</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="mt-3 text-xs text-gray-500 italic">Measurements are approximate; shape and brand may vary slightly.</p>
+                </div>
+            </div>
+
             <!-- Variants -->
             @if($product->variants && $product->variants->count() > 0)
             <div class="bg-white shadow rounded-lg overflow-hidden">

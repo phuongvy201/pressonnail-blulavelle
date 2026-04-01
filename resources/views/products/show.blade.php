@@ -448,9 +448,23 @@
                     </div>
                     @endif
 
-                    {{-- Select Size --}}
+                    {{-- Select Size + Size guide (link nhỏ căn phải) --}}
                     <div class="space-y-2">
-                        <label class="text-xs font-semibold text-slate-700 uppercase tracking-wide">Select Size</label>
+                        <div class="flex items-end justify-between gap-3">
+                            <label class="text-xs font-semibold text-slate-700 uppercase tracking-wide">Select Size</label>
+                            <button type="button"
+                                    id="size-guide-open"
+                                    class="group inline-flex items-center gap-1 shrink-0 bg-transparent border-0 p-0 cursor-pointer text-[11px] sm:text-xs font-medium text-[#0195FE] underline underline-offset-2 decoration-[#0195FE]/80 hover:opacity-85 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0195FE]/40 focus-visible:ring-offset-2 rounded-sm touch-manipulation"
+                                    aria-haspopup="dialog"
+                                    aria-controls="size-guide-modal"
+                                    aria-expanded="false">
+                                <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-[#0195FE]" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                    <rect x="1.5" y="5" width="13" height="6" rx="0.5" stroke="currentColor" stroke-width="1.25"/>
+                                    <path d="M3.5 5v6M5.5 5v4M7.5 5v6M9.5 5v4M11.5 5v6" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+                                </svg>
+                                <span>Size guide</span>
+                            </button>
+                        </div>
                         <div class="flex flex-wrap gap-2" id="size-options">
                             @foreach($sizes as $size)
                             <div class="size-badge" data-size="{{ $size }}" role="button" tabindex="0">
@@ -949,6 +963,55 @@
     </div>
 </div>
 
+{{-- Size guide modal --}}
+<div id="size-guide-modal" class="size-guide-modal-root fixed inset-0 z-[120] hidden flex items-center justify-center p-3 sm:p-4" role="dialog" aria-modal="true" aria-labelledby="size-guide-modal-title">
+    <div class="absolute inset-0 size-guide-modal-backdrop" data-size-guide-modal-close aria-hidden="true"></div>
+    <div class="relative z-10 w-full max-w-lg max-h-[min(90vh,90dvh)] flex flex-col rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden pointer-events-auto">
+        <div class="flex items-start justify-between gap-3 px-4 py-3 border-b border-slate-100 bg-gradient-to-r from-[#0297FE]/10 to-white shrink-0">
+            <div class="min-w-0 pr-2">
+                <h2 id="size-guide-modal-title" class="text-base font-extrabold text-slate-900">Size Guide</h2>
+                <p class="text-xs text-slate-600 mt-0.5 leading-snug">mm per finger; numbers in ( ) are sample tip numbers.</p>
+            </div>
+            <button type="button" class="shrink-0 w-10 h-10 rounded-full border border-slate-200 bg-white flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors" data-size-guide-modal-close aria-label="Close size guide">
+                <span class="material-symbols-outlined text-2xl">close</span>
+            </button>
+        </div>
+        <div class="overflow-y-auto overscroll-contain px-4 py-4">
+            <div class="overflow-x-auto rounded-lg border border-slate-200">
+                <table class="min-w-full text-left text-xs sm:text-sm">
+                    <thead>
+                        <tr class="bg-[#0297FE] text-white">
+                            <th class="px-3 py-2.5 font-bold uppercase tracking-wide whitespace-nowrap">Preset</th>
+                            <th class="px-3 py-2.5 font-bold uppercase tracking-wide whitespace-nowrap">Thumb</th>
+                            <th class="px-3 py-2.5 font-bold uppercase tracking-wide whitespace-nowrap">Index</th>
+                            <th class="px-3 py-2.5 font-bold uppercase tracking-wide whitespace-nowrap">Middle</th>
+                            <th class="px-3 py-2.5 font-bold uppercase tracking-wide whitespace-nowrap">Ring</th>
+                            <th class="px-3 py-2.5 font-bold uppercase tracking-wide whitespace-nowrap">Pinky</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach($sizeChartTable as $row)
+                        <tr class="hover:bg-[#0297FE]/5 transition-colors">
+                            <td class="px-3 py-2.5 font-bold text-[#0297FE] whitespace-nowrap">{{ $row['preset'] }}</td>
+                            <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ $row['thumb']['mm'] }}mm ({{ $row['thumb']['num'] }})</td>
+                            <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ $row['index']['mm'] }}mm ({{ $row['index']['num'] }})</td>
+                            <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ $row['middle']['mm'] }}mm ({{ $row['middle']['num'] }})</td>
+                            <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ $row['ring']['mm'] }}mm ({{ $row['ring']['num'] }})</td>
+                            <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ $row['pinky']['mm'] }}mm ({{ $row['pinky']['num'] }})</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            <p class="mt-3 text-[11px] text-slate-500 italic">Approximate reference — shape and fit can vary.</p>
+            <a href="{{ route('sizing-kit.index') }}#size-chart" class="mt-4 inline-flex items-center gap-1 text-sm font-bold text-[#0297FE] hover:underline">
+                Full guide &amp; sizing kit
+                <span class="material-symbols-outlined text-base">arrow_forward</span>
+            </a>
+        </div>
+    </div>
+</div>
+
 {{-- Review image lightbox (same behavior as shops/reviews). No backdrop-blur: blur on fixed layers flickers when body scroll locks. --}}
 <div id="review-image-modal" class="review-image-modal-root fixed inset-0 z-[110] hidden flex items-center justify-center p-2 sm:p-3" role="dialog" aria-modal="true" aria-labelledby="review-image-modal-title">
     <div class="absolute inset-0 review-image-modal-backdrop" data-review-image-modal-close aria-hidden="true"></div>
@@ -993,6 +1056,13 @@ button.wishlist-btn.in-wishlist { color: #0297FE; }
     background: rgba(15, 23, 42, 0.92);
 }
 .review-image-modal-root {
+    isolation: isolate;
+    contain: layout style;
+}
+.size-guide-modal-backdrop {
+    background: rgba(15, 23, 42, 0.6);
+}
+.size-guide-modal-root {
     isolation: isolate;
     contain: layout style;
 }
@@ -1561,6 +1631,28 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('recentlyViewedIds', JSON.stringify(ids));
     } catch (e) {}
 
+    var sizeGuideModal = document.getElementById('size-guide-modal');
+    var sizeGuideOpenBtn = document.getElementById('size-guide-open');
+    function openSizeGuideModal() {
+        if (!sizeGuideModal || !sizeGuideOpenBtn) return;
+        sizeGuideModal.classList.remove('hidden');
+        sizeGuideOpenBtn.setAttribute('aria-expanded', 'true');
+        var sb = window.innerWidth - document.documentElement.clientWidth;
+        if (sb > 0) document.body.style.paddingRight = sb + 'px';
+        document.body.style.overflow = 'hidden';
+    }
+    function closeSizeGuideModal() {
+        if (!sizeGuideModal || !sizeGuideOpenBtn) return;
+        sizeGuideModal.classList.add('hidden');
+        sizeGuideOpenBtn.setAttribute('aria-expanded', 'false');
+        document.body.style.paddingRight = '';
+        document.body.style.overflow = '';
+        try { sizeGuideOpenBtn.focus(); } catch (err) {}
+    }
+    if (sizeGuideOpenBtn) {
+        sizeGuideOpenBtn.addEventListener('click', function() { openSizeGuideModal(); });
+    }
+
     var reviewImgModal = document.getElementById('review-image-modal');
     var reviewImgModalEl = document.getElementById('review-image-modal-img');
     function openReviewImageModal(src) {
@@ -1590,9 +1682,17 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.target.closest('[data-review-image-modal-close]')) {
             closeReviewImageModal();
         }
+        if (e.target.closest('[data-size-guide-modal-close]')) {
+            closeSizeGuideModal();
+        }
     });
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && reviewImgModal && !reviewImgModal.classList.contains('hidden')) {
+        if (e.key !== 'Escape') return;
+        if (sizeGuideModal && !sizeGuideModal.classList.contains('hidden')) {
+            closeSizeGuideModal();
+            return;
+        }
+        if (reviewImgModal && !reviewImgModal.classList.contains('hidden')) {
             closeReviewImageModal();
         }
     });

@@ -55,9 +55,17 @@ use App\Http\Controllers\SellerApplicationController;
 use App\Http\Controllers\Admin\SellerApplicationAdminController;
 use App\Http\Controllers\Admin\ReturnRequestController as AdminReturnRequestController;
 use App\Http\Controllers\TestController;
+use App\Http\Controllers\SitemapController;
 
 // Public routes
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+Route::get('/robots.txt', function () {
+    $base = rtrim(config('app.url'), '/');
+    $body = "User-agent: *\nDisallow:\n\nSitemap: {$base}/sitemap.xml\n";
+
+    return response($body, 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
+})->name('robots');
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 Route::get('/products/recently-viewed', [ProductController::class, 'recentlyViewedFragment'])->name('products.recently-viewed');
 Route::get('/products/{slug}', [ProductController::class, 'show'])->name('products.show');

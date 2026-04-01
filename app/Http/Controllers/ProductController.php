@@ -12,6 +12,7 @@ use App\Models\OrderItem;
 use App\Models\Review;
 use App\Services\TikTokEventsService;
 use App\Services\CurrencyService;
+use App\Support\ReferenceNailSizeChart;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 
@@ -294,6 +295,8 @@ class ProductController extends Controller
             }
         }
 
+        $sizeChartTable = ReferenceNailSizeChart::table();
+
         return view('products.show', compact(
             'product',
             'relatedProducts',
@@ -308,7 +311,8 @@ class ProductController extends Controller
             'hasCompletedOrderForReview',
             'canSubmitReview',
             'userExistingReview',
-            'shopSpotlightReviews'
+            'shopSpotlightReviews',
+            'sizeChartTable'
         ));
     }
 

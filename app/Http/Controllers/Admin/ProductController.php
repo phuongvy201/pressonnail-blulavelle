@@ -13,6 +13,7 @@ use App\Models\GmcConfig;
 use App\Services\GoogleMerchantCenterService;
 use App\Services\OpenAIService;
 use App\Services\VideoThumbnailService;
+use App\Support\ReferenceNailSizeChart;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -471,7 +472,11 @@ class ProductController extends Controller
     public function show(Product $product)
     {
         $product->load(['template', 'variants']);
-        return view('admin.products.show', compact('product'));
+
+        return view('admin.products.show', [
+            'product' => $product,
+            'sizeChartTable' => ReferenceNailSizeChart::table(),
+        ]);
     }
 
     /**
