@@ -2,7 +2,7 @@
 
 use App\Services\CurrencyService;
 
-if (!function_exists('currency')) {
+if (! function_exists('currency')) {
     /**
      * Lấy currency code hiện tại
      */
@@ -12,7 +12,7 @@ if (!function_exists('currency')) {
     }
 }
 
-if (!function_exists('currency_rate')) {
+if (! function_exists('currency_rate')) {
     /**
      * Lấy currency rate hiện tại
      */
@@ -22,7 +22,7 @@ if (!function_exists('currency_rate')) {
     }
 }
 
-if (!function_exists('currency_symbol')) {
+if (! function_exists('currency_symbol')) {
     /**
      * Lấy currency symbol
      */
@@ -32,7 +32,7 @@ if (!function_exists('currency_symbol')) {
     }
 }
 
-if (!function_exists('format_price')) {
+if (! function_exists('format_price')) {
     /**
      * Format giá theo currency hiện tại
      */
@@ -42,7 +42,7 @@ if (!function_exists('format_price')) {
     }
 }
 
-if (!function_exists('format_price_usd')) {
+if (! function_exists('format_price_usd')) {
     /**
      * Format giá từ USD (tự động convert và format)
      */
@@ -52,7 +52,7 @@ if (!function_exists('format_price_usd')) {
     }
 }
 
-if (!function_exists('convert_currency')) {
+if (! function_exists('convert_currency')) {
     /**
      * Convert giá từ USD sang currency hiện tại
      */
@@ -62,7 +62,7 @@ if (!function_exists('convert_currency')) {
     }
 }
 
-if (!function_exists('content_block')) {
+if (! function_exists('content_block')) {
     /**
      * Lấy nội dung block (trang chủ, v.v.) đã merge với default.
      * Dùng cho inline editing: admin chỉnh trên frontend, lưu vào DB.
@@ -73,7 +73,7 @@ if (!function_exists('content_block')) {
     }
 }
 
-if (!function_exists('footer_faq_block_defaults')) {
+if (! function_exists('footer_faq_block_defaults')) {
     /**
      * Nội dung mặc định block FAQ chân trang (layout.footer_faq).
      */
@@ -93,7 +93,7 @@ if (!function_exists('footer_faq_block_defaults')) {
     }
 }
 
-if (!function_exists('footer_faq_block_schema')) {
+if (! function_exists('footer_faq_block_schema')) {
     /**
      * Schema cho inline edit (modal) — khớp key với data-content-field trong layout.
      */
@@ -113,43 +113,33 @@ if (!function_exists('footer_faq_block_schema')) {
     }
 }
 
+if (! function_exists('product_media_image_urls')) {
+    /**
+     * Trích URL ảnh gốc và WebP (nếu có) từ phần tử media — chuỗi URL hoặc mảng {url, webp}.
+     * Bỏ qua video.
+     *
+     * @return array{original: ?string, webp: ?string}
+     */
+    function product_media_image_urls(string|array|null $item): array
+    {
+        if ($item === null || $item === '') {
+            return ['original' => null, 'webp' => null];
+        }
+        if (is_string($item)) {
+            return ['original' => $item, 'webp' => null];
+        }
+        if (! is_array($item)) {
+            return ['original' => null, 'webp' => null];
+        }
+        if (($item['type'] ?? null) === 'video') {
+            return ['original' => null, 'webp' => null];
+        }
+        $original = $item['url'] ?? $item['path'] ?? null;
+        $webp = $item['webp'] ?? null;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        return [
+            'original' => is_string($original) ? $original : null,
+            'webp' => is_string($webp) ? $webp : null,
+        ];
+    }
+}

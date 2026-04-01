@@ -18,7 +18,9 @@
         foreach ($media as $m) {
             if (is_string($m)) {
                 $url = $normalizeUrl($m);
-                if ($url) $galleryItems[] = ['type' => 'image', 'url' => $url];
+                if ($url) {
+                    $galleryItems[] = ['type' => 'image', 'url' => $url];
+                }
             } elseif (is_array($m)) {
                 $u = $m['url'] ?? $m['path'] ?? reset($m);
                 if (!$u) continue;
@@ -26,7 +28,8 @@
                     $poster = isset($m['poster']) ? $normalizeUrl($m['poster']) : null;
                     $galleryItems[] = ['type' => 'video', 'url' => $normalizeUrl($u), 'poster' => $poster];
                 } else {
-                    $galleryItems[] = ['type' => 'image', 'url' => $normalizeUrl($u)];
+                    $w = isset($m['webp']) ? $normalizeUrl($m['webp']) : null;
+                    $galleryItems[] = ['type' => 'image', 'url' => $normalizeUrl($u), 'webp' => $w];
                 }
             }
         }
@@ -48,7 +51,10 @@
                         }
                     } else {
                         $u = $m['url'] ?? $m['path'] ?? reset($m);
-                        if ($u) $galleryItems[] = ['type' => 'image', 'url' => $normalizeUrl($u)];
+                        if ($u) {
+                            $w = isset($m['webp']) ? $normalizeUrl($m['webp']) : null;
+                            $galleryItems[] = ['type' => 'image', 'url' => $normalizeUrl($u), 'webp' => $w];
+                        }
                     }
                 }
             }
@@ -79,7 +85,14 @@
                 }
             } else {
                 $u = $m['url'] ?? $m['path'] ?? reset($m);
-                if ($u) { $url = $normalizeUrl($u); if (empty($existingUrls[$url] ?? null)) { $galleryItems[] = ['type' => 'image', 'url' => $url]; $existingUrls[$url] = true; } }
+                if ($u) {
+                    $url = $normalizeUrl($u);
+                    if (empty($existingUrls[$url] ?? null)) {
+                        $w = isset($m['webp']) ? $normalizeUrl($m['webp']) : null;
+                        $galleryItems[] = ['type' => 'image', 'url' => $url, 'webp' => $w];
+                        $existingUrls[$url] = true;
+                    }
+                }
             }
         }
     }
@@ -206,7 +219,7 @@
                                     <img alt="{{ $product->name }}" class="w-full h-full object-cover hidden" id="product-main-image" src="">
                                 @else
                                     <video id="product-main-video" class="w-full h-full object-cover hidden" controls playsinline></video>
-                                    <img alt="{{ $product->name }}" class="w-full h-full object-cover" id="product-main-image" src="{{ $galleryItems[0]['url'] }}">
+                                    <img alt="{{ $product->name }}" class="w-full h-full object-cover" id="product-main-image" src="{{ !empty($galleryItems[0]['webp']) ? $galleryItems[0]['webp'] : $galleryItems[0]['url'] }}">
                                 @endif
                             @else
                                 <img alt="{{ $product->name }}" class="w-full h-full object-cover" id="product-main-image" src="{{ $primaryImageUrl ?? '' }}">
@@ -242,6 +255,7 @@
                                             data-index="{{ $index }}"
                                             data-type="{{ $item['type'] }}"
                                             data-url="{{ $item['url'] }}"
+                                            data-webp="{{ $item['webp'] ?? '' }}"
                                             data-poster="{{ $item['poster'] ?? '' }}"
                                             aria-label="{{ $item['type'] === 'video' ? 'Xem video ' : 'Xem ảnh ' }}{{ $index + 1 }}">
                                         @if($item['type'] === 'video')
@@ -255,7 +269,7 @@
                                                 <span class="material-symbols-outlined text-white text-3xl drop-shadow">play_circle</span>
                                             </span>
                                         @else
-                                            <img class="w-full h-full object-cover" src="{{ $item['url'] }}" alt="">
+                                            <img class="w-full h-full object-cover" src="{{ !empty($item['webp']) ? $item['webp'] : $item['url'] }}" alt="">
                                         @endif
                                     </button>
                                     @endforeach
@@ -1076,6 +1090,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var btn = thumbs[index];
         if (!btn) return;
         var type = btn.getAttribute('data-type');
+        var webp = btn.getAttribute('data-webp') || '';
         var url = btn.getAttribute('data-url');
         var poster = btn.getAttribute('data-poster') || '';
         if (type === 'video' && url) {
@@ -1089,7 +1104,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (mainImg) mainImg.classList.add('hidden');
         } else if (url) {
             if (mainVideo) { mainVideo.pause(); mainVideo.classList.add('hidden'); mainVideo.removeAttribute('src'); }
-            if (mainImg) { mainImg.src = url; mainImg.classList.remove('hidden'); }
+            if (mainImg) {
+                var imgSrc = (type === 'image' && webp) ? webp : url;
+                mainImg.src = imgSrc;
+                mainImg.classList.remove('hidden');
+            }
         }
         thumbs.forEach(function(b) { b.classList.remove('border-[#0297FE]'); b.classList.add('border-slate-200'); });
         btn.classList.add('border-[#0297FE]'); btn.classList.remove('border-slate-200');

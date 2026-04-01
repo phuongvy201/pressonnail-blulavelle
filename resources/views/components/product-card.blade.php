@@ -3,12 +3,17 @@
 @php
     $media = $product->getEffectiveMedia();
     $imageUrl = null;
+    $webpUrl = null;
     if ($media && count($media) > 0) {
         if (is_string($media[0])) {
             $imageUrl = str_starts_with($media[0], 'http') ? $media[0] : asset('storage/' . $media[0]);
         } elseif (is_array($media[0])) {
             $u = $media[0]['url'] ?? $media[0]['path'] ?? reset($media[0]) ?? null;
             $imageUrl = $u ? (str_starts_with($u, 'http') ? $u : asset('storage/' . $u)) : null;
+            $w = $media[0]['webp'] ?? null;
+            if ($w) {
+                $webpUrl = str_starts_with($w, 'http') ? $w : asset('storage/' . $w);
+            }
         }
     }
     $currentPriceUsd = (float) ($product->price ?? ($product->template->base_price ?? 0));
@@ -37,7 +42,7 @@
     <!-- Image wrapper: zoom + Quick View overlay -->
     <div class="relative aspect-square overflow-hidden bg-gray-100">
         @if($imageUrl)
-            <img src="{{ $imageUrl }}"
+            <img src="{{ $webpUrl ?: $imageUrl }}"
                  alt="{{ $product->name }}"
                  class="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-110">
         @else
