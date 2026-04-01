@@ -6,6 +6,8 @@ use App\Models\Product;
 use App\Models\ProductTemplate;
 use App\Models\ProductVariant;
 use App\Services\OpenAIService;
+use App\Services\ProductMediaWebpService;
+use App\Services\ProductMediaKeywordsService;
 use App\Services\VideoThumbnailService;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Concerns\ToModel;
@@ -173,7 +175,7 @@ class ProductsImport implements
                     }
 
                     if ($s3Url) {
-                        $mediaUrls[] = $s3Url;
+                        $mediaUrls[] = $this->withWebpMediaItem($s3Url);
                         Log::info("Successfully uploaded image_{$i} to S3 for product: {$productName}");
                     } else {
                         // Log warning but don't fail the entire import - will use template media as fallback
@@ -257,7 +259,6 @@ class ProductsImport implements
                     'description' => $description,
                     'quantity' => $row['quantity'] ?? 0,
                     'status' => $row['status'] ?? 'active',
-                    'media' => $mediaUrls ?: null, // Laravel auto-cast to JSON via $casts
                 ];
 
                 // Ensure 'id' is not in the data (even if somehow included)
@@ -279,6 +280,13 @@ class ProductsImport implements
                         'message' => $e->getMessage(),
                     ]);
                 }
+
+                $productData['media'] = $mediaUrls !== []
+                    ? ProductMediaKeywordsService::attachKeywordsToMedia(
+                        $mediaUrls,
+                        isset($productData['meta_keywords']) ? trim((string) $productData['meta_keywords']) : null
+                    )
+                    : null;
 
                 // Create product - variants will be created after import completes
                 $product = new Product($productData);
@@ -812,6 +820,16 @@ class ProductsImport implements
         }
 
         return $attributes;
+    }
+
+    /**
+     * Gắn URL WebP (tạo trên S3) cho ảnh vừa upload — storefront dùng key `webp` trong gallery/card.
+     *
+     * @return string|array{type: string, url: string, webp: string}
+     */
+    protected function withWebpMediaItem(string $s3Url): string|array
+    {
+        return ProductMediaWebpService::imageUrlToMediaItemWithWebp(Storage::disk('s3'), $s3Url);
     }
 
     protected function isGoogleDriveUrl(string $url): bool
@@ -1368,7 +1386,15 @@ class ProductsImport implements
                 $contents = @file_get_contents($posterAbs);
                 if ($contents !== false && $contents !== '') {
                     $disk->put($posterKey, $contents);
-                    $posterS3Url = 'https://s3.us-east-1.amazonaws.com/image.bluprinter/'.$posterKey;
+                    $posterS3Url = ProductMediaWebpService::defaultS3BaseUrl().$posterKey;
+                    $webpPoster = ProductMediaWebpService::createWebpCompanionForS3Key(
+                        $disk,
+                        $posterKey,
+                        ProductMediaWebpService::defaultS3BaseUrl()
+                    );
+                    if ($webpPoster !== null) {
+                        $posterS3Url = $webpPoster;
+                    }
                 }
             }
         }

@@ -187,7 +187,9 @@
                                                         @php
                                                             $productMedia = $item->product ? $item->product->getEffectiveMedia() : [];
                                                             $productImageUrl = null;
-                                                            if (!empty($productMedia)) {
+                                                            $productImageAlt = $item->product_name;
+                                                            if (!empty($productMedia) && $item->product) {
+                                                                $productImageAlt = $item->product->altForMediaItem($productMedia[0], $item->product_name, 0);
                                                                 if (is_string($productMedia[0])) {
                                                                     $productImageUrl = $productMedia[0];
                                                                 } elseif (is_array($productMedia[0])) {
@@ -198,7 +200,7 @@
                                                         @endphp
                                                         <div class="size-16 rounded-lg bg-[#f8f6f6] overflow-hidden border border-black/5">
                                                             @if($productImageUrl)
-                                                                <img src="{{ $productImageUrl }}" alt="{{ $item->product_name }}" class="w-full h-full object-cover">
+                                                                <img src="{{ $productImageUrl }}" alt="{{ $productImageAlt }}" class="w-full h-full object-cover">
                                                             @endif
                                                         </div>
                                                         <div class="flex-1 min-w-0">

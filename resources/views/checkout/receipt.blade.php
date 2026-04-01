@@ -172,9 +172,11 @@
                         @php
                             $product = $item->product;
                             $imageUrl = null;
+                            $receiptLineImgAlt = $item->product_name;
                             if ($product) {
                                 $media = $product->getEffectiveMedia();
                                 if ($media && count($media) > 0) {
+                                    $receiptLineImgAlt = $product->altForMediaItem($media[0], $item->product_name, 0);
                                     $imageUrl = is_string($media[0]) ? $media[0] : ($media[0]['url'] ?? $media[0]['path'] ?? reset($media[0]) ?? null);
                                 }
                             }
@@ -220,7 +222,7 @@
                                 <div class="flex items-center gap-4">
                                     <div class="h-12 w-12 rounded-lg bg-slate-100 flex-shrink-0 flex items-center justify-center overflow-hidden">
                                         @if($imageUrl)
-                                            <img src="{{ $imageUrl }}" alt="{{ $item->product_name }}" class="object-cover w-full h-full">
+                                            <img src="{{ $imageUrl }}" alt="{{ $receiptLineImgAlt }}" class="object-cover w-full h-full">
                                         @else
                                             <span class="material-symbols-outlined text-slate-400">image</span>
                                         @endif

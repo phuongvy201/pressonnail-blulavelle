@@ -159,7 +159,9 @@
                                 @php
                                     $media = $item->product ? $item->product->getEffectiveMedia() : [];
                                     $imageUrl = null;
-                                    if ($media && count($media) > 0) {
+                                    $sellerOrderImgAlt = $item->product_name;
+                                    if ($media && count($media) > 0 && $item->product) {
+                                        $sellerOrderImgAlt = $item->product->altForMediaItem($media[0], $item->product_name, 0);
                                         if (is_string($media[0])) {
                                             $imageUrl = $media[0];
                                         } elseif (is_array($media[0])) {
@@ -169,7 +171,7 @@
                                 @endphp
                                 @if($imageUrl)
                                     <img src="{{ $imageUrl }}" 
-                                         alt="{{ $item->product_name }}"
+                                         alt="{{ $sellerOrderImgAlt }}"
                                          class="w-16 h-16 object-cover rounded-lg">
                                 @else
                                     <div class="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">

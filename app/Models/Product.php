@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Services\ProductMediaKeywordsService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Product extends Model
 {
@@ -359,6 +361,134 @@ class Product extends Model
         }
 
         return is_array($media) ? $media : [];
+    }
+
+    /**
+     * Chuỗi alt cho <img>: ưu tiên keywords trên phần tử media (JSON); nếu thiếu thì tính từ meta_keywords
+     * + keyword cố định theo thứ tự ảnh (hoặc $mediaIndex). Cuối cùng mới dùng $fallback / tên SP.
+     */
+    public function altForMediaItem(mixed $mediaItem, ?string $fallback = null, ?int $mediaIndex = null): string
+    {
+        $fallback = $fallback ?? (string) ($this->name ?? '');
+        if (is_array($mediaItem)) {
+            $k = $mediaItem['keywords'] ?? '';
+            if (is_string($k)) {
+                $k = trim($k);
+                if ($k !== '') {
+                    return Str::limit($k, 500, '');
+                }
+            }
+        }
+
+        $idx = $mediaIndex ?? $this->resolveMediaItemIndex($mediaItem);
+        if ($idx !== null) {
+            $built = trim(ProductMediaKeywordsService::keywordsStringForMediaIndex($idx, $this->meta_keywords));
+            if ($built !== '') {
+                return Str::limit($built, 500, '');
+            }
+        }
+
+        return $fallback !== '' ? $fallback : 'Product';
+    }
+
+    /**
+     * Chuẩn hoá product khi trả về cart/API: media đầy đủ + primary_image_alt cho JS.
+     */
+    public function hydrateForCartDisplay(): void
+    {
+        $this->setAttribute('media', $this->getEffectiveMedia());
+        if (! in_array('primary_image_alt', $this->getAppends(), true)) {
+            $this->append('primary_image_alt');
+        }
+    }
+
+    public function getPrimaryImageAltAttribute(): string
+    {
+        $media = $this->getEffectiveMedia();
+        if ($media === []) {
+            $n = (string) ($this->name ?? '');
+
+            return $n !== '' ? $n : 'Product';
+        }
+
+        return $this->altForMediaItem($media[0], null, 0);
+    }
+
+    protected function normalizeMediaPathForMatch(string $url): string
+    {
+        $url = trim($url);
+        if ($url === '') {
+            return '';
+        }
+        if (preg_match('#^https?://#i', $url)) {
+            $path = parse_url($url, PHP_URL_PATH) ?? '';
+
+            return $path !== '' ? strtolower(ltrim(str_replace('\\', '/', $path), '/')) : strtolower($url);
+        }
+
+        return strtolower(ltrim(str_replace('\\', '/', $url), '/'));
+    }
+
+    protected function resolveMediaItemIndex(mixed $mediaItem): ?int
+    {
+        $list = $this->getEffectiveMedia();
+        if ($list === []) {
+            return null;
+        }
+
+        $targets = [];
+        if (is_string($mediaItem)) {
+            $n = $this->normalizeMediaPathForMatch($mediaItem);
+            if ($n !== '') {
+                $targets[] = $n;
+            }
+        } elseif (is_array($mediaItem)) {
+            foreach (['url', 'webp', 'path', 'poster'] as $key) {
+                if (! empty($mediaItem[$key]) && is_string($mediaItem[$key])) {
+                    $n = $this->normalizeMediaPathForMatch($mediaItem[$key]);
+                    if ($n !== '') {
+                        $targets[] = $n;
+                    }
+                }
+            }
+        } else {
+            return null;
+        }
+
+        $targets = array_values(array_unique($targets));
+        if ($targets === []) {
+            return null;
+        }
+
+        foreach ($list as $idx => $m) {
+            $candidates = [];
+            if (is_string($m)) {
+                $candidates[] = $this->normalizeMediaPathForMatch($m);
+            } elseif (is_array($m)) {
+                foreach (['url', 'webp', 'path', 'poster'] as $key) {
+                    if (! empty($m[$key]) && is_string($m[$key])) {
+                        $candidates[] = $this->normalizeMediaPathForMatch($m[$key]);
+                    }
+                }
+            }
+            foreach ($candidates as $c) {
+                if ($c === '') {
+                    continue;
+                }
+                foreach ($targets as $t) {
+                    if ($t === $c) {
+                        return (int) $idx;
+                    }
+                    $bt = basename($t);
+                    $bc = basename($c);
+                    if ($bt !== '' && $bt === $bc) {
+                        return (int) $idx;
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
     // Check if current user can edit this product (admin, product owner, or shop owner)

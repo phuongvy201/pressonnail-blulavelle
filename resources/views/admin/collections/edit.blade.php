@@ -274,7 +274,7 @@
                                             <div class="flex items-center">
                                                 <div class="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center text-lg mr-3 overflow-hidden">
                                                     @if(!empty($product->primary_image))
-                                                        <img src="{{ $product->primary_image }}" alt="{{ $product->name }}" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                        <img src="{{ $product->primary_image }}" alt="{{ $product->altForMediaItem($product->getEffectiveMedia()[0] ?? '', null, 0) }}" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                                         <span class="w-full h-full items-center justify-center text-lg hidden">📦</span>
                                                     @else
                                                         <span class="w-full h-full flex items-center justify-center text-lg">📦</span>

@@ -357,14 +357,8 @@
                                 <!-- Thumbnail -->
                                 <div class="flex-shrink-0">
                                     @php
-                                        // Get first media URL safely
-                                        $mediaItem = $product->media && is_array($product->media) && count($product->media) > 0 
-                                            ? $product->media[0] 
-                                            : ($product->template->media && is_array($product->template->media) && count($product->template->media) > 0 
-                                                ? $product->template->media[0] 
-                                                : null);
-                                        
-                                        // Convert to URL string
+                                        $effMedia = $product->getEffectiveMedia();
+                                        $mediaItem = (is_array($effMedia) && count($effMedia) > 0) ? $effMedia[0] : null;
                                         if (is_string($mediaItem)) {
                                             $mediaUrl = $mediaItem;
                                         } elseif (is_array($mediaItem) && !empty($mediaItem)) {
@@ -372,6 +366,9 @@
                                         } else {
                                             $mediaUrl = null;
                                         }
+                                        $adminThumbAlt = $mediaItem !== null
+                                            ? $product->altForMediaItem(is_array($mediaItem) || is_string($mediaItem) ? $mediaItem : [], null, 0)
+                                            : $product->name;
                                     @endphp
                                     
                                     @if($mediaUrl)
@@ -382,7 +379,7 @@
                                                 </svg>
                                             </div>
                                         @else
-                                            <img src="{{ $mediaUrl }}" alt="{{ $product->name }}" class="w-16 h-16 rounded-lg object-cover border-2 border-gray-200">
+                                            <img src="{{ $mediaUrl }}" alt="{{ $adminThumbAlt }}" class="w-16 h-16 rounded-lg object-cover border-2 border-gray-200">
                                         @endif
                                     @else
                                         <div class="w-16 h-16 rounded-lg bg-gradient-to-br from-green-100 to-teal-100 flex items-center justify-center">

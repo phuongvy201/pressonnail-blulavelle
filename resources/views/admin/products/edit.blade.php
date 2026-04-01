@@ -291,30 +291,36 @@
                     <div id="current-media-list" class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         @foreach($product->media as $mediaItem)
                             @php
-                                // Get media URL safely
+                                // orderUrl = URL gốc (hidden + rehydrate); previewUrl = webp cho ảnh khi có
+                                $orderUrl = null;
+                                $previewUrl = null;
                                 if (is_string($mediaItem)) {
-                                    $mediaUrl = $mediaItem;
-                                } elseif (is_array($mediaItem) && !empty($mediaItem)) {
-                                    $mediaUrl = $mediaItem['url'] ?? $mediaItem['path'] ?? reset($mediaItem) ?? null;
-                                } else {
-                                    $mediaUrl = null;
+                                    $orderUrl = $previewUrl = $mediaItem;
+                                } elseif (is_array($mediaItem) && ! empty($mediaItem)) {
+                                    $orderUrl = $mediaItem['url'] ?? $mediaItem['path'] ?? reset($mediaItem) ?? null;
+                                    $isVideo = ($mediaItem['type'] ?? '') === 'video';
+                                    if ($isVideo) {
+                                        $previewUrl = $orderUrl;
+                                    } else {
+                                        $previewUrl = ! empty($mediaItem['webp']) ? $mediaItem['webp'] : $orderUrl;
+                                    }
                                 }
                             @endphp
                             
-                            @if($mediaUrl)
+                            @if($orderUrl)
                             <div class="current-media-item relative bg-white rounded-lg border-2 border-gray-200 p-2 cursor-move group"
                                  draggable="true"
                                  data-media-key="{{ $loop->index }}">
-                                @if(str_contains($mediaUrl, '.mp4') || str_contains($mediaUrl, '.mov') || str_contains($mediaUrl, '.avi'))
+                                @if(str_contains($orderUrl, '.mp4') || str_contains($orderUrl, '.mov') || str_contains($orderUrl, '.avi'))
                                     <div class="aspect-square rounded-lg bg-purple-100 flex items-center justify-center">
                                         <svg class="w-12 h-12 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
                                         </svg>
                                     </div>
                                 @else
-                                    <img src="{{ $mediaUrl }}" class="w-full aspect-square object-cover rounded-lg" alt="">
+                                    <img src="{{ $previewUrl }}" class="w-full aspect-square object-cover rounded-lg" alt="{{ $product->altForMediaItem(is_array($mediaItem) || is_string($mediaItem) ? $mediaItem : [], null, $loop->index) }}">
                                 @endif
-                                <input type="hidden" name="current_media_order[]" value="{{ $mediaUrl }}">
+                                <input type="hidden" name="current_media_order[]" value="{{ $orderUrl }}">
                                 <button type="button" 
                                         onclick="removeCurrentMedia(this)" 
                                         class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 z-10 opacity-0 group-hover:opacity-100 transition-opacity shadow"

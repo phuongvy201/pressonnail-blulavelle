@@ -725,6 +725,22 @@
             return '';
         }
 
+        function getProductImageAlt(item) {
+            var p = item.product || {};
+            var name = p.name ? String(p.name) : 'Product';
+            if (!item.product) return name;
+            if (p.primary_image_alt && String(p.primary_image_alt).trim()) {
+                return String(p.primary_image_alt).trim().slice(0, 500);
+            }
+            var media = p.media || [];
+            if (!Array.isArray(media) || !media.length) return name;
+            var m = media[0];
+            if (m && typeof m === 'object' && m.keywords && String(m.keywords).trim()) {
+                return String(m.keywords).trim().slice(0, 500);
+            }
+            return name;
+        }
+
         function buildVariantLine(item) {
             var v = item.selected_variant || {};
             var attrs = v.attributes || {};
@@ -808,6 +824,7 @@
             var html = '';
             items.forEach(function(item) {
                 var img = getProductImage(item);
+                var imgAlt = getProductImageAlt(item);
                 var name = (item.product && item.product.name) ? item.product.name : 'Product';
                 var variantLine = buildVariantLine(item);
                 var qty = item.quantity || 1;
@@ -817,7 +834,7 @@
 
                 html += '<div class="p-4 sm:p-6 flex gap-3 sm:gap-4 cart-drawer-item" data-cart-id="' + cartItemId + '">';
                 html += '<div class="h-24 w-20 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">';
-                if (img) html += '<img class="h-full w-full object-cover" alt="" src="' + img + '">';
+                if (img) html += '<img class="h-full w-full object-cover" alt="' + String(imgAlt).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;') + '" src="' + img + '">';
                 else html += '<span class="h-full w-full flex items-center justify-center material-symbols-outlined text-4xl text-slate-300">image</span>';
                 html += '</div>';
                 html += '<div class="flex flex-col flex-1 min-w-0">';

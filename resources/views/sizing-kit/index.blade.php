@@ -85,7 +85,9 @@
                 @php
                     $media = $product->getEffectiveMedia();
                     $imageUrl = null;
+                    $shapeKitImgAlt = $product->name;
                     if ($media && count($media) > 0) {
+                        $shapeKitImgAlt = $product->altForMediaItem($media[0], null, 0);
                         if (is_string($media[0])) {
                             $imageUrl = str_starts_with($media[0], 'http') ? $media[0] : asset('storage/' . $media[0]);
                         } elseif (is_array($media[0])) {
@@ -98,7 +100,7 @@
                 <div class="group flex flex-col gap-4">
                     <a href="{{ route('products.show', $product->slug) }}" class="relative aspect-square overflow-hidden rounded-xl bg-slate-100 block">
                         @if($imageUrl)
-                        <img src="{{ $imageUrl }}" alt="{{ $product->name }}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                        <img src="{{ $imageUrl }}" alt="{{ $shapeKitImgAlt }}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
                         @else
                         <div class="absolute inset-0 flex items-center justify-center bg-slate-200">
                             <span class="material-symbols-outlined text-4xl text-slate-400">image</span>

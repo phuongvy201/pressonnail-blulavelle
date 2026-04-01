@@ -4,7 +4,9 @@
     $media = $product->getEffectiveMedia();
     $imageUrl = null;
     $webpUrl = null;
+    $imgAlt = $product->name;
     if ($media && count($media) > 0) {
+        $imgAlt = $product->altForMediaItem($media[0], null, 0);
         if (is_string($media[0])) {
             $imageUrl = str_starts_with($media[0], 'http') ? $media[0] : asset('storage/' . $media[0]);
         } elseif (is_array($media[0])) {
@@ -43,7 +45,7 @@
     <div class="relative aspect-square overflow-hidden bg-gray-100">
         @if($imageUrl)
             <img src="{{ $webpUrl ?: $imageUrl }}"
-                 alt="{{ $product->name }}"
+                 alt="{{ $imgAlt }}"
                  class="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-110">
         @else
             <div class="w-full h-full flex items-center justify-center bg-gray-200">

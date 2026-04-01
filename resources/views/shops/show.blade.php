@@ -112,15 +112,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
                 $imageUrl = null;
+                $categoryThumbAlt = $category->name;
                 if ($firstProduct && count($firstProduct->getEffectiveMedia()) > 0) {
                     $media = $firstProduct->getEffectiveMedia();
-                    $imageUrl = is_array($media) && isset($media[0]) ? $media[0] : (is_string($media) ? $media : '');
+                    $first = $media[0] ?? null;
+                    if (is_string($first)) {
+                        $imageUrl = str_starts_with($first, 'http') ? $first : asset('storage/'.$first);
+                        $categoryThumbAlt = $firstProduct->altForMediaItem($first, null, 0);
+                    } elseif (is_array($first)) {
+                        $u = $first['url'] ?? $first['path'] ?? reset($first) ?? null;
+                        $imageUrl = $u ? (str_starts_with((string) $u, 'http') ? $u : asset('storage/'.$u)) : null;
+                        $categoryThumbAlt = $firstProduct->altForMediaItem($first, null, 0);
+                    }
                 }
             @endphp
             <button type="button" onclick="filterByCategory('{{ $category->id }}')" class="shop-category-pill flex-shrink-0 flex items-center gap-3 rounded-full pl-1 pr-5 py-1.5 bg-white border border-slate-200/80 shadow-sm hover:border-primary/30 hover:shadow-md hover:bg-primary/5 transition-all duration-200 text-left group">
                 <span class="w-12 h-12 rounded-full overflow-hidden bg-slate-100 flex-shrink-0 ring-2 ring-white shadow-sm">
                     @if($imageUrl)
-                        <img alt="{{ $category->name }}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" src="{{ $imageUrl }}">
+                        <img alt="{{ $categoryThumbAlt }}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" src="{{ $imageUrl }}">
                     @else
                         <span class="w-full h-full flex items-center justify-center text-slate-400">
                             <span class="material-symbols-outlined text-2xl">category</span>
@@ -157,7 +166,9 @@ document.addEventListener('DOMContentLoaded', function() {
             @php
                 $media = $product->getEffectiveMedia();
                 $imageUrl = null;
+                $shopProductImgAlt = $product->name;
                 if ($media && count($media) > 0) {
+                    $shopProductImgAlt = $product->altForMediaItem($media[0], null, 0);
                     if (is_string($media[0])) {
                         $imageUrl = $media[0];
                     } elseif (is_array($media[0])) {
@@ -177,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <!-- Product Image -->
                 <div class="relative aspect-[4/5] overflow-hidden bg-slate-100">
                     @if($imageUrl)
-                        <img alt="{{ $product->name }}" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" src="{{ $imageUrl }}">
+                        <img alt="{{ $shopProductImgAlt }}" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" src="{{ $imageUrl }}">
                     @else
                         <div class="w-full h-full flex items-center justify-center">
                             <span class="material-symbols-outlined text-slate-400 text-6xl">image</span>

@@ -99,9 +99,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             @php
                                 $product = $item->product;
                                 $imageUrl = null;
+                                $successLineImgAlt = $item->product_name;
                                 if ($product) {
                                     $media = $product->getEffectiveMedia();
                                     if ($media && count($media) > 0) {
+                                        $successLineImgAlt = $product->altForMediaItem($media[0], $item->product_name, 0);
                                         $imageUrl = is_string($media[0]) ? $media[0] : ($media[0]['url'] ?? $media[0]['path'] ?? reset($media[0]) ?? null);
                                     }
                                 }
@@ -109,7 +111,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="flex items-center gap-4 py-3 border-b border-slate-100 last:border-0">
                                 <div class="aspect-square size-16 shrink-0 rounded-lg overflow-hidden bg-[#f8f6f6] border border-slate-100">
                                     @if($imageUrl)
-                                        <img src="{{ $imageUrl }}" alt="{{ $item->product_name }}" class="w-full h-full object-cover">
+                                        <img src="{{ $imageUrl }}" alt="{{ $successLineImgAlt }}" class="w-full h-full object-cover">
                                     @else
                                         <div class="w-full h-full flex items-center justify-center text-slate-300">
                                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14"/></svg>

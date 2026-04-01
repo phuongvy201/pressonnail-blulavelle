@@ -13,6 +13,8 @@ use App\Models\GmcConfig;
 use App\Services\GoogleMerchantCenterService;
 use App\Services\OpenAIService;
 use App\Services\VideoThumbnailService;
+use App\Services\ProductMediaWebpService;
+use App\Services\ProductMediaKeywordsService;
 use App\Support\ReferenceNailSizeChart;
 use Exception;
 use Illuminate\Http\Request;
@@ -60,13 +62,35 @@ class ProductController extends Controller
                     $contents = Storage::disk('local')->get($posterPath);
                     if ($contents) {
                         Storage::disk('s3')->put('products/posters/' . $posterFileName, $contents);
-                        $posterUrl = $this->getS3BaseUrl() . 'products/posters/' . $posterFileName;
+                        $posterKey = 'products/posters/' . $posterFileName;
+                        $posterUrl = $this->getS3BaseUrl() . $posterKey;
+                        $webpPoster = ProductMediaWebpService::createWebpCompanionForS3Key(
+                            Storage::disk('s3'),
+                            $posterKey,
+                            $this->getS3BaseUrl()
+                        );
+                        if ($webpPoster !== null) {
+                            $posterUrl = $webpPoster;
+                        }
                     }
                     $thumbnailService->deleteTempPoster($posterPath);
                 }
                 // Nếu không tạo được poster thì để null để frontend fallback về ảnh khác,
                 // tránh dùng URL video (.mp4) làm src của <img>
                 return ['type' => 'video', 'url' => $fileUrl, 'poster' => $posterUrl];
+            }
+
+            $webpUrl = ProductMediaWebpService::createWebpCompanionForS3Key(
+                Storage::disk('s3'),
+                $filePath,
+                $this->getS3BaseUrl()
+            );
+            if ($webpUrl !== null) {
+                return [
+                    'type' => 'image',
+                    'url' => $fileUrl,
+                    'webp' => $webpUrl,
+                ];
             }
 
             return $fileUrl;
@@ -362,6 +386,13 @@ class ProductController extends Controller
                 ]);
             }
 
+            if (! empty($data['media']) && is_array($data['media'])) {
+                $data['media'] = ProductMediaKeywordsService::attachKeywordsToMedia(
+                    $data['media'],
+                    isset($data['meta_keywords']) ? trim((string) $data['meta_keywords']) : null
+                );
+            }
+
             $product = Product::create($data);
 
             // Note: Variants and shop products count are automatically handled by Product model's created event
@@ -634,6 +665,8 @@ class ProductController extends Controller
                         $orderedExistingMedia[] = $mediaUrl;
                     }
                 }
+                // Form chỉ gửi URL gốc; giữ nguyên mảng có webp/poster từ DB
+                $orderedExistingMedia = $this->rehydrateMediaItemsFromOriginal($orderedExistingMedia, $product->media);
             } else {
                 // Fallback to current product media if no order provided
                 if (is_array($product->media)) {
@@ -659,8 +692,21 @@ class ProductController extends Controller
                 }
             }
 
-            if (!empty($orderedExistingMedia)) {
-                // Re-index array to ensure clean JSON encoding
+            // Đổi tên file trên S3 theo slug mới khi đổi tên sản phẩm (ảnh gốc, .webp, video, poster)
+            if (isset($data['slug']) && $data['slug'] !== $product->slug) {
+                $orderedExistingMedia = $this->renameProductMediaFilesForSlugChange(
+                    $product->slug,
+                    (string) $data['slug'],
+                    $orderedExistingMedia
+                );
+            }
+
+            if (! empty($orderedExistingMedia)) {
+                $metaRaw = $product->meta_keywords;
+                $orderedExistingMedia = ProductMediaKeywordsService::attachKeywordsToMedia(
+                    array_values($orderedExistingMedia),
+                    is_string($metaRaw) && trim($metaRaw) !== '' ? $metaRaw : null
+                );
                 $data['media'] = array_values($orderedExistingMedia);
             } else {
                 $data['media'] = [];
@@ -969,6 +1015,193 @@ class ProductController extends Controller
             'attached' => count($allowedIds),
             'skipped' => $skipped,
         ]);
+    }
+
+    /**
+     * Đổi prefix slug trong key S3 (chỉ products/ và products/posters/, basename bắt đầu bằng "{oldSlug}-").
+     */
+    private function s3ProductKeyWithRenamedSlug(string $key, string $oldSlug, string $newSlug): ?string
+    {
+        $oldSlug = Str::slug($oldSlug);
+        $newSlug = Str::slug($newSlug);
+        if ($oldSlug === '' || $newSlug === '' || $oldSlug === $newSlug) {
+            return null;
+        }
+        $dir = dirname($key);
+        $base = basename($key);
+        if (! in_array($dir, ['products', 'products/posters'], true)) {
+            return null;
+        }
+        if (! str_starts_with($base, $oldSlug.'-')) {
+            return null;
+        }
+
+        return $dir.'/'.$newSlug.substr($base, strlen($oldSlug));
+    }
+
+    /**
+     * Khi slug sản phẩm đổi: copy object trên S3 sang key mới, cập nhật URL trong mảng media, xóa bản cũ.
+     *
+     * @param  list<mixed>  $media
+     * @return list<mixed>
+     */
+    private function renameProductMediaFilesForSlugChange(string $oldSlug, string $newSlug, array $media): array
+    {
+        $oldSlug = Str::slug($oldSlug);
+        $newSlug = Str::slug($newSlug);
+        if ($oldSlug === '' || $oldSlug === $newSlug) {
+            return $media;
+        }
+
+        $planned = [];
+
+        $planUrl = function (?string $url) use (&$planned, $oldSlug, $newSlug): void {
+            if ($url === null || trim($url) === '') {
+                return;
+            }
+            $resolved = ProductMediaWebpService::resolvePublicUrlToKey($url);
+            if ($resolved === null) {
+                return;
+            }
+            $newKey = $this->s3ProductKeyWithRenamedSlug($resolved['key'], $oldSlug, $newSlug);
+            if ($newKey === null || $newKey === $resolved['key']) {
+                return;
+            }
+            $planned[$resolved['key']] = [
+                'new' => $newKey,
+                'base' => $resolved['base'],
+            ];
+        };
+
+        foreach ($media as $item) {
+            if (is_string($item)) {
+                $planUrl($item);
+            } elseif (is_array($item)) {
+                foreach (['url', 'webp', 'poster'] as $field) {
+                    if (isset($item[$field]) && is_string($item[$field])) {
+                        $planUrl($item[$field]);
+                    }
+                }
+            }
+        }
+
+        if ($planned === []) {
+            return $media;
+        }
+
+        $disk = Storage::disk('s3');
+        $successful = [];
+
+        foreach ($planned as $oldKey => $meta) {
+            $newKey = $meta['new'];
+            if (! $disk->exists($oldKey)) {
+                continue;
+            }
+            if ($disk->exists($newKey)) {
+                Log::warning('renameProductMedia: S3 target key already exists, skip', [
+                    'old' => $oldKey,
+                    'new' => $newKey,
+                ]);
+
+                continue;
+            }
+            try {
+                $disk->copy($oldKey, $newKey);
+                $successful[$oldKey] = $meta;
+            } catch (\Throwable $e) {
+                Log::error('renameProductMedia: S3 copy failed', [
+                    'old' => $oldKey,
+                    'new' => $newKey,
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        foreach (array_keys($successful) as $oldKey) {
+            try {
+                $disk->delete($oldKey);
+            } catch (\Throwable $e) {
+                Log::warning('renameProductMedia: S3 delete old failed', [
+                    'key' => $oldKey,
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        $rewriteUrl = function (?string $url) use ($successful): ?string {
+            if ($url === null || trim($url) === '') {
+                return $url;
+            }
+            $resolved = ProductMediaWebpService::resolvePublicUrlToKey($url);
+            if ($resolved === null || ! isset($successful[$resolved['key']])) {
+                return $url;
+            }
+            $meta = $successful[$resolved['key']];
+
+            return rtrim($meta['base'], '/').'/'.$meta['new'];
+        };
+
+        $out = [];
+        foreach ($media as $item) {
+            if (is_string($item)) {
+                $out[] = $rewriteUrl($item);
+            } elseif (is_array($item)) {
+                $row = $item;
+                foreach (['url', 'webp', 'poster'] as $field) {
+                    if (isset($row[$field]) && is_string($row[$field])) {
+                        $row[$field] = $rewriteUrl($row[$field]);
+                    }
+                }
+                $out[] = $row;
+            } else {
+                $out[] = $item;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Map URL từ current_media_order[] về phần tử media đầy đủ (webp, video poster, v.v.).
+     *
+     * @param  list<string>  $submittedUrls
+     * @return list<mixed>
+     */
+    private function rehydrateMediaItemsFromOriginal(array $submittedUrls, mixed $originalMedia): array
+    {
+        if (! is_array($originalMedia)) {
+            $originalMedia = is_string($originalMedia) ? (json_decode($originalMedia, true) ?? []) : [];
+        }
+        if (! is_array($originalMedia)) {
+            $originalMedia = [];
+        }
+
+        $byUrl = [];
+        foreach ($originalMedia as $item) {
+            if (is_string($item)) {
+                $byUrl[$item] = $item;
+
+                continue;
+            }
+            if (! is_array($item)) {
+                continue;
+            }
+            $u = $item['url'] ?? $item['path'] ?? null;
+            if (is_string($u) && $u !== '') {
+                $byUrl[$u] = $item;
+            }
+        }
+
+        $out = [];
+        foreach ($submittedUrls as $u) {
+            $u = is_string($u) ? trim($u) : '';
+            if ($u === '') {
+                continue;
+            }
+            $out[] = $byUrl[$u] ?? $u;
+        }
+
+        return $out;
     }
 
     /**

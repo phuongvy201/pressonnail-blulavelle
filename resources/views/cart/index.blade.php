@@ -421,7 +421,9 @@
                             @php
                                 $media = $item->product->getEffectiveMedia();
                                 $imageUrl = '/images/placeholder.jpg';
+                                $cartLineImgAlt = $item->product->name;
                                 if ($media && count($media) > 0) {
+                                    $cartLineImgAlt = $item->product->altForMediaItem($media[0], null, 0);
                                     if (is_string($media[0])) { $imageUrl = $media[0]; }
                                     elseif (is_array($media[0])) { $imageUrl = $media[0]['url'] ?? $media[0]['path'] ?? reset($media[0]) ?? '/images/placeholder.jpg'; }
                                 }
@@ -437,7 +439,7 @@
                             @endphp
                             <div class="py-6 first:pt-0 flex flex-col sm:flex-row gap-6" data-cart-item-id="{{ $item->id }}">
                                 <div class="w-32 h-40 bg-slate-100 rounded-xl overflow-hidden shrink-0 border border-primary/5">
-                                    <img src="{{ $imageUrl }}" alt="{{ $item->product->name }}" class="w-full h-full object-cover">
+                                    <img src="{{ $imageUrl }}" alt="{{ $cartLineImgAlt }}" class="w-full h-full object-cover">
                                 </div>
                                 <div class="flex-1 flex flex-col justify-between py-1">
                                     <div class="flex justify-between items-start">
@@ -895,7 +897,7 @@ function buildEditCartModalContent(cartItem) {
         <div class="space-y-6">
             <!-- Product Info -->
             <div class="flex gap-4">
-                <img src="${getProductImage(product)}" alt="${product.name}" class="w-24 h-24 object-cover rounded-lg">
+                <img src="${getProductImage(product)}" alt="${String(getProductImageAlt(product)).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}" class="w-24 h-24 object-cover rounded-lg">
                 <div>
                     <h3 class="text-lg font-semibold text-gray-900">${product.name}</h3>
                     <p class="text-gray-600">${CURRENCY_SYMBOL}${parseFloat(cartItem.price).toFixed(2)} each</p>
@@ -1021,6 +1023,20 @@ function getProductImage(product) {
         }
     }
     return '/images/placeholder.jpg';
+}
+
+function getProductImageAlt(product) {
+    const name = (product && product.name) ? String(product.name) : 'Product';
+    if (!product) return name;
+    if (product.primary_image_alt && String(product.primary_image_alt).trim()) {
+        return String(product.primary_image_alt).trim().slice(0, 500);
+    }
+    if (!product.media || !product.media.length) return name;
+    const m = product.media[0];
+    if (m && typeof m === 'object' && m.keywords && String(m.keywords).trim()) {
+        return String(m.keywords).trim().slice(0, 500);
+    }
+    return name;
 }
 
 function updateModalQuantity(cartItemId, newQuantity) {

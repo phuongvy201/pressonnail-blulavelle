@@ -119,10 +119,15 @@ class CartController extends Controller
                 }
             }
 
+            $cartItem->load(['product.shop', 'product.template', 'product.variants', 'variant']);
+            if ($cartItem->product) {
+                $cartItem->product->hydrateForCartDisplay();
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Item added to cart successfully',
-                'cart_item' => $cartItem->load('product')
+                'cart_item' => $cartItem,
             ]);
         } catch (\Exception $e) {
             Log::error('Error adding item to cart', [
@@ -153,10 +158,10 @@ class CartController extends Controller
                 })
                 ->get();
 
-            // Transform cart items to include media
+            // Transform cart items to include media + primary_image_alt (cho alt ảnh trong JS)
             $cartItems->each(function ($item) {
                 if ($item->product) {
-                    $item->product->media = $item->product->getEffectiveMedia();
+                    $item->product->hydrateForCartDisplay();
                 }
             });
 
@@ -395,14 +400,13 @@ class CartController extends Controller
                 })
                 ->firstOrFail();
 
-            // Transform cart item to include media
             if ($cartItem->product) {
-                $cartItem->product->media = $cartItem->product->getEffectiveMedia();
+                $cartItem->product->hydrateForCartDisplay();
             }
 
             return response()->json([
                 'success' => true,
-                'cart_item' => $cartItem
+                'cart_item' => $cartItem,
             ]);
         } catch (\Exception $e) {
             Log::error('Error getting cart item', [
@@ -462,10 +466,15 @@ class CartController extends Controller
 
             $cartItem->update($updateData);
 
+            $cartItem->load(['product.shop', 'product.template', 'product.variants', 'variant']);
+            if ($cartItem->product) {
+                $cartItem->product->hydrateForCartDisplay();
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Cart item updated successfully',
-                'cart_item' => $cartItem->load('product')
+                'cart_item' => $cartItem,
             ]);
         } catch (\Exception $e) {
             Log::error('Error updating cart item', [

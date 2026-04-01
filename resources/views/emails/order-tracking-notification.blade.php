@@ -235,7 +235,9 @@
                         @php
                             $media = $item->product ? $item->product->getEffectiveMedia() : [];
                             $imageUrl = null;
-                            if ($media && count($media) > 0) {
+                            $emailItemImgAlt = $item->product_name;
+                            if ($media && count($media) > 0 && $item->product) {
+                                $emailItemImgAlt = $item->product->altForMediaItem($media[0], $item->product_name, 0);
                                 if (is_string($media[0])) {
                                     $imageUrl = $media[0];
                                 } elseif (is_array($media[0])) {
@@ -245,7 +247,7 @@
                         @endphp
                         @if($imageUrl)
                             <img src="{{ $imageUrl }}" 
-                                 alt="{{ $item->product_name }}" 
+                                 alt="{{ $emailItemImgAlt }}" 
                                  class="item-image">
                         @else
                             <div class="item-image" style="background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: #64748b;">

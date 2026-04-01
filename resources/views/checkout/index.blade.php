@@ -1146,7 +1146,9 @@ function buildCheckoutCustomizationInputs(customizations) {
                                 @php
                                     $media = $item['product']->getEffectiveMedia();
                                     $imageUrl = null;
+                                    $checkoutLineImgAlt = $item['product']->name;
                                     if ($media && count($media) > 0) {
+                                        $checkoutLineImgAlt = $item['product']->altForMediaItem($media[0], null, 0);
                                         if (is_string($media[0])) {
                                             $imageUrl = $media[0];
                                         } elseif (is_array($media[0])) {
@@ -1157,7 +1159,7 @@ function buildCheckoutCustomizationInputs(customizations) {
                                 <div class="shrink-0">
                                     @if($imageUrl)
                                         <img src="{{ $imageUrl }}" 
-                                             alt="{{ $item['product']->name }}"
+                                             alt="{{ $checkoutLineImgAlt }}"
                                              class="w-14 h-14 object-cover rounded-lg">
                                     @else
                                         <div class="w-14 h-14 bg-gray-200 rounded-lg flex items-center justify-center">
@@ -3761,19 +3763,26 @@ document.addEventListener('DOMContentLoaded', function() {
             $categories = collect($categories);
         }
         
+        $checkoutProduct = $item['product'];
+        $checkoutMedia = $checkoutProduct->media ?? $checkoutProduct->getEffectiveMedia();
         $checkoutItems[] = [
             'id' => $item['cart_item']->id,
             'quantity' => $item['cart_item']->quantity,
             'price' => (float) $item['cart_item']->price,
             'product' => [
-                'id' => $item['product']->id,
-                'name' => $item['product']->name,
-                'sku' => $item['product']->sku ?? null,
-                'variants' => $item['product']->variants,
-                'media' => $item['product']->media ?? $item['product']->getEffectiveMedia(),
-                'base_price' => (float) ($item['product']->base_price ?? 0),
-                'price' => (float) ($item['product']->price ?? 0),
-                'template' => $item['product']->template ? ['base_price' => (float) $item['product']->template->base_price] : null,
+                'id' => $checkoutProduct->id,
+                'name' => $checkoutProduct->name,
+                'sku' => $checkoutProduct->sku ?? null,
+                'variants' => $checkoutProduct->variants,
+                'media' => $checkoutMedia,
+                'primary_image_alt' => $checkoutProduct->altForMediaItem(
+                    (is_array($checkoutMedia) && isset($checkoutMedia[0])) ? $checkoutMedia[0] : [],
+                    null,
+                    0
+                ),
+                'base_price' => (float) ($checkoutProduct->base_price ?? 0),
+                'price' => (float) ($checkoutProduct->price ?? 0),
+                'template' => $checkoutProduct->template ? ['base_price' => (float) $checkoutProduct->template->base_price] : null,
                 'categories' => $categories->map(function($cat) {
                     return [
                         'id' => $cat->id ?? null,
@@ -3821,11 +3830,12 @@ function buildCheckoutEditContent(ci) {
     const selectedVariant = ci.selected_variant || {};
     const customizations = ci.customizations || {};
     const img = getCheckoutProductImage(product);
+    const imgAltEsc = String(getCheckoutProductImageAlt(product)).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
     const total = (parseFloat(ci.price) * ci.quantity).toFixed(2);
     return `
         <div class="space-y-6">
             <div class="flex gap-4">
-                <img src="${img}" alt="${product.name}" class="w-24 h-24 object-cover rounded-lg">
+                <img src="${img}" alt="${imgAltEsc}" class="w-24 h-24 object-cover rounded-lg">
                 <div>
                     <h3 class="text-lg font-semibold text-slate-900">${product.name}</h3>
                     <p class="text-slate-600">${CHECKOUT_CURRENCY_SYMBOL}${parseFloat(ci.price).toFixed(2)} each</p>
@@ -3905,6 +3915,20 @@ function getCheckoutProductImage(product) {
     if (!media) return '/images/placeholder.jpg';
     if (typeof media === 'string') return media;
     if (media.url) return media.url; if (media.path) return media.path; return '/images/placeholder.jpg';
+}
+
+function getCheckoutProductImageAlt(product) {
+    const name = (product && product.name) ? String(product.name) : 'Product';
+    if (!product) return name;
+    if (product.primary_image_alt && String(product.primary_image_alt).trim()) {
+        return String(product.primary_image_alt).trim().slice(0, 500);
+    }
+    if (!product.media || !product.media.length) return name;
+    const m = product.media[0];
+    if (m && typeof m === 'object' && m.keywords && String(m.keywords).trim()) {
+        return String(m.keywords).trim().slice(0, 500);
+    }
+    return name;
 }
 
 function updateCheckoutModalQty(id, newQty) {

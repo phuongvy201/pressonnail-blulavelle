@@ -30,10 +30,9 @@ class CartController extends Controller
             })
             ->get();
 
-        // Transform cart items to include media using getEffectiveMedia()
         $cartItems->each(function ($item) {
             if ($item->product) {
-                $item->product->media = $item->product->getEffectiveMedia();
+                $item->product->hydrateForCartDisplay();
             }
         });
 

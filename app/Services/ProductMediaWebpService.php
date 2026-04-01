@@ -245,4 +245,68 @@ class ProductMediaWebpService
 
         return (bool) $put;
     }
+
+    /**
+     * Sau khi file ảnh raster đã nằm trên S3 ($sourceKey), tạo bản .webp cùng thư mục và trả URL public đầy đủ.
+     * Không xử lý nếu đã là .webp hoặc định dạng không chuyển được.
+     */
+    public static function createWebpCompanionForS3Key(Filesystem $s3, string $sourceKey, string $publicBaseUrl): ?string
+    {
+        $publicBaseUrl = rtrim($publicBaseUrl, '/').'/';
+
+        if (! self::isConvertiblePath($sourceKey)) {
+            return null;
+        }
+
+        if (! $s3->exists($sourceKey)) {
+            Log::warning('ProductMediaWebp: createWebpCompanion — source key missing.', ['key' => $sourceKey]);
+
+            return null;
+        }
+
+        $binary = $s3->get($sourceKey);
+        if ($binary === false || $binary === '') {
+            return null;
+        }
+
+        $webpBinary = self::encodeToWebp($binary, 85);
+        if ($webpBinary === null) {
+            Log::warning('ProductMediaWebp: createWebpCompanion — encode failed.', ['key' => $sourceKey]);
+
+            return null;
+        }
+
+        $webpKey = self::webpKeyFromImageKey($sourceKey);
+
+        if (! self::putWebpToS3($s3, $webpKey, $webpBinary)) {
+            return null;
+        }
+
+        return $publicBaseUrl.$webpKey;
+    }
+
+    /**
+     * Chuẩn hóa một URL ảnh S3 thành phần tử media có thêm webp (nếu tạo được).
+     *
+     * @return string|array{type: string, url: string, webp: string}
+     */
+    public static function imageUrlToMediaItemWithWebp(Filesystem $s3, string $imageUrl): string|array
+    {
+        $resolved = self::resolvePublicUrlToKey($imageUrl);
+        if ($resolved === null) {
+            return $imageUrl;
+        }
+
+        $webpUrl = self::createWebpCompanionForS3Key($s3, $resolved['key'], $resolved['base']);
+
+        if ($webpUrl === null) {
+            return $imageUrl;
+        }
+
+        return [
+            'type' => 'image',
+            'url' => $imageUrl,
+            'webp' => $webpUrl,
+        ];
+    }
 }

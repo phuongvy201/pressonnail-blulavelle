@@ -362,17 +362,24 @@ document.addEventListener('DOMContentLoaded', function () {
     ]);
     $indulgeFallback = asset('storage/images/fbe2e728-728c-4815-bc47-db0f790a5b1b.mp4');
     $indulgeImages = isset($indulge['images']) && is_array($indulge['images']) ? array_filter($indulge['images']) : [];
+    $indulgeImageAlts = [];
     if (empty($indulgeImages)) {
         foreach ($bestsellers as $p) {
             $m = $p->getEffectiveMedia();
             if ($m && count($m) > 0) {
                 $first = $m[0];
                 $url = is_string($first) ? $first : ($first['url'] ?? $first['path'] ?? null);
-                if ($url) $indulgeImages[] = (str_starts_with($url, 'http') ? $url : asset('storage/' . $url));
+                if ($url) {
+                    $indulgeImages[] = (str_starts_with($url, 'http') ? $url : asset('storage/' . $url));
+                    $indulgeImageAlts[] = $p->altForMediaItem($first, null, 0);
+                }
             }
         }
     }
     if (empty($indulgeImages)) $indulgeImages[] = $indulgeFallback;
+    while (count($indulgeImageAlts) < count($indulgeImages)) {
+        $indulgeImageAlts[] = $indulge['title'] ?? 'Premium Press-on Nails';
+    }
     $indulgeSchema = [
         ['key' => 'heading', 'label' => 'Tiêu đề', 'type' => 'text'],
         ['key' => 'button_label', 'label' => 'Chữ nút', 'type' => 'text'],
@@ -403,9 +410,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div class="relative rounded-xl overflow-hidden mb-6 aspect-square bg-primary/20 flex items-center justify-center" id="indulge-carousel">
                     <div class="relative w-full h-full overflow-hidden rounded-xl">
                         @foreach($indulgeImages as $idx => $imgUrl)
-                            @php $src = str_starts_with($imgUrl, 'http') ? $imgUrl : asset($imgUrl); @endphp
+                            @php
+                                $src = str_starts_with($imgUrl, 'http') ? $imgUrl : asset($imgUrl);
+                                $slideAlt = $indulgeImageAlts[$idx] ?? ($indulge['title'] ?? 'Premium Press-on Nails');
+                            @endphp
                             <div class="indulge-slide absolute inset-0 flex items-center justify-center transition-opacity duration-300 {{ $idx === 0 ? 'opacity-100 z-10' : 'opacity-0 z-0' }}" data-slide="{{ $idx }}">
-                                <img alt="Press-on Nails Set" class="w-4/5 h-4/5 object-contain" src="{{ $src }}">
+                                <img alt="{{ $slideAlt }}" class="w-4/5 h-4/5 object-contain" src="{{ $src }}">
                             </div>
                         @endforeach
                     </div>

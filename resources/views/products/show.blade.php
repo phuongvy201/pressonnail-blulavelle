@@ -8,6 +8,10 @@
     $currencySymbol = currency_symbol();
     // Gallery = ảnh product trước, sau đó + media từ template (ảnh + video)
     $galleryItems = [];
+    $gallerySlot = 0;
+    $galleryAlt = function ($raw) use ($product, &$gallerySlot) {
+        return $product->altForMediaItem($raw, null, $gallerySlot++);
+    };
     $normalizeUrl = function ($u) {
         if (!$u) return null;
         return (str_starts_with($u, 'http://') || str_starts_with($u, 'https://')) ? $u : asset('storage/' . $u);
@@ -19,17 +23,17 @@
             if (is_string($m)) {
                 $url = $normalizeUrl($m);
                 if ($url) {
-                    $galleryItems[] = ['type' => 'image', 'url' => $url];
+                    $galleryItems[] = ['type' => 'image', 'url' => $url, 'alt' => $galleryAlt($m)];
                 }
             } elseif (is_array($m)) {
                 $u = $m['url'] ?? $m['path'] ?? reset($m);
                 if (!$u) continue;
                 if (isset($m['type']) && ($m['type'] ?? '') === 'video') {
                     $poster = isset($m['poster']) ? $normalizeUrl($m['poster']) : null;
-                    $galleryItems[] = ['type' => 'video', 'url' => $normalizeUrl($u), 'poster' => $poster];
+                    $galleryItems[] = ['type' => 'video', 'url' => $normalizeUrl($u), 'poster' => $poster, 'alt' => $galleryAlt($m)];
                 } else {
                     $w = isset($m['webp']) ? $normalizeUrl($m['webp']) : null;
-                    $galleryItems[] = ['type' => 'image', 'url' => $normalizeUrl($u), 'webp' => $w];
+                    $galleryItems[] = ['type' => 'image', 'url' => $normalizeUrl($u), 'webp' => $w, 'alt' => $galleryAlt($m)];
                 }
             }
         }
@@ -41,19 +45,19 @@
             foreach ($media as $m) {
                 if (is_string($m)) {
                     $url = $normalizeUrl($m);
-                    if ($url && !preg_match('/\.(mp4|webm|ogg|mov|avi)$/i', $m)) $galleryItems[] = ['type' => 'image', 'url' => $url];
+                    if ($url && !preg_match('/\.(mp4|webm|ogg|mov|avi)$/i', $m)) $galleryItems[] = ['type' => 'image', 'url' => $url, 'alt' => $galleryAlt($m)];
                 } elseif (is_array($m)) {
                     if (isset($m['type']) && ($m['type'] ?? '') === 'video') {
                         $u = $m['url'] ?? $m['path'] ?? null;
                         if ($u) {
                             $poster = isset($m['poster']) ? $normalizeUrl($m['poster']) : null;
-                            $galleryItems[] = ['type' => 'video', 'url' => $normalizeUrl($u), 'poster' => $poster];
+                            $galleryItems[] = ['type' => 'video', 'url' => $normalizeUrl($u), 'poster' => $poster, 'alt' => $galleryAlt($m)];
                         }
                     } else {
                         $u = $m['url'] ?? $m['path'] ?? reset($m);
                         if ($u) {
                             $w = isset($m['webp']) ? $normalizeUrl($m['webp']) : null;
-                            $galleryItems[] = ['type' => 'image', 'url' => $normalizeUrl($u), 'webp' => $w];
+                            $galleryItems[] = ['type' => 'image', 'url' => $normalizeUrl($u), 'webp' => $w, 'alt' => $galleryAlt($m)];
                         }
                     }
                 }
@@ -68,9 +72,9 @@
             $url = $normalizeUrl($m);
             if (!$url) continue;
             if (preg_match('/\.(mp4|webm|ogg|mov|avi)$/i', $m)) {
-                if (empty($existingUrls[$url] ?? null)) { $galleryItems[] = ['type' => 'video', 'url' => $url, 'poster' => $galleryItems[0]['url'] ?? null]; $existingUrls[$url] = true; }
+                if (empty($existingUrls[$url] ?? null)) { $galleryItems[] = ['type' => 'video', 'url' => $url, 'poster' => $galleryItems[0]['url'] ?? null, 'alt' => $galleryAlt($m)]; $existingUrls[$url] = true; }
             } else {
-                if (empty($existingUrls[$url] ?? null)) { $galleryItems[] = ['type' => 'image', 'url' => $url]; $existingUrls[$url] = true; }
+                if (empty($existingUrls[$url] ?? null)) { $galleryItems[] = ['type' => 'image', 'url' => $url, 'alt' => $galleryAlt($m)]; $existingUrls[$url] = true; }
             }
         } elseif (is_array($m)) {
             if (isset($m['type']) && ($m['type'] ?? '') === 'video') {
@@ -79,7 +83,7 @@
                     $url = $normalizeUrl($u);
                     if (empty($existingUrls[$url] ?? null)) {
                         $poster = isset($m['poster']) ? $normalizeUrl($m['poster']) : ($galleryItems[0]['url'] ?? null);
-                        $galleryItems[] = ['type' => 'video', 'url' => $url, 'poster' => $poster];
+                        $galleryItems[] = ['type' => 'video', 'url' => $url, 'poster' => $poster, 'alt' => $galleryAlt($m)];
                         $existingUrls[$url] = true;
                     }
                 }
@@ -89,7 +93,7 @@
                     $url = $normalizeUrl($u);
                     if (empty($existingUrls[$url] ?? null)) {
                         $w = isset($m['webp']) ? $normalizeUrl($m['webp']) : null;
-                        $galleryItems[] = ['type' => 'image', 'url' => $url, 'webp' => $w];
+                        $galleryItems[] = ['type' => 'image', 'url' => $url, 'webp' => $w, 'alt' => $galleryAlt($m)];
                         $existingUrls[$url] = true;
                     }
                 }
@@ -216,10 +220,10 @@
                                         $mainPoster = $mainPoster ?: $fallbackPosterUrl;
                                     @endphp
                                     <video id="product-main-video" class="w-full h-full object-cover" controls playsinline poster="{{ $mainPoster }}" src="{{ $galleryItems[0]['url'] }}"></video>
-                                    <img alt="{{ $product->name }}" class="w-full h-full object-cover hidden" id="product-main-image" src="">
+                                    <img alt="{{ $galleryItems[0]['alt'] ?? $product->name }}" class="w-full h-full object-cover hidden" id="product-main-image" src="">
                                 @else
                                     <video id="product-main-video" class="w-full h-full object-cover hidden" controls playsinline></video>
-                                    <img alt="{{ $product->name }}" class="w-full h-full object-cover" id="product-main-image" src="{{ !empty($galleryItems[0]['webp']) ? $galleryItems[0]['webp'] : $galleryItems[0]['url'] }}">
+                                    <img alt="{{ $galleryItems[0]['alt'] ?? $product->name }}" class="w-full h-full object-cover" id="product-main-image" src="{{ !empty($galleryItems[0]['webp']) ? $galleryItems[0]['webp'] : $galleryItems[0]['url'] }}">
                                 @endif
                             @else
                                 <img alt="{{ $product->name }}" class="w-full h-full object-cover" id="product-main-image" src="{{ $primaryImageUrl ?? '' }}">
@@ -257,6 +261,7 @@
                                             data-url="{{ $item['url'] }}"
                                             data-webp="{{ $item['webp'] ?? '' }}"
                                             data-poster="{{ $item['poster'] ?? '' }}"
+                                            data-alt="{{ $item['alt'] ?? $product->name }}"
                                             aria-label="{{ $item['type'] === 'video' ? 'Xem video ' : 'Xem ảnh ' }}{{ $index + 1 }}">
                                         @if($item['type'] === 'video')
                                             @php
@@ -264,12 +269,12 @@
                                                 if ($thumbPoster && preg_match('/\.(mp4|webm|ogg|mov|avi)$/i', $thumbPoster)) { $thumbPoster = null; }
                                                 $thumbPoster = $thumbPoster ?: $fallbackPosterUrl;
                                             @endphp
-                                            <img class="w-full h-full object-cover" src="{{ $thumbPoster }}" alt="">
+                                            <img class="w-full h-full object-cover" src="{{ $thumbPoster }}" alt="{{ $item['alt'] ?? $product->name }}">
                                             <span class="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
                                                 <span class="material-symbols-outlined text-white text-3xl drop-shadow">play_circle</span>
                                             </span>
                                         @else
-                                            <img class="w-full h-full object-cover" src="{{ !empty($item['webp']) ? $item['webp'] : $item['url'] }}" alt="">
+                                            <img class="w-full h-full object-cover" src="{{ !empty($item['webp']) ? $item['webp'] : $item['url'] }}" alt="{{ $item['alt'] ?? $product->name }}">
                                         @endif
                                     </button>
                                     @endforeach
@@ -1177,6 +1182,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (mainImg) {
                 var imgSrc = (type === 'image' && webp) ? webp : url;
                 mainImg.src = imgSrc;
+                mainImg.alt = btn.getAttribute('data-alt') || '';
                 mainImg.classList.remove('hidden');
             }
         }

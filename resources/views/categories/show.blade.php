@@ -314,7 +314,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 @php
                                     $media = $product->getEffectiveMedia();
                                     $imageUrl = null;
+                                    $cardImgAlt = $product->name;
                                     if ($media && count($media) > 0) {
+                                        $cardImgAlt = $product->altForMediaItem($media[0], null, 0);
                                         if (is_string($media[0])) {
                                             $imageUrl = $media[0];
                                         } elseif (is_array($media[0])) {
@@ -324,7 +326,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 @endphp
                                 @if($imageUrl)
                                     <img src="{{ $imageUrl }}" 
-                                         alt="{{ $product->name }}"
+                                         alt="{{ $cardImgAlt }}"
                                          class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300">
                                 @else
                                     <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
