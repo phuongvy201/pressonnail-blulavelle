@@ -58,32 +58,32 @@ document.addEventListener('DOMContentLoaded', function() {
     @endif
     <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-12">
         <div class="flex flex-col gap-6 lg:w-1/2 z-10">
-            <span class="text-primary font-bold tracking-widest text-sm uppercase" data-content-field="tagline">{{ $hero['tagline'] ?? '' }}</span>
+            <span class="text-primary-fg font-bold tracking-widest text-sm uppercase" data-content-field="tagline">{{ $hero['tagline'] ?? '' }}</span>
             <h1 class="text-slate-900 text-4xl sm:text-5xl lg:text-7xl font-black leading-tight tracking-tight">
-                {{ $hero['heading'] ?? 'Manicure in' }} <span class="text-primary" data-content-field="heading_highlight">{{ $hero['heading_highlight'] ?? 'Minutes' }}</span>
+                {{ $hero['heading'] ?? 'Manicure in' }} <span class="text-primary-fg" data-content-field="heading_highlight">{{ $hero['heading_highlight'] ?? 'Minutes' }}</span>
             </h1>
             <p class="text-slate-600 text-lg lg:text-xl max-w-lg leading-relaxed" data-content-field="subheading">{{ $hero['subheading'] ?? '' }}</p>
             <div class="flex flex-wrap gap-4 pt-4">
                 <a href="{{ $hero['cta_primary_url'] ?? route('products.index') }}" class="inline-block px-8 py-4 bg-primary text-white rounded-lg font-bold text-lg hover:shadow-lg hover:shadow-primary/30 transition-all active:scale-95" data-content-field="cta_primary_url"><span data-content-field="cta_primary_label">{{ $hero['cta_primary_label'] ?? 'Shop the Collection' }}</span></a>
-                <a href="{{ $hero['cta_secondary_url'] ?? '#' }}" class="inline-block px-8 py-4 border-2 border-primary text-primary rounded-lg font-bold text-lg hover:bg-primary hover:text-white transition-all" data-content-field="cta_secondary_url"><span data-content-field="cta_secondary_label">{{ $hero['cta_secondary_label'] ?? 'How it Works' }}</span></a>
+                <a href="{{ $hero['cta_secondary_url'] ?? '#' }}" class="inline-block px-8 py-4 border-2 border-primary text-primary-fg rounded-lg font-bold text-lg hover:bg-primary hover:text-white transition-all" data-content-field="cta_secondary_url"><span data-content-field="cta_secondary_label">{{ $hero['cta_secondary_label'] ?? 'How it Works' }}</span></a>
             </div>
         </div>
         <div class="lg:w-1/2 relative">
             <div class="relative rounded-2xl overflow-hidden shadow-2xl aspect-[4/5] lg:aspect-square bg-slate-200">
-                <img alt="Premium press-on nails" class="w-full h-full object-cover hero-main-image" data-content-field="image" src="{{ $heroImageUrl }}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                <div class="hidden w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary">
+                <img alt="Premium press-on nails" class="w-full h-full object-cover hero-main-image" data-content-field="image" src="{{ $heroImageUrl }}" fetchpriority="high" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <div class="hidden w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary-fg">
                     <svg class="w-24 h-24 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z"></path></svg>
                 </div>
             </div>
             <div class="absolute -bottom-6 -left-6 bg-white p-6 rounded-xl shadow-xl hidden md:flex items-center gap-4 border border-primary/10">
                 <div class="flex -space-x-3">
-                    <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center border-2 border-white"><span class="text-primary text-sm">★</span></div>
+                    <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center border-2 border-white"><span class="text-primary-fg text-sm">★</span></div>
                     <div class="w-10 h-10 rounded-full bg-slate-200 border-2 border-white"></div>
                     <div class="w-10 h-10 rounded-full bg-slate-300 border-2 border-white"></div>
                 </div>
                 <div>
                     <p class="text-sm font-bold text-slate-900">50k+ Happy Customers</p>
-                    <div class="flex text-primary">★★★★★</div>
+                    <div class="flex text-primary-fg">★★★★★</div>
                 </div>
             </div>
         </div>
@@ -189,28 +189,28 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 lg:gap-8 max-w-7xl mx-auto">
         <div class="bg-white p-5 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-sm border border-primary/5 hover:border-primary/30 transition-all group flex flex-col">
-            <div class="w-12 h-12 sm:w-14 sm:h-14 bg-primary/10 rounded-lg sm:rounded-xl flex items-center justify-center text-primary mb-4 sm:mb-6 group-hover:bg-primary group-hover:text-white transition-all flex-shrink-0">
+            <div class="w-12 h-12 sm:w-14 sm:h-14 bg-primary/10 rounded-lg sm:rounded-xl flex items-center justify-center text-primary-fg mb-4 sm:mb-6 group-hover:bg-primary group-hover:text-white transition-all flex-shrink-0">
                 <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
             </div>
             <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-slate-900" data-content-field="card1_title">{{ $whyChoose['card1_title'] ?? 'Salon Quality' }}</h3>
             <p class="text-slate-600 text-sm sm:text-base leading-relaxed" data-content-field="card1_body">{{ $whyChoose['card1_body'] ?? '' }}</p>
         </div>
         <div class="bg-white p-5 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-sm border border-primary/5 hover:border-primary/30 transition-all group flex flex-col">
-            <div class="w-12 h-12 sm:w-14 sm:h-14 bg-primary/10 rounded-lg sm:rounded-xl flex items-center justify-center text-primary mb-4 sm:mb-6 group-hover:bg-primary group-hover:text-white transition-all flex-shrink-0">
+            <div class="w-12 h-12 sm:w-14 sm:h-14 bg-primary/10 rounded-lg sm:rounded-xl flex items-center justify-center text-primary-fg mb-4 sm:mb-6 group-hover:bg-primary group-hover:text-white transition-all flex-shrink-0">
                 <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
             </div>
             <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-slate-900" data-content-field="card2_title">{{ $whyChoose['card2_title'] ?? 'Reusable' }}</h3>
             <p class="text-slate-600 text-sm sm:text-base leading-relaxed" data-content-field="card2_body">{{ $whyChoose['card2_body'] ?? '' }}</p>
         </div>
         <div class="bg-white p-5 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-sm border border-primary/5 hover:border-primary/30 transition-all group flex flex-col">
-            <div class="w-12 h-12 sm:w-14 sm:h-14 bg-primary/10 rounded-lg sm:rounded-xl flex items-center justify-center text-primary mb-4 sm:mb-6 group-hover:bg-primary group-hover:text-white transition-all flex-shrink-0">
+            <div class="w-12 h-12 sm:w-14 sm:h-14 bg-primary/10 rounded-lg sm:rounded-xl flex items-center justify-center text-primary-fg mb-4 sm:mb-6 group-hover:bg-primary group-hover:text-white transition-all flex-shrink-0">
                 <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
             </div>
             <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-slate-900" data-content-field="card3_title">{{ $whyChoose['card3_title'] ?? 'Easy Application' }}</h3>
             <p class="text-slate-600 text-sm sm:text-base leading-relaxed" data-content-field="card3_body">{{ $whyChoose['card3_body'] ?? '' }}</p>
         </div>
         <div class="bg-white p-5 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-sm border border-primary/5 hover:border-primary/30 transition-all group flex flex-col">
-            <div class="w-12 h-12 sm:w-14 sm:h-14 bg-primary/10 rounded-lg sm:rounded-xl flex items-center justify-center text-primary mb-4 sm:mb-6 group-hover:bg-primary group-hover:text-white transition-all flex-shrink-0">
+            <div class="w-12 h-12 sm:w-14 sm:h-14 bg-primary/10 rounded-lg sm:rounded-xl flex items-center justify-center text-primary-fg mb-4 sm:mb-6 group-hover:bg-primary group-hover:text-white transition-all flex-shrink-0">
                 <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z"></path></svg>
             </div>
             <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-slate-900" data-content-field="card4_title">{{ $whyChoose['card4_title'] ?? 'Custom Designs' }}</h3>
@@ -232,7 +232,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 <h2 class="text-3xl lg:text-4xl font-black text-slate-900 mb-4" data-content-field="heading">{{ $bestsellersBlock['heading'] ?? 'Shop Our Bestsellers' }}</h2>
                 <p class="text-slate-600" data-content-field="subheading">{{ $bestsellersBlock['subheading'] ?? 'The most-loved styles by our community' }}</p>
             </div>
-            <a class="text-primary font-bold flex items-center justify-center md:justify-start gap-2 hover:underline underline-offset-4 shrink-0" href="{{ route('products.index', ['filter' => 'bestsellers']) }}" data-content-field="view_all_label">{{ $bestsellersBlock['view_all_label'] ?? 'View All Sets' }}
+            <a class="text-primary-fg font-bold flex items-center justify-center md:justify-start gap-2 hover:underline underline-offset-4 shrink-0" href="{{ route('products.index', ['filter' => 'bestsellers']) }}" data-content-field="view_all_label">{{ $bestsellersBlock['view_all_label'] ?? 'View All Sets' }}
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
             </a>
         </div>
@@ -287,17 +287,17 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
 
                     <div class="text-center px-4">
-                        <h3 class="font-serif text-2xl sm:text-3xl text-slate-900 mb-2 group-hover:text-primary transition-colors line-clamp-2">
+                        <h3 class="font-serif text-2xl sm:text-3xl text-slate-900 mb-2 group-hover:text-primary-fg transition-colors line-clamp-2">
                             {{ $collection->name }}
                         </h3>
 
                         @if($collection->description)
-                            <p class="text-slate-500 text-sm italic mb-3 line-clamp-2">{{ $collection->description }}</p>
+                            <p class="text-slate-700 text-sm italic mb-3 line-clamp-2">{{ $collection->description }}</p>
                         @else
-                            <p class="text-slate-500 text-sm italic mb-3">Curated sets designed to match your mood.</p>
+                            <p class="text-slate-700 text-sm italic mb-3">Curated sets designed to match your mood.</p>
                         @endif
 
-                        <span class="inline-block text-xs font-bold uppercase tracking-[0.2em] text-primary border-b border-primary/30 pb-1 group-hover:border-primary transition-all lg:hidden">
+                        <span class="inline-block text-xs font-bold uppercase tracking-[0.2em] text-primary-fg border-b border-primary-fg/40 pb-1 group-hover:border-primary transition-all lg:hidden">
                             View Series
                         </span>
                     </div>
@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', function () {
             @endforeach
         </div>
         <div class="text-center mt-8">
-            <a href="{{ route('collections.index') }}" class="text-primary font-bold inline-flex items-center gap-2 hover:underline underline-offset-4">
+            <a href="{{ route('collections.index') }}" class="text-primary-fg font-bold inline-flex items-center gap-2 hover:underline underline-offset-4">
                 View All Collections
                 <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
             </a>
@@ -426,9 +426,11 @@ document.addEventListener('DOMContentLoaded', function () {
                         <button type="button" class="indulge-next absolute right-2 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-white transition-colors" aria-label="Next">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                         </button>
-                        <div class="absolute bottom-2 left-0 right-0 z-20 flex justify-center gap-1.5">
+                        <div class="absolute bottom-2 left-0 right-0 z-20 flex justify-center items-center gap-2">
                             @foreach($indulgeImages as $idx => $imgUrl)
-                                <button type="button" class="indulge-dot w-2 h-2 rounded-full transition-colors {{ $idx === 0 ? 'bg-white' : 'bg-white/40' }}" data-slide="{{ $idx }}" aria-label="Slide {{ $idx + 1 }}"></button>
+                                <button type="button" class="indulge-dot inline-flex min-w-11 min-h-11 items-center justify-center rounded-full touch-manipulation" data-slide="{{ $idx }}" aria-label="Slide {{ $idx + 1 }}">
+                                    <span class="indulge-dot-inner pointer-events-none block h-2.5 w-2.5 shrink-0 rounded-full transition-colors {{ $idx === 0 ? 'bg-white' : 'bg-white/40' }}" aria-hidden="true"></span>
+                                </button>
                             @endforeach
                         </div>
                     @endif
@@ -436,11 +438,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
                 <a href="{{ $indulge['button_url'] ?? route('products.index') }}" class="block w-full py-4 bg-primary hover:bg-primary/90 text-white font-black rounded-lg text-lg mb-6 text-center transition-colors" data-content-field="button_url"><span data-content-field="button_label">{{ $indulge['button_label'] ?? 'SHOP NOW' }}</span></a>
                 <div class="text-center">
-                    <div class="flex justify-center text-primary mb-2">
+                    <div class="flex flex-wrap justify-center items-center gap-x-1 gap-y-1 mb-2">
+                        <span class="flex text-amber-400" aria-hidden="true">
                         @for($i = 0; $i < 5; $i++)
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                            <svg class="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
                         @endfor
-                        <span class="text-sm ml-2 font-bold" data-content-field="review_text">{{ $indulge['review_text'] ?? '50k+ Reviews' }}</span>
+                        </span>
+                        <span class="text-sm font-bold text-white" data-content-field="review_text">{{ $indulge['review_text'] ?? '50k+ Reviews' }}</span>
                     </div>
                     <h3 class="text-xl font-bold mb-1" data-content-field="title">{{ $indulge['title'] ?? 'Premium Press-on Nails' }}</h3>
                     <p class="text-white/80 text-sm" data-content-field="subtitle">{{ $indulge['subtitle'] ?? 'Complete set • Reusable • Easy to apply' }}</p>
@@ -531,8 +535,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 s.classList.toggle('z-0', i !== current);
             });
             dots.forEach(function(d, i) {
-                d.classList.toggle('bg-white', i === current);
-                d.classList.toggle('bg-white/40', i !== current);
+                var inner = d.querySelector('.indulge-dot-inner');
+                if (inner) {
+                    inner.classList.toggle('bg-white', i === current);
+                    inner.classList.toggle('bg-white/40', i !== current);
+                }
             });
         }
         indulgeCarousel.querySelectorAll('.indulge-prev').forEach(function(btn) {
@@ -664,7 +671,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         videoLabel.textContent = 'Video: ';
                         videoWrap.appendChild(videoLabel);
                         var videoLink = document.createElement('a');
-                        videoLink.className = 'text-xs text-primary truncate max-w-[180px]';
+                        videoLink.className = 'text-xs text-primary-fg truncate max-w-[180px]';
                         videoLink.target = '_blank';
                         videoLink.rel = 'noopener';
                         if (tab.video_url) { videoLink.href = tab.video_url; videoLink.textContent = 'Đã có video'; } else { videoLink.textContent = 'Chưa chọn'; videoLink.href = '#'; }

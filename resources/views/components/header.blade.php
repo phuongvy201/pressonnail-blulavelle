@@ -150,7 +150,7 @@
     <div class="flex-1 overflow-y-auto px-4 py-4">
         {{-- 1. Wishlist --}}
         <div class="mb-5">
-            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 mb-2">Wishlist</p>
+            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-600 px-2 mb-2">Wishlist</p>
             <a href="{{ route('wishlist.index') }}" class="flex items-center justify-between py-3 px-3 rounded-xl bg-primary/5 hover:bg-primary/10 active:bg-primary/15 transition-colors">
                 <span class="flex items-center gap-3 text-slate-800 font-semibold text-sm">
                     <span class="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-sm text-primary">
@@ -164,7 +164,7 @@
 
         {{-- 2. Account --}}
         <div class="mb-5">
-            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 mb-2">Account</p>
+            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-600 px-2 mb-2">Account</p>
             @auth
             <div class="rounded-xl border border-slate-200/80 bg-slate-50/80 overflow-hidden">
                 <a href="{{ route('customer.profile.index') }}" class="flex items-center gap-3 py-3.5 px-3 hover:bg-white/60 transition-colors">
@@ -207,7 +207,7 @@
 
         {{-- 3. Menu (Browse) --}}
         <div>
-            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 mb-2">Menu</p>
+            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-600 px-2 mb-2">Menu</p>
             <nav class="rounded-xl border border-slate-200/80 bg-white overflow-hidden">
                 <a href="{{ route('home') }}" class="flex items-center gap-3 py-3 px-3 text-slate-700 text-sm font-medium hover:bg-primary/5 hover:text-primary border-b border-slate-100 transition-colors">
                     <span class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></span>
@@ -375,7 +375,9 @@
             }
 
             updateHeaderCartCount();
-            syncHeaderWithBackend();
+            window.addEventListener('load', function () {
+                setTimeout(syncHeaderWithBackend, 1400);
+            }, { once: true });
         });
 
         // Function to update cart count in header
@@ -604,9 +606,7 @@
                 });
         }
 
-        // Update wishlist count on page load
-        updateWishlistCount();
-
+        // Số wishlist: do public/js/wishlist.js tải sau idle (tránh chuỗi request quan trọng / trùng fetch).
         // Listen for custom wishlist update event
         window.addEventListener('wishlistUpdated', function() {
             updateWishlistCount();

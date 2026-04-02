@@ -32,6 +32,7 @@ export default {
         'bg-[#0195FE]', 'text-[#0195FE]', 'border-[#0195FE]',
         'from-[#0195FE]', 'via-[#0195FE]', 'to-[#0195FE]',
         'hover:bg-[#0195FE]', 'hover:text-[#0195FE]', 'hover:underline',
+        'text-primary-fg', 'border-primary-fg/40',
         'bg-gradient-to-r', 'bg-gradient-to-br',
         'shadow-md', 'shadow-lg', 'shadow-xl', 'shadow-2xl', 'transition', 'duration-200',
     ],
@@ -44,6 +45,8 @@ export default {
             },
             colors: {
                 primary: "#0195FE",
+                // Chữ/link thay text-primary trên nền sáng / pastel (WCAG AA)
+                "primary-fg": "#052f4a",
                 "background-light": "#f8f6f6",
             },
             borderRadius: {

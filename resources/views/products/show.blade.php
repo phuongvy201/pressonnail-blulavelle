@@ -348,7 +348,7 @@
                                         if ($mainPoster && preg_match('/\.(mp4|webm|ogg|mov|avi)$/i', $mainPoster)) { $mainPoster = null; }
                                         $mainPoster = $mainPoster ?: $fallbackPosterUrl;
                                     @endphp
-                                    <video id="product-main-video" class="w-full h-full object-cover" controls playsinline poster="{{ $mainPoster }}" src="{{ $galleryItems[0]['url'] }}"></video>
+                                    <video id="product-main-video" class="w-full h-full object-cover" controls playsinline preload="metadata" poster="{{ $mainPoster }}" src="{{ $galleryItems[0]['url'] }}"></video>
                                     <img alt="{{ $galleryItems[0]['alt'] ?? $product->name }}" class="w-full h-full object-cover hidden" id="product-main-image" src="">
                                 @else
                                     <video id="product-main-video" class="w-full h-full object-cover hidden" controls playsinline></video>
@@ -1076,7 +1076,7 @@
                     See it in Action
                 </h3>
                 <div class="aspect-video w-full max-w-3xl rounded-2xl overflow-hidden bg-slate-200">
-                    <video class="w-full h-full object-cover" src="{{ $videoUrl }}" controls poster="{{ $primaryImageUrl }}"></video>
+                    <video class="w-full h-full object-cover" src="{{ $videoUrl }}" controls preload="none" poster="{{ $primaryImageUrl }}"></video>
                 </div>
             </div>
             @endif

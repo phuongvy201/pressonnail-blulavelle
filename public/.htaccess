@@ -24,10 +24,14 @@
     RewriteRule ^ index.php [L]
 </IfModule>
 
-# Cache tài nguyên tĩnh (Lighthouse: efficient cache lifetimes)
-# Cloudflare: đặt Browser Cache TTL = "Respect Existing Headers" để TTL này áp dụng cho trình duyệt.
+# Cache tài nguyên tĩnh (Lighthouse / mobile)
+# Nếu PageSpeed vẫn báo TTL ~4h: (1) server có thể là Nginx → dùng file deploy/nginx-static-assets.conf
+# (2) Cloudflare → Caching → Browser Cache TTL = "Respect Existing Headers" (hoặc Cache Rule set TTL theo path).
 <IfModule mod_expires.c>
     ExpiresActive On
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType text/javascript "access plus 1 year"
     ExpiresByType image/avif "access plus 1 year"
     ExpiresByType image/webp "access plus 1 year"
     ExpiresByType image/jpeg "access plus 1 year"
@@ -44,7 +48,8 @@
 </IfModule>
 
 <IfModule mod_headers.c>
-    <FilesMatch "\.(?:avif|webp|jpe?g|png|gif|svg|ico|mp4|webm|woff2?|ttf|otf|eot)$">
-        Header set Cache-Control "public, max-age=31536000"
+    <FilesMatch "\.(?:avif|webp|jpe?g|png|gif|svg|ico|mp4|webm|woff2?|ttf|otf|eot|css|js|mjs)$">
+        Header unset Cache-Control
+        Header always set Cache-Control "public, max-age=31536000"
     </FilesMatch>
 </IfModule>

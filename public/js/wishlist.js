@@ -10,8 +10,13 @@ class WishlistManager {
 
     init() {
         this.bindEvents();
-        this.updateWishlistCount();
-        this.updateWishlistButtons();
+        // Tách fetch /wishlist/count + /wishlist/check khỏi cùng tick với parse script (chuỗi mạng).
+        const self = this;
+        const run = () => {
+            self.updateWishlistCount();
+            self.updateWishlistButtons();
+        };
+        setTimeout(run, 400);
     }
 
     /**
@@ -410,7 +415,13 @@ class WishlistManager {
     }
 }
 
-// Initialize wishlist manager when DOM is ready
-document.addEventListener("DOMContentLoaded", function () {
+// Khởi tạo khi DOM sẵn sàng (script có thể được inject sau idle → DOM đã interactive).
+function bootWishlistManager() {
+    if (window.wishlistManager) return;
     window.wishlistManager = new WishlistManager();
-});
+}
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootWishlistManager);
+} else {
+    bootWishlistManager();
+}

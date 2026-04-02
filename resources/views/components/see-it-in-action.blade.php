@@ -58,7 +58,8 @@
                     <span data-content-field="heading">{{ $heading }}</span> <span class="font-normal italic text-slate-700" data-content-field="subheading">{{ $subheading }}</span>
                 </h2>
             </div>
-            <div class="flex items-center bg-slate-100 p-1.5 rounded-xl" role="tablist">
+            {{-- role="group" + aria-pressed: tránh tablist bắt buộc con role="tab" (một số engine không gán tab đúng cho <button>). --}}
+            <div class="seeit-style-picker flex items-center bg-slate-100 p-1.5 rounded-xl" role="group" aria-label="Choose a look to preview">
                 @foreach($tabs as $i => $tab)
                     @php
                         $isActive = ($tab['key'] ?? '') === $activeTabKey;
@@ -66,11 +67,11 @@
                         $vid = $tab['video_url'] ?? null;
                     @endphp
                     <button type="button"
-                            class="tab-btn px-6 py-2 rounded-lg text-sm font-semibold transition-colors {{ $isActive ? 'bg-primary text-white shadow-md' : 'bg-transparent text-slate-600 hover:text-slate-900' }}"
+                            class="tab-btn px-6 py-2 rounded-lg text-sm font-semibold transition-colors {{ $isActive ? 'bg-primary text-white shadow-md' : 'bg-transparent text-slate-800 hover:text-slate-950' }}"
                             data-tab="{{ $tab['key'] }}"
                             data-image="{{ $img ?? '' }}"
                             data-video="{{ $vid ?? '' }}"
-                            aria-selected="{{ $isActive ? 'true' : 'false' }}">
+                            aria-pressed="{{ $isActive ? 'true' : 'false' }}">
                         {{ $tab['label'] ?? 'Tab' }}
                     </button>
                 @endforeach
@@ -81,16 +82,20 @@
             $firstImg = $firstTab['image_url'] ?? null;
             $firstVid = $firstTab['video_url'] ?? $videoSrc;
         @endphp
-        <div class="relative rounded-3xl overflow-hidden shadow-2xl group">
-            <video id="seeit-video" autoplay loop muted playsinline
-                   class="w-full aspect-video lg:aspect-[21/9] object-cover transition-transform duration-700 group-hover:scale-105 {{ $firstVid ? '' : 'hidden' }}"
-                   @if($firstVid) src="{{ $firstVid }}" @endif
+        <div class="seeit-media-region relative rounded-3xl overflow-hidden shadow-2xl group bg-slate-200"
+             role="region"
+             aria-label="Selected look preview">
+            {{-- Không gắn src ban đầu: tránh tải MP4 lớn (~MB) trước khi section vào viewport (PageSpeed payload). --}}
+            <video preload="none" autoplay loop muted playsinline
+                   class="seeit-main-video w-full aspect-video lg:aspect-[21/9] object-cover transition-transform duration-700 group-hover:scale-105 {{ $firstVid ? '' : 'hidden' }}"
+                   @if($firstVid) data-seeit-src="{{ $firstVid }}" @endif
                    onerror="this.classList.add('hidden');">
             </video>
-            <img id="seeit-image"
-                 class="w-full aspect-video lg:aspect-[21/9] object-cover {{ $firstVid ? 'hidden' : '' }}"
+            <img class="seeit-main-image w-full aspect-video lg:aspect-[21/9] object-cover {{ $firstVid ? 'hidden' : '' }}"
                  src="{{ $firstImg ?: '' }}"
                  alt="See it in action"
+                 loading="lazy"
+                 decoding="async"
                  onerror="this.style.display='none';" />
 
             <div class="absolute bottom-8 left-8 right-8 flex justify-between items-end text-white pointer-events-none">
@@ -105,45 +110,103 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.tab-btn').forEach(function(btn) {
-        if (btn.dataset.tabListen === '1') return;
-        btn.dataset.tabListen = '1';
-        btn.addEventListener('click', function() {
-            var wrapper = this.closest('section');
-            if (wrapper)             wrapper.querySelectorAll('.tab-btn').forEach(function(b) {
-                b.classList.remove('bg-primary', 'text-white', 'shadow-md');
-                b.classList.add('bg-transparent', 'text-slate-600');
-                b.setAttribute('aria-selected', 'false');
-            });
-            this.classList.remove('bg-transparent', 'text-slate-600');
-            this.classList.add('bg-primary', 'text-white', 'shadow-md');
-            this.setAttribute('aria-selected', 'true');
+    document.querySelectorAll('section[data-content-block="home.see_it_in_action"]').forEach(function(section) {
+        var video = section.querySelector('.seeit-main-video');
+        var image = section.querySelector('.seeit-main-image');
 
-            // Swap media (image/video)
-            var imgUrl = this.getAttribute('data-image') || '';
-            var vidUrl = this.getAttribute('data-video') || '';
-            var video = wrapper ? wrapper.querySelector('#seeit-video') : null;
-            var image = wrapper ? wrapper.querySelector('#seeit-image') : null;
-            if (vidUrl) {
-                if (image) image.classList.add('hidden');
-                if (video) {
-                    video.classList.remove('hidden');
-                    if (video.getAttribute('src') !== vidUrl) {
-                        video.setAttribute('src', vidUrl);
-                        video.load();
-                    }
-                    video.play().catch(function(){});
-                }
-            } else if (imgUrl) {
-                if (video) {
-                    video.pause();
-                    video.classList.add('hidden');
-                }
-                if (image) {
-                    image.setAttribute('src', imgUrl);
-                    image.classList.remove('hidden');
-                }
+        function playVideoUrl(url) {
+            if (!video || !url) return;
+            video.classList.remove('hidden');
+            if (image) image.classList.add('hidden');
+            if (video.getAttribute('src') !== url) {
+                video.setAttribute('src', url);
+                video.load();
             }
+            video.play().catch(function () {});
+            video.dataset.seeItHydrated = '1';
+        }
+
+        function hydrateFromDataAttr() {
+            if (!video || video.dataset.seeItHydrated === '1') return;
+            var u = video.getAttribute('data-seeit-src');
+            if (u) playVideoUrl(u);
+        }
+
+        if (video && video.getAttribute('data-seeit-src')) {
+            if ('IntersectionObserver' in window) {
+                var io = new IntersectionObserver(function (entries) {
+                    entries.forEach(function (e) {
+                        if (e.isIntersecting) {
+                            hydrateFromDataAttr();
+                            io.disconnect();
+                        }
+                    });
+                }, { rootMargin: '200px', threshold: 0.01 });
+                io.observe(section);
+            } else {
+                hydrateFromDataAttr();
+            }
+        }
+
+        var stylePicker = section.querySelector('.seeit-style-picker');
+        if (stylePicker) {
+            stylePicker.addEventListener('keydown', function (e) {
+                if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+                var tabs = Array.prototype.slice.call(stylePicker.querySelectorAll('.tab-btn'));
+                if (!tabs.length) return;
+                var idx = tabs.indexOf(document.activeElement);
+                if (idx < 0) return;
+                e.preventDefault();
+                var next = e.key === 'ArrowRight' ? (idx + 1) % tabs.length : (idx - 1 + tabs.length) % tabs.length;
+                tabs[next].click();
+                tabs[next].focus();
+            });
+        }
+
+        section.querySelectorAll('.tab-btn').forEach(function(btn) {
+            if (btn.dataset.tabListen === '1') return;
+            btn.dataset.tabListen = '1';
+            btn.addEventListener('click', function() {
+                var wrapper = this.closest('section');
+                if (!wrapper) return;
+                var picker = wrapper.querySelector('.seeit-style-picker');
+                var buttons = picker ? picker.querySelectorAll('.tab-btn') : wrapper.querySelectorAll('.tab-btn');
+                buttons.forEach(function(b) {
+                    b.classList.remove('bg-primary', 'text-white', 'shadow-md');
+                    b.classList.add('bg-transparent', 'text-slate-800');
+                    b.setAttribute('aria-pressed', 'false');
+                });
+                this.classList.remove('bg-transparent', 'text-slate-800');
+                this.classList.add('bg-primary', 'text-white', 'shadow-md');
+                this.setAttribute('aria-pressed', 'true');
+
+                var imgUrl = this.getAttribute('data-image') || '';
+                var vidUrl = this.getAttribute('data-video') || '';
+                var vid = wrapper.querySelector('.seeit-main-video');
+                var img = wrapper.querySelector('.seeit-main-image');
+                if (vidUrl) {
+                    if (img) img.classList.add('hidden');
+                    if (vid) {
+                        vid.classList.remove('hidden');
+                        if (vid.getAttribute('src') !== vidUrl) {
+                            vid.setAttribute('src', vidUrl);
+                            vid.load();
+                        }
+                        vid.play().catch(function () {});
+                        vid.dataset.seeItHydrated = '1';
+                    }
+                } else if (imgUrl) {
+                    if (vid) {
+                        vid.pause();
+                        vid.removeAttribute('src');
+                        vid.classList.add('hidden');
+                    }
+                    if (img) {
+                        img.setAttribute('src', imgUrl);
+                        img.classList.remove('hidden');
+                    }
+                }
+            });
         });
     });
 });

@@ -96,7 +96,7 @@
                                                 </div>
                                                 <p class="font-bold text-slate-900">{{ $review->display_name }}</p>
                                                 @if($review->is_verified_purchase)
-                                                    <p class="text-[10px] text-slate-400 flex items-center gap-1"><span class="text-primary">✓</span> Verified Buyer</p>
+                                                    <p class="text-[10px] text-slate-600 flex items-center gap-1"><span class="text-primary">✓</span> Verified Buyer</p>
                                                 @endif
                                             </div>
                                         </div>
@@ -146,7 +146,7 @@
                     <div class="flex flex-col items-center">
                         <div class="w-10 h-10 rounded-full bg-slate-200 mb-2"><img class="w-full h-full object-cover rounded-full" src="{{ asset('storage/images/1769484507_zFot4Im9WW.png') }}" alt=""></div>
                         <p class="font-bold text-slate-900">Sarah F.</p>
-                        <p class="text-[10px] text-slate-400 flex items-center gap-1"><span class="text-primary">✓</span> Verified Buyer</p>
+                        <p class="text-[10px] text-slate-600 flex items-center gap-1"><span class="text-primary">✓</span> Verified Buyer</p>
                     </div>
                 </div>
                 <div class="flex flex-col items-center">
@@ -158,7 +158,7 @@
                     <div class="flex flex-col items-center">
                         <div class="w-10 h-10 rounded-full bg-slate-200 mb-2"><img class="w-full h-full object-cover rounded-full" src="{{ asset('storage/images/c768ab6feb861eabf2beb33c0fb2cebc.jpg') }}" alt=""></div>
                         <p class="font-bold text-slate-900">Susan T.</p>
-                        <p class="text-[10px] text-slate-400 flex items-center gap-1"><span class="text-primary">✓</span> Verified Buyer</p>
+                        <p class="text-[10px] text-slate-600 flex items-center gap-1"><span class="text-primary">✓</span> Verified Buyer</p>
                     </div>
                 </div>
                 <div class="flex flex-col items-center">
@@ -170,7 +170,7 @@
                     <div class="flex flex-col items-center">
                         <div class="w-10 h-10 rounded-full bg-slate-200 mb-2"><img class="w-full h-full object-cover rounded-full" src="{{ asset('storage/images/c768ab6feb861eabf2beb33c0fb2cebc.jpg') }}" alt=""></div>
                         <p class="font-bold text-slate-900">Mariah B.</p>
-                        <p class="text-[10px] text-slate-400 flex items-center gap-1"><span class="text-primary">✓</span> Verified Buyer</p>
+                        <p class="text-[10px] text-slate-600 flex items-center gap-1"><span class="text-primary">✓</span> Verified Buyer</p>
                     </div>
                 </div>
             </div>

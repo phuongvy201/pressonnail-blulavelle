@@ -29,7 +29,6 @@
     @php
         $metaPixelId = \App\Support\Settings::get('analytics.meta_pixel_id', config('services.meta.pixel_id'));
         $tiktokPixelId = \App\Support\Settings::get('analytics.tiktok_pixel_id', config('services.tiktok.pixel_id'));
-        $googleTagManagerId = \App\Support\Settings::get('analytics.google_tag_manager_id', config('services.google.tag_manager_id'));
         $googleAdsId = \App\Support\Settings::get('analytics.google_ads_id', config('services.google.ads_id'));
         
         // Currency configuration - available in all views
@@ -64,22 +63,28 @@
     })();
     </script>
 
-    @if($googleTagManagerId)
-        <!-- Google Tag Manager -->
-        <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-        new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-        j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-        'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-        })(window,document,'script','dataLayer','{{ $googleTagManagerId }}');</script>
-        <!-- End Google Tag Manager -->
-    @endif
-
-    @if($googleAdsId)
-        <!-- Google tag (gtag.js) -->
-        <script async src="https://www.googletagmanager.com/gtag/js?id={{ $googleAdsId }}"></script>
+    @php
+        $__adsId = $googleAdsId ? trim((string) $googleAdsId) : '';
+    @endphp
+    @if($__adsId !== '')
+        {{-- gtag (GA4 G- / Ads AW-): tải sau load — giảm JS ban đầu so với inject trong head. --}}
         <script>
-            gtag('js', new Date());
-            gtag('config', '{{ $googleAdsId }}');
+        (function () {
+            var gid = @json($__adsId);
+            function injectGtagLib() {
+                var s = document.createElement('script');
+                s.async = true;
+                s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(gid);
+                s.onload = function () {
+                    if (typeof gtag === 'function') {
+                        gtag('js', new Date());
+                        gtag('config', gid);
+                    }
+                };
+                (document.head || document.documentElement).appendChild(s);
+            }
+            window.addEventListener('load', function () { setTimeout(injectGtagLib, 2000); }, { once: true });
+        })();
         </script>
     @endif
     
@@ -209,6 +214,8 @@
     <!-- Fonts: tải không chặn first paint; display=swap trong CSS Google -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    {{-- Footer DMCA badge: mở kết nối sớm (≤4 preconnect); giảm latency khi ảnh + helper tải. --}}
+    <link rel="preconnect" href="https://images.dmca.com">
     <link href="{{ $googleFontsText }}" rel="stylesheet" media="print" onload="this.media='all'">
     <link href="{{ $googleFontsIcons }}" rel="stylesheet" media="print" onload="this.media='all'">
     <noscript>
@@ -258,9 +265,9 @@
 
     /* Promo banner color-shift animation (màu chủ đạo #0297FE) */
     @keyframes promo-banner-shift {
-        0%, 100% { background-color: #0297FE; }
-        33% { background-color: #3d9ad1; }
-        66% { background-color: #1565a0; }
+        0%, 100% { background-color: #0195FE; }
+        33% { background-color: #0178c7; }
+        66% { background-color: #015a9e; }
     }
     .promo-banner-animate {
         animation: promo-banner-shift 6s ease-in-out infinite;
@@ -279,16 +286,9 @@
         $footerBgCustom = (is_string($footerBg) && (str_starts_with(trim($footerBg), '#') || str_starts_with(trim($footerBg), 'rgb'))) ? trim($footerBg) : null;
         $footerFaq = content_block('layout.footer_faq', footer_faq_block_defaults());
     @endphp
-    <div class="text-white text-center py-1.5 sm:py-2 px-3 sm:px-4 text-xs sm:text-sm font-bold tracking-wide {{ $promoBannerCustom ? '' : 'bg-primary promo-banner-animate' }}" @if($promoBannerCustom) style="background-color: {{ $promoBannerCustom }};" @endif>
+    <div class="text-white text-center py-1.5 sm:py-2 px-3 sm:px-4 text-xs sm:text-sm font-bold tracking-wide [text-shadow:0_1px_2px_rgba(0,0,0,0.25)] {{ $promoBannerCustom ? '' : 'bg-primary promo-banner-animate' }}" @if($promoBannerCustom) style="background-color: {{ $promoBannerCustom }};" @endif>
         {{ \App\Support\Settings::get('site.promo_banner', config('theme.promo_banner', 'Free Shipping on Orders Over $150 • Premium Press-on Nails')) }}
     </div>
-    @if($googleTagManagerId)
-        <!-- Google Tag Manager (noscript) -->
-        <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ $googleTagManagerId }}"
-        height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-        <!-- End Google Tag Manager (noscript) -->
-    @endif
-
     
     <div class="min-h-screen">
         <!-- Header Component -->
@@ -405,12 +405,12 @@
                         <div class="flex items-center gap-3">
                             <img src="{{ asset('images/logo/BABYBLUE.png') }}" alt="Baby Blue" class="h-20 sm:h-24 lg:h-28 w-auto object-contain">
                         </div>
-                        <p class="text-sm text-slate-400 leading-relaxed max-w-md">
+                        <p class="text-sm text-slate-300 leading-relaxed max-w-md">
                             Blulavelle.com is a global online marketplace where people come together to make, sell, buy, and collect unique items. There's no Blulavelle warehouse – just independent sellers selling the things they love. We make the whole process easy, helping you connect directly with makers to find something extraordinary.
                         </p>
                         <div>
                             <p class="text-sm font-bold text-white mb-2">The website is jointly operated by:</p>
-                            <ul class="text-xs text-slate-400 space-y-1.5 leading-relaxed">
+                            <ul class="text-xs text-slate-300 space-y-1.5 leading-relaxed">
                                 <li><strong class="text-slate-300">HM FULFILL COMPANY LIMITED</strong> — 63/9D, Ap Chanh 1, Tan Xuan, Hoc Mon, Ho Chi Minh City 700000, Vietnam</li>
                                 <li><strong class="text-slate-300">BLUE STAR TRADING LIMITED</strong> — RM C, G/F, WORLD TRUST TOWER, 50 STANLEY STREET, CENTRAL HONG KONG</li>
                                 <li><strong class="text-slate-300">Bluprinter LTD (UK)</strong> — Company Number 16342015, 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom</li>
@@ -418,8 +418,8 @@
                             </ul>
                         </div>
                         <div>
-                            <p class="text-xs text-slate-400"><strong class="text-slate-300">US Warehouse:</strong> 1301 S ARAPAHO RD, STE 101 RICHARDSON, TX 75081, USA</p>
-                            <p class="text-xs text-slate-400 mt-1"><strong class="text-slate-300">UK Warehouse:</strong> 3 Kincraig Rd, Blackpool FY2 0FY, United Kingdom</p>
+                            <p class="text-xs text-slate-300"><strong class="text-slate-200">US Warehouse:</strong> 1301 S ARAPAHO RD, STE 101 RICHARDSON, TX 75081, USA</p>
+                            <p class="text-xs text-slate-300 mt-1"><strong class="text-slate-200">UK Warehouse:</strong> 3 Kincraig Rd, Blackpool FY2 0FY, United Kingdom</p>
                         </div>
                         <div>
                             <p class="text-sm font-bold text-white mb-3">Follow us:</p>
@@ -458,10 +458,21 @@
                         <div class="mt-4 flex flex-col items-center gap-3">
                             <div class="flex items-center gap-3">
                                 <a href="https://www.dmca.com/Protection/Status.aspx?ID=1318f147-a17c-4b0f-bdf2-18feb5c80ce7" title="DMCA.com Protection Status" class="dmca-badge">
-                                    <img src="https://images.dmca.com/Badges/dmca_protected_sml_120l.png?ID=1318f147-a17c-4b0f-bdf2-18feb5c80ce7" alt="DMCA.com Protection Status" />
+                                    <img src="https://images.dmca.com/Badges/dmca_protected_sml_120l.png?ID=1318f147-a17c-4b0f-bdf2-18feb5c80ce7" alt="DMCA.com Protection Status" loading="lazy" decoding="async" />
                                 </a>
                             </div>
-                            <script src="https://images.dmca.com/Badges/DMCABadgeHelper.min.js"></script>
+                            {{-- DMCA helper: sau window.load + delay — tránh chuỗi quan trọng (idle vẫn bị Lighthouse tính). --}}
+                            <script>
+                            (function () {
+                                function loadDmca() {
+                                    var s = document.createElement('script');
+                                    s.src = 'https://images.dmca.com/Badges/DMCABadgeHelper.min.js';
+                                    s.async = true;
+                                    document.body.appendChild(s);
+                                }
+                                window.addEventListener('load', function () { setTimeout(loadDmca, 3200); }, { once: true });
+                            })();
+                            </script>
 
                             {{-- Trustpilot under DMCA (aligned left) --}}
                             <div class="w-full flex justify-center">
@@ -482,34 +493,34 @@
                         <div>
                             <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-4">Company</h3>
                             <ul class="space-y-2.5 text-sm">
-                                <li><a href="{{ route('page.show', 'about-us') }}" class="text-slate-400 hover:text-primary transition-colors">About Us</a></li>
-                                <li><a href="{{ route('page.show', 'privacy-policy') }}" class="text-slate-400 hover:text-primary transition-colors">Privacy Policy</a></li>
-                                <li><a href="{{ route('page.show', 'terms-of-service') }}" class="text-slate-400 hover:text-primary transition-colors">Terms of Service</a></li>
-                                <li><a href="{{ route('page.show', 'secure-payments') }}" class="text-slate-400 hover:text-primary transition-colors">Secure Payments</a></li>
-                                <li><a href="{{ route('page.show','contact-us') }}" class="text-slate-400 hover:text-primary transition-colors">Contact Us</a></li>
-                                <li><a href="{{ route('page.show', 'help-center') }}" class="text-slate-400 hover:text-primary transition-colors">Help Center</a></li>
-                                <li><a href="{{ route('page.show', 'sitemap') }}" class="text-slate-400 hover:text-primary transition-colors">Sitemap</a></li>
+                                <li><a href="{{ route('page.show', 'about-us') }}" class="text-slate-300 hover:text-primary transition-colors">About Us</a></li>
+                                <li><a href="{{ route('page.show', 'privacy-policy') }}" class="text-slate-300 hover:text-primary transition-colors">Privacy Policy</a></li>
+                                <li><a href="{{ route('page.show', 'terms-of-service') }}" class="text-slate-300 hover:text-primary transition-colors">Terms of Service</a></li>
+                                <li><a href="{{ route('page.show', 'secure-payments') }}" class="text-slate-300 hover:text-primary transition-colors">Secure Payments</a></li>
+                                <li><a href="{{ route('page.show','contact-us') }}" class="text-slate-300 hover:text-primary transition-colors">Contact Us</a></li>
+                                <li><a href="{{ route('page.show', 'help-center') }}" class="text-slate-300 hover:text-primary transition-colors">Help Center</a></li>
+                                <li><a href="{{ route('page.show', 'sitemap') }}" class="text-slate-300 hover:text-primary transition-colors">Sitemap</a></li>
                             </ul>
                         </div>
                         <div>
                             <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-4">Get Help</h3>
                             <ul class="space-y-2.5 text-sm">
-                                <li><a href="{{ route('page.show', 'faqs') }}" class="text-slate-400 hover:text-primary transition-colors">FAQs</a></li>
-                                <li><a href="{{ route('orders.track') }}" class="text-slate-400 hover:text-primary transition-colors">Order Tracking</a></li>
-                                <li><a href="{{ route('page.show','shipping-delivery') }}" class="text-slate-400 hover:text-primary transition-colors">Shipping & Delivery</a></li>
-                                <li><a href="{{ route('page.show', 'cancelchange-order') }}" class="text-slate-400 hover:text-primary transition-colors">Cancel/Change Order</a></li>
-                                <li><a href="{{ route('page.show', 'refund-policy') }}" class="text-slate-400 hover:text-primary transition-colors">Refund Policy</a></li>
-                                <li><a href="{{ route('page.show', 'returns-exchanges-policy') }}" class="text-slate-400 hover:text-primary transition-colors">Returns & Exchanges Policy</a></li>
-                                <li><a href="{{ route('page.show', 'dmca') }}" class="text-slate-400 hover:text-primary transition-colors">DMCA</a></li>
-                                <li><a href="our-intellectual-property-policy" class="text-slate-400 hover:text-primary transition-colors">Our Intellectual Property Policy</a></li>
+                                <li><a href="{{ route('page.show', 'faqs') }}" class="text-slate-300 hover:text-primary transition-colors">FAQs</a></li>
+                                <li><a href="{{ route('orders.track') }}" class="text-slate-300 hover:text-primary transition-colors">Order Tracking</a></li>
+                                <li><a href="{{ route('page.show','shipping-delivery') }}" class="text-slate-300 hover:text-primary transition-colors">Shipping & Delivery</a></li>
+                                <li><a href="{{ route('page.show', 'cancelchange-order') }}" class="text-slate-300 hover:text-primary transition-colors">Cancel/Change Order</a></li>
+                                <li><a href="{{ route('page.show', 'refund-policy') }}" class="text-slate-300 hover:text-primary transition-colors">Refund Policy</a></li>
+                                <li><a href="{{ route('page.show', 'returns-exchanges-policy') }}" class="text-slate-300 hover:text-primary transition-colors">Returns & Exchanges Policy</a></li>
+                                <li><a href="{{ route('page.show', 'dmca') }}" class="text-slate-300 hover:text-primary transition-colors">DMCA</a></li>
+                                <li><a href="our-intellectual-property-policy" class="text-slate-300 hover:text-primary transition-colors">Our Intellectual Property Policy</a></li>
                             </ul>
                         </div>
                         <div>
                             <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-4">Shop</h3>
                             <ul class="space-y-2.5 text-sm">
-                                <li><a href="{{ route('bulk.order.create') }}" class="text-slate-400 hover:text-primary transition-colors">Bulk Order</a></li>
-                                <li><a href="{{ route('promo.code.create') }}" class="text-slate-400 hover:text-primary transition-colors">Promo Code</a></li>
-                                <li><a href="/become-a-seller" class="text-slate-400 hover:text-primary transition-colors">Sell on Blulavelle</a></li>
+                                <li><a href="{{ route('bulk.order.create') }}" class="text-slate-300 hover:text-primary transition-colors">Bulk Order</a></li>
+                                <li><a href="{{ route('promo.code.create') }}" class="text-slate-300 hover:text-primary transition-colors">Promo Code</a></li>
+                                <li><a href="/become-a-seller" class="text-slate-300 hover:text-primary transition-colors">Sell on Blulavelle</a></li>
                             </ul>
                         </div>
                     </div>
@@ -517,7 +528,7 @@
                     {{-- Col 5: Newsletter --}}
                     <div class="lg:col-span-3">
                         <h3 class="text-lg font-bold text-white mb-2">Never miss out on a moment</h3>
-                        <p class="text-sm text-slate-400 mb-4 leading-relaxed">
+                        <p class="text-sm text-slate-300 mb-4 leading-relaxed">
                             Stay updated with the latest trends, exclusive offers, and exciting updates by signing up for our newsletter. Secret privileges for your purchase will be delivered straight to your inbox.
                         </p>
                         <form id="newsletter-form" class="flex gap-2 mb-3" action="{{ route('newsletter.subscribe') }}" method="POST">
@@ -529,24 +540,24 @@
                             </button>
                         </form>
                         <div id="newsletter-message" class="hidden mt-3 px-4 py-3 rounded-xl text-sm font-medium" role="alert"></div>
-                        <p class="text-xs text-slate-500 leading-relaxed mt-2">
-                            By clicking Subscribe, you agree to our <a href="{{ route('page.show', 'privacy-policy') }}" class="text-primary hover:underline">Privacy Policy</a> and to receive our promotional emails (opt out anytime).
+                        <p class="text-xs text-slate-200 leading-relaxed mt-2">
+                            By clicking Subscribe, you agree to our <a href="{{ route('page.show', 'privacy-policy') }}" class="text-white font-semibold underline decoration-2 underline-offset-2 hover:text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 rounded-sm">Privacy Policy</a> and to receive our promotional emails (opt out anytime).
                         </p>
                     </div>
                 </div>
 
                 {{-- Bottom bar: Language, Copyright, Payment icons --}}
                 <div class="max-w-7xl mx-auto mt-10 sm:mt-12 pt-6 sm:pt-8 border-t border-slate-600/80 flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <div class="flex items-center gap-2 text-sm text-slate-400">
+                    <div class="flex items-center gap-2 text-sm text-slate-300">
                         <span class="inline-block w-6 h-4 rounded-sm bg-primary0 flex items-center justify-center text-white text-[10px] font-bold">VN</span>
                         <span>Vietnam</span>
-                        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </div>
-                    <p class="text-sm text-slate-500">© {{ date('Y') }} Blulavelle. All Rights Reserved.</p>
-                    <div class="flex gap-3 items-center grayscale opacity-80">
-                        <span class="material-symbols-outlined text-2xl text-slate-400">credit_card</span>
-                        <span class="material-symbols-outlined text-2xl text-slate-400">account_balance</span>
-                        <span class="material-symbols-outlined text-2xl text-slate-400">payments</span>
+                    <p class="text-sm text-slate-300">© {{ date('Y') }} Blulavelle. All Rights Reserved.</p>
+                    <div class="flex gap-3 items-center grayscale opacity-90">
+                        <span class="material-symbols-outlined text-2xl text-slate-300">credit_card</span>
+                        <span class="material-symbols-outlined text-2xl text-slate-300">account_balance</span>
+                        <span class="material-symbols-outlined text-2xl text-slate-300">payments</span>
                     </div>
                 </div>
 
@@ -571,12 +582,12 @@
             <div id="cart-drawer-progress-wrap" class="p-4 sm:p-6 bg-primary/5 border-b border-primary/10 hidden">
                 <div class="flex justify-between items-center mb-2">
                     <p class="text-sm font-semibold text-slate-700">Free Shipping Progress</p>
-                    <p id="cart-drawer-progress-ratio" class="text-sm font-bold text-primary">$0.00 / $150.00</p>
+                    <p id="cart-drawer-progress-ratio" class="text-sm font-bold text-primary-fg">$0.00 / $150.00</p>
                 </div>
                 <div class="h-2.5 w-full bg-primary/10 rounded-full overflow-hidden">
                     <div id="cart-drawer-progress-bar" class="h-full bg-primary rounded-full transition-all duration-500" style="width: 0%;"></div>
                 </div>
-                <p id="cart-drawer-progress-note" class="mt-2 text-xs font-medium text-slate-500">Add <span class="text-primary font-bold">$0.00</span> more to unlock free shipping!</p>
+                <p id="cart-drawer-progress-note" class="mt-2 text-xs font-medium text-slate-600">Add <span class="text-primary-fg font-bold">$0.00</span> more to unlock free shipping!</p>
             </div>
             {{-- Cart Items --}}
             <div id="cart-drawer-items" class="flex flex-col divide-y divide-primary/5">
@@ -617,7 +628,7 @@
                     </div>
                 </div>
                 <div class="mb-4">
-                    <label class="block text-xs font-bold text-slate-400 mb-1.5 uppercase">Choose discount</label>
+                    <label class="block text-xs font-bold text-slate-600 mb-1.5 uppercase">Choose discount</label>
                     <div class="flex gap-2 mb-2">
                         <button type="button" id="cart-drawer-mode-volume" class="flex-1 px-3 py-2 rounded-lg border border-primary/20 bg-white text-slate-600 text-xs font-bold hover:bg-primary/5 transition-colors">
                             Volume
@@ -626,7 +637,7 @@
                             Promo code
                         </button>
                     </div>
-                    <label class="block text-xs font-bold text-slate-400 mb-1.5 uppercase">Promo Code</label>
+                    <label class="block text-xs font-bold text-slate-600 mb-1.5 uppercase">Promo Code</label>
                     <div class="flex gap-2">
                         <input type="text" id="cart-drawer-promo-input" placeholder="Enter code" class="flex-1 rounded-lg border border-primary/20 bg-slate-50 text-sm px-3 py-2 focus:ring-primary focus:border-primary" autocomplete="off">
                         <button type="button" id="cart-drawer-promo-apply" class="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-primary transition-colors shrink-0">Apply</button>
@@ -638,7 +649,7 @@
                         Checkout Now
                         <span class="material-symbols-outlined text-sm">arrow_forward</span>
                     </a>
-                    <a href="{{ route('cart.index') }}" class="w-full py-4 border-2 border-primary text-primary font-bold rounded-xl hover:bg-primary/5 transition-colors uppercase tracking-widest text-sm text-center">
+                    <a href="{{ route('cart.index') }}" class="w-full py-4 border-2 border-primary text-primary-fg font-bold rounded-xl hover:bg-primary/5 transition-colors uppercase tracking-widest text-sm text-center">
                         View My Cart
                     </a>
                 </div>
@@ -964,11 +975,11 @@
                 if (progressBar) progressBar.style.width = pct + '%';
                 if (progressNote) {
                     if (needMore > 0) {
-                        progressNote.innerHTML = 'Add <span class="text-primary font-bold">' + formatPrice(needMore) + '</span> more to unlock free shipping!';
-                        progressNote.className = 'mt-2 text-xs font-medium text-slate-500';
+                        progressNote.innerHTML = 'Add <span class="text-primary-fg font-bold">' + formatPrice(needMore) + '</span> more to unlock free shipping!';
+                        progressNote.className = 'mt-2 text-xs font-medium text-slate-600';
                     } else {
                         progressNote.textContent = "You've unlocked free shipping!";
-                        progressNote.className = 'mt-2 text-xs font-semibold text-primary';
+                        progressNote.className = 'mt-2 text-xs font-semibold text-primary-fg';
                     }
                 }
             }
@@ -1449,7 +1460,7 @@
             }
         });
 
-        (function prefillAndResume() {
+        function prefillAndResume() {
             var guestForm = document.getElementById('live-chat-guest-form');
             var isGuestUi = guestForm && !guestForm.classList.contains('hidden');
 
@@ -1492,7 +1503,9 @@
                         tryResumeThenStart({}, null);
                     }
                 });
-        })();
+        }
+        {{-- Chat: chỉ gọi resume-status sau load + delay — tách khỏi critical path trong lab. --}}
+        window.addEventListener('load', function () { setTimeout(prefillAndResume, 2600); }, { once: true });
 
         document.getElementById('live-chat-send-form').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -1641,11 +1654,23 @@
     })();
     </script>
     
-    <!-- Wishlist JavaScript -->
     @php
         $__wishlistPath = public_path('js/wishlist.js');
         $__wishlistV = is_file($__wishlistPath) ? (string) filemtime($__wishlistPath) : '1';
+        $__wishlistSrc = asset('js/wishlist.js') . '?v=' . $__wishlistV;
     @endphp
-    <script src="{{ asset('js/wishlist.js') }}?v={{ $__wishlistV }}"></script>
+    {{-- wishlist.js sau load + delay; init trong file trì hoãn fetch count/check thêm một nhịp. --}}
+    <script>
+    (function () {
+        var src = @json($__wishlistSrc);
+        function loadWishlist() {
+            var s = document.createElement('script');
+            s.src = src;
+            s.async = true;
+            document.body.appendChild(s);
+        }
+        window.addEventListener('load', function () { setTimeout(loadWishlist, 2000); }, { once: true });
+    })();
+    </script>
 </body>
 </html>
