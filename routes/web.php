@@ -187,7 +187,8 @@ Route::post('/promo-code', [PromoCodeController::class, 'store'])->name('promo.c
 Route::get('/promo-offer', [App\Http\Controllers\PromoPopupController::class, 'offer'])->name('promo.offer');
 Route::post('/promo-claim', [App\Http\Controllers\PromoPopupController::class, 'claim'])->name('promo.claim');
 
-// Live Chat (khách hàng): bắt đầu, lấy tin nhắn, gửi tin
+// Live Chat (khách hàng): kiểm tra resume, bắt đầu, lấy tin nhắn, gửi tin
+Route::get('/live-chat/resume-status', [App\Http\Controllers\LiveChatController::class, 'resumeStatus'])->name('live-chat.resume-status');
 Route::post('/live-chat/start', [App\Http\Controllers\LiveChatController::class, 'startOrGet'])->name('live-chat.start');
 Route::get('/live-chat/conversations/{conversationId}/messages', [App\Http\Controllers\LiveChatController::class, 'messages'])->name('live-chat.messages');
 Route::post('/live-chat/send', [App\Http\Controllers\LiveChatController::class, 'send'])->name('live-chat.send');

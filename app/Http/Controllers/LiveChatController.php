@@ -11,6 +11,23 @@ use Illuminate\Http\Request;
 class LiveChatController extends Controller
 {
     /**
+     * Kiểm tra có conversation đang mở theo session/user (GET, luôn 200 — tránh POST /start → 422 khi load trang).
+     */
+    public function resumeStatus(Request $request): JsonResponse
+    {
+        $userId = auth()->id();
+        $sessionId = $request->session()->getId();
+
+        if ($userId) {
+            $open = ChatConversation::where('customer_user_id', $userId)->open()->exists();
+        } else {
+            $open = ChatConversation::where('guest_session_id', $sessionId)->open()->exists();
+        }
+
+        return response()->json(['can_resume' => $open]);
+    }
+
+    /**
      * Bắt đầu hoặc lấy conversation hiện tại (khách hoặc user).
      * Guest: có thể gửi rỗng để "resume" theo session (không cần nhập lại tên/email).
      * Honeypot: nếu field "website" được gửi và có giá trị => coi là bot, từ chối.

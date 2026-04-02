@@ -44,8 +44,25 @@
         window.SITE_CURRENCY_SYMBOL = @json($siteCurrencySymbol);
     </script>
 
-    <!-- Cookie Script -->
-    <script type="text/javascript" charset="UTF-8" src="//cdn.cookie-script.com/s/4a353d27e80af68f255e8b4bff37f75c.js"></script>
+    {{-- Cookie Script: tải sau idle/load — tránh chặn render (Lighthouse render-blocking) --}}
+    <script>
+    (function () {
+        var src = 'https://cdn.cookie-script.com/s/4a353d27e80af68f255e8b4bff37f75c.js';
+        function inject() {
+            var s = document.createElement('script');
+            s.type = 'text/javascript';
+            s.charset = 'UTF-8';
+            s.async = true;
+            s.src = src;
+            (document.head || document.documentElement).appendChild(s);
+        }
+        if ('requestIdleCallback' in window) {
+            window.requestIdleCallback(inject, { timeout: 2500 });
+        } else {
+            window.addEventListener('load', inject, { once: true });
+        }
+    })();
+    </script>
 
     @if($googleTagManagerId)
         <!-- Google Tag Manager -->
@@ -68,39 +85,46 @@
     
     
     @if($metaPixelId)
-        <!-- Meta Pixel Code -->
+        {{-- Pixel Meta: tải sau idle — giảm tải main thread; fbevents.js vẫn là bundle legacy của Meta (không chỉnh được). --}}
         <script>
-        !function(f,b,e,v,n,t,s)
-        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-        n.queue=[];t=b.createElement(e);t.async=!0;
-        t.src=v;s=b.getElementsByTagName(e)[0];
-        s.parentNode.insertBefore(t,s)}(window, document,'script',
-        'https://connect.facebook.net/en_US/fbevents.js');
-        fbq('init', '{{ $metaPixelId }}');
-        fbq('track', 'PageView');
+        (function () {
+            var id = @json($metaPixelId);
+            function boot() {
+                if (window.fbq) return;
+                !function(f,b,e,v,n,t,s)
+                {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+                n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+                if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+                n.queue=[];t=b.createElement(e);t.async=!0;
+                t.src=v;s=b.getElementsByTagName(e)[0];
+                s.parentNode.insertBefore(t,s)}(window, document,'script',
+                'https://connect.facebook.net/en_US/fbevents.js');
+                fbq('init', id);
+                fbq('track', 'PageView');
+            }
+            if ('requestIdleCallback' in window) {
+                window.requestIdleCallback(boot, { timeout: 4000 });
+            } else {
+                window.addEventListener('load', function () { setTimeout(boot, 0); }, { once: true });
+            }
+        })();
         </script>
         <noscript><img height="1" width="1" style="display:none"
         src="https://www.facebook.com/tr?id={{ $metaPixelId }}&ev=PageView&noscript=1"
         /></noscript>
-        <!-- End Meta Pixel Code -->
     @endif
 
     @if($tiktokPixelId)
-        <!-- TikTok Pixel Code Start -->
+        {{-- TikTok giữ tải sớm: script @auth bên dưới gọi ttq.identify — defer SDK sẽ race. --}}
         <script>
         !function (w, d, t) {
           w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(
         var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._o=ttq._o||{},ttq._o[e]=n||{};n=document.createElement("script")
         ;n.type="text/javascript",n.async=!0,n.src=r+"?sdkid="+e+"&lib="+t;e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};
-
-
           ttq.load('{{ $tiktokPixelId }}');
           ttq.page();
         }(window, document, 'ttq');
         </script>
-        <!-- TikTok Pixel Code End -->
     @endif
 
     @auth
@@ -177,13 +201,20 @@
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
 
-    <!-- Fonts -->
+    @php
+        // Chữ: swap. Icon: một trục cố định khớp .material-symbols-outlined (opsz 24, wght 400) — ít @font-face hơn, Lighthouse font-display ổn định hơn so với range đầy đủ.
+        $googleFontsText = 'https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap';
+        $googleFontsIcons = 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap';
+    @endphp
+    <!-- Fonts: tải không chặn first paint; display=swap trong CSS Google -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" crossorigin="anonymous">
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+    <link href="{{ $googleFontsText }}" rel="stylesheet" media="print" onload="this.media='all'">
+    <link href="{{ $googleFontsIcons }}" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript>
+        <link href="{{ $googleFontsText }}" rel="stylesheet">
+        <link href="{{ $googleFontsIcons }}" rel="stylesheet">
+    </noscript>
 
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -1251,6 +1282,7 @@
     <script>
     (function() {
         var startUrl = '{{ route("live-chat.start") }}';
+        var resumeStatusUrl = '{{ route("live-chat.resume-status") }}';
         var sendUrl = '{{ route("live-chat.send") }}';
         var csrf = document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').content;
         var conversationId = null;
@@ -1419,7 +1451,10 @@
 
         (function prefillAndResume() {
             var guestForm = document.getElementById('live-chat-guest-form');
-            if (guestForm && !guestForm.classList.contains('hidden')) {
+            var isGuestUi = guestForm && !guestForm.classList.contains('hidden');
+
+            function prefillGuestFromStorage() {
+                if (!isGuestUi) return { name: '', email: '' };
                 try {
                     var savedName = localStorage.getItem(STORAGE_KEY_NAME);
                     var savedEmail = localStorage.getItem(STORAGE_KEY_EMAIL);
@@ -1430,10 +1465,33 @@
                 var emailEl = document.getElementById('live-chat-guest-email');
                 var name = (nameEl && nameEl.value) ? nameEl.value.trim() : '';
                 var email = (emailEl && emailEl.value) ? emailEl.value.trim() : '';
-                tryResumeThenStart(name && email ? { name: name, email: email } : {});
-            } else {
-                tryResumeThenStart({});
+                return { name: name, email: email };
             }
+
+            fetch(resumeStatusUrl, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                credentials: 'same-origin'
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data && data.can_resume) {
+                        tryResumeThenStart({}, null);
+                        return;
+                    }
+                    if (!isGuestUi) {
+                        tryResumeThenStart({}, null);
+                        return;
+                    }
+                    var creds = prefillGuestFromStorage();
+                    if (creds.name && creds.email) {
+                        tryResumeThenStart({ name: creds.name, email: creds.email }, null);
+                    }
+                })
+                .catch(function () {
+                    if (!isGuestUi) {
+                        tryResumeThenStart({}, null);
+                    }
+                });
         })();
 
         document.getElementById('live-chat-send-form').addEventListener('submit', function(e) {
@@ -1584,6 +1642,10 @@
     </script>
     
     <!-- Wishlist JavaScript -->
-    <script src="{{ asset('js/wishlist.js') }}"></script>
+    @php
+        $__wishlistPath = public_path('js/wishlist.js');
+        $__wishlistV = is_file($__wishlistPath) ? (string) filemtime($__wishlistPath) : '1';
+    @endphp
+    <script src="{{ asset('js/wishlist.js') }}?v={{ $__wishlistV }}"></script>
 </body>
 </html>
