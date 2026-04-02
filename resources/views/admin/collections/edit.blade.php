@@ -11,7 +11,7 @@
     </div>
 
     <!-- Form -->
-    <form action="{{ route('admin.collections.update', $collection) }}" method="POST" enctype="multipart/form-data" class="bg-white rounded-xl shadow-md p-8 space-y-6">
+    <form id="collection-edit-form" action="{{ route('admin.collections.update', $collection) }}" method="POST" enctype="multipart/form-data" class="bg-white rounded-xl shadow-md p-8 space-y-6">
         @csrf
         @method('PUT')
 
@@ -255,6 +255,12 @@
                                 </thead>
                                 <tbody id="products-table-body" class="bg-white divide-y divide-gray-200">
                                     @foreach($products as $product)
+                                    @php
+                                        $primaryImage = $product->primary_image ?? null;
+                                        if (is_array($primaryImage)) {
+                                            $primaryImage = $primaryImage['url'] ?? $primaryImage['path'] ?? reset($primaryImage) ?? null;
+                                        }
+                                    @endphp
                                     <tr class="product-row hover:bg-purple-50 transition" 
                                         data-name="{{ strtolower($product->name) }}" 
                                         data-price="{{ $product->getEffectivePrice() }}"
@@ -265,7 +271,7 @@
                                             <input type="checkbox" class="product-checkbox w-4 h-4 text-purple-600 focus:ring-purple-500 rounded" 
                                                    value="{{ $product->id }}" 
                                                    data-name="{{ $product->name }}"
-                                                   data-image="{{ $product->primary_image ?? '' }}"
+                                                   data-image="{{ $primaryImage ?? '' }}"
                                                    data-price="{{ number_format($product->getEffectivePrice(), 2) }}"
                                                    {{ in_array($product->id, old('products', $collection->products->pluck('id')->toArray())) ? 'checked' : '' }}
                                                    onchange="updateSelectedProducts()">
@@ -273,8 +279,8 @@
                                         <td class="px-4 py-3">
                                             <div class="flex items-center">
                                                 <div class="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center text-lg mr-3 overflow-hidden">
-                                                    @if(!empty($product->primary_image))
-                                                        <img src="{{ $product->primary_image }}" alt="{{ $product->altForMediaItem($product->getEffectiveMedia()[0] ?? '', null, 0) }}" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                    @if(!empty($primaryImage))
+                                                        <img src="{{ $primaryImage }}" alt="{{ $product->altForMediaItem($product->getEffectiveMedia()[0] ?? '', null, 0) }}" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                                         <span class="w-full h-full items-center justify-center text-lg hidden">📦</span>
                                                     @else
                                                         <span class="w-full h-full flex items-center justify-center text-lg">📦</span>
@@ -446,9 +452,9 @@
                 document.getElementById('modal-selected-count').textContent = selectedProducts.size;
             }
 
-            function saveSelectedProducts() {
-                // Update hidden inputs
+            function syncSelectedProductsToInputs() {
                 const container = document.getElementById('selected-products-inputs');
+                if (!container) return;
                 container.innerHTML = '';
                 selectedProducts.forEach(productId => {
                     const input = document.createElement('input');
@@ -457,6 +463,11 @@
                     input.value = productId;
                     container.appendChild(input);
                 });
+            }
+
+            function saveSelectedProducts() {
+                // Cập nhật hidden inputs trước
+                syncSelectedProductsToInputs();
 
                 // Update checkboxes in modal
                 document.querySelectorAll('.product-checkbox').forEach(checkbox => {
@@ -516,10 +527,18 @@
             // Initialize on page load
             document.addEventListener('DOMContentLoaded', function() {
                 updateSelectedProductsDisplay();
-                // Sync checkboxes with selectedProducts
+                // Sync checkboxes với selectedProducts
                 document.querySelectorAll('.product-checkbox').forEach(checkbox => {
                     checkbox.checked = selectedProducts.has(parseInt(checkbox.value));
                 });
+
+                // Khi submit form, luôn sync selectedProducts -> hidden inputs
+                const form = document.getElementById('collection-edit-form');
+                if (form) {
+                    form.addEventListener('submit', function () {
+                        syncSelectedProductsToInputs();
+                    });
+                }
             });
 
             // Close modal when clicking outside

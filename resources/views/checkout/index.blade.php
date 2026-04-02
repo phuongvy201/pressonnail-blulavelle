@@ -1198,14 +1198,23 @@ function buildCheckoutCustomizationInputs(customizations) {
                                         <div class="mt-2">
                                             <ul id="cust-list-{{ $cid }}" class="space-y-0.5">
                                                 @foreach($item['cart_item']->customizations as $k => $c)
+                                                    @php
+                                                        $rawValue = $c['value'] ?? $c;
+                                                        $displayValue = $rawValue;
+                                                        // Nếu là JSON (file custom), chỉ hiển thị tên file ngắn gọn
+                                                        if (is_string($rawValue) && str_starts_with(ltrim($rawValue), '{')) {
+                                                            $decoded = json_decode($rawValue, true);
+                                                            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                                                                $fileName = $decoded['original_name'] ?? basename($decoded['file_url'] ?? '') ?? null;
+                                                                $displayValue = $fileName ?: $rawValue;
+                                                            }
+                                                        }
+                                                        $displayValue = Str::limit((string) $displayValue, 50);
+                                                    @endphp
                                                     <li class="text-[11px] text-slate-700 {{ $loop->iteration > 3 ? 'hidden more-'.$cid : '' }}">
                                                         <span class="text-slate-500">{{ $k }}:</span>
-                                                        <span class="font-medium customization-value" title="{{ $c['value'] }}">
-                                                            @if(strlen($c['value']) > 50)
-                                                                {{ Str::limit($c['value'], 50) }}
-                                                            @else
-                                                                {{ $c['value'] }}
-                                                            @endif
+                                                        <span class="font-medium customization-value" title="{{ $displayValue }}">
+                                                            {{ $displayValue }}
                                                         </span>
                                                         @if(isset($c['price']) && $c['price']>0)
                                                             <span class="text-green-600">(+${{ number_format($c['price'],2) }})</span>

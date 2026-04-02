@@ -68,9 +68,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 <a href="{{ $hero['cta_secondary_url'] ?? '#' }}" class="inline-block px-8 py-4 border-2 border-primary text-primary-fg rounded-lg font-bold text-lg hover:bg-primary hover:text-white transition-all" data-content-field="cta_secondary_url"><span data-content-field="cta_secondary_label">{{ $hero['cta_secondary_label'] ?? 'How it Works' }}</span></a>
             </div>
         </div>
-        <div class="lg:w-1/2 relative">
+        <div class="lg:w-1/2 relative min-w-0">
             <div class="relative rounded-2xl overflow-hidden shadow-2xl aspect-[4/5] lg:aspect-square bg-slate-200">
-                <img alt="Premium press-on nails" class="w-full h-full object-cover hero-main-image" data-content-field="image" src="{{ $heroImageUrl }}" fetchpriority="high" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                @php
+                    $heroResize960 = storage_image_resize_url($heroImageUrl, 960);
+                @endphp
+                @if($heroResize960)
+                    <img alt="Premium press-on nails" class="w-full h-full object-cover hero-main-image" data-content-field="image"
+                         src="{{ $heroResize960 }}"
+                         srcset="{{ storage_image_resize_url($heroImageUrl, 640) }} 640w, {{ $heroResize960 }} 960w, {{ storage_image_resize_url($heroImageUrl, 1280) }} 1280w"
+                         sizes="(max-width: 1023px) 100vw, 46vw"
+                         width="960" height="1200" decoding="async" fetchpriority="high"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                @else
+                    <img alt="Premium press-on nails" class="w-full h-full object-cover hero-main-image" data-content-field="image" src="{{ $heroImageUrl }}" fetchpriority="high" decoding="async" width="960" height="1200" sizes="(max-width: 1023px) 100vw, 46vw" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                @endif
                 <div class="hidden w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary-fg">
                     <svg class="w-24 h-24 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z"></path></svg>
                 </div>
@@ -404,18 +416,30 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
     @endif
     <div class="max-w-7xl mx-auto">
-        <h2 class="text-3xl lg:text-4xl font-black text-center mb-12" data-content-field="heading">{{ $indulge['heading'] ?? 'Indulge in salon-quality at home' }}</h2>
-        <div class="flex flex-col items-center">
-            <div class="bg-white/10 p-6 rounded-2xl backdrop-blur-sm max-w-sm w-full border border-white/20">
-                <div class="relative rounded-xl overflow-hidden mb-6 aspect-square bg-primary/20 flex items-center justify-center" id="indulge-carousel">
+        <h2 class="text-3xl lg:text-4xl font-black text-center mb-12 px-2" data-content-field="heading">{{ $indulge['heading'] ?? 'Indulge in salon-quality at home' }}</h2>
+        <div class="flex flex-col items-center w-full min-w-0 px-2 sm:px-0">
+            <div class="bg-white/10 p-4 sm:p-6 rounded-2xl backdrop-blur-sm w-full max-w-sm border border-white/20 min-w-0">
+                <div class="relative rounded-xl overflow-hidden mb-6 aspect-square bg-primary/20 flex items-center justify-center w-full min-w-0" id="indulge-carousel">
                     <div class="relative w-full h-full overflow-hidden rounded-xl">
                         @foreach($indulgeImages as $idx => $imgUrl)
                             @php
                                 $src = str_starts_with($imgUrl, 'http') ? $imgUrl : asset($imgUrl);
                                 $slideAlt = $indulgeImageAlts[$idx] ?? ($indulge['title'] ?? 'Premium Press-on Nails');
                             @endphp
+                            @php
+                                $indulgeOpt520 = storage_image_resize_url($src, 520);
+                                $indulgeOpt780 = storage_image_resize_url($src, 780);
+                            @endphp
                             <div class="indulge-slide absolute inset-0 flex items-center justify-center transition-opacity duration-300 {{ $idx === 0 ? 'opacity-100 z-10' : 'opacity-0 z-0' }}" data-slide="{{ $idx }}">
-                                <img alt="{{ $slideAlt }}" class="w-4/5 h-4/5 object-contain" src="{{ $src }}">
+                                @if($indulgeOpt520)
+                                    <img alt="{{ $slideAlt }}" class="max-h-[85%] max-w-[90%] w-auto h-auto object-contain"
+                                         src="{{ $indulgeOpt520 }}"
+                                         @if($indulgeOpt780) srcset="{{ $indulgeOpt520 }} 520w, {{ $indulgeOpt780 }} 780w" @endif
+                                         sizes="(max-width: 640px) 88vw, 400px"
+                                         width="520" height="292" loading="{{ $idx === 0 ? 'eager' : 'lazy' }}" decoding="async">
+                                @else
+                                    <img alt="{{ $slideAlt }}" class="max-h-[85%] max-w-[90%] w-auto h-auto object-contain" src="{{ $src }}" loading="{{ $idx === 0 ? 'eager' : 'lazy' }}" decoding="async" sizes="(max-width: 640px) 88vw, 400px">
+                                @endif
                             </div>
                         @endforeach
                     </div>

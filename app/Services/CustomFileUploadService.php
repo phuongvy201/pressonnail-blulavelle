@@ -63,8 +63,11 @@ class CustomFileUploadService
         $filePath = $this->getStoragePath($filename);
 
         try {
-            // Upload to S3
-            $uploadedPath = Storage::disk('s3')->putFileAs(
+            // Luôn dùng S3 để lưu trữ (kể cả local nếu đã cấu hình)
+            $disk = 's3';
+
+            // Upload file
+            $uploadedPath = Storage::disk($disk)->putFileAs(
                 dirname($filePath),
                 $file,
                 basename($filePath),
@@ -80,7 +83,7 @@ class CustomFileUploadService
             }
 
             // Get full URL
-            $fileUrl = Storage::disk('s3')->url($uploadedPath);
+            $fileUrl = Storage::disk($disk)->url($uploadedPath);
 
             // Create database record
             $customFile = CustomFile::create([

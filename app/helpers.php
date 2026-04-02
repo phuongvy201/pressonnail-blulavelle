@@ -143,3 +143,69 @@ if (! function_exists('product_media_image_urls')) {
         ];
     }
 }
+
+if (! function_exists('storage_public_path_from_url')) {
+    /**
+     * Lấy đường dẫn tương đối (storage/app/public hoặc public/) từ URL đầy đủ hoặc path có /storage/ hoặc /images/.
+     */
+    function storage_public_path_from_url(?string $src): ?string
+    {
+        if ($src === null || $src === '') {
+            return null;
+        }
+
+        $pathPart = $src;
+        if (str_contains($src, '://')) {
+            $parsed = parse_url($src);
+            $pathPart = $parsed['path'] ?? '';
+        }
+
+        if (preg_match('#/storage/(.+)$#i', $pathPart, $m)) {
+            return rawurldecode($m[1]);
+        }
+
+        if (preg_match('#/(images/.+)$#i', $pathPart, $m)) {
+            return rawurldecode($m[1]);
+        }
+
+        return null;
+    }
+}
+
+if (! function_exists('storage_image_resize_url')) {
+    /**
+     * URL resize có chữ ký (WebP/JPEG theo Accept) — chỉ file local public hoặc disk public.
+     */
+    function storage_image_resize_url(?string $src, int $maxWidth = 720): ?string
+    {
+        $path = storage_public_path_from_url($src);
+        if ($path === null || str_contains($path, '..')) {
+            return null;
+        }
+
+        if (! preg_match('/\.(jpe?g|png|gif|webp)$/i', $path)) {
+            return null;
+        }
+
+        $w = max(80, min(1920, $maxWidth));
+
+        return \Illuminate\Support\Facades\URL::signedRoute('media.resize', [
+            'p' => $path,
+            'w' => $w,
+        ], absolute: true);
+    }
+}
+
+if (! function_exists('optimized_local_img')) {
+    /**
+     * Dùng URL resize nếu được; ngược lại trả về URL gốc.
+     */
+    function optimized_local_img(?string $src, int $maxWidth = 720): string
+    {
+        if ($src === null || $src === '') {
+            return '';
+        }
+
+        return storage_image_resize_url($src, $maxWidth) ?? $src;
+    }
+}

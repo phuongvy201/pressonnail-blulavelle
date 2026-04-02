@@ -50,12 +50,13 @@ class CustomFileController extends Controller
             $userId = auth()->id();
             $sessionId = $userId ? null : session()->getId();
 
-            // Check if product exists and is active
-            $product = Product::find($productId);
-            if (!$product || !$product->is_active) {
+            // Check if product exists (bỏ lọc is_active để vẫn cho upload khi preview / sản phẩm tạm tắt)
+            // Dùng withoutGlobalScopes để không bị global scope "active" ẩn sản phẩm.
+            $product = Product::withoutGlobalScopes()->find($productId);
+            if (! $product) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Product not found or inactive'
+                    'message' => 'Product not found'
                 ], 404);
             }
 

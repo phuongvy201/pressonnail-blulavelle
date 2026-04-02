@@ -1,4 +1,0 @@
-
-# Đổi example.com thành domain thật (Google khuyến nghị URL đầy đủ cho Sitemap).
-# Hoặc thêm cùng dòng với APP_URL khi deploy.
-# Sitemap: https://example.com/sitemap.xml

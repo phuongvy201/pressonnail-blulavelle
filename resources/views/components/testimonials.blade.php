@@ -77,9 +77,12 @@
                                             $initials = $getInitials($review->customer_name ?? $review->display_name ?? '');
                                         @endphp
                                         <div class="flex flex-col items-center">
-                                            <div class="relative rounded-2xl overflow-hidden mb-6 aspect-square shadow-md max-w-xs">
+                                            <div class="relative rounded-2xl overflow-hidden mb-6 aspect-square shadow-md max-w-xs w-full mx-auto">
                                                 @if($hasImage)
-                                                    <img alt="{{ $review->display_name }}" class="w-full h-full object-cover" src="{{ $imgUrl }}">
+                                                    <img alt="{{ $review->display_name }}" class="w-full h-full object-cover"
+                                                         src="{{ optimized_local_img($imgUrl, 560) }}"
+                                                         sizes="(max-width: 768px) 88vw, 320px"
+                                                         width="560" height="560" loading="lazy" decoding="async">
                                                 @else
                                                     <div class="w-full h-full bg-slate-200 flex items-center justify-center text-slate-500 text-4xl font-bold">{{ $initials }}</div>
                                                 @endif
@@ -87,12 +90,8 @@
                                             <h3 class="text-xl font-extrabold mb-4 text-slate-900">{{ $cardTitle }}</h3>
                                             <p class="text-slate-600 text-sm italic mb-6">"{{ $review->review_text ?? '' }}"</p>
                                             <div class="flex flex-col items-center">
-                                                <div class="w-10 h-10 rounded-full bg-slate-200 mb-2 overflow-hidden flex items-center justify-center flex-shrink-0">
-                                                    @if($hasImage)
-                                                        <img class="w-full h-full object-cover" src="{{ $imgUrl }}" alt="{{ $review->display_name }}">
-                                                    @else
-                                                        <span class="text-slate-600 text-sm font-bold">{{ $initials }}</span>
-                                                    @endif
+                                                <div class="w-10 h-10 rounded-full bg-slate-200 mb-2 overflow-hidden flex items-center justify-center flex-shrink-0" aria-hidden="true">
+                                                    <span class="text-slate-600 text-sm font-bold">{{ $initials }}</span>
                                                 </div>
                                                 <p class="font-bold text-slate-900">{{ $review->display_name }}</p>
                                                 @if($review->is_verified_purchase)
@@ -138,37 +137,40 @@
         @else
             <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
                 <div class="flex flex-col items-center">
-                    <div class="relative rounded-2xl overflow-hidden mb-6 aspect-square shadow-md max-w-xs">
-                        <img alt="Customer Sarah" class="w-full h-full object-cover" src="{{ asset('storage/images/c768ab6feb861eabf2beb33c0fb2cebc.jpg') }}">
+                    <div class="relative rounded-2xl overflow-hidden mb-6 aspect-square shadow-md max-w-xs w-full mx-auto">
+                        <img alt="Customer Sarah" class="w-full h-full object-cover" loading="lazy" decoding="async" sizes="(max-width: 768px) 88vw, 320px" width="560" height="560"
+                             src="{{ optimized_local_img(asset('storage/images/c768ab6feb861eabf2beb33c0fb2cebc.jpg'), 560) }}">
                     </div>
                     <h3 class="text-xl font-extrabold mb-4 text-slate-900">I'm totally blown away.</h3>
                     <p class="text-slate-600 text-sm italic mb-6">"Salon quality at home was the dream. These press-on nails have changed the way I do my nails forever. So many compliments!"</p>
                     <div class="flex flex-col items-center">
-                        <div class="w-10 h-10 rounded-full bg-slate-200 mb-2"><img class="w-full h-full object-cover rounded-full" src="{{ asset('storage/images/1769484507_zFot4Im9WW.png') }}" alt=""></div>
+                        <div class="w-10 h-10 rounded-full bg-slate-200 mb-2 flex items-center justify-center text-slate-600 text-xs font-bold" aria-hidden="true">SF</div>
                         <p class="font-bold text-slate-900">Sarah F.</p>
                         <p class="text-[10px] text-slate-600 flex items-center gap-1"><span class="text-primary">✓</span> Verified Buyer</p>
                     </div>
                 </div>
                 <div class="flex flex-col items-center">
-                    <div class="relative rounded-2xl overflow-hidden mb-6 aspect-square shadow-md max-w-xs">
-                        <img alt="Customer Susan" class="w-full h-full object-cover" src="{{ asset('storage/images/44ad1fa40f4f3b0b55214cf29e1dd8a2.jpg') }}">
+                    <div class="relative rounded-2xl overflow-hidden mb-6 aspect-square shadow-md max-w-xs w-full mx-auto">
+                        <img alt="Customer Susan" class="w-full h-full object-cover" loading="lazy" decoding="async" sizes="(max-width: 768px) 88vw, 320px" width="560" height="560"
+                             src="{{ optimized_local_img(asset('storage/images/44ad1fa40f4f3b0b55214cf29e1dd8a2.jpg'), 560) }}">
                     </div>
                     <h3 class="text-xl font-extrabold mb-4 text-slate-900">Smooth, chic, and easy.</h3>
                     <p class="text-slate-600 text-sm italic mb-6">"I've only been using these for a week, but they look amazing. Application was so easy. My nails have never looked better!"</p>
                     <div class="flex flex-col items-center">
-                        <div class="w-10 h-10 rounded-full bg-slate-200 mb-2"><img class="w-full h-full object-cover rounded-full" src="{{ asset('storage/images/c768ab6feb861eabf2beb33c0fb2cebc.jpg') }}" alt=""></div>
+                        <div class="w-10 h-10 rounded-full bg-slate-200 mb-2 flex items-center justify-center text-slate-600 text-xs font-bold" aria-hidden="true">ST</div>
                         <p class="font-bold text-slate-900">Susan T.</p>
                         <p class="text-[10px] text-slate-600 flex items-center gap-1"><span class="text-primary">✓</span> Verified Buyer</p>
                     </div>
                 </div>
                 <div class="flex flex-col items-center">
-                    <div class="relative rounded-2xl overflow-hidden mb-6 aspect-square shadow-md max-w-xs">
-                        <img alt="Customer Mariah" class="w-full h-full object-cover" src="{{ asset('storage/images/1769484507_zFot4Im9WW.png') }}">
+                    <div class="relative rounded-2xl overflow-hidden mb-6 aspect-square shadow-md max-w-xs w-full mx-auto">
+                        <img alt="Customer Mariah" class="w-full h-full object-cover" loading="lazy" decoding="async" sizes="(max-width: 768px) 88vw, 320px" width="560" height="560"
+                             src="{{ optimized_local_img(asset('storage/images/1769484507_zFot4Im9WW.png'), 560) }}">
                     </div>
                     <h3 class="text-xl font-extrabold mb-4 text-slate-900">You have to try this!</h3>
                     <p class="text-slate-600 text-sm italic mb-6">"Money well spent! I can't believe what I used to pay for salon manicures. These do the same thing, minus the wait and the cost."</p>
                     <div class="flex flex-col items-center">
-                        <div class="w-10 h-10 rounded-full bg-slate-200 mb-2"><img class="w-full h-full object-cover rounded-full" src="{{ asset('storage/images/c768ab6feb861eabf2beb33c0fb2cebc.jpg') }}" alt=""></div>
+                        <div class="w-10 h-10 rounded-full bg-slate-200 mb-2 flex items-center justify-center text-slate-600 text-xs font-bold" aria-hidden="true">MB</div>
                         <p class="font-bold text-slate-900">Mariah B.</p>
                         <p class="text-[10px] text-slate-600 flex items-center gap-1"><span class="text-primary">✓</span> Verified Buyer</p>
                     </div>

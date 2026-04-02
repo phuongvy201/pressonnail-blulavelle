@@ -403,7 +403,12 @@
                     {{-- Col 1: Logo, About, Operating entities, Follow us, Buttons, Badges --}}
                     <div class="lg:col-span-5 space-y-6">
                         <div class="flex items-center gap-3">
-                            <img src="{{ asset('images/logo/BABYBLUE.png') }}" alt="Baby Blue" class="h-20 sm:h-24 lg:h-28 w-auto object-contain">
+                            @php
+                                $__footLogo = asset('images/logo/BABYBLUE.png');
+                            @endphp
+                            <img src="{{ optimized_local_img($__footLogo, 320) }}" alt="Baby Blue" decoding="async" width="320" height="111"
+                                 @if(storage_image_resize_url($__footLogo, 320)) srcset="{{ optimized_local_img($__footLogo, 200) }} 200w, {{ optimized_local_img($__footLogo, 320) }} 320w" sizes="(max-width: 640px) 200px, 280px" @endif
+                                 class="h-20 sm:h-24 lg:h-28 w-auto object-contain">
                         </div>
                         <p class="text-sm text-slate-300 leading-relaxed max-w-md">
                             Blulavelle.com is a global online marketplace where people come together to make, sell, buy, and collect unique items. There's no Blulavelle warehouse – just independent sellers selling the things they love. We make the whole process easy, helping you connect directly with makers to find something extraordinary.

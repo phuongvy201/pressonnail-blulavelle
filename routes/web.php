@@ -42,6 +42,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Cache\RateLimiting\Limit;
 use App\Http\Controllers\Customer\ReturnRequestController;
 use App\Http\Controllers\ReviewListingController;
+use App\Http\Controllers\PublicMediaResizeController;
 
 RateLimiter::for('register', function (Request $request) {
     return Limit::perMinute(5)->by($request->ip());
@@ -58,6 +59,8 @@ use App\Http\Controllers\TestController;
 use App\Http\Controllers\SitemapController;
 
 // Public routes
+Route::get('/_media/resize', [PublicMediaResizeController::class, 'show'])->name('media.resize');
+
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 Route::get('/robots.txt', function () {

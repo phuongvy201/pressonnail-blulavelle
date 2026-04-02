@@ -550,7 +550,7 @@
                             $required = !empty($custom['required']);
                             $options = isset($custom['options']) ? preg_split('/\r\n|\r|\n/', trim($custom['options']), -1, PREG_SPLIT_NO_EMPTY) : [];
                         @endphp
-                        <div class="space-y-1.5 customization-row" data-customization-index="{{ $index }}" data-label="{{ e($label) }}" data-price="{{ $price }}">
+                        <div class="space-y-1.5 customization-row" data-customization-index="{{ $index }}" data-field-type="{{ $type }}" data-label="{{ e($label) }}" data-price="{{ $price }}">
                             <label class="text-sm font-medium text-slate-800">
                                 {{ $label }}
                                 @if($price > 0)<span class="text-slate-500 font-normal">(+{{ format_price($price) }})</span>@endif
@@ -574,6 +574,21 @@
                                     <input type="checkbox" class="customization-field w-4 h-4 rounded border-slate-300 text-[#0297FE] focus:ring-[#0297FE]" name="customization[{{ $index }}]" value="1" @if($required) data-required="1" @endif>
                                     <span class="text-sm text-slate-600">{{ $placeholder ?: 'Yes' }}</span>
                                 </label>
+                            @elseif($type === 'file')
+                                <input type="hidden" class="customization-field customization-file-value" name="customization[{{ $index }}]" value="" autocomplete="off" @if($required) data-required="1" @endif>
+                                <input type="file" class="customization-file-input sr-only" id="customization-file-input-{{ $index }}" accept="image/*,video/*,.pdf,.doc,.docx,.txt">
+                                <div class="flex flex-col gap-2">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <button type="button" class="customization-file-pick inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 touch-manipulation">
+                                            <span class="material-symbols-outlined text-lg" aria-hidden="true">upload_file</span>
+                                            Choose file
+                                        </button>
+                                        <span class="customization-file-status text-xs text-slate-600 truncate max-w-[min(100%,240px)]" aria-live="polite"></span>
+                                        <button type="button" class="customization-file-clear hidden text-xs font-semibold text-red-600 hover:underline touch-manipulation">Remove</button>
+                                    </div>
+                                    <p class="text-xs text-slate-500">{{ $placeholder ?: 'JPG, PNG, PDF, video… Max 10MB per file.' }}</p>
+                                    <p class="customization-file-error text-xs text-red-600 hidden"></p>
+                                </div>
                             @else
                                 <input type="text" class="customization-field w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#0297FE]/30 focus:border-[#0297FE]" name="customization[{{ $index }}]" placeholder="{{ $placeholder }}" @if($required) data-required="1" @endif>
                             @endif
@@ -1284,6 +1299,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     pushViewItemAnalytics();
 
+    var CUSTOM_FILE_PRODUCT_ID = {{ (int) $product->id }};
+    var CUSTOM_FILE_UPLOAD_URL = @json(route('api.custom-files.upload'));
+    var CUSTOM_FILES_API_BASE = @json(rtrim(url('/api/custom-files'), '/'));
+
     var mainImg = document.getElementById('product-main-image');
     var mainVideo = document.getElementById('product-main-video');
     var thumbs = document.querySelectorAll('.gallery-thumb');
@@ -1585,6 +1604,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return null;
     }
+    function getCustomizationRowValueForTotal(row, field) {
+        var ft = row.getAttribute('data-field-type') || '';
+        if (!field) return '';
+        if (ft === 'file') return (field.value || '').trim();
+        if (field.type === 'checkbox') return field.checked ? '1' : '';
+        return (field.value || '').trim();
+    }
+    function getCustomizationRowValueForCart(row, field) {
+        var ft = row.getAttribute('data-field-type') || '';
+        if (!field) return '';
+        if (ft === 'file') return (field.value || '').trim();
+        if (field.type === 'checkbox') return field.checked ? (field.value || 'Yes') : '';
+        return (field.value || '').trim();
+    }
     function getCustomizationTotal() {
         var total = 0;
         document.querySelectorAll('.customization-row').forEach(function(row) {
@@ -1592,7 +1625,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!price) return;
             var field = row.querySelector('.customization-field');
             if (!field) return;
-            var value = field.type === 'checkbox' ? (field.checked ? '1' : '') : (field.value || '').trim();
+            var value = getCustomizationRowValueForTotal(row, field);
             if (value) total += price;
         });
         return total;
@@ -1638,6 +1671,181 @@ document.addEventListener('DOMContentLoaded', function() {
         field.addEventListener('input', updateDisplayedPrice);
         field.addEventListener('change', updateDisplayedPrice);
     });
+
+    function parseCustomizationFilePayload(hiddenVal) {
+        if (!hiddenVal) return null;
+        try {
+            var o = JSON.parse(hiddenVal);
+            if (o && o.id) return o;
+        } catch (e) {}
+        return null;
+    }
+    function clearCustomizationUploadedFile(row) {
+        var hidden = row.querySelector('.customization-file-value');
+        var status = row.querySelector('.customization-file-status');
+        var errEl = row.querySelector('.customization-file-error');
+        var clr = row.querySelector('.customization-file-clear');
+        var finput = row.querySelector('.customization-file-input');
+        var pick = row.querySelector('.customization-file-pick');
+        var prev = hidden ? hidden.value : '';
+        var payload = parseCustomizationFilePayload(prev);
+        function resetUi() {
+            if (hidden) {
+                hidden.value = '';
+                hidden.dispatchEvent(new Event('input', { bubbles: true }));
+                hidden.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            if (status) status.textContent = '';
+            if (errEl) {
+                errEl.textContent = '';
+                errEl.classList.add('hidden');
+            }
+            if (clr) clr.classList.add('hidden');
+            if (finput) finput.value = '';
+            if (pick) pick.disabled = false;
+            updateDisplayedPrice();
+        }
+        if (payload && payload.id) {
+            fetch(CUSTOM_FILES_API_BASE + '/' + encodeURIComponent(payload.id), {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }).then(function() { resetUi(); }).catch(function() { resetUi(); });
+        } else {
+            resetUi();
+        }
+    }
+    function uploadCustomizationFile(row, file, fileInput) {
+        var hidden = row.querySelector('.customization-file-value');
+        var status = row.querySelector('.customization-file-status');
+        var errEl = row.querySelector('.customization-file-error');
+        var clr = row.querySelector('.customization-file-clear');
+        var pick = row.querySelector('.customization-file-pick');
+        var maxBytes = 10 * 1024 * 1024;
+        if (file.size > maxBytes) {
+            if (errEl) {
+                errEl.textContent = 'File is too large (max 10MB).';
+                errEl.classList.remove('hidden');
+            }
+            if (fileInput) fileInput.value = '';
+            return;
+        }
+        if (errEl) {
+            errEl.textContent = '';
+            errEl.classList.add('hidden');
+        }
+        var prev = hidden ? hidden.value : '';
+        var oldPayload = parseCustomizationFilePayload(prev);
+        if (pick) pick.disabled = true;
+        if (status) status.textContent = 'Uploading…';
+        function doUpload() {
+            var fd = new FormData();
+            fd.append('product_id', String(CUSTOM_FILE_PRODUCT_ID));
+            fd.append('files[]', file, file.name);
+            console.log('🔹 Uploading custom file', {
+                product_id: CUSTOM_FILE_PRODUCT_ID,
+                name: file.name,
+                size: file.size
+            });
+            fetch(CUSTOM_FILE_UPLOAD_URL, {
+                method: 'POST',
+                body: fd,
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(function(r) {
+                    return r.json().then(function(j) {
+                        var out = { ok: r.ok, status: r.status, j: j };
+                        console.log('🔹 Custom file upload response', out);
+                        return out;
+                    });
+                })
+                .then(function(res) {
+                    if (pick) pick.disabled = false;
+                    if (fileInput) fileInput.value = '';
+                    if (!res.ok || !res.j || !res.j.success || !res.j.data || !res.j.data.files || !res.j.data.files[0]) {
+                        if (status) status.textContent = '';
+                        if (errEl) {
+                            var msg = (res.j && res.j.message) ? res.j.message : 'Upload failed.';
+                            console.error('❌ Custom file upload error', {
+                                status: res.status,
+                                ok: res.ok,
+                                message: msg,
+                                response: res.j
+                            });
+                            errEl.textContent = msg;
+                            errEl.classList.remove('hidden');
+                        }
+                        return;
+                    }
+                    var f = res.j.data.files[0];
+                    var payload = JSON.stringify({ id: f.id, file_url: f.file_url, original_name: f.original_name || '' });
+                    if (hidden) {
+                        hidden.value = payload;
+                        hidden.dispatchEvent(new Event('input', { bubbles: true }));
+                        hidden.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                    if (status) status.textContent = f.original_name || 'Uploaded';
+                    if (clr) clr.classList.remove('hidden');
+                    console.log('✅ Custom file uploaded successfully', f);
+                    updateDisplayedPrice();
+                })
+                .catch(function(err) {
+                    if (pick) pick.disabled = false;
+                    if (fileInput) fileInput.value = '';
+                    if (status) status.textContent = '';
+                    console.error('❌ Custom file upload failed (network/JS error)', err);
+                    if (errEl) {
+                        errEl.textContent = 'Upload failed. Please try again.';
+                        errEl.classList.remove('hidden');
+                    }
+                });
+        }
+        if (oldPayload && oldPayload.id) {
+            fetch(CUSTOM_FILES_API_BASE + '/' + encodeURIComponent(oldPayload.id), {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }).finally(function() { doUpload(); });
+        } else {
+            doUpload();
+        }
+    }
+    var customizationsRoot = document.getElementById('product-customizations');
+    if (customizationsRoot) {
+        customizationsRoot.addEventListener('click', function(e) {
+            var pickBtn = e.target.closest('.customization-file-pick');
+            if (pickBtn) {
+                e.preventDefault();
+                var row = pickBtn.closest('.customization-row');
+                if (!row) return;
+                var finput = row.querySelector('.customization-file-input');
+                if (finput && !pickBtn.disabled) finput.click();
+                return;
+            }
+            if (e.target.closest('.customization-file-clear')) {
+                e.preventDefault();
+                var row2 = e.target.closest('.customization-row');
+                if (row2) clearCustomizationUploadedFile(row2);
+            }
+        });
+        customizationsRoot.addEventListener('change', function(e) {
+            var t = e.target;
+            if (!t || !t.classList || !t.classList.contains('customization-file-input')) return;
+            var row = t.closest('.customization-row');
+            if (row && t.files && t.files[0]) uploadCustomizationFile(row, t.files[0], t);
+        });
+    }
+
     updateDisplayedPrice();
 
     // Quantity +/- 
@@ -1689,13 +1897,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 var label = row.getAttribute('data-label');
                 var price = parseFloat(row.getAttribute('data-price')) || 0;
                 var field = row.querySelector('.customization-field');
+                var fieldType = row.getAttribute('data-field-type') || '';
                 if (!field) return;
-                var value = field.type === 'checkbox' ? (field.checked ? (field.value || 'Yes') : '') : (field.value || '').trim();
+                var value = getCustomizationRowValueForCart(row, field);
                 if (field.getAttribute('data-required') && !value) {
                     if (valid) {
                         showToast('Please fill in: ' + label);
-                        field.focus();
-                        field.closest('.customization-row') && field.closest('.customization-row').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        if (fieldType === 'file') {
+                            var pickEl = row.querySelector('.customization-file-pick');
+                            if (pickEl && pickEl.focus) pickEl.focus();
+                        } else if (typeof field.focus === 'function') {
+                            field.focus();
+                        }
+                        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
                     valid = false;
                     return;

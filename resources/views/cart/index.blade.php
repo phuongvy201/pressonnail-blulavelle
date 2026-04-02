@@ -453,7 +453,20 @@
                                             @if($item->customizations && count($item->customizations) > 0)
                                                 <p class="text-sm text-slate-500 mt-0.5">
                                                     @foreach($item->customizations as $key => $c)
-                                                        {{ $key }}: {{ $c['value'] ?? $c }}{{ isset($c['price']) && $c['price'] > 0 ? ' (+' . format_price((float)$c['price']) . ')' : '' }}{{ $loop->last ? '' : ' · ' }}
+                                                        @php
+                                                            $rawValue = $c['value'] ?? $c;
+                                                            $displayValue = $rawValue;
+                                                            // Nếu là JSON (file custom), chỉ hiển thị tên file ngắn gọn
+                                                            if (is_string($rawValue) && str_starts_with(ltrim($rawValue), '{')) {
+                                                                $decoded = json_decode($rawValue, true);
+                                                                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                                                                    $fileName = $decoded['original_name'] ?? basename($decoded['file_url'] ?? '') ?? null;
+                                                                    $displayValue = $fileName ?: $rawValue;
+                                                                }
+                                                            }
+                                                            $displayValue = \Illuminate\Support\Str::limit((string) $displayValue, 40);
+                                                        @endphp
+                                                        {{ $key }}: {{ $displayValue }}{{ isset($c['price']) && $c['price'] > 0 ? ' (+' . format_price((float)$c['price']) . ')' : '' }}{{ $loop->last ? '' : ' · ' }}
                                                     @endforeach
                                                 </p>
                                             @endif
