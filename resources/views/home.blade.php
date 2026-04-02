@@ -68,35 +68,41 @@ document.addEventListener('DOMContentLoaded', function() {
                 <a href="{{ $hero['cta_secondary_url'] ?? '#' }}" class="inline-block px-8 py-4 border-2 border-primary text-primary-fg rounded-lg font-bold text-lg hover:bg-primary hover:text-white transition-all" data-content-field="cta_secondary_url"><span data-content-field="cta_secondary_label">{{ $hero['cta_secondary_label'] ?? 'How it Works' }}</span></a>
             </div>
         </div>
-        <div class="lg:w-1/2 relative min-w-0">
-            <div class="relative rounded-2xl overflow-hidden shadow-2xl aspect-[4/5] lg:aspect-square bg-slate-200"
-                 style="aspect-ratio: 4 / 5;">
-                @php
-                    $heroResize960 = storage_image_resize_url($heroImageUrl, 960);
-                @endphp
-                @if($heroResize960)
-                    <img alt="Premium press-on nails" class="w-full h-full object-cover hero-main-image" data-content-field="image"
-                         src="{{ $heroResize960 }}"
-                         srcset="{{ storage_image_resize_url($heroImageUrl, 640) }} 640w, {{ $heroResize960 }} 960w, {{ storage_image_resize_url($heroImageUrl, 1280) }} 1280w"
-                         sizes="(max-width: 1023px) 100vw, 46vw"
-                         width="960" height="1200" decoding="async" fetchpriority="high"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                @else
-                    <img alt="Premium press-on nails" class="w-full h-full object-cover hero-main-image" data-content-field="image" src="{{ $heroImageUrl }}" fetchpriority="high" decoding="async" width="960" height="1200" sizes="(max-width: 1023px) 100vw, 46vw" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                @endif
-                <div class="hidden w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary-fg">
-                    <svg class="w-24 h-24 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z"></path></svg>
+        <div class="lg:w-1/2 relative min-w-0 pb-0 md:pb-10">
+            <div class="relative w-full overflow-hidden rounded-2xl shadow-2xl bg-slate-200 aspect-[4/5] lg:aspect-square">
+                <img
+                    alt="Premium press-on nails"
+                    class="absolute inset-0 w-full h-full object-cover hero-main-image"
+                    data-content-field="image"
+                    src="https://blulavelle.com/_media/resize?p=content-blocks%2Fimages%2F20260328092256_DOtRByFv.jpeg&amp;w=960&amp;signature=1db01bb5dccd9bb8b21a12c704d5ac81bef7209d9985c548b0028175a9e13bc1"
+                    srcset="https://blulavelle.com/_media/resize?p=content-blocks%2Fimages%2F20260328092256_DOtRByFv.jpeg&amp;w=640&amp;signature=dc2e18d8c5c379a96def410d2290aa45478a699dc4d5c37c98a891bf64ad7b8b 640w, https://blulavelle.com/_media/resize?p=content-blocks%2Fimages%2F20260328092256_DOtRByFv.jpeg&amp;w=960&amp;signature=1db01bb5dccd9bb8b21a12c704d5ac81bef7209d9985c548b0028175a9e13bc1 960w, https://blulavelle.com/_media/resize?p=content-blocks%2Fimages%2F20260328092256_DOtRByFv.jpeg&amp;w=1280&amp;signature=c6b603cdda3012ed6fa97fb647c47825c773549502586a1418517e2da891a36b 1280w"
+                    sizes="(max-width: 1023px) 100vw, 46vw"
+                    width="960"
+                    height="1200"
+                    loading="eager"
+                    fetchpriority="high"
+                    decoding="async"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                >
+        
+                <div class="hidden absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5 items-center justify-center text-primary-fg">
+                    <svg class="w-24 h-24 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z"></path>
+                    </svg>
                 </div>
             </div>
-            <div class="absolute -bottom-6 -left-6 bg-white p-6 rounded-xl shadow-xl hidden md:flex items-center gap-4 border border-primary/10">
+        
+            <div class="absolute left-0 bottom-0 translate-y-0 md:-bottom-6 md:-left-6 md:translate-y-0 bg-white p-6 rounded-xl shadow-xl hidden md:flex items-center gap-4 border border-primary/10 z-10">
                 <div class="flex -space-x-3">
-                    <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center border-2 border-white"><span class="text-primary-fg text-sm">★</span></div>
+                    <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center border-2 border-white">
+                        <span class="text-primary-fg text-sm">★</span>
+                    </div>
                     <div class="w-10 h-10 rounded-full bg-slate-200 border-2 border-white"></div>
                     <div class="w-10 h-10 rounded-full bg-slate-300 border-2 border-white"></div>
                 </div>
                 <div>
                     <p class="text-sm font-bold text-slate-900">50k+ Happy Customers</p>
-                    <div class="flex text-primary-fg">★★★★★</div>
+                    <div class="flex text-primary-fg leading-none">★★★★★</div>
                 </div>
             </div>
         </div>

@@ -341,9 +341,13 @@
         $footerBgCustom = (is_string($footerBg) && (str_starts_with(trim($footerBg), '#') || str_starts_with(trim($footerBg), 'rgb'))) ? trim($footerBg) : null;
         $footerFaq = content_block('layout.footer_faq', footer_faq_block_defaults());
     @endphp
-    <div class="text-white text-center py-1.5 sm:py-2 px-3 sm:px-4 text-xs sm:text-sm font-bold tracking-wide [text-shadow:0_1px_2px_rgba(0,0,0,0.25)] {{ $promoBannerCustom ? '' : 'bg-primary promo-banner-animate' }}" @if($promoBannerCustom) style="background-color: {{ $promoBannerCustom }};" @endif>
-        {{ \App\Support\Settings::get('site.promo_banner', config('theme.promo_banner', 'Free Shipping on Orders Over $150 • Premium Press-on Nails')) }}
-    </div>
+<div
+class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text-white text-center px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold tracking-wide promo-banner-animate"
+>
+<span class="block leading-tight">
+    {{ \App\Support\Settings::get('site.promo_banner', config('theme.promo_banner', 'Free Shipping on Orders Over $150 • Premium Press-on Nails')) }}
+</span>
+</div>
     
     <div class="min-h-screen">
         <!-- Header Component -->
