@@ -113,41 +113,170 @@
     $firstMediaIsVideo = isset($galleryItems[0]) && $galleryItems[0]['type'] === 'video';
     $reviewsCount = $product->getTotalReviews();
     $averageRating = $product->getAverageRating();
-    $sizes = $product->variants->pluck('attributes')->filter()->map(function ($a) { return $a['Size'] ?? $a['size'] ?? null; })->filter()->unique()->values();
-    if ($sizes->isEmpty()) { $sizes = collect(['XS', 'S', 'M', 'L']); }
-    $nailShapeKey = 'Nail Shape';
-    $shapes = $product->variants->pluck('attributes')->filter()->map(function ($a) use ($nailShapeKey) {
-        return $a[$nailShapeKey] ?? $a['Shape'] ?? $a['shape'] ?? null;
-    })->filter()->unique()->values();
-    if ($shapes->isEmpty() && $product->template && $product->template->relationLoaded('variants')) {
-        $shapes = $product->template->variants->pluck('attributes')->filter()->map(function ($a) use ($nailShapeKey) {
-            return $a[$nailShapeKey] ?? $a['Shape'] ?? $a['shape'] ?? null;
+
+    // Tên thuộc tính = key JSON trong cột attributes. Quét cả ProductVariant và TemplateVariant của template sản phẩm
+    // (tránh rơi về mặc định "Nail Shape" khi product variant thiếu key nhưng template DB đã có đủ).
+    // Đọc cột attributes an toàn (tránh nhầm với $model->attributes nội bộ của Eloquent).
+    $readVariantAttributesJson = function ($model) {
+        if (! is_object($model) || ! method_exists($model, 'getRawOriginal')) {
+            return [];
+        }
+        $raw = $model->getRawOriginal('attributes');
+        if ($raw === null || $raw === '') {
+            $via = $model->getAttribute('attributes');
+
+            return is_array($via) ? $via : [];
+        }
+        if (is_array($raw)) {
+            return $raw;
+        }
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return [];
+    };
+    $legacySecondAttrKeys = ['SHAPE & LENGTH', 'Shape & Length', 'shape & length', 'Shape & length', 'Nail Shape', 'Shape', 'shape'];
+    $orderedVariantAttrKeys = [];
+    $variantAttrValueSets = [];
+    $variantAttrKeyCanonByLower = [];
+    $accumulateVariantAttributeKeys = function ($variants) use (&$orderedVariantAttrKeys, &$variantAttrValueSets, &$variantAttrKeyCanonByLower, $readVariantAttributesJson) {
+        foreach ($variants as $v) {
+            $attrs = $readVariantAttributesJson($v);
+            if ($attrs === []) {
+                continue;
+            }
+            foreach ($attrs as $k => $val) {
+                if ($k === '' || $k === null) {
+                    continue;
+                }
+                $lower = mb_strtolower((string) $k);
+                if (! isset($variantAttrKeyCanonByLower[$lower])) {
+                    $variantAttrKeyCanonByLower[$lower] = $k;
+                    $orderedVariantAttrKeys[] = $k;
+                    $variantAttrValueSets[$k] = $variantAttrValueSets[$k] ?? [];
+                }
+                $canonical = $variantAttrKeyCanonByLower[$lower];
+                if ($val !== null && $val !== '') {
+                    $variantAttrValueSets[$canonical] = $variantAttrValueSets[$canonical] ?? [];
+                    $variantAttrValueSets[$canonical][(string) $val] = true;
+                }
+            }
+        }
+    };
+    $accumulateVariantAttributeKeys($product->variants);
+    if ($product->template) {
+        if (! $product->template->relationLoaded('variants')) {
+            $product->template->load('variants');
+        }
+        if ($product->template->variants && $product->template->variants->isNotEmpty()) {
+            $accumulateVariantAttributeKeys($product->template->variants);
+        }
+    }
+    $keysWithMultipleValues = [];
+    foreach ($orderedVariantAttrKeys as $k) {
+        if (count($variantAttrValueSets[$k] ?? []) >= 2) {
+            $keysWithMultipleValues[] = $k;
+        }
+    }
+    $pickedVariantAttrKeys = [];
+    foreach ($orderedVariantAttrKeys as $k) {
+        if (count($pickedVariantAttrKeys) >= 2) {
+            break;
+        }
+        if (in_array($k, $keysWithMultipleValues, true)) {
+            $pickedVariantAttrKeys[] = $k;
+        }
+    }
+    foreach ($orderedVariantAttrKeys as $k) {
+        if (count($pickedVariantAttrKeys) >= 2) {
+            break;
+        }
+        if (! in_array($k, $pickedVariantAttrKeys, true)) {
+            $pickedVariantAttrKeys[] = $k;
+        }
+    }
+    if ($orderedVariantAttrKeys === []) {
+        $variantAttrKeyFirst = null;
+        $variantAttrKeySecond = null;
+        $variantHasSecondPicker = false;
+    } else {
+        $variantAttrKeyFirst = $pickedVariantAttrKeys[0] ?? null;
+        $variantAttrKeySecond = $pickedVariantAttrKeys[1] ?? null;
+        $variantHasSecondPicker = $variantAttrKeySecond !== null;
+    }
+    $pickVariantAttrValue = function ($a, ?string $primaryKey, array $legacyKeys) {
+        if (! is_array($a)) {
+            return null;
+        }
+        if ($primaryKey !== null && $primaryKey !== '' && array_key_exists($primaryKey, $a) && $a[$primaryKey] !== null && $a[$primaryKey] !== '') {
+            return $a[$primaryKey];
+        }
+        $wantLower = ($primaryKey !== null && $primaryKey !== '') ? mb_strtolower((string) $primaryKey) : null;
+        if ($wantLower !== null) {
+            foreach ($a as $ak => $av) {
+                if ($av === null || $av === '') {
+                    continue;
+                }
+                if (mb_strtolower((string) $ak) === $wantLower) {
+                    return $av;
+                }
+            }
+        }
+        foreach ($legacyKeys as $lk) {
+            if (isset($a[$lk]) && $a[$lk] !== null && $a[$lk] !== '') {
+                return $a[$lk];
+            }
+        }
+        foreach ($legacyKeys as $lk) {
+            $ll = mb_strtolower((string) $lk);
+            foreach ($a as $ak => $av) {
+                if ($av === null || $av === '') {
+                    continue;
+                }
+                if (mb_strtolower((string) $ak) === $ll) {
+                    return $av;
+                }
+            }
+        }
+
+        return null;
+    };
+    $sizes = collect();
+    if ($variantAttrKeyFirst) {
+        $sizes = $product->variants->map(function ($v) use ($readVariantAttributesJson, $pickVariantAttrValue, $variantAttrKeyFirst) {
+            return $pickVariantAttrValue($readVariantAttributesJson($v), $variantAttrKeyFirst, ['Size', 'size']);
         })->filter()->unique()->values();
+        if ($sizes->isEmpty() && $product->template && $product->template->variants && $product->template->variants->isNotEmpty()) {
+            $sizes = $product->template->variants->map(function ($v) use ($readVariantAttributesJson, $pickVariantAttrValue, $variantAttrKeyFirst) {
+                return $pickVariantAttrValue($readVariantAttributesJson($v), $variantAttrKeyFirst, ['Size', 'size']);
+            })->filter()->unique()->values();
+        }
     }
-    $shapeIconMap = [
-        'Short - Square' => 'rectangle', 'Medium - Square' => 'rectangle', 'Long - Square' => 'rectangle',
-        'Short - Oval' => 'circle', 'Medium - Oval' => 'circle', 'Long - Oval' => 'circle',
-        'Short - Almond' => 'water_drop', 'Medium - Almond' => 'water_drop', 'Long - Almond' => 'water_drop',
-        'Short - Coffin' => 'straighten', 'Medium - Coffin' => 'straighten', 'Long - Coffin' => 'straighten',
-        'Short - Stiletto' => 'straighten', 'Medium - Stiletto' => 'straighten', 'Long - Stiletto' => 'straighten',
-    ];
-    $shapeIcons = $shapes->mapWithKeys(function ($name) use ($shapeIconMap) {
-        return [$name => $shapeIconMap[$name] ?? 'rectangle'];
-    });
-    if ($shapes->isEmpty()) {
-        $shapes = collect(['Short - Square', 'Short - Oval', 'Short - Almond', 'Medium - Coffin']);
-        $shapeIcons = collect($shapes->mapWithKeys(fn($n) => [$n => $shapeIconMap[$n] ?? 'rectangle']));
+    $shapes = collect();
+    if ($variantHasSecondPicker && $variantAttrKeySecond) {
+        $shapes = $product->variants->map(function ($v) use ($readVariantAttributesJson, $pickVariantAttrValue, $variantAttrKeySecond, $legacySecondAttrKeys) {
+            return $pickVariantAttrValue($readVariantAttributesJson($v), $variantAttrKeySecond, $legacySecondAttrKeys);
+        })->filter()->unique()->values();
+        if ($shapes->isEmpty() && $product->template && $product->template->variants && $product->template->variants->isNotEmpty()) {
+            $shapes = $product->template->variants->map(function ($v) use ($readVariantAttributesJson, $pickVariantAttrValue, $variantAttrKeySecond, $legacySecondAttrKeys) {
+                return $pickVariantAttrValue($readVariantAttributesJson($v), $variantAttrKeySecond, $legacySecondAttrKeys);
+            })->filter()->unique()->values();
+        }
     }
-    $sizeMm = ['XS' => '14-10-11-10-8mm', 'S' => '15-11-12-11-9mm', 'M' => '16-12-13-12-10mm', 'L' => '18-13-14-13-12mm'];
+    $hasVariantSizeOptions = $sizes->isNotEmpty();
+    $hasVariantShapeOptions = $variantHasSecondPicker && $shapes->isNotEmpty();
     $productPrice = (float) ($product->price ?? $product->base_price ?? 0);
     $productListPrice = (float) ($product->list_price ?? $product->template->list_price ?? 0);
     $showProductListPrice = $productListPrice > 0 && $productListPrice > $productPrice;
-    $variantsForJs = $product->variants->map(function ($v) {
+    $variantsForJs = $product->variants->map(function ($v) use ($readVariantAttributesJson) {
         return [
             'id' => $v->id,
             'price' => $v->price !== null ? (float) $v->price : null,
             'list_price' => $v->list_price !== null ? (float) $v->list_price : null,
-            'attributes' => $v->attributes ?? [],
+            'attributes' => $readVariantAttributesJson($v),
         ];
     })->values();
 
@@ -453,10 +582,11 @@
                     </div>
                     @endif
 
-                    {{-- Select Size + Size guide (link nhỏ căn phải) --}}
+                    {{-- Thuộc tính biến thể: chỉ hiển thị khi có key + giá trị lấy từ DB (product/template variants) --}}
+                    @if($variantAttrKeyFirst && $sizes->isNotEmpty())
                     <div class="space-y-2">
                         <div class="flex items-end justify-between gap-3">
-                            <label class="text-xs font-semibold text-slate-700 uppercase tracking-wide">Select Size</label>
+                            <label class="text-xs font-semibold text-slate-700 uppercase tracking-wide">{{ $variantAttrKeyFirst }}</label>
                             <button type="button"
                                     id="size-guide-open"
                                     class="group inline-flex items-center gap-1 shrink-0 bg-transparent border-0 p-0 cursor-pointer text-[11px] sm:text-xs font-medium text-[#0195FE] underline underline-offset-2 decoration-[#0195FE]/80 hover:opacity-85 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0195FE]/40 focus-visible:ring-offset-2 rounded-sm touch-manipulation"
@@ -474,15 +604,15 @@
                             @foreach($sizes as $size)
                             <div class="size-badge" data-size="{{ $size }}" role="button" tabindex="0">
                                 <span class="size-label">{{ $size }}</span>
-                                <span class="size-mm">{{ $sizeMm[$size] ?? '' }}</span>
                             </div>
                             @endforeach
                         </div>
                     </div>
+                    @endif
 
-                    {{-- Select Shape (Nail Shape) - chỉ chữ, không icon --}}
+                    @if($variantHasSecondPicker && $variantAttrKeySecond && $shapes->isNotEmpty())
                     <div class="space-y-2">
-                        <label class="text-xs font-semibold text-slate-700 uppercase tracking-wide">Nail Shape</label>
+                        <label class="text-xs font-semibold text-slate-700 uppercase tracking-wide">{{ $variantAttrKeySecond }}</label>
                         <div class="flex flex-wrap gap-2" id="shape-options">
                             @foreach($shapes as $shape)
                             <div class="shape-button shape-button-text" data-shape="{{ $shape }}" role="button" tabindex="0">
@@ -491,6 +621,7 @@
                             @endforeach
                         </div>
                     </div>
+                    @endif
 
                     {{-- Quantity --}}
                     <div class="space-y-2">
@@ -1233,6 +1364,42 @@ document.addEventListener('DOMContentLoaded', function() {
         updateGalleryNav();
     }
 
+    var PRODUCT_VARIANTS = @json($variantsForJs);
+    var VARIANT_ATTR_KEY_FIRST = @json($variantAttrKeyFirst);
+    var VARIANT_ATTR_KEY_SECOND = @json($variantAttrKeySecond);
+    var VARIANT_HAS_SECOND_PICKER = @json($variantHasSecondPicker);
+    var VARIANT_HAS_SIZE_OPTIONS = @json($hasVariantSizeOptions);
+    var VARIANT_HAS_SHAPE_OPTIONS = @json($hasVariantShapeOptions);
+    var VARIANT_LABEL_FIRST = VARIANT_ATTR_KEY_FIRST || '';
+    var VARIANT_LABEL_SECOND = (VARIANT_HAS_SECOND_PICKER && VARIANT_ATTR_KEY_SECOND) ? VARIANT_ATTR_KEY_SECOND : '';
+
+    function noVariantPickersShown() {
+        return !VARIANT_HAS_SIZE_OPTIONS && !(VARIANT_HAS_SECOND_PICKER && VARIANT_HAS_SHAPE_OPTIONS);
+    }
+
+    function variantAttrKeysFirst() {
+        var keys = [];
+        if (VARIANT_ATTR_KEY_FIRST) keys.push(VARIANT_ATTR_KEY_FIRST);
+        keys.push('Size', 'size');
+        var seen = {};
+        return keys.filter(function (k) {
+            if (!k || seen[k]) return false;
+            seen[k] = true;
+            return true;
+        });
+    }
+    function variantAttrKeysSecond() {
+        var keys = [];
+        if (VARIANT_HAS_SECOND_PICKER && VARIANT_ATTR_KEY_SECOND) keys.push(VARIANT_ATTR_KEY_SECOND);
+        keys.push('SHAPE & LENGTH', 'Shape & Length', 'shape & length', 'Nail Shape', 'Shape', 'shape');
+        var seen = {};
+        return keys.filter(function (k) {
+            if (!k || seen[k]) return false;
+            seen[k] = true;
+            return true;
+        });
+    }
+
     document.querySelectorAll('.size-badge').forEach(function(el) {
         el.addEventListener('click', function() {
             document.querySelectorAll('.size-badge').forEach(function(b) { b.classList.remove('active'); });
@@ -1248,10 +1415,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     if (document.querySelector('.size-badge')) document.querySelector('.size-badge').classList.add('active');
-    if (document.querySelector('.shape-button')) document.querySelector('.shape-button').classList.add('active');
+    if (VARIANT_HAS_SECOND_PICKER && document.querySelector('.shape-button')) document.querySelector('.shape-button').classList.add('active');
 
-    // Variants data for pricing (variant.price overrides base)
-    var PRODUCT_VARIANTS = @json($variantsForJs);
     var CURRENCY_CODE = @json($currentCurrency);
     var CURRENCY_SYMBOL = @json($currencySymbol);
     var BULK_DISCOUNT_RULES = @json($bulkDiscountRules);
@@ -1365,32 +1530,57 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!attrs) return null;
         for (var i = 0; i < keys.length; i++) {
             var k = keys[i];
-            if (attrs[k] !== undefined && attrs[k] !== null && String(attrs[k]).trim() !== '') return String(attrs[k]).trim();
+            if (k && attrs[k] !== undefined && attrs[k] !== null && String(attrs[k]).trim() !== '') return String(attrs[k]).trim();
+        }
+        for (var j = 0; j < keys.length; j++) {
+            var want = keys[j];
+            if (!want) continue;
+            var lw = String(want).toLowerCase();
+            for (var attrKey in attrs) {
+                if (!Object.prototype.hasOwnProperty.call(attrs, attrKey)) continue;
+                if (String(attrKey).toLowerCase() !== lw) continue;
+                var v = attrs[attrKey];
+                if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
+            }
         }
         return null;
     }
     function getVariantPrice(selectedSize, selectedShape) {
-        if (!selectedSize && !selectedShape) return null;
+        if (!PRODUCT_VARIANTS || PRODUCT_VARIANTS.length === 0) return null;
+        if (noVariantPickersShown() && PRODUCT_VARIANTS.length === 1) {
+            var p0 = PRODUCT_VARIANTS[0].price;
+            return (p0 !== null && p0 !== undefined && !isNaN(parseFloat(p0))) ? parseFloat(p0) : null;
+        }
+        if (noVariantPickersShown()) return null;
+        if (VARIANT_HAS_SIZE_OPTIONS && !selectedSize) return null;
+        if (VARIANT_HAS_SHAPE_OPTIONS && !selectedShape) return null;
         for (var i = 0; i < PRODUCT_VARIANTS.length; i++) {
             var v = PRODUCT_VARIANTS[i];
             var attrs = v.attributes || {};
-            var vSize = pickAttr(attrs, ['Size', 'size']);
-            var vShape = pickAttr(attrs, ['Nail Shape', 'Shape', 'shape']);
-            var sizeOk = selectedSize ? (vSize === selectedSize) : true;
-            var shapeOk = selectedShape ? (vShape === selectedShape) : true;
+            var vSize = pickAttr(attrs, variantAttrKeysFirst());
+            var vShape = VARIANT_HAS_SECOND_PICKER ? pickAttr(attrs, variantAttrKeysSecond()) : null;
+            var sizeOk = !VARIANT_HAS_SIZE_OPTIONS || (vSize === selectedSize);
+            var shapeOk = !VARIANT_HAS_SHAPE_OPTIONS || (vShape === selectedShape);
             if (sizeOk && shapeOk) return v.price;
         }
         return null;
     }
     function getVariantListPrice(selectedSize, selectedShape) {
-        if (!selectedSize && !selectedShape) return null;
+        if (!PRODUCT_VARIANTS || PRODUCT_VARIANTS.length === 0) return null;
+        if (noVariantPickersShown() && PRODUCT_VARIANTS.length === 1) {
+            var lp0 = PRODUCT_VARIANTS[0].list_price;
+            return (lp0 !== null && lp0 !== undefined && !isNaN(parseFloat(lp0))) ? parseFloat(lp0) : null;
+        }
+        if (noVariantPickersShown()) return null;
+        if (VARIANT_HAS_SIZE_OPTIONS && !selectedSize) return null;
+        if (VARIANT_HAS_SHAPE_OPTIONS && !selectedShape) return null;
         for (var i = 0; i < PRODUCT_VARIANTS.length; i++) {
             var v = PRODUCT_VARIANTS[i];
             var attrs = v.attributes || {};
-            var vSize = pickAttr(attrs, ['Size', 'size']);
-            var vShape = pickAttr(attrs, ['Nail Shape', 'Shape', 'shape']);
-            var sizeOk = selectedSize ? (vSize === selectedSize) : true;
-            var shapeOk = selectedShape ? (vShape === selectedShape) : true;
+            var vSize = pickAttr(attrs, variantAttrKeysFirst());
+            var vShape = VARIANT_HAS_SECOND_PICKER ? pickAttr(attrs, variantAttrKeysSecond()) : null;
+            var sizeOk = !VARIANT_HAS_SIZE_OPTIONS || (vSize === selectedSize);
+            var shapeOk = !VARIANT_HAS_SHAPE_OPTIONS || (vShape === selectedShape);
             if (sizeOk && shapeOk && v.list_price != null) return v.list_price;
         }
         return null;
@@ -1473,13 +1663,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function getMatchingVariant(selectedSize, selectedShape) {
+        if (!PRODUCT_VARIANTS || PRODUCT_VARIANTS.length === 0) return null;
+        if (noVariantPickersShown() && PRODUCT_VARIANTS.length === 1) {
+            return PRODUCT_VARIANTS[0];
+        }
         for (var i = 0; i < PRODUCT_VARIANTS.length; i++) {
             var v = PRODUCT_VARIANTS[i];
             var attrs = v.attributes || {};
-            var vSize = pickAttr(attrs, ['Size', 'size']);
-            var vShape = pickAttr(attrs, ['Nail Shape', 'Shape', 'shape']);
-            var sizeOk = selectedSize ? (vSize === selectedSize) : true;
-            var shapeOk = selectedShape ? (vShape === selectedShape) : true;
+            var vSize = pickAttr(attrs, variantAttrKeysFirst());
+            var vShape = VARIANT_HAS_SECOND_PICKER ? pickAttr(attrs, variantAttrKeysSecond()) : null;
+            var sizeOk = !VARIANT_HAS_SIZE_OPTIONS || (vSize === selectedSize);
+            var shapeOk = !VARIANT_HAS_SHAPE_OPTIONS || (vShape === selectedShape);
             if (sizeOk && shapeOk) return v;
         }
         return null;
@@ -1521,17 +1715,17 @@ document.addEventListener('DOMContentLoaded', function() {
             if (PRODUCT_VARIANTS.length > 0) {
                 var match = getMatchingVariant(selectedSize, selectedShape);
                 if (!match) {
-                    if (!selectedSize && document.getElementById('size-options')) {
-                        showToast('Please select a size.');
+                    if (VARIANT_HAS_SIZE_OPTIONS && !selectedSize && document.getElementById('size-options')) {
+                        showToast('Please select ' + (VARIANT_LABEL_FIRST || 'an option') + '.');
                         document.querySelector('.size-badge') && document.querySelector('.size-badge').focus();
                         return;
                     }
-                    if (!selectedShape && document.getElementById('shape-options')) {
-                        showToast('Please select a nail shape.');
+                    if (VARIANT_HAS_SHAPE_OPTIONS && !selectedShape && document.getElementById('shape-options')) {
+                        showToast('Please select ' + (VARIANT_LABEL_SECOND || 'an option') + '.');
                         document.querySelector('.shape-button') && document.querySelector('.shape-button').focus();
                         return;
                     }
-                    showToast('Please select size and nail shape.');
+                    showToast('This combination is not available. Try another option.');
                     return;
                 }
             }
