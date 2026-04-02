@@ -184,7 +184,8 @@ class CollectionController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:2000',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            // Cho phép webp/avif giống phần create
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,avif|max:5120',
             'type' => 'required|in:manual,automatic',
             'status' => 'required|in:active,inactive,draft',
             'featured' => 'boolean',

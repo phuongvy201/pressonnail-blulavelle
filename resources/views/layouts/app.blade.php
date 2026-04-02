@@ -26,6 +26,37 @@
         });
     </script>
 
+    {{-- Helper: trì hoãn script tracking cho đến khi user tương tác (scroll/move/touch/keydown) hoặc sau ~4s --}}
+    <script>
+    (function () {
+        if (window.__runAfterInteraction) return;
+        var fired = false;
+        var queue = [];
+        function run() {
+            if (fired) return;
+            fired = true;
+            queue.forEach(function (fn) {
+                try { fn(); } catch (e) {}
+            });
+            queue = [];
+            ['scroll', 'mousemove', 'touchstart', 'keydown'].forEach(function (ev) {
+                window.removeEventListener(ev, run, { passive: true });
+            });
+        }
+        window.__runAfterInteraction = function (fn) {
+            if (typeof fn !== 'function') return;
+            if (fired) { fn(); return; }
+            queue.push(fn);
+        };
+        ['scroll', 'mousemove', 'touchstart', 'keydown'].forEach(function (ev) {
+            window.addEventListener(ev, run, { passive: true });
+        });
+        window.addEventListener('load', function () {
+            setTimeout(run, 4000);
+        }, { once: true });
+    })();
+    </script>
+
     @php
         $metaPixelId = \App\Support\Settings::get('analytics.meta_pixel_id', config('services.meta.pixel_id'));
         $tiktokPixelId = \App\Support\Settings::get('analytics.tiktok_pixel_id', config('services.tiktok.pixel_id'));
@@ -67,7 +98,7 @@
         $__adsId = $googleAdsId ? trim((string) $googleAdsId) : '';
     @endphp
     @if($__adsId !== '')
-        {{-- gtag (GA4 G- / Ads AW-): tải sau load — giảm JS ban đầu so với inject trong head. --}}
+        {{-- gtag (GA4 G- / Ads AW-): trì hoãn tới khi user tương tác (hoặc sau ~4s). --}}
         <script>
         (function () {
             var gid = @json($__adsId);
@@ -83,14 +114,18 @@
                 };
                 (document.head || document.documentElement).appendChild(s);
             }
-            window.addEventListener('load', function () { setTimeout(injectGtagLib, 2000); }, { once: true });
+            if (window.__runAfterInteraction) {
+                window.__runAfterInteraction(injectGtagLib);
+            } else {
+                window.addEventListener('load', function () { setTimeout(injectGtagLib, 2000); }, { once: true });
+            }
         })();
         </script>
     @endif
     
     
     @if($metaPixelId)
-        {{-- Pixel Meta: tải sau idle — giảm tải main thread; fbevents.js vẫn là bundle legacy của Meta (không chỉnh được). --}}
+        {{-- Pixel Meta: tải sau tương tác / idle — giảm tải main thread; fbevents.js vẫn là bundle legacy của Meta (không chỉnh được). --}}
         <script>
         (function () {
             var id = @json($metaPixelId);
@@ -108,9 +143,19 @@
                 fbq('track', 'PageView');
             }
             if ('requestIdleCallback' in window) {
-                window.requestIdleCallback(boot, { timeout: 4000 });
+                if (window.__runAfterInteraction) {
+                    window.__runAfterInteraction(function () {
+                        window.requestIdleCallback(boot, { timeout: 4000 });
+                    });
+                } else {
+                    window.requestIdleCallback(boot, { timeout: 4000 });
+                }
             } else {
-                window.addEventListener('load', function () { setTimeout(boot, 0); }, { once: true });
+                if (window.__runAfterInteraction) {
+                    window.__runAfterInteraction(boot);
+                } else {
+                    window.addEventListener('load', function () { setTimeout(boot, 0); }, { once: true });
+                }
             }
         })();
         </script>
@@ -120,14 +165,23 @@
     @endif
 
     @if($tiktokPixelId)
-        {{-- TikTok giữ tải sớm: script @auth bên dưới gọi ttq.identify — defer SDK sẽ race. --}}
+        {{-- TikTok: trì hoãn load SDK tới khi user tương tác / idle --}}
         <script>
         !function (w, d, t) {
           w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(
         var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._o=ttq._o||{},ttq._o[e]=n||{};n=document.createElement("script")
         ;n.type="text/javascript",n.async=!0,n.src=r+"?sdkid="+e+"&lib="+t;e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};
-          ttq.load('{{ $tiktokPixelId }}');
-          ttq.page();
+          function bootTikTok() {
+              ttq.load('{{ $tiktokPixelId }}');
+              ttq.page();
+          }
+          if (w.__runAfterInteraction) {
+              w.__runAfterInteraction(bootTikTok);
+          } else if ('requestIdleCallback' in w) {
+              w.requestIdleCallback(bootTikTok, { timeout: 4000 });
+          } else {
+              w.addEventListener('load', function () { setTimeout(bootTikTok, 1500); }, { once: true });
+          }
         }(window, document, 'ttq');
         </script>
     @endif
@@ -200,6 +254,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="google-site-verification" content="gGIR-fmeNV2oZz1duWvcwwKqTbqtvKM2OsiaTUyiLZc" />
+    <meta name="description" content="Premium press-on nails with free shipping. Discover reusable, salon-quality nails at Blulavelle.">
 
     <title>{{ config('app.name', 'Blulavelle') }} - {{ $title ?? 'Home' }}</title>
 
