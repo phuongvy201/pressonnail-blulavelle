@@ -69,7 +69,8 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         </div>
         <div class="lg:w-1/2 relative min-w-0">
-            <div class="relative rounded-2xl overflow-hidden shadow-2xl aspect-[4/5] lg:aspect-square bg-slate-200">
+            <div class="relative rounded-2xl overflow-hidden shadow-2xl aspect-[4/5] lg:aspect-square bg-slate-200"
+                 style="aspect-ratio: 4 / 5;">
                 @php
                     $heroResize960 = storage_image_resize_url($heroImageUrl, 960);
                 @endphp
