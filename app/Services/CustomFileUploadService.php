@@ -8,6 +8,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Exception;
+use Illuminate\Support\Facades\Log;
 
 class CustomFileUploadService
 {
@@ -60,29 +61,46 @@ class CustomFileUploadService
         $originalName = $file->getClientOriginalName();
         $extension = $file->getClientOriginalExtension();
         $filename = $this->generateFilename($originalName, $productId, $userId, $sessionId);
+        // Đường dẫn lưu trong disk (public storage)
         $filePath = $this->getStoragePath($filename);
 
         try {
-            // Luôn dùng S3 để lưu trữ (kể cả local nếu đã cấu hình)
-            $disk = 's3';
+            // Đẩy ảnh vào storage (disk public)
+            $disk = 'public';
 
-            // Upload file
+            // Log trước khi upload để debug
+            Log::info('CustomFileUploadService: chuẩn bị upload custom file vào storage', [
+                'disk' => $disk,
+                'product_id' => $productId,
+                'user_id' => $userId,
+                'session_id' => $sessionId,
+                'original_name' => $originalName,
+                'mime_type' => $file->getMimeType(),
+                'size' => $file->getSize(),
+                'storage_path' => $filePath,
+                'dir' => dirname($filePath),
+                'basename' => basename($filePath),
+            ]);
+
+            // Upload file vào storage/public
             $uploadedPath = Storage::disk($disk)->putFileAs(
                 dirname($filePath),
                 $file,
                 basename($filePath),
                 [
                     'visibility' => 'public',
-                    'CacheControl' => 'max-age=31536000',
-                    'ContentType' => $file->getMimeType(),
                 ]
             );
 
             if (!$uploadedPath) {
-                throw new Exception('Failed to upload file to S3');
+                Log::error('CustomFileUploadService: putFileAs trả về false', [
+                    'disk' => $disk,
+                    'storage_path' => $filePath,
+                ]);
+                throw new Exception('Failed to upload file to storage (putFileAs returned false)');
             }
 
-            // Get full URL
+            // Get full URL (storage/public => /storage/...)
             $fileUrl = Storage::disk($disk)->url($uploadedPath);
 
             // Create database record
@@ -108,9 +126,22 @@ class CustomFileUploadService
 
             return $customFile;
         } catch (Exception $e) {
+            Log::error('CustomFileUploadService: lỗi khi upload custom file vào storage', [
+                'product_id' => $productId,
+                'user_id' => $userId,
+                'session_id' => $sessionId,
+                'file_name' => $originalName,
+                'storage_path' => $filePath ?? null,
+                'uploaded_path' => $uploadedPath ?? null,
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'previous_exception' => $e->getPrevious() ? get_class($e->getPrevious()) : null,
+                'previous_message' => $e->getPrevious() ? $e->getPrevious()->getMessage() : null,
+            ]);
+
             // Clean up uploaded file if database save fails
             if (isset($uploadedPath)) {
-                Storage::disk('s3')->delete($uploadedPath);
+                Storage::disk($disk ?? 'public')->delete($uploadedPath);
             }
 
             throw new Exception('File upload failed: ' . $e->getMessage());
@@ -273,14 +304,17 @@ class CustomFileUploadService
         $timestamp = now()->format('YmdHis');
         $random = Str::random(8);
 
-        $prefix = $userId ? "user_{$userId}" : "session_{$sessionId}";
+        $ownerPart = $userId ? "user_{$userId}" : "session_{$sessionId}";
 
-        return "custom_files/{$prefix}/product_{$productId}/{$timestamp}_{$random}.{$extension}";
+        // Ví dụ: custom_user_1_product_35_20260402080924_abcd1234.webp
+        return "custom_{$ownerPart}_product_{$productId}_{$timestamp}_{$random}.{$extension}";
     }
 
     protected function getStoragePath(string $filename): string
     {
-        return "custom_files/{$filename}";
+        // $filename đã bao gồm đầy đủ prefix thư mục (vd: "custom_files/user_1/product_35/xxx.webp")
+        // Không được prepend thêm "custom_files/" lần nữa để tránh path kiểu "custom_files/custom_files/..."
+        return $filename;
     }
 
     protected function formatBytes(int $bytes): string
