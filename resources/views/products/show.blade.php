@@ -1222,12 +1222,45 @@ button.wishlist-btn.in-wishlist { color: #0297FE; }
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     /** GTM dataLayer: view_item + add_to_cart */
+    var ANALYTICS_DEBUG = @json($analyticsDebugOn);
     var GTM_CURRENCY = @json($currentCurrency);
     var GTM_PRODUCT_ITEM = {
         item_id: @json($product->sku ?? (string) $product->id),
         item_name: @json($product->name),
         item_category: @json($gtagPrimaryCategory),
     };
+    function analyticsDebugLog(title, detail) {
+        if (!ANALYTICS_DEBUG) return;
+        var body = document.getElementById('analytics-debug-body');
+        if (!body) return;
+        var dlLen = (typeof dataLayer !== 'undefined' && dataLayer.length) ? dataLayer.length : 0;
+        var block = {
+            title: title,
+            time: new Date().toISOString(),
+            dataLayer_length_after: dlLen,
+            payload: detail
+        };
+        var line = JSON.stringify(block, null, 2);
+        body.textContent = line + '\n\n' + (body.textContent || '');
+        console.log('[analytics-debug]', title, detail);
+    }
+    (function initAnalyticsDebugPanel() {
+        if (!ANALYTICS_DEBUG) return;
+        var panel = document.getElementById('analytics-debug-panel');
+        var body = document.getElementById('analytics-debug-body');
+        var toggle = document.getElementById('analytics-debug-toggle');
+        var clearBtn = document.getElementById('analytics-debug-clear');
+        if (toggle && body) {
+            toggle.addEventListener('click', function() {
+                var open = body.classList.toggle('hidden');
+                toggle.setAttribute('aria-expanded', open ? 'false' : 'true');
+                toggle.textContent = open ? 'Mở rộng' : 'Thu gọn';
+            });
+        }
+        if (clearBtn && body) {
+            clearBtn.addEventListener('click', function() { body.textContent = ''; });
+        }
+    })();
     function pushViewItemAnalytics() {
         var basePrice = @json(round((float) $productPrice, 2));
         var item = Object.assign({}, GTM_PRODUCT_ITEM, { price: basePrice, quantity: 1 });

@@ -15,16 +15,26 @@
             <div class="flex items-center gap-4 flex-wrap">
                 <!-- Days Selector -->
                 <select 
-                    x-model="days" 
-                    @change="updateFilters()"
+                    x-model="rangeType" 
+                    @change="handleRangeTypeChange()"
                     class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
-                    <option value="7" {{ $days == 7 ? 'selected' : '' }}>Last 7 Days</option>
-                    <option value="14" {{ $days == 14 ? 'selected' : '' }}>Last 14 Days</option>
-                    <option value="30" {{ $days == 30 ? 'selected' : '' }}>Last 30 Days</option>
-                    <option value="60" {{ $days == 60 ? 'selected' : '' }}>Last 60 Days</option>
-                    <option value="90" {{ $days == 90 ? 'selected' : '' }}>Last 90 Days</option>
+                    <option value="1">Today</option>
+                    <option value="7">Last 7 Days</option>
+                    <option value="14">Last 14 Days</option>
+                    <option value="30">Last 30 Days</option>
+                    <option value="60">Last 60 Days</option>
+                    <option value="90">Last 90 Days</option>
+                    <option value="custom">Custom Date</option>
                 </select>
+
+                <input
+                    x-show="rangeType === 'custom'"
+                    x-model="customDate"
+                    @change="handleCustomDateChange()"
+                    type="date"
+                    class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                >
                 
                 <div class="flex items-center gap-2">
                     <button class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg" title="Export">
@@ -709,6 +719,8 @@ function analyticsDashboard() {
     return {
         activeTab: '{{ $tab }}',
         days: {{ $days }},
+        rangeType: '{{ request()->has("custom_date") ? "custom" : (string) $days }}',
+        customDate: '{{ request("custom_date", "") }}',
         filter: '{{ $filter }}',
         searchChannel: '',
         
@@ -719,6 +731,35 @@ function analyticsDashboard() {
         
         setFilter(filterValue) {
             this.filter = filterValue;
+            this.updateFilters();
+        },
+
+        handleRangeTypeChange() {
+            if (this.rangeType === 'custom') {
+                return;
+            }
+
+            this.days = Number.parseInt(this.rangeType, 10) || 7;
+            this.customDate = '';
+            this.updateFilters();
+        },
+
+        handleCustomDateChange() {
+            if (!this.customDate) {
+                return;
+            }
+
+            const selectedDate = new Date(`${this.customDate}T00:00:00`);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            let diffDays = Math.floor((today - selectedDate) / 86400000);
+            if (Number.isNaN(diffDays) || diffDays < 0) {
+                diffDays = 0;
+            }
+
+            // +1 để include cả ngày được chọn.
+            this.days = diffDays + 1;
             this.updateFilters();
         },
         
@@ -736,6 +777,10 @@ function analyticsDashboard() {
                 tab: this.activeTab,
                 days: this.days,
             });
+
+            if (this.rangeType === 'custom' && this.customDate) {
+                params.append('custom_date', this.customDate);
+            }
             
             if (this.activeTab === 'acquisition' && this.filter !== 'all') {
                 params.append('filter', this.filter);

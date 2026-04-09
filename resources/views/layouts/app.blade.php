@@ -60,6 +60,7 @@
     @php
         $metaPixelId = \App\Support\Settings::get('analytics.meta_pixel_id', config('services.meta.pixel_id'));
         $tiktokPixelId = \App\Support\Settings::get('analytics.tiktok_pixel_id', config('services.tiktok.pixel_id'));
+        $googleTagManagerId = \App\Support\Settings::get('analytics.google_tag_manager_id', config('services.google.tag_manager_id'));
         $googleAdsId = \App\Support\Settings::get('analytics.google_ads_id', config('services.google.ads_id'));
         
         // Currency configuration - available in all views
@@ -67,6 +68,18 @@
         $siteCurrencyRate = currency_rate();
         $siteCurrencySymbol = currency_symbol();
     @endphp
+    @php
+        $__gtmId = $googleTagManagerId ? trim((string) $googleTagManagerId) : '';
+    @endphp
+    @if($__gtmId !== '')
+        <!-- Google Tag Manager -->
+        <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+        new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+        j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+        'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+        })(window,document,'script','dataLayer',@json($__gtmId));</script>
+        <!-- End Google Tag Manager -->
+    @endif
     
     <!-- Currency Configuration for JavaScript -->
     <script>
@@ -331,6 +344,13 @@
     @stack('styles')
 </head>
 <body class="font-display antialiased bg-background-light text-slate-900">
+    @if($__gtmId !== '')
+        <!-- Google Tag Manager (noscript) -->
+        <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ $__gtmId }}"
+        height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+        <!-- End Google Tag Manager (noscript) -->
+    @endif
+
     <!-- Promotional Banner -->
     @php
         $promoBannerBg = \App\Support\Settings::get('site.promo_banner_bg', config('theme.promo_banner_bg'));
