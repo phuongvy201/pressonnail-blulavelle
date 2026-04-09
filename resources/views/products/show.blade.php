@@ -6,6 +6,7 @@
 @php
     $currentCurrency = currency();
     $currencySymbol = currency_symbol();
+    $analyticsDebugOn = $analyticsDebugOn ?? (bool) request()->boolean('analytics_debug', false);
     // Gallery = ảnh product trước, sau đó + media từ template (ảnh + video)
     $galleryItems = [];
     $gallerySlot = 0;

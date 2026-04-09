@@ -24,6 +24,7 @@
     $discountPercent = $onSale ? round((($originalPriceUsd - $currentPriceUsd) / $originalPriceUsd) * 100) : 0;
     $avgRating = method_exists($product, 'getAverageRating') ? $product->getAverageRating() : 0;
     $reviewsCount = method_exists($product, 'getTotalReviews') ? $product->getTotalReviews() : 0;
+    $productUrl = !empty($product->slug) ? route('products.show', ['slug' => $product->slug]) : null;
     $primaryCategory = optional(($product->categories ?? collect())->first())->name
         ?? optional(($product->collections ?? collect())->first())->name;
     $gaSelectItemPayload = [
@@ -56,18 +57,18 @@
         @endif
 
         {{-- Overlay: Quick View button (nền tối nhẹ, nút màu hồng) --}}
-        @if($showQuickView)
-            <a href="{{ route('products.show', $product->slug) }}"
-               data-ga-select-item-link
-               class="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                <span class="inline-flex items-center gap-2 px-5 py-3 bg-primary-dark text-white font-semibold rounded-full shadow-xl transform translate-y-3 group-hover:translate-y-0 transition-transform duration-300 hover:bg-primary">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                    </svg>
-                    Quick View
-                </span>
-            </a>
+        @if($showQuickView && $productUrl)
+            <a href="{{ $productUrl }}"
+                data-ga-select-item-link
+                class="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                    <span class="inline-flex items-center gap-2 px-5 py-3 bg-primary-dark text-white font-semibold rounded-full shadow-xl transform translate-y-3 group-hover:translate-y-0 transition-transform duration-300 hover:bg-primary">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                        Quick View
+                    </span>
+                </a>
         @endif
 
         {{-- Wishlist --}}
@@ -86,9 +87,13 @@
     {{-- Info --}}
     <div class="p-3 sm:p-4">
         <h3 class="font-semibold text-gray-900 mb-1 line-clamp-2 group-hover:text-[#005366] transition-colors text-sm sm:text-base">
-            <a href="{{ route('products.show', $product->slug) }}" class="block" data-ga-select-item-link>
-                {{ Str::limit($product->name, 50) }}
-            </a>
+            @if($productUrl)
+                <a href="{{ $productUrl }}" class="block" data-ga-select-item-link>
+                    {{ Str::limit($product->name, 50) }}
+                </a>
+            @else
+                <span class="block text-gray-700 cursor-default">{{ Str::limit($product->name, 50) }}</span>
+            @endif
         </h3>
         <p class="text-xs sm:text-sm text-gray-500 mb-1 line-clamp-1">By {{ $product->shop->shop_name ?? $product->shop->name ?? 'Shop' }}</p>
 
