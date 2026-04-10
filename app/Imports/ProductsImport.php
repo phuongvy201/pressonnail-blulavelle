@@ -9,6 +9,7 @@ use App\Services\OpenAIService;
 use App\Services\ProductMediaWebpService;
 use App\Services\ProductMediaKeywordsService;
 use App\Services\VideoThumbnailService;
+use App\Services\GoogleSheetsProductExportService;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -42,6 +43,8 @@ class ProductsImport implements
     protected $user;
     protected $importedProducts = []; // Store products that need variants created
     protected $variantsCreated = false; // Flag to ensure variants are only created once
+    /** @var list<string> slug sản phẩm import thành công — đồng bộ Google Sheet sau cùng */
+    protected array $slugsForGoogleSheetExport = [];
     protected $progressKey = null; // Cache key for progress tracking
     protected $totalRows = 0; // Total rows to process
     protected $processedRows = 0; // Rows processed so far
@@ -313,6 +316,7 @@ class ProductsImport implements
                 }
 
                 $this->successCount++;
+                $this->slugsForGoogleSheetExport[] = $slug;
                 $this->processedRows++;
                 $this->updateProgress();
                 return $product;
@@ -535,12 +539,53 @@ class ProductsImport implements
                     }
 
                     $this->createVariantsForImportedProducts();
+                    $this->syncImportedProductsToGoogleSheets();
                     $this->variantsCreated = true;
                     // Mark import as completed after variants are created
                     $this->markCompleted();
                 }
             },
         ];
+    }
+
+    /**
+     * Ghi các sản phẩm vừa import lên Google Sheet (best-effort, không làm fail import).
+     */
+    protected function syncImportedProductsToGoogleSheets(): void
+    {
+        $slugs = array_values(array_unique(array_filter($this->slugsForGoogleSheetExport)));
+        if ($slugs === []) {
+            return;
+        }
+
+        try {
+            /** @var GoogleSheetsProductExportService $sheets */
+            $sheets = app(GoogleSheetsProductExportService::class);
+            if (! $sheets->isConfigured()) {
+                return;
+            }
+
+            $products = Product::query()
+                ->whereIn('slug', $slugs)
+                ->orderBy('id')
+                ->get();
+
+            if ($products->isEmpty()) {
+                return;
+            }
+
+            $written = $sheets->appendProductRows($products);
+            Log::info('ProductsImport: Google Sheets sync after import.', [
+                'slug_count' => count($slugs),
+                'products_loaded' => $products->count(),
+                'rows_appended' => $written,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('ProductsImport: Google Sheets sync failed (import vẫn thành công).', [
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

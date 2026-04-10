@@ -150,8 +150,14 @@ class ProductController extends Controller
      */
     public function show(Request $request, $slug)
     {
-        // Get product and require all display conditions
-        $product = Product::where('slug', $slug)
+        // Get product and require all display conditions (segment số: coi như id — dùng khi slug DB trống / link export)
+        $product = Product::query()
+            ->where(function ($q) use ($slug) {
+                $q->where('slug', $slug);
+                if (ctype_digit((string) $slug)) {
+                    $q->orWhere('id', (int) $slug);
+                }
+            })
             ->availableForDisplay()
             ->with(['shop', 'template.category', 'template.variants', 'variants', 'collections', 'approvedReviews' => function ($query) {
                 $query->orderBy('created_at', 'desc')->limit(10);

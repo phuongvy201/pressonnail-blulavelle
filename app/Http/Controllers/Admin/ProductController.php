@@ -11,6 +11,7 @@ use App\Models\Category;
 use App\Models\Collection;
 use App\Models\GmcConfig;
 use App\Services\GoogleMerchantCenterService;
+use App\Services\GoogleSheetsProductExportService;
 use App\Services\OpenAIService;
 use App\Services\VideoThumbnailService;
 use App\Services\ProductMediaWebpService;
@@ -394,6 +395,17 @@ class ProductController extends Controller
             }
 
             $product = Product::create($data);
+
+            // Best-effort export to Google Sheets when a new product is created.
+            try {
+                app(GoogleSheetsProductExportService::class)->exportNewProduct($product);
+            } catch (\Throwable $e) {
+                Log::warning('Google Sheets export failed after product creation.', [
+                    'product_id' => $product->id,
+                    'exception' => get_class($e),
+                    'message' => $e->getMessage(),
+                ]);
+            }
 
             // Note: Variants and shop products count are automatically handled by Product model's created event
 
