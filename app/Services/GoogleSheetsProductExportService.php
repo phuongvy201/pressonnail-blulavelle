@@ -418,8 +418,11 @@ class GoogleSheetsProductExportService
         $imageUrls = [];
 
         foreach ($mediaList as $mediaItem) {
-            if (is_string($mediaItem) && $this->looksLikeImageUrl($mediaItem)) {
-                $imageUrls[] = $mediaItem;
+            if (is_string($mediaItem)) {
+                $s = trim($mediaItem);
+                if ($s !== '' && $this->isLikelyImageUrlString($s)) {
+                    $imageUrls[] = $s;
+                }
                 continue;
             }
 
@@ -430,7 +433,7 @@ class GoogleSheetsProductExportService
             $type = strtolower((string) ($mediaItem['type'] ?? ''));
 
             if ($type === 'image') {
-                $url = (string) ($mediaItem['webp'] ?? $mediaItem['url'] ?? '');
+                $url = (string) ($mediaItem['webp'] ?? $mediaItem['url'] ?? $mediaItem['path'] ?? '');
                 if ($url !== '') {
                     $imageUrls[] = $url;
                 }
@@ -443,10 +446,40 @@ class GoogleSheetsProductExportService
                 if ($poster !== '') {
                     $imageUrls[] = $poster;
                 }
+                continue;
+            }
+
+            // Dữ liệu cũ: object có url/webp/path nhưng không có type (trước khi chuẩn hoá media).
+            $poster = (string) ($mediaItem['poster'] ?? '');
+            if ($poster !== '') {
+                $imageUrls[] = $poster;
+                continue;
+            }
+
+            $candidate = (string) ($mediaItem['webp'] ?? $mediaItem['url'] ?? $mediaItem['path'] ?? '');
+            if ($candidate !== '' && ! $this->looksLikeVideoUrl($candidate) && $this->isLikelyImageUrlString($candidate)) {
+                $imageUrls[] = $candidate;
             }
         }
 
         return array_values(array_unique(array_filter($imageUrls)));
+    }
+
+    /**
+     * URL có đuôi ảnh, hoặc http(s) hợp lệ và không phải file video.
+     */
+    private function isLikelyImageUrlString(string $url): bool
+    {
+        if ($this->looksLikeImageUrl($url)) {
+            return true;
+        }
+
+        if ($this->looksLikeVideoUrl($url)) {
+            return false;
+        }
+
+        return (bool) filter_var($url, FILTER_VALIDATE_URL)
+            && (bool) preg_match('#^https?://#i', $url);
     }
 
     private function looksLikeImageUrl(string $url): bool
@@ -454,5 +487,12 @@ class GoogleSheetsProductExportService
         $path = (string) parse_url($url, PHP_URL_PATH);
 
         return (bool) preg_match('/\.(jpe?g|png|gif|webp|avif)$/i', $path);
+    }
+
+    private function looksLikeVideoUrl(string $url): bool
+    {
+        $path = (string) parse_url($url, PHP_URL_PATH);
+
+        return (bool) preg_match('/\.(mp4|webm|mov|avi|ogg|ogv|m4v|quicktime)$/i', $path);
     }
 }

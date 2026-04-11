@@ -19,7 +19,7 @@ use Maatwebsite\Excel\Concerns\SkipsOnFailure;
 use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
 use Maatwebsite\Excel\Concerns\WithEvents;
-use Maatwebsite\Excel\Events\AfterSheet;
+use Maatwebsite\Excel\Events\AfterImport;
 use Maatwebsite\Excel\Events\AfterChunk;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -528,10 +528,10 @@ class ProductsImport implements
                     gc_collect_cycles();
                 }
             },
-            AfterSheet::class => function (AfterSheet $event) {
+            AfterImport::class => function (AfterImport $event) {
                 // After all products are imported, create variants for them
                 // This is needed because batch insert doesn't trigger created event
-                // Only create variants once (AfterSheet can be called multiple times for multiple sheets)
+                // Only create variants once (defensive guard)
                 if (!$this->variantsCreated) {
                     // Update total rows to actual processed count if it was estimated
                     if ($this->totalRows == 0 || $this->totalRows < $this->processedRows) {
