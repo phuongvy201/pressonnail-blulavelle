@@ -343,6 +343,9 @@ class CheckoutController extends Controller
             'postal_code' => 'required|string|max:20',
             'country' => 'required|string|max:100',
             'payment_method' => 'required|in:paypal,lianlian_pay,stripe',
+            'shipping_cost' => 'nullable|numeric|min:0',
+            'retention_free_shipping' => 'nullable|boolean',
+            'retention_popup_source' => 'nullable|string|max:100',
         ];
 
         // Add PayPal SDK specific validation if present
@@ -452,15 +455,23 @@ class CheckoutController extends Controller
             $shippingDetails = null;
             $useRequestShippingCost = false;
             
-            if ($request->has('shipping_cost') && $request->shipping_cost !== null && $request->shipping_cost !== '' && $request->shipping_cost > 0) {
-                $originalShippingCostUSD = (float) $request->shipping_cost;
+            $requestShippingCost = $request->has('shipping_cost') && $request->shipping_cost !== null && $request->shipping_cost !== ''
+                ? (float) $request->shipping_cost
+                : null;
+            $retentionFreeShipping = $request->boolean('retention_free_shipping');
+            $hasValidRequestShipping = $requestShippingCost !== null && $requestShippingCost >= 0;
+
+            if ($hasValidRequestShipping && ($requestShippingCost > 0 || $retentionFreeShipping)) {
+                $originalShippingCostUSD = $retentionFreeShipping ? 0.0 : $requestShippingCost;
                 $shippingZoneId = $request->shipping_zone_id ?? null;
                 $useRequestShippingCost = true;
                 
                 Log::info('🚚 Using shipping cost from request', [
                     'shipping_cost_usd' => $originalShippingCostUSD,
                     'shipping_zone_id' => $shippingZoneId,
-                    'country' => $request->country
+                    'country' => $request->country,
+                    'retention_free_shipping' => $retentionFreeShipping,
+                    'retention_popup_source' => $request->input('retention_popup_source'),
                 ]);
                 
                 // Still calculate shipping details for order items breakdown
@@ -565,6 +576,23 @@ class CheckoutController extends Controller
                 ];
             }
 
+            // Use the same discount mode logic as checkout index (volume OR promo).
+            $discountMode = session('discount_mode', 'volume');
+            if (session()->has('applied_promo_code_id')) {
+                $discountMode = 'promo';
+            }
+
+            $bulkDiscountPercent = 0.0;
+            $bulkDiscountAmount = 0.0;
+            if ($discountMode === 'volume') {
+                $totalQty = (int) $cartItems->sum('quantity');
+                $bulkDiscountPercent = Cart::getComboDiscountPercentForQty($totalQty);
+                $bulkDiscountAmount = $bulkDiscountPercent > 0
+                    ? round((float) $subtotal * ($bulkDiscountPercent / 100), 2)
+                    : 0.0;
+            }
+            $subtotalAfterBulk = max(0, $subtotal - $bulkDiscountAmount);
+
             // Check freeship based on base USD amount (100 USD)
             // Convert subtotal back to USD to check freeship threshold
             $baseSubtotalUSD = $orderCurrency !== 'USD' ? ($subtotal / $currencyRate) : $subtotal;
@@ -590,7 +618,7 @@ class CheckoutController extends Controller
             $orderDiscount = 0.0;
             $orderPromoCode = null;
             $promoId = session('applied_promo_code_id');
-            if ($promoId && $baseSubtotalUSD > 0) {
+            if ($discountMode === 'promo' && $promoId && $baseSubtotalUSD > 0) {
                 $promo = PromoCode::find($promoId);
                 if ($promo && $promo->isValidForSubtotal($baseSubtotalUSD)) {
                     $discountUsd = $promo->calculateDiscountUsd($baseSubtotalUSD);
@@ -601,11 +629,14 @@ class CheckoutController extends Controller
                 }
             }
 
-            $total = $subtotal - $orderDiscount + $shippingCost + $convertedTipAmount;
+            $total = $subtotalAfterBulk - $orderDiscount + $shippingCost + $convertedTipAmount;
 
             // Log freeship application and currency conversion for debugging
             Log::info('🚚 CHECKOUT PROCESS - Shipping & Currency Conversion', [
                 'subtotal' => $subtotal,
+                'subtotal_after_bulk' => $subtotalAfterBulk,
+                'bulk_discount_percent' => $bulkDiscountPercent,
+                'bulk_discount_amount' => $bulkDiscountAmount,
                 'subtotal_currency' => $orderCurrency,
                 'baseSubtotalUSD' => $baseSubtotalUSD,
                 'originalShippingCostUSD' => $originalShippingCostUSD,
@@ -615,6 +646,8 @@ class CheckoutController extends Controller
                 'tipAmountUSD' => $tipAmount,
                 'convertedTipAmount' => $convertedTipAmount,
                 'totalAmount' => $total,
+                'discount_mode' => $discountMode,
+                'promo_discount_amount' => $orderDiscount,
                 'currency' => $orderCurrency,
                 'currencyRate' => $currencyRate,
                 'note' => 'All amounts in order currency except baseSubtotalUSD and originalShippingCostUSD'
@@ -656,7 +689,8 @@ class CheckoutController extends Controller
                 'state' => $request->state,
                 'postal_code' => $request->postal_code,
                 'country' => $request->country,
-                'subtotal' => $subtotal, // Already in order currency
+                // Store subtotal AFTER volume discount so order data matches checkout UI.
+                'subtotal' => $subtotalAfterBulk,
                 'tax_amount' => $taxAmount,
                 'discount_amount' => $orderDiscount,
                 'promo_code' => $orderPromoCode,

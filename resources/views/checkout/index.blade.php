@@ -666,6 +666,8 @@ function buildCheckoutCustomizationInputs(customizations) {
                         <input type="hidden" id="currency" name="currency" value="{{ $currency ?? 'USD' }}">
                         <input type="hidden" id="shipping_cost" name="shipping_cost" value="0">
                         <input type="hidden" id="shipping_zone_id" name="shipping_zone_id" value="">
+                        <input type="hidden" id="retention_free_shipping" name="retention_free_shipping" value="0">
+                        <input type="hidden" id="retention_popup_source" name="retention_popup_source" value="">
                         
                         <!-- Contact Information -->
                         <div class="space-y-5">
@@ -1928,6 +1930,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             tip_amount: parseFloat(document.getElementById('tip_amount')?.value || 0),
                             shipping_cost: parseFloat(document.getElementById('shipping_cost')?.value || 0),
                             shipping_zone_id: document.getElementById('shipping_zone_id')?.value || '',
+                            retention_free_shipping: parseInt(document.getElementById('retention_free_shipping')?.value || '0', 10) ? 1 : 0,
+                            retention_popup_source: document.getElementById('retention_popup_source')?.value || '',
                         };
                         
                         console.log('📋 Sending order data:', currentOrderData);
@@ -2449,6 +2453,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 tip_amount: parseFloat(document.getElementById('tip_amount')?.value || 0),
                 shipping_cost: parseFloat(document.getElementById('shipping_cost')?.value || 0),
                 shipping_zone_id: document.getElementById('shipping_zone_id')?.value || '',
+                retention_free_shipping: parseInt(document.getElementById('retention_free_shipping')?.value || '0', 10) ? 1 : 0,
+                retention_popup_source: document.getElementById('retention_popup_source')?.value || '',
                 payment_method: 'stripe'
             };
             
@@ -3412,6 +3418,8 @@ document.addEventListener('DOMContentLoaded', function() {
         return parseFloat(raw.replace(/[^0-9.-]/g, '')) || 0;
     }
 
+window.__PRESSONNailRetentionFreeShipActive = window.__PRESSONNailRetentionFreeShipActive ?? false;
+
     window.__PRESSONNailLastShippingTier = window.__PRESSONNailLastShippingTier ?? null;
     window.__PRESSONNailTrackAddShippingInfo = function(shippingTier) {
         if (typeof dataLayer === 'undefined') return;
@@ -3477,6 +3485,33 @@ document.addEventListener('DOMContentLoaded', function() {
         const shippingLabelEl = document.getElementById('checkout-shipping-label');
         const shippingCostInput = document.getElementById('shipping_cost');
         const shippingZoneIdInput = document.getElementById('shipping_zone_id');
+        const retentionFreeshipInput = document.getElementById('retention_free_shipping');
+        const retentionFreeShipActive = !!(
+            window.__PRESSONNailRetentionFreeShipActive ||
+            (retentionFreeshipInput && retentionFreeshipInput.value === '1')
+        );
+
+        // Retention popup accepted free shipping: keep shipping = 0 and prevent zone recalculation overwrite.
+        if (retentionFreeShipActive) {
+            window.__PRESSONNailRetentionFreeShipActive = true;
+            if (shippingCostEl) {
+                shippingCostEl.textContent = formatPrice(0, CHECKOUT_CURRENCY);
+                shippingCostEl.classList.remove('text-red-600');
+            }
+            if (shippingLabelEl) {
+                shippingLabelEl.textContent = 'Free Shipping';
+                shippingLabelEl.classList.remove('text-red-600');
+            }
+            if (shippingCostInput) {
+                shippingCostInput.value = '0';
+            }
+            if (shippingZoneIdInput) {
+                shippingZoneIdInput.value = zoneId || '';
+            }
+            updateTotal();
+            window.__PRESSONNailTrackAddShippingInfo('Free Shipping');
+            return;
+        }
 
         // Free shipping: based on subtotal BEFORE discount (USD)
         const qualifiesFreeShip = (Number(CHECKOUT_BASE_SUBTOTAL) || 0) >= (Number(CHECKOUT_FREE_SHIP_THRESHOLD_USD) || 150);
@@ -3975,6 +4010,214 @@ function saveCheckoutCartChanges(cartItemId) {
     }).then(r=>r.json()).then(data=>{ if(data.success){ window.location.reload(); } else { alert('Failed to update cart item'); }}).catch(err=>{ console.error(err); alert('An error occurred'); });
 }
 
+</script>
+
+<script>
+(function () {
+    var POPUP_SESSION_KEY = 'checkout_popup_shown';
+    var GIFT_NOTE_TEXT = '[FREE GIFT] Eligible order >= 150 USD. Please include 1 free gift.';
+    var popupLocked = false;
+    var timers = [];
+    var listeners = [];
+
+    function hasPopupShownInSession() {
+        try {
+            return sessionStorage.getItem(POPUP_SESSION_KEY) === '1';
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function markPopupShownInSession() {
+        try {
+            sessionStorage.setItem(POPUP_SESSION_KEY, '1');
+        } catch (e) {}
+    }
+
+    function cleanupPopupTriggers() {
+        timers.forEach(function (id) { clearTimeout(id); });
+        timers = [];
+        listeners.forEach(function (entry) {
+            entry.target.removeEventListener(entry.event, entry.handler, entry.options || false);
+        });
+        listeners = [];
+    }
+
+    function addListener(target, event, handler, options) {
+        target.addEventListener(event, handler, options || false);
+        listeners.push({ target: target, event: event, handler: handler, options: options || false });
+    }
+
+    function getCheckoutTotalInUsd() {
+        var totalEl = document.getElementById('checkout-total') || document.querySelector('.total-display');
+        var totalDisplay = totalEl ? parseFloat((totalEl.textContent || '').replace(/[^0-9.-]/g, '')) : 0;
+        if (!isFinite(totalDisplay) || totalDisplay < 0) totalDisplay = 0;
+
+        var currency = (typeof CHECKOUT_CURRENCY !== 'undefined' ? CHECKOUT_CURRENCY : 'USD') || 'USD';
+        var rate = Number(typeof CHECKOUT_CURRENCY_RATE !== 'undefined' ? CHECKOUT_CURRENCY_RATE : 1) || 1;
+        if (currency === 'USD') return totalDisplay;
+        if (rate <= 0) return totalDisplay;
+        return totalDisplay / rate;
+    }
+
+    function ensureGiftNote() {
+        var notesEl = document.getElementById('notes');
+        if (!notesEl) return;
+        var current = (notesEl.value || '').trim();
+        if (current.indexOf(GIFT_NOTE_TEXT) !== -1) return;
+        notesEl.value = current ? (current + '\n' + GIFT_NOTE_TEXT) : GIFT_NOTE_TEXT;
+    }
+
+    function applyFreeShippingNow() {
+        var shippingCostEl = document.getElementById('checkout-shipping-cost');
+        var shippingLabelEl = document.getElementById('checkout-shipping-label');
+        var shippingCostInput = document.getElementById('shipping_cost');
+        var retentionFreeshipInput = document.getElementById('retention_free_shipping');
+        var totalEl = document.getElementById('checkout-total') || document.querySelector('.total-display');
+        var shippingBefore = 0;
+        var totalBefore = 0;
+
+        if (shippingCostEl) {
+            shippingBefore = parseFloat((shippingCostEl.textContent || '').replace(/[^0-9.-]/g, '')) || 0;
+        }
+        if (totalEl) {
+            totalBefore = parseFloat((totalEl.textContent || '').replace(/[^0-9.-]/g, '')) || 0;
+        }
+
+        if (shippingCostEl && typeof formatPrice === 'function') {
+            shippingCostEl.textContent = formatPrice(0, (typeof CHECKOUT_CURRENCY !== 'undefined' ? CHECKOUT_CURRENCY : 'USD'));
+            shippingCostEl.classList.remove('text-red-600');
+        }
+        if (shippingLabelEl) {
+            shippingLabelEl.textContent = 'Free Shipping';
+            shippingLabelEl.classList.remove('text-red-600');
+        }
+        if (shippingCostInput) {
+            shippingCostInput.value = '0';
+        }
+        if (retentionFreeshipInput) {
+            retentionFreeshipInput.value = '1';
+        }
+        window.__PRESSONNailRetentionFreeShipActive = true;
+
+        // updateTotal() is scoped in another script block; adjust total directly here
+        // so user sees immediate change when clicking "Continue checkout".
+        if (totalEl && typeof formatPrice === 'function') {
+            var totalAfter = Math.max(0, totalBefore - shippingBefore);
+            totalEl.textContent = formatPrice(totalAfter, (typeof CHECKOUT_CURRENCY !== 'undefined' ? CHECKOUT_CURRENCY : 'USD'));
+        }
+    }
+
+    function applyRetentionOffer(popupType, triggerSource) {
+        if (popupType === 'gift') {
+            ensureGiftNote();
+        } else {
+            applyFreeShippingNow();
+        }
+        console.log('[Checkout Retention] offer applied', {
+            popupType: popupType,
+            triggerSource: triggerSource
+        });
+    }
+
+    window.showPromoPopup = function (triggerSource) {
+        if (popupLocked || hasPopupShownInSession()) return;
+        popupLocked = true;
+        markPopupShownInSession();
+        cleanupPopupTriggers();
+
+        var totalUsd = getCheckoutTotalInUsd();
+        var isGift = totalUsd >= 150;
+        var popupType = isGift ? 'gift' : 'free_shipping';
+        var source = triggerSource || 'unknown';
+        window.__checkoutRetentionPopupSource = source;
+        var sourceInput = document.getElementById('retention_popup_source');
+        if (sourceInput) {
+            sourceInput.value = source;
+        }
+        console.log('[Checkout Retention] popup shown', {
+            popupType: popupType,
+            triggerSource: source,
+            orderTotalUsd: totalUsd
+        });
+
+        var title = isGift ? 'Free Gift for This Order' : 'Free Shipping Offer';
+        var text = isGift
+            ? 'Your order qualifies for 1 free gift.'
+            : 'Complete checkout now to receive free shipping on this order.';
+
+        if (typeof Swal !== 'undefined' && Swal && typeof Swal.fire === 'function') {
+            Swal.fire({
+                icon: 'info',
+                title: title,
+                text: text,
+                confirmButtonText: 'Continue checkout',
+                confirmButtonColor: '#f0427c',
+                allowOutsideClick: false,
+                allowEscapeKey: false
+            }).then(function (result) {
+                if (result && result.isConfirmed) {
+                    applyRetentionOffer(popupType, source);
+                }
+            });
+        } else {
+            alert(title + '\n' + text);
+            applyRetentionOffer(popupType, source);
+        }
+    };
+
+    if (hasPopupShownInSession()) {
+        return;
+    }
+
+    var ua = navigator.userAgent || '';
+    var isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+    var pageEnteredAt = Date.now();
+
+    function fireFirstTrigger(source) {
+        if (popupLocked || hasPopupShownInSession()) return;
+        window.showPromoPopup(source);
+    }
+
+    if (!isMobile) {
+        var onMouseMove = function (event) {
+            if (event && event.clientY <= 0) {
+                fireFirstTrigger('desktop_exit_intent');
+            }
+        };
+        addListener(document, 'mousemove', onMouseMove);
+        timers.push(setTimeout(function () {
+            fireFirstTrigger('desktop_5min_timer');
+        }, 5 * 60 * 1000));
+        return;
+    }
+
+    var onScroll = function () {
+        if (popupLocked || hasPopupShownInSession()) return;
+        if (Date.now() - pageEnteredAt > 60 * 1000) return;
+
+        var footer = document.querySelector('footer');
+        var threshold = document.documentElement.scrollHeight - window.innerHeight - 120;
+        if (footer) {
+            var rect = footer.getBoundingClientRect();
+            if (rect.top <= window.innerHeight) {
+                fireFirstTrigger('mobile_fast_scroll_footer');
+                return;
+            }
+        }
+        if (window.scrollY >= threshold) {
+            fireFirstTrigger('mobile_fast_scroll_footer');
+        }
+    };
+    addListener(window, 'scroll', onScroll, { passive: true });
+
+    timers.push(setTimeout(function () {
+        fireFirstTrigger('mobile_1min_timer');
+    }, 60 * 1000));
+    timers.push(setTimeout(function () {
+        fireFirstTrigger('mobile_5min_timer');
+    }, 5 * 60 * 1000));
+})();
 </script>
 
 <!-- Modal for editing cart items (duplicate removed - use single modal above) -->
