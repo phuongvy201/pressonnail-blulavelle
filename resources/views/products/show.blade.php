@@ -1382,6 +1382,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    (function initGalleryFromQuery() {
+        var params = new URLSearchParams(window.location.search);
+        var g = params.get('gallery');
+        if (g === null || g === '') return;
+        var idx = parseInt(g, 10);
+        if (isNaN(idx) || totalItems < 1) return;
+        showMainMediaIndex(Math.min(Math.max(0, idx), totalItems - 1));
+    })();
+
     var mainPrev = document.getElementById('main-media-prev');
     var mainNext = document.getElementById('main-media-next');
     if (mainPrev) mainPrev.addEventListener('click', function() {

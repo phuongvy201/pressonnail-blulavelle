@@ -166,6 +166,7 @@ Route::get('/shipping-delivery', [App\Http\Controllers\ShippingDeliveryControlle
 
 // Sizing Kit (how to measure nail size, size chart)
 Route::get('/sizing-kit', [App\Http\Controllers\SizingKitController::class, 'index'])->name('sizing-kit.index');
+Route::get('/sizing-kit/order-checkout', [App\Http\Controllers\SizingKitController::class, 'orderCheckout'])->name('sizing-kit.order-checkout');
 
 // Pages routes (must be last to avoid conflicts)
 Route::get('/page/{slug}', [PageController::class, 'show'])->name('page.show');

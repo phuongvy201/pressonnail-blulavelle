@@ -3,7 +3,36 @@
 @section('title', 'Sizing Kit - Find Your Perfect Fit')
 
 @section('content')
+@php
+    $heroKit = $defaultSizingKitProduct ?? $shapeKits->first();
+    $heroImageUrl = 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=800';
+    $heroImageAlt = 'Sizing kit - find your perfect fit';
+    if ($heroKit) {
+        $heroMedia = $heroKit->getEffectiveMedia();
+        if ($heroMedia && count($heroMedia) > 0) {
+            $heroImageAlt = $heroKit->altForMediaItem($heroMedia[0], null, 0);
+            $m0 = $heroMedia[0];
+            if (is_string($m0)) {
+                $heroImageUrl = str_starts_with($m0, 'http') ? $m0 : asset('storage/' . $m0);
+            } elseif (is_array($m0)) {
+                $u = $m0['url'] ?? $m0['path'] ?? reset($m0) ?? null;
+                if ($u) {
+                    $heroImageUrl = str_starts_with((string) $u, 'http') ? $u : asset('storage/' . $u);
+                }
+            }
+        }
+    }
+    // Order a Kit → sizing-kit.order-checkout (controller xử lý flash lỗi nếu không thêm giỏ được).
+    $orderKitHref = route('sizing-kit.order-checkout');
+@endphp
 <div class="min-h-screen bg-background-light font-display text-slate-900">
+    @if (session('error'))
+    <div class="px-4 sm:px-6 lg:px-10 pt-6">
+        <div class="max-w-6xl mx-auto rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
+            {{ session('error') }}
+        </div>
+    </div>
+    @endif
     {{-- Hero Section --}}
     <section class="px-4 sm:px-6 lg:px-10 py-12 md:py-20 bg-white">
         <div class="max-w-6xl mx-auto flex flex-col lg:flex-row gap-12 items-center">
@@ -18,7 +47,7 @@
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-4">
-                    <a href="{{ route('products.index') }}" class="inline-flex min-w-[160px] items-center justify-center rounded-xl h-12 px-6 bg-primary text-white text-base font-bold shadow-lg shadow-primary/25 hover:opacity-90 transition-all">
+                    <a href="{{ $orderKitHref }}" class="inline-flex min-w-[160px] items-center justify-center rounded-xl h-12 px-6 bg-primary text-white text-base font-bold shadow-lg shadow-primary/25 hover:opacity-90 transition-all">
                         Order a Kit
                     </a>
                     <a href="#size-chart" class="inline-flex min-w-[160px] items-center justify-center rounded-xl h-12 px-6 bg-slate-100 text-slate-900 text-base font-bold hover:bg-slate-200 transition-all">
@@ -28,7 +57,7 @@
             </div>
             <div class="flex-1 w-full">
                 <div class="relative rounded-2xl overflow-hidden aspect-[4/3] shadow-2xl bg-slate-100">
-                    <img src="https://images.unsplash.com/photo-1604654894610-df63bc536371?w=800" alt="Sizing kit - find your perfect fit" class="absolute inset-0 w-full h-full object-cover">
+                    <img src="{{ $heroImageUrl }}" alt="{{ $heroImageAlt }}" class="absolute inset-0 w-full h-full object-cover">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                 </div>
             </div>
@@ -121,7 +150,7 @@
                             <span class="text-primary font-bold">{{ currency_symbol() }}{{ number_format($price, 2) }}</span>
                         </div>
                     </div>
-                    <a href="{{ route('products.show', $product->slug) }}" class="w-full bg-slate-900 text-white py-2.5 rounded-xl font-bold text-sm hover:bg-primary transition-colors flex items-center justify-center gap-2">
+                    <a href="{{ route('sizing-kit.order-checkout', ['product' => $product->slug]) }}" class="w-full bg-slate-900 text-white py-2.5 rounded-xl font-bold text-sm hover:bg-primary transition-colors flex items-center justify-center gap-2">
                         <span class="material-symbols-outlined text-sm">add_shopping_cart</span> Add to Cart
                     </a>
                 </div>
