@@ -36,17 +36,15 @@
             </button>
             @endif
             
-            @if(($availableGmcConfigs ?? collect())->isNotEmpty())
-            <!-- Feed to GMC Button (Hidden by default) -->
+            <!-- Export GMC File Button (Hidden by default) -->
             <button id="feedToGMCBtn" onclick="feedToGMC()" 
                     style="display: none;"
                     class="inline-flex items-center whitespace-nowrap shrink-0 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-md">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                 </svg>
-                Feed to GMC (<span id="gmcSelectedCount">0</span>)
+                Export GMC File (<span id="gmcSelectedCount">0</span>)
             </button>
-            @endif
             
             <!-- Export to Meta Button (Hidden by default) -->
             <button id="exportToMetaBtn" onclick="exportToMeta()" 
@@ -1235,202 +1233,28 @@ function removeFilter(filterName) {
 //     });
 // });
 
-// Feed to Google Merchant Center
+// Export selected products to GMC CSV file
 async function feedToGMC() {
     const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
     const productIds = Array.from(checkedBoxes).map(cb => cb.value);
     
     if (productIds.length === 0) {
-        alert('Vui lòng chọn ít nhất một sản phẩm để feed lên Google Merchant Center.');
-        return;
-    }
-    
-    // Show modal to select target country
-    const targetCountry = await showTargetCountryModal();
-    if (!targetCountry) {
-        return; // User cancelled
-    }
-    
-    // Show loading state
-    const feedBtn = document.getElementById('feedToGMCBtn');
-    const originalHTML = feedBtn.innerHTML;
-    feedBtn.disabled = true;
-    feedBtn.innerHTML = '<svg class="w-5 h-5 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> Đang upload...';
-    
-    try {
-        // Get CSRF token
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
-        
-        // Use fetch API to upload via API
-        const response = await fetch('{{ route("admin.products.feed-to-gmc") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-                product_ids: productIds,
-                method: 'api',
-                target_country: targetCountry
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok && data.success) {
-            // Show success message with details
-            let message = data.message || 'Upload thành công!';
-            if (data.results) {
-                const results = data.results;
-                message += `\n\nChi tiết:\n- Thành công: ${results.success_count}/${results.total}`;
-                if (results.failed_count > 0) {
-                    message += `\n- Thất bại: ${results.failed_count}`;
-                }
-            }
-            alert(message);
-            
-            // Reload page to show updated status
-            window.location.reload();
-        } else {
-            // If API fails, try XML download as fallback
-            if (data.error && (data.error.includes('not configured') || data.error.includes('credentials'))) {
-                const useXML = confirm('API chưa được cấu hình. Bạn có muốn tải file XML thay thế không?');
-                if (useXML) {
-                    // Download XML instead
-                    downloadGMCXML(productIds);
-                }
-            } else {
-                alert('Lỗi: ' + (data.message || data.error || 'Có lỗi xảy ra khi upload lên Google Merchant Center.'));
-            }
-        }
-    } catch (error) {
-        console.error('GMC Feed error:', error);
-        alert('Có lỗi xảy ra khi upload. Vui lòng thử lại hoặc tải file XML.');
-    } finally {
-        feedBtn.disabled = false;
-        feedBtn.innerHTML = originalHTML;
-    }
-}
-
-// Show modal to select target country
-function showTargetCountryModal() {
-    return new Promise((resolve) => {
-        // Get available GMC configs from server (only active configs for current domain)
-        const availableConfigs = @json($availableGmcConfigs ?? []);
-        
-        if (availableConfigs.length === 0) {
-            alert('Chưa có cấu hình GMC nào cho domain này.');
-            resolve(null);
-            return;
-        }
-
-        // Country labels mapping
-        const countryLabels = {
-            'US': 'United States (USD)',
-            'GB': 'United Kingdom (GBP)',
-            'VN': 'Vietnam (VND)',
-            'CA': 'Canada (CAD)',
-            'AU': 'Australia (AUD)',
-            'DE': 'Germany (EUR)',
-            'FR': 'France (EUR)',
-            'IT': 'Italy (EUR)',
-            'ES': 'Spain (EUR)',
-        };
-
-        // Get current domain from window location
-        const currentDomain = window.location.hostname.replace(/^www\./, '');
-
-        // Build options from available configs
-        const options = availableConfigs.map(config => {
-            const countryCode = config.target_country;
-            const label = countryLabels[countryCode] || `${countryCode} (${config.currency})`;
-            return `<option value="${countryCode}">${label} - ${config.name}</option>`;
-        }).join('');
-
-        // Create modal
-        const modal = document.createElement('div');
-        modal.id = 'gmcTargetCountryModal';
-        modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center';
-        modal.innerHTML = `
-            <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
-                <h3 class="text-xl font-bold text-gray-900 mb-4">Chọn thị trường</h3>
-                <p class="text-sm text-gray-600 mb-2">Vui lòng chọn thị trường để gửi sản phẩm lên Google Merchant Center:</p>
-                <div class="mb-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
-                    <p class="text-xs text-blue-800">
-                        <strong>Domain sẽ sử dụng:</strong> <span class="font-mono">${currentDomain}</span>
-                    </p>
-                    <p class="text-xs text-blue-600 mt-1">
-                        Chỉ hiển thị các thị trường đã được cấu hình GMC cho domain này.
-                    </p>
-                </div>
-                <select id="targetCountrySelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-4">
-                    <option value="">-- Chọn thị trường --</option>
-                    ${options}
-                </select>
-                <div class="flex justify-end gap-3">
-                    <button onclick="closeGMCModal(null)" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                        Hủy
-                    </button>
-                    <button onclick="confirmGMCModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                        Xác nhận
-                    </button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-
-        // Close modal function
-        window.closeGMCModal = function(result) {
-            document.body.removeChild(modal);
-            resolve(result);
-        };
-
-        // Confirm function
-        window.confirmGMCModal = function() {
-            const select = document.getElementById('targetCountrySelect');
-            const value = select.value;
-            if (!value) {
-                alert('Vui lòng chọn thị trường!');
-                return;
-            }
-            closeGMCModal(value);
-        };
-    });
-}
-
-// Download XML feed as fallback
-async function downloadGMCXML(productIds) {
-    const targetCountry = await showTargetCountryModal();
-    if (!targetCountry) {
+        alert('Vui lòng chọn ít nhất một sản phẩm để xuất file GMC.');
         return;
     }
 
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
-    
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = '{{ route("admin.products.feed-to-gmc") }}';
     form.style.display = 'none';
-    
+
     const csrfInput = document.createElement('input');
     csrfInput.type = 'hidden';
     csrfInput.name = '_token';
     csrfInput.value = csrfToken;
     form.appendChild(csrfInput);
-    
-    const methodInput = document.createElement('input');
-    methodInput.type = 'hidden';
-    methodInput.name = 'method';
-    methodInput.value = 'xml';
-    form.appendChild(methodInput);
 
-    const targetCountryInput = document.createElement('input');
-    targetCountryInput.type = 'hidden';
-    targetCountryInput.name = 'target_country';
-    targetCountryInput.value = targetCountry;
-    form.appendChild(targetCountryInput);
-    
     productIds.forEach(id => {
         const input = document.createElement('input');
         input.type = 'hidden';
@@ -1438,11 +1262,11 @@ async function downloadGMCXML(productIds) {
         input.value = id;
         form.appendChild(input);
     });
-    
+
     document.body.appendChild(form);
     form.submit();
-    
-    setTimeout(() => {
+
+    setTimeout(function() {
         document.body.removeChild(form);
     }, 1000);
 }

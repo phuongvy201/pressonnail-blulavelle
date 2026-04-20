@@ -258,6 +258,7 @@ class ProductsImport implements
                     'shop_id' => $this->user->hasShop() ? $this->user->shop->id : null, // Shop ID
                     'name' => $productName,
                     'slug' => $slug,
+                    'sku' => $this->generateUniqueProductSku(),
                     'price' => $finalPrice,
                     'description' => $description,
                     'quantity' => $row['quantity'] ?? 0,
@@ -1718,5 +1719,18 @@ class ProductsImport implements
 
         // Default to jpg if cannot detect
         return 'jpg';
+    }
+
+    /**
+     * Generate unique SKU for imported products.
+     * Format: PRD-XXXXXXXX
+     */
+    protected function generateUniqueProductSku(): string
+    {
+        do {
+            $sku = 'PRD-' . strtoupper(Str::random(8));
+        } while (Product::where('sku', $sku)->exists());
+
+        return $sku;
     }
 }

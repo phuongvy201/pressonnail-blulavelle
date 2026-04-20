@@ -19,6 +19,7 @@ use App\Services\ProductMediaKeywordsService;
 use App\Support\ReferenceNailSizeChart;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -1351,19 +1352,12 @@ class ProductController extends Controller
         try {
             $user = auth()->user();
 
-            // Validate request
             $request->validate([
                 'product_ids' => 'required|array',
                 'product_ids.*' => 'exists:products,id',
-                'method' => 'nullable|in:api,xml', // api or xml
-                'target_country' => 'required|string|size:2', // US, GB, VN, etc.
             ]);
 
             $productIds = $request->product_ids;
-            $method = $request->input('method', 'api'); // Default to API
-            $targetCountry = strtoupper($request->target_country);
-
-            // Get products with relationships first to determine domain
             $productsQuery = Product::with(['template.category', 'shop', 'variants'])
                 ->whereIn('id', $productIds);
 
@@ -1388,120 +1382,10 @@ class ProductController extends Controller
                 return back()->with('error', 'No products found or you do not have permission to access these products.');
             }
 
-            // Get domain from current request host (where admin is accessing from)
-            // This ensures we use the correct domain for the GMC config
-            $currentDomain = $request->getHost();
-            // Remove www. if present
-            $currentDomain = preg_replace('/^www\./', '', $currentDomain);
+            $exportProducts = $products->values();
+            $fileName = 'gmc_feed_' . now()->format('Y-m-d_His') . '.csv';
 
-            // Get GMC config for domain and target country
-            $gmcConfig = GmcConfig::getConfigForDomainAndCountry($currentDomain, $targetCountry);
-
-            if (!$gmcConfig) {
-                $errorMessage = "Không tìm thấy cấu hình GMC cho domain '{$currentDomain}' và thị trường '{$targetCountry}'. Vui lòng cấu hình GMC trước.";
-
-                Log::warning('GMC Config not found', [
-                    'domain' => $currentDomain,
-                    'target_country' => $targetCountry,
-                    'request_host' => $request->getHost()
-                ]);
-
-                if ($request->expectsJson() || $request->ajax()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => $errorMessage
-                    ], 400);
-                }
-                return back()->with('error', $errorMessage);
-            }
-
-            // Log domain being used
-            Log::info('GMC Feed - Domain determined', [
-                'domain_used' => $currentDomain,
-                'target_country' => $targetCountry,
-                'request_host' => $request->getHost(),
-                'gmc_config_id' => $gmcConfig->id,
-                'gmc_config_name' => $gmcConfig->name,
-                'product_count' => $products->count()
-            ]);
-
-            // Use API method if requested and configured
-            if ($method === 'api') {
-                try {
-                    // Create GMC service with config from database
-                    $gmcService = GoogleMerchantCenterService::fromConfig($gmcConfig);
-
-                    // Prepare products data for API - use current domain
-                    $productsData = [];
-                    foreach ($products as $product) {
-                        $productData = $this->prepareProductForGMC($product, $gmcConfig, $currentDomain);
-                        if ($productData) {
-                            $productsData[] = $productData;
-                        }
-                    }
-
-                    if (empty($productsData)) {
-                        throw new \Exception('No valid products to upload. Products must have name, price, and image.');
-                    }
-
-                    // Batch upload products
-                    $results = $gmcService->batchInsertProducts($productsData);
-
-                    // Log successful batch upload
-                    Log::info('GMC Batch upload completed from admin panel', [
-                        'user_id' => auth()->id(),
-                        'user_email' => auth()->user()->email ?? 'N/A',
-                        'total_products' => $results['total'],
-                        'success_count' => $results['success_count'],
-                        'failed_count' => $results['failed_count'],
-                        'product_ids' => $request->input('product_ids', []),
-                        'results' => $results
-                    ]);
-
-                    // Return JSON response for AJAX requests
-                    if ($request->expectsJson() || $request->ajax()) {
-                        return response()->json([
-                            'success' => $results['success_count'] > 0,
-                            'message' => "Uploaded {$results['success_count']} of {$results['total']} products to Google Merchant Center",
-                            'results' => $results
-                        ]);
-                    }
-
-                    // Return redirect with results
-                    $message = "Successfully uploaded {$results['success_count']} of {$results['total']} products to Google Merchant Center";
-                    if ($results['failed_count'] > 0) {
-                        $message .= ". {$results['failed_count']} products failed to upload.";
-                    }
-
-                    return back()->with('success', $message)->with('gmc_results', $results);
-                } catch (\Exception $e) {
-                    Log::error('GMC API upload failed', [
-                        'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString()
-                    ]);
-
-                    // Fallback to XML if API fails
-                    if (str_contains($e->getMessage(), 'not configured') || str_contains($e->getMessage(), 'credentials')) {
-                        $errorMessage = 'Google Merchant Center API is not configured. Please configure GMC_MERCHANT_ID and GMC_CREDENTIALS_PATH in .env file. Falling back to XML download.';
-                        Log::warning($errorMessage);
-
-                        // Fall through to XML generation
-                        $method = 'xml';
-                    } else {
-                        throw $e;
-                    }
-                }
-            }
-
-            // Generate XML feed (fallback or if explicitly requested)
-            if ($method === 'xml') {
-                $xml = $this->generateGMCXML($products, $gmcConfig, $currentDomain);
-
-                // Return XML response
-                return response($xml, 200)
-                    ->header('Content-Type', 'application/xml; charset=utf-8')
-                    ->header('Content-Disposition', 'attachment; filename="gmc_feed_' . date('Y-m-d_His') . '.xml"');
-            }
+            return $this->exportGoogleMerchantFeedCsvFromCollection($exportProducts, true, $fileName);
         } catch (\Exception $e) {
             Log::error('GMC Feed failed', [
                 'error' => $e->getMessage(),
@@ -1509,17 +1393,7 @@ class ProductController extends Controller
                 'request_data' => $request->all()
             ]);
 
-            $message = 'An error occurred while processing GMC feed. Please try again.';
-
-            if ($request->expectsJson() || $request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $message,
-                    'error' => $e->getMessage()
-                ], 500);
-            }
-
-            return back()->with('error', $message);
+            return back()->with('error', 'Không thể xuất file GMC. Vui lòng thử lại.');
         }
     }
 
@@ -2196,6 +2070,201 @@ class ProductController extends Controller
 
         // Default category: Other
         return '783';
+    }
+
+    /**
+     * Export Google Merchant Center feed CSV from an already-loaded product collection.
+     *
+     * @param  SupportCollection<int, Product>  $products
+     */
+    protected function exportGoogleMerchantFeedCsvFromCollection(SupportCollection $products, bool $download = false, ?string $filename = null)
+    {
+        $headers = [
+            'id',
+            'title',
+            'description',
+            'link',
+            'image_link',
+            'additional_image_link',
+            'video_link',
+            'availability',
+            'price',
+            'sale_price',
+            'google_product_category',
+            'product_type',
+            'brand',
+            'condition',
+            'age_group',
+            'gender',
+            'shipping_weight',
+        ];
+
+        $filename = $filename ?: 'google_merchant_feed_' . now()->format('Y-m-d_His') . '.csv';
+        $baseUrl = rtrim(config('app.url') ?: url('/'), '/');
+
+        $formatPrice = static function ($value): string {
+            $amount = is_numeric($value) ? (float) $value : 0.0;
+            return number_format($amount, 2, '.', '') . ' USD';
+        };
+
+        $sanitizeText = static function ($value, bool $stripHtml = false): string {
+            $text = is_scalar($value) ? (string) $value : '';
+            if ($stripHtml) {
+                $text = strip_tags($text);
+            }
+            $text = preg_replace('/\s+/u', ' ', $text ?? '') ?? '';
+            return trim($text);
+        };
+
+        $normalizeMediaUrl = static function ($mediaItem): ?string {
+            if (is_string($mediaItem)) {
+                return trim($mediaItem) !== '' ? trim($mediaItem) : null;
+            }
+            if (!is_array($mediaItem)) {
+                return null;
+            }
+
+            $candidates = [
+                $mediaItem['url'] ?? null,
+                $mediaItem['path'] ?? null,
+            ];
+            foreach ($candidates as $candidate) {
+                if (is_string($candidate) && trim($candidate) !== '') {
+                    return trim($candidate);
+                }
+            }
+
+            return null;
+        };
+
+        $isVideoMedia = static function ($mediaItem, ?string $url): bool {
+            if (is_array($mediaItem) && isset($mediaItem['type']) && strtolower((string) $mediaItem['type']) === 'video') {
+                return true;
+            }
+            if ($url === null || $url === '') {
+                return false;
+            }
+
+            $path = parse_url($url, PHP_URL_PATH);
+            $ext = strtolower((string) pathinfo((string) $path, PATHINFO_EXTENSION));
+            return in_array($ext, ['mp4', 'mov', 'avi', 'webm', 'ogg', 'm4v', 'mpeg', 'mpg'], true);
+        };
+
+        $toAbsoluteUrl = static function (?string $url) use ($baseUrl): ?string {
+            if ($url === null || $url === '') {
+                return null;
+            }
+            if (preg_match('/^https?:\/\//i', $url)) {
+                return $url;
+            }
+            return $baseUrl . '/' . ltrim($url, '/');
+        };
+
+        $buildRow = function (Product $product) use (
+            $sanitizeText,
+            $normalizeMediaUrl,
+            $isVideoMedia,
+            $toAbsoluteUrl,
+            $formatPrice,
+            $baseUrl
+        ): array {
+            $media = $product->getEffectiveMedia();
+            $media = is_array($media) ? $media : [];
+
+            $imageLinks = [];
+            $videoLinks = [];
+
+            foreach ($media as $item) {
+                $rawUrl = $normalizeMediaUrl($item);
+                if ($rawUrl === null) {
+                    continue;
+                }
+
+                $absoluteUrl = $toAbsoluteUrl($rawUrl);
+                if ($absoluteUrl === null) {
+                    continue;
+                }
+
+                if ($isVideoMedia($item, $absoluteUrl)) {
+                    if (count($videoLinks) < 10) {
+                        $videoLinks[] = $absoluteUrl;
+                    }
+                    continue;
+                }
+
+                if (count($imageLinks) < 11) {
+                    $imageLinks[] = $absoluteUrl;
+                }
+            }
+
+            $primaryImage = $imageLinks[0] ?? '';
+            $additionalImages = array_slice($imageLinks, 1, 10);
+            $slug = trim((string) ($product->slug ?? ''));
+            $productIdentifier = $slug !== '' ? $slug : (string) $product->id;
+
+            $listPrice = is_numeric($product->list_price) && (float) $product->list_price > 0
+                ? (float) $product->list_price
+                : (float) ($product->price ?? 0);
+
+            return [
+                $sanitizeText($product->sku ?: ('PRD-' . $product->id)),
+                $sanitizeText($product->name),
+                $sanitizeText($product->description ?? '', true),
+                $baseUrl . '/product/' . $productIdentifier,
+                $primaryImage,
+                implode(',', $additionalImages),
+                implode(',', array_slice($videoLinks, 0, 10)),
+                $product->status === 'active' ? 'in_stock' : 'out_of_stock',
+                $formatPrice($listPrice),
+                $formatPrice($product->price ?? 0),
+                'Health & Beauty > Personal Care > Cosmetics > Nail Care > False Nails',
+                'Nail Box',
+                'Blu Lavelle',
+                'new',
+                'adult',
+                'female',
+                '50 g',
+            ];
+        };
+
+        if (! $download) {
+            $stream = fopen('php://temp', 'w+');
+            if ($stream === false) {
+                return '';
+            }
+
+            fputcsv($stream, $headers);
+            foreach ($products as $product) {
+                fputcsv($stream, $buildRow($product));
+            }
+
+            rewind($stream);
+            $csv = stream_get_contents($stream) ?: '';
+            fclose($stream);
+
+            return $csv;
+        }
+
+        return response()->streamDownload(function () use ($products, $headers, $buildRow) {
+            $output = fopen('php://output', 'w');
+            if ($output === false) {
+                return;
+            }
+
+            fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($output, $headers);
+
+            foreach ($products as $product) {
+                fputcsv($output, $buildRow($product));
+            }
+
+            fclose($output);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+        ]);
     }
 
     /**
