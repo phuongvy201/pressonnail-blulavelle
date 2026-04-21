@@ -286,8 +286,29 @@
     $shipCountryCode = $location->detectCountryCode(request(), 'VN');
     $shipCountryName = $location->getCountryName($shipCountryCode);
     $shipsFrom = 'United States';
-    $deliveryStart = now()->addDays(11);
-    $deliveryEnd = now()->addDays(20);
+    $deliveryMinDays = 11;
+    $deliveryMaxDays = 20;
+    try {
+        $rateForDelivery = app(\App\Services\ShippingCalculator::class)->findRateForProduct($product, $shipCountryCode, 1, $productPrice);
+        if ($rateForDelivery && ($rateForDelivery->delivery_min_days !== null || $rateForDelivery->delivery_max_days !== null)) {
+            $min = $rateForDelivery->delivery_min_days;
+            $max = $rateForDelivery->delivery_max_days;
+            if ($min === null) {
+                $min = $max;
+            }
+            if ($max === null) {
+                $max = $min;
+            }
+            if ($min !== null && $max !== null) {
+                $deliveryMinDays = max(0, (int) $min);
+                $deliveryMaxDays = max($deliveryMinDays, (int) $max);
+            }
+        }
+    } catch (\Throwable $e) {
+        // giữ mặc định 11–20
+    }
+    $deliveryStart = now()->startOfDay()->addDays($deliveryMinDays);
+    $deliveryEnd = now()->startOfDay()->addDays($deliveryMaxDays);
     $deliveryRangeText = $deliveryStart->format('M j') . '–' . ($deliveryStart->format('M') === $deliveryEnd->format('M') ? $deliveryEnd->format('j') : $deliveryEnd->format('M j'));
     $shippingCostUsd = null;
     try {

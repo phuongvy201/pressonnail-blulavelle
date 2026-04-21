@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <!-- Google Consent Mode -->
@@ -26,7 +26,7 @@
         });
     </script>
 
-    {{-- Helper: trì hoãn script tracking cho đến khi user tương tác (scroll/move/touch/keydown) hoặc sau ~4s --}}
+    {{-- Helper: trÃ¬ hoÃ£n script tracking cho Ä‘áº¿n khi user tÆ°Æ¡ng tÃ¡c (scroll/move/touch/keydown) hoáº·c sau ~4s --}}
     <script>
     (function () {
         if (window.__runAfterInteraction) return;
@@ -87,7 +87,7 @@
         window.SITE_CURRENCY_SYMBOL = @json($siteCurrencySymbol);
     </script>
 
-    {{-- Cookie Script: tải sau idle/load — tránh chặn render (Lighthouse render-blocking) --}}
+    {{-- Cookie Script: táº£i sau idle/load â€” trÃ¡nh cháº·n render (Lighthouse render-blocking) --}}
     <script>
     (function () {
         var src = 'https://cdn.cookie-script.com/s/4a353d27e80af68f255e8b4bff37f75c.js';
@@ -111,7 +111,7 @@
         $__adsId = $googleAdsId ? trim((string) $googleAdsId) : '';
     @endphp
     @if($__adsId !== '')
-        {{-- gtag (GA4 G- / Ads AW-): trì hoãn tới khi user tương tác (hoặc sau ~4s). --}}
+        {{-- gtag (GA4 G- / Ads AW-): trÃ¬ hoÃ£n tá»›i khi user tÆ°Æ¡ng tÃ¡c (hoáº·c sau ~4s). --}}
         <script>
         (function () {
             var gid = @json($__adsId);
@@ -138,7 +138,7 @@
     
     
     @if($metaPixelId)
-        {{-- Pixel Meta: tải sau tương tác / idle — giảm tải main thread; fbevents.js vẫn là bundle legacy của Meta (không chỉnh được). --}}
+        {{-- Pixel Meta: táº£i sau tÆ°Æ¡ng tÃ¡c / idle â€” giáº£m táº£i main thread; fbevents.js váº«n lÃ  bundle legacy cá»§a Meta (khÃ´ng chá»‰nh Ä‘Æ°á»£c). --}}
         <script>
         (function () {
             var id = @json($metaPixelId);
@@ -178,7 +178,7 @@
     @endif
 
     @if($tiktokPixelId)
-        {{-- TikTok: trì hoãn load SDK tới khi user tương tác / idle --}}
+        {{-- TikTok: trÃ¬ hoÃ£n load SDK tá»›i khi user tÆ°Æ¡ng tÃ¡c / idle --}}
         <script>
         !function (w, d, t) {
           w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(
@@ -275,14 +275,14 @@
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
 
     @php
-        // Chữ: swap. Icon: một trục cố định khớp .material-symbols-outlined (opsz 24, wght 400) — ít @font-face hơn, Lighthouse font-display ổn định hơn so với range đầy đủ.
+        // Chá»¯: swap. Icon: má»™t trá»¥c cá»‘ Ä‘á»‹nh khá»›p .material-symbols-outlined (opsz 24, wght 400) â€” Ã­t @font-face hÆ¡n, Lighthouse font-display á»•n Ä‘á»‹nh hÆ¡n so vá»›i range Ä‘áº§y Ä‘á»§.
         $googleFontsText = 'https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap';
         $googleFontsIcons = 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap';
     @endphp
-    <!-- Fonts: tải không chặn first paint; display=swap trong CSS Google -->
+    <!-- Fonts: táº£i khÃ´ng cháº·n first paint; display=swap trong CSS Google -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    {{-- Footer DMCA badge: mở kết nối sớm (≤4 preconnect); giảm latency khi ảnh + helper tải. --}}
+    {{-- Footer DMCA badge: má»Ÿ káº¿t ná»‘i sá»›m (â‰¤4 preconnect); giáº£m latency khi áº£nh + helper táº£i. --}}
     <link rel="preconnect" href="https://images.dmca.com">
     <link href="{{ $googleFontsText }}" rel="stylesheet" media="print" onload="this.media='all'">
     <link href="{{ $googleFontsIcons }}" rel="stylesheet" media="print" onload="this.media='all'">
@@ -331,7 +331,7 @@
     }
     .material-symbols-outlined.fill-current { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
 
-    /* Promo banner color-shift animation (màu chủ đạo #0297FE) */
+    /* Promo banner color-shift animation (mÃ u chá»§ Ä‘áº¡o #0297FE) */
     @keyframes promo-banner-shift {
         0%, 100% { background-color: #0195FE; }
         33% { background-color: #0178c7; }
@@ -365,7 +365,7 @@
 class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text-white text-center px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold tracking-wide promo-banner-animate"
 >
 <span class="block leading-tight">
-    {{ \App\Support\Settings::get('site.promo_banner', config('theme.promo_banner', 'Free Shipping on Orders Over $150 • Premium Press-on Nails')) }}
+    {{ \App\Support\Settings::get('site.promo_banner', config('theme.promo_banner', 'Free Shipping on Orders Over $150 â€¢ Premium Press-on Nails')) }}
 </span>
 </div>
     
@@ -409,12 +409,12 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
             @yield('content')
         </main>
 
-        <!-- FAQ Section (Minimalist Footer) — nội dung: layout.footer_faq (content_block) -->
+        <!-- FAQ Section (Minimalist Footer) â€” ná»™i dung: layout.footer_faq (content_block) -->
         <section class="px-4 sm:px-6 lg:px-20 py-10 sm:py-14 lg:py-20 bg-white" id="footer-faq" data-content-block="layout.footer_faq" @if($footerFaqBgCustom) style="background-color: {{ $footerFaqBgCustom }};" @endif>
             <div class="max-w-3xl mx-auto">
                 @if(isset($canEdit) && $canEdit && isset($editMode) && $editMode)
                 <div class="flex justify-end mb-2">
-                    <button type="button" class="inline-edit-trigger px-3 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-lg hover:opacity-90" data-block="layout.footer_faq">Chỉnh sửa FAQ</button>
+                    <button type="button" class="inline-edit-trigger px-3 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-lg hover:opacity-90" data-block="layout.footer_faq">Chá»‰nh sá»­a FAQ</button>
                 </div>
                 @endif
                 <h2 class="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 text-center mb-8 sm:mb-12" data-content-field="section_heading">{{ $footerFaq['section_heading'] ?? 'Your Questions, Answered' }}</h2>
@@ -490,15 +490,15 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                                  class="h-20 sm:h-24 lg:h-28 w-auto object-contain">
                         </div>
                         <p class="text-sm text-slate-300 leading-relaxed max-w-md">
-                            Blulavelle.com is a global online marketplace where people come together to make, sell, buy, and collect unique items. There's no Blulavelle warehouse – just independent sellers selling the things they love. We make the whole process easy, helping you connect directly with makers to find something extraordinary.
+                            Blulavelle.com is a global online marketplace where people come together to make, sell, buy, and collect unique items. There's no Blulavelle warehouse â€“ just independent sellers selling the things they love. We make the whole process easy, helping you connect directly with makers to find something extraordinary.
                         </p>
                         <div>
                             <p class="text-sm font-bold text-white mb-2">The website is jointly operated by:</p>
                             <ul class="text-xs text-slate-300 space-y-1.5 leading-relaxed">
-                                <li><strong class="text-slate-300">HM FULFILL COMPANY LIMITED</strong> — 63/9D, Ap Chanh 1, Tan Xuan, Hoc Mon, Ho Chi Minh City 700000, Vietnam</li>
-                                <li><strong class="text-slate-300">BLUE STAR TRADING LIMITED</strong> — RM C, G/F, WORLD TRUST TOWER, 50 STANLEY STREET, CENTRAL HONG KONG</li>
-                                <li><strong class="text-slate-300">Bluprinter LTD (UK)</strong> — Company Number 16342015, 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom</li>
-                                <li><strong class="text-slate-300">Bluprinter LLC (US)</strong> — 5900 BALCONES DR STE 100, AUSTIN, TX 78731, USA</li>
+                                <li><strong class="text-slate-300">HM FULFILL COMPANY LIMITED</strong> â€” 63/9D, Ap Chanh 1, Tan Xuan, Hoc Mon, Ho Chi Minh City 700000, Vietnam</li>
+                                <li><strong class="text-slate-300">BLUE STAR TRADING LIMITED</strong> â€” RM C, G/F, WORLD TRUST TOWER, 50 STANLEY STREET, CENTRAL HONG KONG</li>
+                                <li><strong class="text-slate-300">Bluprinter LTD (UK)</strong> â€” Company Number 16342015, 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom</li>
+                                <li><strong class="text-slate-300">Bluprinter LLC (US)</strong> â€” 5900 BALCONES DR STE 100, AUSTIN, TX 78731, USA</li>
                             </ul>
                         </div>
                         <div>
@@ -545,7 +545,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                                     <img src="https://images.dmca.com/Badges/dmca_protected_sml_120l.png?ID=1318f147-a17c-4b0f-bdf2-18feb5c80ce7" alt="DMCA.com Protection Status" loading="lazy" decoding="async" />
                                 </a>
                             </div>
-                            {{-- DMCA helper: sau window.load + delay — tránh chuỗi quan trọng (idle vẫn bị Lighthouse tính). --}}
+                            {{-- DMCA helper: sau window.load + delay â€” trÃ¡nh chuá»—i quan trá»ng (idle váº«n bá»‹ Lighthouse tÃ­nh). --}}
                             <script>
                             (function () {
                                 function loadDmca() {
@@ -572,7 +572,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                         </div>
                     </div>
 
-                    {{-- Col 2–4: Company, Get Help, Shop --}}
+                    {{-- Col 2â€“4: Company, Get Help, Shop --}}
                     <div class="lg:col-span-4 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
                         <div>
                             <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-4">Company</h3>
@@ -637,7 +637,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                         <span>Vietnam</span>
                         <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </div>
-                    <p class="text-sm text-slate-300">© {{ date('Y') }} Blulavelle. All Rights Reserved.</p>
+                    <p class="text-sm text-slate-300">Â© {{ date('Y') }} Blulavelle. All Rights Reserved.</p>
                     <div class="flex gap-3 items-center grayscale opacity-90">
                         <span class="material-symbols-outlined text-2xl text-slate-300">credit_card</span>
                         <span class="material-symbols-outlined text-2xl text-slate-300">account_balance</span>
@@ -649,20 +649,20 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         </footer>
     </div>
 
-    {{-- Cart Drawer (popup khi add to cart / click icon giỏ) - full width trên mobile --}}
+    {{-- Cart Drawer (popup khi add to cart / click icon giá») - full width trÃªn mobile --}}
     <div id="cart-drawer-backdrop" class="fixed inset-0 bg-black/30 z-40 hidden transition-opacity" aria-hidden="true"></div>
-    <div id="cart-drawer" class="fixed top-0 right-0 h-full w-full sm:max-w-md bg-white shadow-2xl z-50 flex flex-col border-l border-primary/10 transform translate-x-full transition-transform duration-300 ease-out" role="dialog" aria-label="Giỏ hàng">
+    <div id="cart-drawer" class="fixed top-0 right-0 h-full w-full sm:max-w-md bg-white shadow-2xl z-50 flex flex-col border-l border-primary/10 transform translate-x-full transition-transform duration-300 ease-out" role="dialog" aria-label="Giá» hÃ ng">
         <div class="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-primary/10">
             <div class="flex items-center gap-2">
                 <span class="material-symbols-outlined text-primary">shopping_bag</span>
                 <h2 id="cart-drawer-title" class="text-xl font-bold text-slate-900">Your Cart (0)</h2>
             </div>
-            <button type="button" id="cart-drawer-close" class="p-2 hover:bg-primary/10 rounded-full transition-colors" aria-label="Đóng">
+            <button type="button" id="cart-drawer-close" class="p-2 hover:bg-primary/10 rounded-full transition-colors" aria-label="ÄÃ³ng">
                 <span class="material-symbols-outlined text-slate-600">close</span>
             </button>
         </div>
         <div class="flex-1 overflow-y-auto custom-scrollbar">
-            {{-- Free Shipping Progress (giống cart/index.blade.php) --}}
+            {{-- Free Shipping Progress (giá»‘ng cart/index.blade.php) --}}
             <div id="cart-drawer-progress-wrap" class="p-4 sm:p-6 bg-primary/5 border-b border-primary/10 hidden">
                 <div class="flex justify-between items-center mb-2">
                     <p class="text-sm font-semibold text-slate-700">Free Shipping Progress</p>
@@ -672,6 +672,13 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                     <div id="cart-drawer-progress-bar" class="h-full bg-primary rounded-full transition-all duration-500" style="width: 0%;"></div>
                 </div>
                 <p id="cart-drawer-progress-note" class="mt-2 text-xs font-medium text-slate-600">Add <span class="text-primary-fg font-bold">$0.00</span> more to unlock free shipping!</p>
+                <div id="cart-drawer-delivery-row" class="mt-3 flex items-start gap-2.5 text-sm text-slate-700">
+                    <span class="material-symbols-outlined text-slate-600 text-xl leading-none shrink-0">calendar_month</span>
+                    <div class="leading-snug">
+                        <span class="text-slate-600">Order today to get by</span>
+                        <span id="cart-drawer-delivery-range" class="font-bold underline underline-offset-2 decoration-[#0297FE] ml-1">May 1-3</span>
+                    </div>
+                </div>
             </div>
             {{-- Cart Items --}}
             <div id="cart-drawer-items" class="flex flex-col divide-y divide-primary/5">
@@ -721,6 +728,9 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                             Promo code
                         </button>
                     </div>
+                    <p class="text-[11px] leading-snug text-slate-500 px-0.5 mb-2">
+                        <span class="font-semibold text-slate-600">Volume</span> is an automatic discount based on how many items are in your cartâ€”no code needed. Choose <span class="font-semibold text-slate-600">Promo code</span> if you have a coupon instead.
+                    </p>
                     <label class="block text-xs font-bold text-slate-600 mb-1.5 uppercase">Promo Code</label>
                     <div class="flex gap-2">
                         <input type="text" id="cart-drawer-promo-input" placeholder="Enter code" class="flex-1 rounded-lg border border-primary/20 bg-slate-50 text-sm px-3 py-2 focus:ring-primary focus:border-primary" autocomplete="off">
@@ -746,10 +756,10 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         </div>
     </div>
 
-    {{-- Toast thông báo (dùng cho newsletter, v.v.) --}}
+    {{-- Toast thÃ´ng bÃ¡o (dÃ¹ng cho newsletter, v.v.) --}}
     <div id="toast-container" class="fixed top-4 right-4 z-[70] flex flex-col gap-3 pointer-events-none max-w-sm w-full sm:max-w-md" aria-live="polite"></div>
 
-    {{-- Live Chat widget (khách hàng) - responsive --}}
+    {{-- Live Chat widget (khÃ¡ch hÃ ng) - responsive --}}
     <div id="live-chat-widget" class="fixed z-[55] bottom-4 right-4 sm:bottom-6 sm:right-6 md:bottom-6 md:right-6" style="padding-bottom: max(0.25rem, env(safe-area-inset-bottom)); padding-right: max(0.25rem, env(safe-area-inset-right));">
         <div id="live-chat-toggle-wrap" class="relative inline-block">
             <button type="button" id="live-chat-toggle" class="live-chat-ring-target w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg flex items-center justify-center text-white hover:opacity-90 transition-opacity flex-shrink-0" style="background: #0297FE;" aria-label="Chat">
@@ -768,7 +778,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
             <div id="live-chat-start" class="p-3 sm:p-4 flex-shrink-0">
                 <p class="text-xs sm:text-sm text-slate-600 mb-3 sm:mb-4">Send a message, we'll reply soon.</p>
                 <div id="live-chat-guest-form" class="space-y-2.5 sm:space-y-3 {{ auth()->check() ? 'hidden' : '' }}">
-                    {{-- Honeypot: ẩn với CSS, bot điền vào sẽ bị từ chối --}}
+                    {{-- Honeypot: áº©n vá»›i CSS, bot Ä‘iá»n vÃ o sáº½ bá»‹ tá»« chá»‘i --}}
                     <input type="text" id="live-chat-website" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="absolute left-[-9999px] w-0 h-0 opacity-0 pointer-events-none">
                     <input type="text" id="live-chat-guest-name" placeholder="Your name" class="w-full px-3 py-2 sm:px-4 rounded-xl border border-slate-200 text-sm min-h-[44px] sm:min-h-0" autocomplete="name">
                     <input type="email" id="live-chat-guest-email" placeholder="Email" class="w-full px-3 py-2 sm:px-4 rounded-xl border border-slate-200 text-sm min-h-[44px] sm:min-h-0" autocomplete="email">
@@ -787,7 +797,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         </div>
     </div>
 
-    {{-- Promo popup: sau Add to Cart / Wishlist — "Get 10% OFF! Enter your email..." (responsive) --}}
+    {{-- Promo popup: sau Add to Cart / Wishlist â€” "Get 10% OFF! Enter your email..." (responsive) --}}
     <div id="promo-popup-backdrop" class="fixed inset-0 bg-black/40 z-[55] hidden transition-opacity" aria-hidden="true"></div>
     <div id="promo-popup" class="fixed left-4 right-4 top-1/2 -translate-y-1/2 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 w-[calc(100%-2rem)] sm:w-full max-w-md max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl z-[60] hidden flex flex-col" style="padding-bottom: max(1rem, env(safe-area-inset-bottom));" role="dialog" aria-modal="true" aria-labelledby="promo-popup-headline">
         <div class="bg-primary text-white px-4 py-5 sm:px-6 sm:py-6 text-center flex-shrink-0">
@@ -839,6 +849,26 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
             return CURRENCY_SYMBOL + n.toFixed(2);
         }
 
+        function formatDeliveryRange(minDays, maxDays) {
+            var min = Number.isFinite(Number(minDays)) ? Math.max(0, Math.floor(Number(minDays))) : 11;
+            var max = Number.isFinite(Number(maxDays)) ? Math.max(min, Math.floor(Number(maxDays))) : 20;
+            var start = new Date();
+            start.setHours(0, 0, 0, 0);
+            start.setDate(start.getDate() + min);
+            var end = new Date();
+            end.setHours(0, 0, 0, 0);
+            end.setDate(end.getDate() + max);
+
+            var startMonth = start.toLocaleString('en-US', { month: 'short' });
+            var endMonth = end.toLocaleString('en-US', { month: 'short' });
+            var startDay = start.getDate();
+            var endDay = end.getDate();
+
+            return startMonth === endMonth
+                ? (startMonth + ' ' + startDay + '–' + endDay)
+                : (startMonth + ' ' + startDay + '–' + endMonth + ' ' + endDay);
+        }
+
         function getProductImage(item) {
             if (!item.product) return '';
             var media = item.product.media || [];
@@ -869,10 +899,19 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
 
         function buildVariantLine(item) {
             var v = item.selected_variant || {};
-            var attrs = v.attributes || {};
+            var attrs = (v && typeof v === 'object' && v.attributes && typeof v.attributes === 'object')
+                ? v.attributes
+                : (v && typeof v === 'object' ? v : {});
             var parts = [];
-            if (attrs.Size || attrs.size) parts.push('Size: ' + (attrs.Size || attrs.size));
-            if (attrs['Nail Shape'] || attrs.Shape || attrs.shape) parts.push('Shape: ' + (attrs['Nail Shape'] || attrs.Shape || attrs.shape));
+
+            Object.keys(attrs).forEach(function(key) {
+                if (key === 'id' || key === 'attributes') return;
+                var value = attrs[key];
+                if (value === null || value === undefined || value === '') return;
+                var label = String(key).replace(/_/g, ' ').replace(/\b\w/g, function(ch) { return ch.toUpperCase(); });
+                parts.push(label + ': ' + String(value));
+            });
+
             return parts.length ? parts.join(' | ') : '';
         }
 
@@ -1053,6 +1092,12 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
             var progressBar = document.getElementById('cart-drawer-progress-bar');
             var progressRatio = document.getElementById('cart-drawer-progress-ratio');
             var progressNote = document.getElementById('cart-drawer-progress-note');
+            var deliveryRangeEl = document.getElementById('cart-drawer-delivery-range');
+            if (deliveryRangeEl) {
+                var summaryMinDays = summary.delivery_min_days;
+                var summaryMaxDays = summary.delivery_max_days;
+                deliveryRangeEl.textContent = summary.delivery_range_text || formatDeliveryRange(summaryMinDays, summaryMaxDays);
+            }
             if (progressWrap) {
                 progressWrap.classList.remove('hidden');
                 if (progressRatio) progressRatio.textContent = formatPrice(Math.min(progressSubtotal, CART_DRAWER_FREE_SHIP_THRESHOLD)) + ' / ' + formatPrice(CART_DRAWER_FREE_SHIP_THRESHOLD);
@@ -1262,7 +1307,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         });
     </script>
 
-    <!-- Toast + Newsletter: toast đẹp thay cho alert -->
+    <!-- Toast + Newsletter: toast Ä‘áº¹p thay cho alert -->
     <script>
     (function() {
         function showToast(message, type) {
@@ -1348,7 +1393,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         from { opacity: 1; transform: translateX(0); }
         to { opacity: 0; transform: translateX(100%); }
     }
-    /* Rung icon chat khi có tin nhắn mới (như điện thoại đổ chuông) */
+    /* Rung icon chat khi cÃ³ tin nháº¯n má»›i (nhÆ° Ä‘iá»‡n thoáº¡i Ä‘á»• chuÃ´ng) */
     @keyframes liveChatRing {
         0%, 100% { transform: translateX(0) rotate(0deg); }
         10% { transform: translateX(-2px) rotate(-8deg); }
@@ -1364,7 +1409,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
     #live-chat-toggle-wrap.live-chat-ring .live-chat-ring-target {
         animation: liveChatRing 0.5s ease-in-out 6 forwards;
     }
-    /* Live chat responsive: bottom sheet trên mobile, tránh safe area */
+    /* Live chat responsive: bottom sheet trÃªn mobile, trÃ¡nh safe area */
     @media (max-width: 639px) {
         #live-chat-panel.live-chat-panel {
             bottom: max(5rem, calc(env(safe-area-inset-bottom, 0px) + 3.5rem));
@@ -1373,7 +1418,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
     }
     </style>
 
-    <!-- Live Chat widget: khách hàng chat với seller -->
+    <!-- Live Chat widget: khÃ¡ch hÃ ng chat vá»›i seller -->
     <script>
     (function() {
         var startUrl = '{{ route("live-chat.start") }}';
@@ -1588,7 +1633,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                     }
                 });
         }
-        {{-- Chat: chỉ gọi resume-status sau load + delay — tách khỏi critical path trong lab. --}}
+        {{-- Chat: chá»‰ gá»i resume-status sau load + delay â€” tÃ¡ch khá»i critical path trong lab. --}}
         window.addEventListener('load', function () { setTimeout(prefillAndResume, 2600); }, { once: true });
 
         document.getElementById('live-chat-send-form').addEventListener('submit', function(e) {
@@ -1654,7 +1699,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
     })();
     </script>
 
-    <!-- Promo popup: hiển thị sau Add to Cart / Wishlist -->
+    <!-- Promo popup: hiá»ƒn thá»‹ sau Add to Cart / Wishlist -->
     <script>
     (function() {
         var offerUrl = '{{ route("promo.offer") }}';
@@ -1743,7 +1788,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         $__wishlistV = is_file($__wishlistPath) ? (string) filemtime($__wishlistPath) : '1';
         $__wishlistSrc = asset('js/wishlist.js') . '?v=' . $__wishlistV;
     @endphp
-    {{-- wishlist.js sau load + delay; init trong file trì hoãn fetch count/check thêm một nhịp. --}}
+    {{-- wishlist.js sau load + delay; init trong file trÃ¬ hoÃ£n fetch count/check thÃªm má»™t nhá»‹p. --}}
     <script>
     (function () {
         var src = @json($__wishlistSrc);
@@ -1758,3 +1803,4 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
     </script>
 </body>
 </html>
+

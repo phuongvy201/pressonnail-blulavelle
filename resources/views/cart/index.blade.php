@@ -365,6 +365,47 @@
     $freeShippingThreshold = 150;
     $freeShippingProgress = $baseSubtotal >= $freeShippingThreshold ? 100 : ($baseSubtotal / $freeShippingThreshold) * 100;
     $amountLeftForFreeShipping = max(0, $freeShippingThreshold - $baseSubtotal);
+
+    $locationSvcCart = app(\App\Services\CustomerLocationService::class);
+    $cartPolicyShipCountryCode = $locationSvcCart->detectCountryCode(request(), 'US');
+    if (!empty($selectedZoneValue)) {
+        $sv = (string) $selectedZoneValue;
+        if (strlen($sv) === 2 && ctype_alpha($sv)) {
+            $cartPolicyShipCountryCode = strtoupper($sv);
+        } elseif (ctype_digit($sv)) {
+            $zCart = \App\Models\ShippingZone::find((int) $sv);
+            if ($zCart) {
+                $zCountries = $zCart->countries ?? [];
+                if (is_array($zCountries) && count($zCountries) > 0) {
+                    $fc = $zCountries[0];
+                    if (is_string($fc) && $fc !== '') {
+                        $cartPolicyShipCountryCode = strtoupper($fc);
+                    }
+                }
+            }
+        }
+    }
+    $dsCart = now()->startOfDay()->addDays(11);
+    $deCart = now()->startOfDay()->addDays(20);
+    $cartPolicyDeliveryRangeText = $dsCart->format('M j') . '–' . ($dsCart->format('M') === $deCart->format('M') ? $deCart->format('j') : $deCart->format('M j'));
+    if ($cartItems->isNotEmpty()) {
+        try {
+            $calcCart = app(\App\Services\ShippingCalculator::class);
+            $linesUsd = $cartItems->map(function ($ci) use ($currentCurrency, $currentCurrencyRate) {
+                $p = (float) $ci->price;
+                $usd = $currentCurrency !== 'USD' && $currentCurrencyRate > 0 ? $p / $currentCurrencyRate : $p;
+
+                return [
+                    'product_id' => $ci->product_id,
+                    'quantity' => max(1, (int) $ci->quantity),
+                    'price' => $usd,
+                ];
+            });
+            $cartPolicyDeliveryRangeText = $calcCart->getDeliveryEstimateRangeForCart($linesUsd, $cartPolicyShipCountryCode)['range_text'];
+        } catch (\Throwable $e) {
+            // giữ mặc định
+        }
+    }
 @endphp
 <div class="bg-background-light min-h-screen font-display text-slate-900 py-8 lg:py-12">
     <div class="max-w-7xl mx-auto px-4 lg:px-20">
@@ -410,6 +451,13 @@
                     @else
                         <p class="mt-2 text-xs font-semibold text-primary">You've unlocked free shipping!</p>
                     @endif
+                </div>
+                <div class="mt-3 flex items-start gap-3 text-sm text-slate-700 max-w-2xl">
+                    <span class="material-symbols-outlined text-slate-600 text-xl leading-none shrink-0">calendar_month</span>
+                    <div class="leading-snug">
+                        <span class="text-slate-600">Order today to get by</span>
+                        <span class="font-bold underline underline-offset-2 decoration-[#0297FE] ml-1">{{ $cartPolicyDeliveryRangeText }}</span>
+                    </div>
                 </div>
             </div>
 
@@ -519,6 +567,9 @@
                                         Promo code
                                     </button>
                                 </div>
+                                <p class="text-[11px] leading-snug text-slate-500 px-0.5 -mt-1">
+                                    <span class="font-semibold text-slate-600">Volume</span> is an automatic discount based on how many items are in your cart—no code needed. Choose <span class="font-semibold text-slate-600">Promo code</span> if you have a coupon instead.
+                                </p>
                                 <div class="flex justify-between text-sm">
                                     <span class="text-slate-500">Subtotal</span>
                                     <span class="font-bold text-slate-900" id="cart-subtotal">{{ format_price((float) $subtotalAfterBulk) }}</span>

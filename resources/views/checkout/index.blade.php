@@ -283,6 +283,9 @@ const CHECKOUT_SUBTOTAL_AFTER_BULK = {{ $subtotalAfterBulk ?? ($convertedSubtota
 const CHECKOUT_BULK_DISCOUNT_PERCENT = {{ $bulkDiscountPercent ?? 0 }};
 const CHECKOUT_DISCOUNT_MODE = @json($discountMode ?? 'volume');
 const CHECKOUT_DISCOUNT_MODE_URL = @json(route('api.cart.discount-mode'));
+const CHECKOUT_APPLY_PROMO_URL = @json(route('api.cart.apply-promo'));
+const CHECKOUT_REMOVE_PROMO_URL = @json(route('api.cart.remove-promo'));
+const CHECKOUT_PROMO_DRAFT_KEY = 'checkout_promo_code_draft';
 const CHECKOUT_CURRENCY_SYMBOL = @json(\App\Services\CurrencyService::getCurrencySymbol($currency ?? 'USD'));
 const SHIPPING_RATES = @json($shippingRatesData);
 const SHIPPING_RATES_BY_ZONE = @json($shippingRatesByZone);
@@ -1108,21 +1111,6 @@ function buildCheckoutCustomizationInputs(customizations) {
                                 <!-- Shimmer effect -->
                                 <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 -translate-x-full group-hover:translate-x-full transition-transform duration-700 z-10"></div>
                             </button>
-                            
-                            <!-- Security Information - match cart primary -->
-                            <div class="mt-6 p-6 bg-primary/10 border border-primary/20 rounded-2xl shadow-sm">
-                                <div class="flex items-center justify-center text-slate-900">
-                                    <div class="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mr-4">
-                                        <svg class="w-6 h-6 text-primary" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path>
-                                        </svg>
-                                    </div>
-                                    <div class="text-center">
-                                        <h3 class="text-lg font-bold mb-1 text-slate-900">🔒 100% Secure Checkout</h3>
-                                        <p class="text-slate-600 text-sm">Your information is protected with 256-bit SSL encryption</p>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </form>
                     </div>
@@ -1282,6 +1270,40 @@ function buildCheckoutCustomizationInputs(customizations) {
                                 Promo code
                             </button>
                         </div>
+                        <p class="text-[11px] leading-snug text-slate-500 px-0.5">
+                            <span class="font-semibold text-slate-600">Volume</span> is an automatic discount based on how many items are in this order—no code needed. Choose <span class="font-semibold text-slate-600">Promo code</span> if you have a coupon instead.
+                        </p>
+                        <div class="space-y-1">
+                            <div class="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-2">
+                                <input
+                                    type="text"
+                                    id="checkout-promo-input"
+                                    placeholder="Enter promo code"
+                                    value="{{ $appliedPromoCode ?? '' }}"
+                                    class="w-full min-w-0 rounded-lg border border-primary/20 bg-slate-50 text-sm px-3 py-2 focus:ring-primary focus:border-primary sm:flex-1 {{ ($discountMode ?? 'volume') !== 'promo' ? 'opacity-60 cursor-not-allowed' : '' }}"
+                                    autocomplete="off"
+                                    {{ ($discountMode ?? 'volume') !== 'promo' ? 'disabled' : '' }}
+                                >
+                                <div class="flex w-full min-w-0 gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
+                                    <button
+                                        type="button"
+                                        id="checkout-promo-apply"
+                                        class="min-w-0 flex-1 px-3 py-2 sm:flex-none sm:px-4 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors {{ ($discountMode ?? 'volume') !== 'promo' ? 'opacity-60 cursor-not-allowed' : '' }}"
+                                        {{ ($discountMode ?? 'volume') !== 'promo' ? 'disabled' : '' }}
+                                    >
+                                        Apply
+                                    </button>
+                                    <button
+                                        type="button"
+                                        id="checkout-promo-remove"
+                                        class="min-w-0 flex-1 px-3 py-2 sm:flex-none sm:px-4 border border-primary/20 text-slate-700 rounded-lg text-xs font-bold hover:bg-primary/5 transition-colors {{ !empty($appliedPromoCode) ? '' : 'hidden' }}"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+                            <p id="checkout-promo-message" class="text-xs hidden"></p>
+                        </div>
                         <div class="flex justify-between text-slate-600">
                             <span>Subtotal</span>
                             <span class="subtotal-display" id="checkout-subtotal">
@@ -1336,7 +1358,7 @@ function buildCheckoutCustomizationInputs(customizations) {
                         </div>
                     </div>
 
-                    <!-- Security Badge - match cart primary -->
+                    <!-- Security Badge - sidebar Order Summary -->
                     <div class="mt-6 p-6 bg-primary/5 border border-primary/10 rounded-2xl">
                         <div class="text-center">
                             <div class="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -3587,10 +3609,18 @@ window.__PRESSONNailRetentionFreeShipActive = window.__PRESSONNailRetentionFreeS
 
         function setMode(mode) {
             var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+            var retentionInput = document.getElementById('retention_free_shipping');
+            var retentionFreeShipping = retentionInput && retentionInput.value === '1' ? 1 : 0;
+            var promoInput = document.getElementById('checkout-promo-input');
+            try {
+                if (promoInput) {
+                    sessionStorage.setItem(CHECKOUT_PROMO_DRAFT_KEY, (promoInput.value || '').trim());
+                }
+            } catch (e) {}
             fetch(CHECKOUT_DISCOUNT_MODE_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-                body: JSON.stringify({ mode: mode })
+                body: JSON.stringify({ mode: mode, retention_free_shipping: retentionFreeShipping })
             }).then(function () {
                 window.location.reload();
             }).catch(function () {
@@ -3600,6 +3630,110 @@ window.__PRESSONNailRetentionFreeShipActive = window.__PRESSONNailRetentionFreeS
 
         btnVol.addEventListener('click', function () { setMode('volume'); });
         btnPromo.addEventListener('click', function () { setMode('promo'); });
+    })();
+
+    // Checkout promo code apply/remove
+    (function () {
+        var input = document.getElementById('checkout-promo-input');
+        var applyBtn = document.getElementById('checkout-promo-apply');
+        var removeBtn = document.getElementById('checkout-promo-remove');
+        var message = document.getElementById('checkout-promo-message');
+        if (!input || !applyBtn) return;
+
+        try {
+            var savedCode = sessionStorage.getItem(CHECKOUT_PROMO_DRAFT_KEY) || '';
+            if (!input.value && savedCode) {
+                input.value = savedCode;
+            }
+        } catch (e) {}
+
+        var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+
+        function showMessage(text, isError) {
+            if (!message) return;
+            message.textContent = text;
+            message.className = 'text-xs ' + (isError ? 'text-red-600' : 'text-emerald-600');
+        }
+
+        applyBtn.addEventListener('click', function () {
+            var code = (input.value || '').trim();
+            if (!code) {
+                showMessage('Please enter a promo code.', true);
+                return;
+            }
+
+            applyBtn.disabled = true;
+            fetch(CHECKOUT_APPLY_PROMO_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ code: code })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success) {
+                    try {
+                        sessionStorage.removeItem(CHECKOUT_PROMO_DRAFT_KEY);
+                    } catch (e) {}
+                    window.location.reload();
+                    return;
+                }
+                applyBtn.disabled = false;
+                showMessage(data.message || 'Invalid or expired promo code.', true);
+            })
+            .catch(function () {
+                applyBtn.disabled = false;
+                showMessage('Something went wrong.', true);
+            });
+        });
+
+        if (input) {
+            input.addEventListener('input', function () {
+                try {
+                    sessionStorage.setItem(CHECKOUT_PROMO_DRAFT_KEY, (input.value || '').trim());
+                } catch (e) {}
+            });
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applyBtn.click();
+                }
+            });
+        }
+
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function () {
+                removeBtn.disabled = true;
+                fetch(CHECKOUT_REMOVE_PROMO_URL, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrf,
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        try {
+                            sessionStorage.removeItem(CHECKOUT_PROMO_DRAFT_KEY);
+                        } catch (e) {}
+                        window.location.reload();
+                        return;
+                    }
+                    removeBtn.disabled = false;
+                    showMessage(data.message || 'Cannot remove promo code right now.', true);
+                })
+                .catch(function () {
+                    removeBtn.disabled = false;
+                    showMessage('Something went wrong.', true);
+                });
+            });
+        }
     })();
     
     /**
@@ -3724,6 +3858,14 @@ window.__PRESSONNailRetentionFreeShipActive = window.__PRESSONNailRetentionFreeS
     
     // Initialize shipping cost on page load
     function initializeCheckoutShipping() {
+        var retentionFreeshipInput = document.getElementById('retention_free_shipping');
+        try {
+            if (sessionStorage.getItem('checkout_retention_free_shipping') === '1') {
+                window.__PRESSONNailRetentionFreeShipActive = true;
+                if (retentionFreeshipInput) retentionFreeshipInput.value = '1';
+            }
+        } catch (e) {}
+
         let selectedZoneId = null;
         
         // Check if country is selected and get zone from country
@@ -3900,11 +4042,11 @@ function buildCheckoutEditContent(ci) {
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-2">Quantity</label>
                 <div class="flex items-center gap-3">
-                    <button onclick="updateCheckoutModalQty(${ci.id}, ${ci.quantity - 1})" class="w-10 h-10 rounded-lg border border-primary/20 flex items-center justify-center hover:bg-primary/5 transition-colors" ${ci.quantity<=1?'disabled':''}>
+                    <button type="button" id="checkoutModalQtyDec${ci.id}" onclick="updateCheckoutModalQty(${ci.id}, -1)" class="w-10 h-10 rounded-lg border border-primary/20 flex items-center justify-center hover:bg-primary/5 transition-colors" ${ci.quantity<=1?'disabled':''}>
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
                     </button>
                     <span class="text-xl font-semibold" id="checkoutModalQty${ci.id}">${ci.quantity}</span>
-                    <button onclick="updateCheckoutModalQty(${ci.id}, ${ci.quantity + 1})" class="w-10 h-10 rounded-lg border border-primary/20 flex items-center justify-center hover:bg-primary/5 transition-colors">
+                    <button type="button" onclick="updateCheckoutModalQty(${ci.id}, 1)" class="w-10 h-10 rounded-lg border border-primary/20 flex items-center justify-center hover:bg-primary/5 transition-colors">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     </button>
                 </div>
@@ -3975,8 +4117,16 @@ function getCheckoutProductImageAlt(product) {
     return name;
 }
 
-function updateCheckoutModalQty(id, newQty) {
-    if (newQty < 1) return; const el = document.getElementById('checkoutModalQty'+id); if (el) el.textContent = newQty; updateCheckoutModalTotal();
+function updateCheckoutModalQty(id, delta) {
+    const el = document.getElementById('checkoutModalQty' + id);
+    if (!el) return;
+    const current = parseInt(String(el.textContent).trim(), 10) || 1;
+    const newQty = current + (parseInt(delta, 10) || 0);
+    if (newQty < 1) return;
+    el.textContent = String(newQty);
+    const decBtn = document.getElementById('checkoutModalQtyDec' + id);
+    if (decBtn) decBtn.disabled = newQty <= 1;
+    updateCheckoutModalTotal();
 }
 
 function updateCheckoutModalTotal() {
@@ -4099,6 +4249,9 @@ function saveCheckoutCartChanges(cartItemId) {
             retentionFreeshipInput.value = '1';
         }
         window.__PRESSONNailRetentionFreeShipActive = true;
+        try {
+            sessionStorage.setItem('checkout_retention_free_shipping', '1');
+        } catch (e) {}
 
         // updateTotal() is scoped in another script block; adjust total directly here
         // so user sees immediate change when clicking "Continue checkout".

@@ -24,10 +24,8 @@ class CartController extends Controller
 
         $mode = $request->input('mode');
 
-        if ($mode === 'volume') {
-            // Switching to volume discount means promo cannot stack; clear promo.
-            session()->forget(['applied_promo_code_id', 'applied_promo_code']);
-        }
+        // Keep applied promo in session when switching mode.
+        // The active mode still decides whether promo discount is used.
 
         session(['discount_mode' => $mode]);
 
