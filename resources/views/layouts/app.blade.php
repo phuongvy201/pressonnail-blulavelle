@@ -296,6 +296,11 @@
     
     <!-- Global CSS for select styling -->
     <style>
+    html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
     /* Hide default select arrows globally */
     select {
         -webkit-appearance: none !important;
@@ -343,7 +348,7 @@
     </style>
     @stack('styles')
 </head>
-<body class="font-display antialiased bg-background-light text-slate-900">
+<body class="m-0 font-display antialiased bg-background-light text-slate-900">
     @if($__gtmId !== '')
         <!-- Google Tag Manager (noscript) -->
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ $__gtmId }}"
