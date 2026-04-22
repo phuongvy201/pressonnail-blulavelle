@@ -5,12 +5,17 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
+use App\Services\TelegramBotService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class LiveChatController extends Controller
 {
+    public function __construct(private readonly TelegramBotService $telegramBot)
+    {
+    }
+
     public function index(): View
     {
         $conversations = ChatConversation::with(['customer', 'seller', 'messages' => fn ($q) => $q->latest()->limit(1)])
@@ -47,6 +52,9 @@ class LiveChatController extends Controller
             'is_from_customer' => false,
             'body' => $request->body,
         ]);
+
+        $this->telegramBot->notifySellerMessage($conversation, $message);
+
         return response()->json([
             'success' => true,
             'message' => [

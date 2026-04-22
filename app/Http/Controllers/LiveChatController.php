@@ -5,11 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
 use App\Models\User;
+use App\Services\TelegramBotService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class LiveChatController extends Controller
 {
+    public function __construct(private readonly TelegramBotService $telegramBot)
+    {
+    }
+
     /**
      * Kiểm tra có conversation đang mở theo session/user (GET, luôn 200 — tránh POST /start → 422 khi load trang).
      */
@@ -128,6 +133,8 @@ class LiveChatController extends Controller
             'is_from_customer' => true,
             'body' => $request->body,
         ]);
+
+        $this->telegramBot->notifyCustomerMessage($conversation, $message);
 
         return response()->json([
             'success' => true,

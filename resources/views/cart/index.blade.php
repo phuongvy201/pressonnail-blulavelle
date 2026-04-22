@@ -452,11 +452,11 @@
                         <p class="mt-2 text-xs font-semibold text-primary">You've unlocked free shipping!</p>
                     @endif
                 </div>
-                <div class="mt-3 flex items-start gap-3 text-sm text-slate-700 max-w-2xl">
-                    <span class="material-symbols-outlined text-slate-600 text-xl leading-none shrink-0">calendar_month</span>
+                <div class="mt-3 flex items-start gap-3 text-base text-slate-700 max-w-2xl bg-primary/5 border border-primary/10 rounded-xl px-3 py-2.5">
+                    <span class="material-symbols-outlined text-slate-600 text-2xl leading-none shrink-0">calendar_month</span>
                     <div class="leading-snug">
-                        <span class="text-slate-600">Order today to get by</span>
-                        <span class="font-bold underline underline-offset-2 decoration-[#0297FE] ml-1">{{ $cartPolicyDeliveryRangeText }}</span>
+                        <span class="text-slate-600 font-medium">Order today to get by</span>
+                        <span class="font-bold text-lg underline underline-offset-2 decoration-[#0297FE] ml-1">{{ $cartPolicyDeliveryRangeText }}</span>
                     </div>
                 </div>
             </div>

@@ -216,6 +216,38 @@
         $baseSubtotal += $baseLineTotal;
     }
 
+    $checkoutLocationSvc = app(\App\Services\CustomerLocationService::class);
+    $checkoutShipCountryCode = $checkoutLocationSvc->detectCountryCode(request(), 'US');
+    if (is_string(old('country')) && strlen(trim((string) old('country'))) === 2) {
+        $checkoutShipCountryCode = strtoupper(trim((string) old('country')));
+    }
+
+    $checkoutDeliveryStart = now()->startOfDay()->addDays(11);
+    $checkoutDeliveryEnd = now()->startOfDay()->addDays(20);
+    $checkoutDeliveryRangeText = $checkoutDeliveryStart->format('M j') . '–' . ($checkoutDeliveryStart->format('M') === $checkoutDeliveryEnd->format('M') ? $checkoutDeliveryEnd->format('j') : $checkoutDeliveryEnd->format('M j'));
+    if (!empty($products)) {
+        try {
+            $checkoutCalc = app(\App\Services\ShippingCalculator::class);
+            $checkoutLinesUsd = collect($products)->map(function ($checkoutItem) use ($currentCurrency, $currentCurrencyRate) {
+                $quantity = max(1, (int) ($checkoutItem['quantity'] ?? 1));
+                $lineTotal = (float) ($checkoutItem['total'] ?? (($checkoutItem['product']->price ?? $checkoutItem['product']->base_price ?? 0) * $quantity));
+                $unitPrice = $quantity > 0 ? ($lineTotal / $quantity) : 0;
+                $unitUsd = $currentCurrency !== 'USD' && $currentCurrencyRate > 0
+                    ? $unitPrice / $currentCurrencyRate
+                    : $unitPrice;
+
+                return [
+                    'product_id' => $checkoutItem['product']->id,
+                    'quantity' => $quantity,
+                    'price' => $unitUsd,
+                ];
+            });
+            $checkoutDeliveryRangeText = $checkoutCalc->getDeliveryEstimateRangeForCart($checkoutLinesUsd, $checkoutShipCountryCode)['range_text'];
+        } catch (\Throwable $e) {
+            // keep fallback range
+        }
+    }
+
     $gtagItems = [];
     $tiktokContents = [];
     foreach ($products as $index => $item) {
@@ -1128,7 +1160,15 @@ function buildCheckoutCustomizationInputs(customizations) {
                         </div>
                         <h2 class="text-xl font-bold text-slate-900">Order Summary</h2>
                     </div>
-                    
+
+                    <div class="mb-4 flex items-start gap-3 text-base text-slate-700 bg-primary/5 border border-primary/10 rounded-xl px-3 py-2.5">
+                        <span class="material-symbols-outlined text-slate-600 text-2xl leading-none shrink-0">calendar_month</span>
+                        <div class="leading-snug">
+                            <span class="text-slate-600 font-medium">Order today to get by</span>
+                            <span class="font-bold text-lg underline underline-offset-2 decoration-[#0297FE] ml-1">{{ $checkoutDeliveryRangeText }}</span>
+                        </div>
+                    </div>
+
                     <!-- Products -->
                     <div class="space-y-3 mb-6">
                         @foreach($products as $item)
@@ -1355,6 +1395,13 @@ function buildCheckoutCustomizationInputs(customizations) {
                             <span class="text-primary total-display" id="checkout-total">
                                 {{ \App\Services\CurrencyService::formatPrice($convertedTotal ?? ($subtotal - ($discount ?? 0) + ($convertedShipping ?? $shippingCost ?? 0)), $currency ?? 'USD') }}
                             </span>
+                        </div>
+                        <div id="checkout-discount-countdown" class="mt-3 flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5">
+                            <div class="flex items-center gap-2 text-rose-700">
+                                <span class="material-symbols-outlined text-xl leading-none">local_offer</span>
+                                <span class="text-sm font-semibold">Discount expires in</span>
+                            </div>
+                            <span id="checkout-discount-timer" class="text-lg font-extrabold tracking-wide text-rose-700">15:00</span>
                         </div>
                     </div>
 
@@ -3937,6 +3984,49 @@ window.__PRESSONNailRetentionFreeShipActive = window.__PRESSONNailRetentionFreeS
         updateCheckoutProducts(); // Update products with categories if available
         initializeCheckoutShipping();
     }, 500);
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var timerEl = document.getElementById('checkout-discount-timer');
+    var wrapEl = document.getElementById('checkout-discount-countdown');
+    if (!timerEl || !wrapEl) return;
+
+    var STORAGE_KEY = 'checkout_discount_expires_at_v1';
+    var DURATION_MS = 15 * 60 * 1000;
+    var now = Date.now();
+    var stored = parseInt(sessionStorage.getItem(STORAGE_KEY) || '0', 10);
+    var expiresAt = Number.isFinite(stored) && stored > now ? stored : (now + DURATION_MS);
+    sessionStorage.setItem(STORAGE_KEY, String(expiresAt));
+
+    function formatRemain(ms) {
+        var totalSec = Math.max(0, Math.floor(ms / 1000));
+        var min = Math.floor(totalSec / 60);
+        var sec = totalSec % 60;
+        return String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+    }
+
+    function renderCountdown() {
+        var remain = expiresAt - Date.now();
+        if (remain <= 0) {
+            timerEl.textContent = '00:00';
+            wrapEl.classList.remove('border-rose-200', 'bg-rose-50');
+            wrapEl.classList.add('border-slate-200', 'bg-slate-50');
+            wrapEl.querySelector('.text-sm').textContent = 'Discount offer expired';
+            return false;
+        }
+
+        timerEl.textContent = formatRemain(remain);
+        return true;
+    }
+
+    if (!renderCountdown()) return;
+    var interval = setInterval(function () {
+        if (!renderCountdown()) {
+            clearInterval(interval);
+        }
+    }, 1000);
 });
 </script>
 

@@ -43,6 +43,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use App\Http\Controllers\Customer\ReturnRequestController;
 use App\Http\Controllers\ReviewListingController;
 use App\Http\Controllers\PublicMediaResizeController;
+use App\Http\Controllers\TelegramWebhookController;
 
 RateLimiter::for('register', function (Request $request) {
     return Limit::perMinute(5)->by($request->ip());
@@ -196,6 +197,7 @@ Route::get('/live-chat/resume-status', [App\Http\Controllers\LiveChatController:
 Route::post('/live-chat/start', [App\Http\Controllers\LiveChatController::class, 'startOrGet'])->name('live-chat.start');
 Route::get('/live-chat/conversations/{conversationId}/messages', [App\Http\Controllers\LiveChatController::class, 'messages'])->name('live-chat.messages');
 Route::post('/live-chat/send', [App\Http\Controllers\LiveChatController::class, 'send'])->name('live-chat.send');
+Route::post('/api/telegram/webhook/{token}', TelegramWebhookController::class)->name('telegram.webhook');
 
 // Seller Application routes
 Route::get('/become-a-seller', [SellerApplicationController::class, 'create'])->name('seller.apply');

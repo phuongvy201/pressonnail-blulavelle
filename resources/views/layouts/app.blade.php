@@ -677,13 +677,6 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                     <div id="cart-drawer-progress-bar" class="h-full bg-primary rounded-full transition-all duration-500" style="width: 0%;"></div>
                 </div>
                 <p id="cart-drawer-progress-note" class="mt-2 text-xs font-medium text-slate-600">Add <span class="text-primary-fg font-bold">$0.00</span> more to unlock free shipping!</p>
-                <div id="cart-drawer-delivery-row" class="mt-3 flex items-start gap-2.5 text-sm text-slate-700">
-                    <span class="material-symbols-outlined text-slate-600 text-xl leading-none shrink-0">calendar_month</span>
-                    <div class="leading-snug">
-                        <span class="text-slate-600">Order today to get by</span>
-                        <span id="cart-drawer-delivery-range" class="font-bold underline underline-offset-2 decoration-[#0297FE] ml-1">May 1-3</span>
-                    </div>
-                </div>
             </div>
             {{-- Cart Items --}}
             <div id="cart-drawer-items" class="flex flex-col divide-y divide-primary/5">
@@ -698,6 +691,13 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
             {{-- Footer: Subtotal, Discount, Shipping, Total, Promo, Buttons --}}
             <div id="cart-drawer-footer" class="p-4 sm:p-6 border-t border-primary/10 bg-white hidden">
                 <div class="flex flex-col gap-3 mb-4">
+                    <div id="cart-drawer-delivery-row" class="flex items-start gap-2.5 text-base text-slate-700 bg-primary/5 border border-primary/10 rounded-xl px-3 py-2.5">
+                        <span class="material-symbols-outlined text-slate-600 text-2xl leading-none shrink-0">calendar_month</span>
+                        <div class="leading-snug">
+                            <span class="text-slate-600 font-medium">Order today to get by</span>
+                            <span id="cart-drawer-delivery-range" class="font-bold text-lg underline underline-offset-2 decoration-[#0297FE] ml-1">May 1-3</span>
+                        </div>
+                    </div>
                     <div class="flex justify-between text-slate-500">
                         <span>Subtotal</span>
                         <span id="cart-drawer-subtotal">$0.00</span>
