@@ -322,11 +322,9 @@
     } catch (\Throwable $e) {
         $shippingCostUsd = null;
     }
-    // Số viewing & in carts ngẫu nhiên theo product (seed bằng id để mỗi sản phẩm cố định)
-    mt_srand(crc32((string) $product->id));
-    $productViewingCount = random_int(8, 120);
-    $productCartsCount = random_int(3, 65);
-    mt_srand();
+    // Số viewing & in carts giả lập, thay đổi theo mỗi lần load
+    $productViewingCount = random_int(12, 120);
+    $productCartsCount = random_int(4, 65);
 
     // GTM / Pixel: category cho ecommerce items (ưu tiên category, fallback collection)
     $gtagPrimaryCategory = null;
@@ -353,6 +351,7 @@
     }
 
     $volumeDiscountPreviewPercent = \App\Models\Cart::getComboDiscountPercentForQty(1);
+    $showSocialProof = (bool) \App\Support\Settings::get('gmc.show_product_social_proof', '1');
 @endphp
 
 <div class="min-h-screen bg-[#f8f6f6] font-display">
@@ -483,14 +482,16 @@
                             <span class="material-symbols-outlined text-base">check_circle</span>
                             In Stock
                         </span>
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                            <span class="material-symbols-outlined text-base">visibility</span>
-                            <span id="product-viewers">{{ $productViewingCount }}</span> viewing
-                        </span>
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[#0297FE]/10 text-[#0297FE] border border-[#0297FE]/15">
-                            <span class="material-symbols-outlined text-base">shopping_cart</span>
-                            In <span id="product-carts">{{ $productCartsCount }}+</span> carts
-                        </span>
+                        @if($showSocialProof)
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                <span class="material-symbols-outlined text-base">visibility</span>
+                                <span id="product-viewers">{{ $productViewingCount }}</span> viewing
+                            </span>
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[#0297FE]/10 text-[#0297FE] border border-[#0297FE]/15">
+                                <span class="material-symbols-outlined text-base">shopping_cart</span>
+                                In <span id="product-carts">{{ $productCartsCount }}+</span> carts
+                            </span>
+                        @endif
                         <button type="button" class="ml-auto p-1.5 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors" aria-label="Share product" id="product-share-btn">
                             <span class="material-symbols-outlined text-xl">share</span>
                         </button>
@@ -2098,6 +2099,56 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Fake social proof: dao động nhẹ để tránh số đứng yên
+    (function initLiveSocialProof() {
+        var viewersEl = document.getElementById('product-viewers');
+        var cartsEl = document.getElementById('product-carts');
+        if (!viewersEl || !cartsEl) return;
+
+        var viewers = parseInt((viewersEl.textContent || '0').replace(/\D+/g, ''), 10);
+        var carts = parseInt((cartsEl.textContent || '0').replace(/\D+/g, ''), 10);
+        if (isNaN(viewers)) viewers = 26;
+        if (isNaN(carts)) carts = 12;
+
+        var minViewers = 8;
+        var maxViewers = 180;
+        var minCarts = 3;
+        var maxCarts = 99;
+
+        function clamp(val, min, max) {
+            return Math.max(min, Math.min(max, val));
+        }
+
+        function randomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function render() {
+            viewersEl.textContent = String(viewers);
+            cartsEl.textContent = String(carts) + '+';
+        }
+
+        function tick() {
+            // Viewers dao động thường xuyên hơn
+            viewers += randomInt(-3, 4);
+            viewers = clamp(viewers, minViewers, maxViewers);
+
+            // Carts thay đổi chậm hơn và luôn thấp hơn viewers
+            if (Math.random() < 0.45) {
+                carts += randomInt(-1, 2);
+            }
+            var maxCartsByViewers = Math.max(minCarts, Math.floor(viewers * 0.7));
+            carts = clamp(carts, minCarts, Math.min(maxCarts, maxCartsByViewers));
+
+            render();
+            var nextMs = randomInt(7000, 15000);
+            window.setTimeout(tick, nextMs);
+        }
+
+        render();
+        window.setTimeout(tick, randomInt(5000, 10000));
+    })();
 
     var productId = {{ $product->id }};
     try {

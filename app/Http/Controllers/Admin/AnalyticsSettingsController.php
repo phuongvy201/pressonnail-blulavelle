@@ -48,6 +48,7 @@ class AnalyticsSettingsController extends Controller
             'testimonials_bg' => Settings::get('theme.testimonials_bg', $defaults['testimonials_bg']),
             'mail_logo_url' => Settings::get('mail.logo_url', $defaults['mail_logo_url']),
             'mail_brand_name' => Settings::get('mail.brand_name', $defaults['mail_brand_name']),
+            'show_product_social_proof' => (bool) Settings::get('gmc.show_product_social_proof', '1'),
         ];
 
         return view('admin.settings.analytics', compact('settings', 'defaults'));
@@ -72,6 +73,7 @@ class AnalyticsSettingsController extends Controller
             'testimonials_bg' => ['nullable', 'string', 'max:64'],
             'mail_logo_url' => ['nullable', 'string', 'max:512'],
             'mail_brand_name' => ['nullable', 'string', 'max:128'],
+            'show_product_social_proof' => ['nullable', 'boolean'],
         ]);
 
         // If user uploaded a GA4 credentials JSON, store it into storage/app and persist the relative path.
@@ -84,6 +86,9 @@ class AnalyticsSettingsController extends Controller
         }
 
         foreach ($validated as $key => $value) {
+            if ($key === 'show_product_social_proof') {
+                continue;
+            }
             $namespace = match (true) {
                 in_array($key, ['header_bg', 'header_border', 'footer_faq_bg', 'footer_bg', 'testimonials_bg'], true) => 'theme',
                 in_array($key, ['mail_logo_url', 'mail_brand_name'], true) => 'mail',
@@ -96,6 +101,8 @@ class AnalyticsSettingsController extends Controller
             }
             Settings::set("$namespace.$key", $value !== null ? trim($value) : null);
         }
+
+        Settings::set('gmc.show_product_social_proof', $request->boolean('show_product_social_proof') ? '1' : '0');
 
         return redirect()
             ->route('admin.settings.analytics.edit')

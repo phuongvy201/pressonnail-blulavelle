@@ -299,6 +299,33 @@
                     </div>
                 </div>
 
+                <div class="pt-2 border-t border-gray-100">
+                    <h2 class="text-xl font-bold text-gray-900 mb-1">GMC Safe Mode</h2>
+                    <p class="text-sm text-gray-600 mb-4">
+                        Bật/tắt hiển thị các chỉ số social proof trên trang sản phẩm để giảm rủi ro khi kiểm tra Google Merchant Center.
+                    </p>
+
+                    <label for="show_product_social_proof" class="flex items-start gap-3 rounded-xl border border-gray-200 p-4 hover:bg-gray-50 transition">
+                        <input
+                            type="checkbox"
+                            name="show_product_social_proof"
+                            id="show_product_social_proof"
+                            value="1"
+                            @checked(old('show_product_social_proof', $settings['show_product_social_proof']))
+                            class="mt-0.5 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        >
+                        <span class="min-w-0">
+                            <span class="block text-sm font-semibold text-gray-900">Hiển thị "viewing" và "in carts" ở trang sản phẩm</span>
+                            <span class="mt-1 block text-xs text-gray-500">
+                                Khi tắt, 2 chỉ số này sẽ ẩn hoàn toàn ở storefront. Dùng khi cần chế độ an toàn cho GMC.
+                            </span>
+                        </span>
+                    </label>
+                    @error('show_product_social_proof')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 <div class="flex items-center justify-end gap-3">
                     <a href="{{ route('admin.dashboard') }}" class="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 transition">
                         Quay lại

@@ -1396,12 +1396,12 @@ function buildCheckoutCustomizationInputs(customizations) {
                                 {{ \App\Services\CurrencyService::formatPrice($convertedTotal ?? ($subtotal - ($discount ?? 0) + ($convertedShipping ?? $shippingCost ?? 0)), $currency ?? 'USD') }}
                             </span>
                         </div>
-                        <div id="checkout-discount-countdown" class="mt-3 flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5">
-                            <div class="flex items-center gap-2 text-rose-700">
+                        <div id="checkout-discount-countdown" class="mt-3 flex items-center justify-between gap-3 rounded-xl border border-red-300 bg-red-50 ring-1 ring-red-200/80 px-3 py-2.5 shadow-sm">
+                            <div id="checkout-discount-label-wrap" class="flex items-center gap-2 text-red-800">
                                 <span class="material-symbols-outlined text-xl leading-none">local_offer</span>
-                                <span class="text-sm font-semibold">Discount expires in</span>
+                                <span id="checkout-discount-label" class="text-sm font-bold">Discount expires in</span>
                             </div>
-                            <span id="checkout-discount-timer" class="text-lg font-extrabold tracking-wide text-rose-700">15:00</span>
+                            <span id="checkout-discount-timer" class="text-lg font-extrabold tracking-wide text-red-700 bg-white/80 border border-red-200 rounded-lg px-2 py-0.5">15:00</span>
                         </div>
                     </div>
 
@@ -3991,6 +3991,8 @@ window.__PRESSONNailRetentionFreeShipActive = window.__PRESSONNailRetentionFreeS
 document.addEventListener('DOMContentLoaded', function () {
     var timerEl = document.getElementById('checkout-discount-timer');
     var wrapEl = document.getElementById('checkout-discount-countdown');
+    var labelEl = document.getElementById('checkout-discount-label');
+    var labelWrapEl = document.getElementById('checkout-discount-label-wrap');
     if (!timerEl || !wrapEl) return;
 
     var STORAGE_KEY = 'checkout_discount_expires_at_v1';
@@ -4011,13 +4013,33 @@ document.addEventListener('DOMContentLoaded', function () {
         var remain = expiresAt - Date.now();
         if (remain <= 0) {
             timerEl.textContent = '00:00';
-            wrapEl.classList.remove('border-rose-200', 'bg-rose-50');
-            wrapEl.classList.add('border-slate-200', 'bg-slate-50');
-            wrapEl.querySelector('.text-sm').textContent = 'Discount offer expired';
+            wrapEl.classList.remove('border-red-300', 'bg-red-50', 'ring-red-200/80', 'animate-pulse');
+            wrapEl.classList.add('border-red-500', 'bg-red-100', 'ring-red-300');
+            timerEl.classList.remove('text-red-700', 'border-red-200');
+            timerEl.classList.add('text-red-800', 'border-red-300');
+            if (labelWrapEl) {
+                labelWrapEl.classList.remove('text-red-800');
+                labelWrapEl.classList.add('text-red-900');
+            }
+            if (labelEl) {
+                labelEl.textContent = 'Discount offer expired';
+            }
             return false;
         }
 
         timerEl.textContent = formatRemain(remain);
+
+        // Urgency mode: dưới 5 phút thì nhấn mạnh màu đỏ và hiệu ứng pulse nhẹ
+        if (remain <= 5 * 60 * 1000) {
+            wrapEl.classList.remove('border-red-300', 'bg-red-50', 'ring-red-200/80');
+            wrapEl.classList.add('border-red-500', 'bg-red-100', 'ring-red-300', 'animate-pulse');
+            timerEl.classList.remove('text-red-700', 'border-red-200');
+            timerEl.classList.add('text-red-800', 'border-red-300');
+            if (labelWrapEl) {
+                labelWrapEl.classList.remove('text-red-800');
+                labelWrapEl.classList.add('text-red-900');
+            }
+        }
         return true;
     }
 
