@@ -115,6 +115,7 @@
                 <option value="thank_you" {{ old('send_on_trigger', $promoCode ? $promoCode->send_on_trigger : '') === 'thank_you' ? 'selected' : '' }}>Thank you (sau khi đặt hàng thành công)</option>
                 <option value="wishlist" {{ old('send_on_trigger', $promoCode ? $promoCode->send_on_trigger : '') === 'wishlist' ? 'selected' : '' }}>Thêm sản phẩm vào Wishlist</option>
                 <option value="add_to_cart" {{ old('send_on_trigger', $promoCode ? $promoCode->send_on_trigger : '') === 'add_to_cart' ? 'selected' : '' }}>Add to cart</option>
+                <option value="checkout_fail" {{ old('send_on_trigger', $promoCode ? $promoCode->send_on_trigger : '') === 'checkout_fail' ? 'selected' : '' }}>Checkout thất bại</option>
             </select>
             @error('send_on_trigger')
                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>

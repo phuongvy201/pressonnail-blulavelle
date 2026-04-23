@@ -17,7 +17,7 @@ class PromoPopupController extends Controller
     public function offer(Request $request): JsonResponse
     {
         $trigger = $request->query('trigger');
-        if (!in_array($trigger, [PromoCodeSendService::TRIGGER_ADD_TO_CART, PromoCodeSendService::TRIGGER_WISHLIST], true)) {
+        if (!in_array($trigger, [PromoCodeSendService::TRIGGER_ADD_TO_CART, PromoCodeSendService::TRIGGER_WISHLIST, PromoCodeSendService::TRIGGER_CHECKOUT_FAIL], true)) {
             return response()->json(['available' => false]);
         }
 
@@ -47,7 +47,7 @@ class PromoPopupController extends Controller
     {
         $valid = $request->validate([
             'email' => 'required|email',
-            'trigger' => 'required|in:add_to_cart,wishlist',
+            'trigger' => 'required|in:add_to_cart,wishlist,checkout_fail',
         ]);
         $email = $valid['email'];
         $trigger = $valid['trigger'];
@@ -62,7 +62,7 @@ class PromoPopupController extends Controller
 
         return response()->json([
             'success' => false,
-            'message' => 'We couldn\'t send the code right now. You may have already received one recently—check your inbox.',
+            'message' => 'We couldn\'t send the code right now. If you already received a code, you can use it immediately at checkout.',
         ], 422);
     }
 
@@ -79,10 +79,10 @@ class PromoPopupController extends Controller
     private function buildDescription(PromoCode $promo): ?string
     {
         if ($promo->type === 'percentage') {
-            return (int) $promo->value . '% off your next order.';
+            return (int) $promo->value . '% off, effective immediately at checkout.';
         }
         if ($promo->type === 'fixed') {
-            return '$' . number_format((float) $promo->value, 0) . ' off your next order.';
+            return '$' . number_format((float) $promo->value, 0) . ' off, effective immediately at checkout.';
         }
         return null;
     }

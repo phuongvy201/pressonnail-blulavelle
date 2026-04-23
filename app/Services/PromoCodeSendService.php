@@ -13,8 +13,9 @@ class PromoCodeSendService
     public const TRIGGER_THANK_YOU = 'thank_you';
     public const TRIGGER_WISHLIST = 'wishlist';
     public const TRIGGER_ADD_TO_CART = 'add_to_cart';
+    public const TRIGGER_CHECKOUT_FAIL = 'checkout_fail';
 
-    /** Throttle: gửi tối đa 1 email per user per trigger trong 24h (cho wishlist, add_to_cart) */
+    /** Throttle: gửi tối đa 1 email per user per trigger trong 24h (cho wishlist, add_to_cart, checkout_fail) */
     public const THROTTLE_HOURS = 24;
 
     /**
@@ -37,7 +38,7 @@ class PromoCodeSendService
             return false;
         }
 
-        if ($throttle && in_array($trigger, [self::TRIGGER_WISHLIST, self::TRIGGER_ADD_TO_CART], true)) {
+        if ($throttle && in_array($trigger, [self::TRIGGER_WISHLIST, self::TRIGGER_ADD_TO_CART, self::TRIGGER_CHECKOUT_FAIL], true)) {
             $throttleKey = $userId !== null ? "uid_{$userId}" : 'email_' . md5(strtolower($email));
             $cacheKey = "promo_sent_{$trigger}_{$throttleKey}";
             if (Cache::has($cacheKey)) {
@@ -50,13 +51,14 @@ class PromoCodeSendService
                 self::TRIGGER_THANK_YOU => 'Thanks for your order!',
                 self::TRIGGER_WISHLIST => 'Thanks for adding to your favorites!',
                 self::TRIGGER_ADD_TO_CART => 'Thanks for adding to your cart!',
+                self::TRIGGER_CHECKOUT_FAIL => 'Your checkout did not complete - here is 20% OFF!',
             ];
             $label = $triggerLabels[$trigger] ?? 'Here’s your reward';
             $description = $this->promoDescription($promo);
 
             Mail::to($email)->send(new PromoCodeRewardMail($email, $promo->code, $label, $description));
 
-            if ($throttle && in_array($trigger, [self::TRIGGER_WISHLIST, self::TRIGGER_ADD_TO_CART], true)) {
+            if ($throttle && in_array($trigger, [self::TRIGGER_WISHLIST, self::TRIGGER_ADD_TO_CART, self::TRIGGER_CHECKOUT_FAIL], true)) {
                 Cache::put($cacheKey, true, now()->addHours(self::THROTTLE_HOURS));
             }
 
@@ -92,10 +94,10 @@ class PromoCodeSendService
     private function promoDescription(PromoCode $promo): ?string
     {
         if ($promo->type === 'percentage') {
-            return (int) $promo->value . '% off your next order.';
+            return (int) $promo->value . '% off, effective immediately at checkout.';
         }
         if ($promo->type === 'fixed') {
-            return '$' . number_format((float) $promo->value, 0) . ' off your next order.';
+            return '$' . number_format((float) $promo->value, 0) . ' off, effective immediately at checkout.';
         }
         return null;
     }

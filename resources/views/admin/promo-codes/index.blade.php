@@ -49,6 +49,7 @@
                     <option value="thank_you" {{ request('trigger') === 'thank_you' ? 'selected' : '' }}>Thank you (sau đặt hàng)</option>
                     <option value="wishlist" {{ request('trigger') === 'wishlist' ? 'selected' : '' }}>Thêm vào Wishlist</option>
                     <option value="add_to_cart" {{ request('trigger') === 'add_to_cart' ? 'selected' : '' }}>Add to cart</option>
+                    <option value="checkout_fail" {{ request('trigger') === 'checkout_fail' ? 'selected' : '' }}>Checkout thất bại</option>
                 </select>
             </div>
             <div class="flex items-end">
@@ -104,7 +105,7 @@
                         <td class="px-6 py-4 whitespace-nowrap">
                             @if($promo->send_on_trigger)
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                                    {{ $promo->send_on_trigger === 'thank_you' ? 'Thank you' : ($promo->send_on_trigger === 'wishlist' ? 'Wishlist' : 'Add to cart') }}
+                                    {{ $promo->send_on_trigger === 'thank_you' ? 'Thank you' : ($promo->send_on_trigger === 'wishlist' ? 'Wishlist' : ($promo->send_on_trigger === 'checkout_fail' ? 'Checkout fail' : 'Add to cart')) }}
                                 </span>
                             @else
                                 <span class="text-gray-400">—</span>

@@ -45,7 +45,7 @@ class PromoCodeController extends Controller
             'starts_at' => 'nullable|date',
             'expires_at' => 'nullable|date|after_or_equal:starts_at',
             'is_active' => 'boolean',
-            'send_on_trigger' => 'nullable|in:thank_you,wishlist,add_to_cart',
+            'send_on_trigger' => 'nullable|in:thank_you,wishlist,add_to_cart,checkout_fail',
         ];
         if ($request->type === 'percentage') {
             $rules['value'] = 'required|numeric|min:0|max:100';
@@ -81,7 +81,7 @@ class PromoCodeController extends Controller
             'starts_at' => 'nullable|date',
             'expires_at' => 'nullable|date',
             'is_active' => 'boolean',
-            'send_on_trigger' => 'nullable|in:thank_you,wishlist,add_to_cart',
+            'send_on_trigger' => 'nullable|in:thank_you,wishlist,add_to_cart,checkout_fail',
         ];
         if ($request->type === 'percentage') {
             $rules['value'] = 'required|numeric|min:0|max:100';

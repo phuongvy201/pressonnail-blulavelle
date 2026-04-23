@@ -1567,6 +1567,20 @@ document.addEventListener('DOMContentLoaded', function() {
             timerProgressBar: true
         });
     };
+    let checkoutFailPromoTriggered = false;
+    const triggerCheckoutFailPromo = () => {
+        if (checkoutFailPromoTriggered) return;
+        checkoutFailPromoTriggered = true;
+
+        if (typeof window.promoPopupShow === 'function') {
+            window.promoPopupShow('checkout_fail');
+            return;
+        }
+
+        if (typeof window.dispatchEvent === 'function' && typeof window.CustomEvent === 'function') {
+            window.dispatchEvent(new CustomEvent('promoPopupShow', { detail: { trigger: 'checkout_fail' } }));
+        }
+    };
     
     let tikTokAddPaymentTracked = false;
     const trackTikTokAddPayment = (paymentMethod) => {
@@ -1714,6 +1728,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('❌ Unified order processing error:', error);
             showToast('error', 'Order Error', error.message);
+            triggerCheckoutFailPromo();
             throw error;
         }
     };
@@ -2094,6 +2109,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     } catch (error) {
                         console.error('❌ Error processing payment:', error);
                         showToast('error', 'Payment Error', 'Payment processing failed: ' + error.message);
+                        triggerCheckoutFailPromo();
                     } finally {
                         showLoading(false);
                     }
@@ -2102,6 +2118,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 onError: function(err) {
                     console.error('❌ PayPal error:', err);
                     showToast('error', 'PayPal Error', 'An error occurred during payment: ' + (err.message || 'Unknown error'));
+                    triggerCheckoutFailPromo();
                     showLoading(false);
                 },
                 
@@ -2498,6 +2515,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('❌ Stripe payment error:', error);
             showToast('error', 'Payment Error', error.message);
+            triggerCheckoutFailPromo();
             showLoading(false);
         }
     };
@@ -2533,6 +2551,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('❌ Order processing error:', error);
             showToast('error', 'Order Error', error.message);
+            triggerCheckoutFailPromo();
             showLoading(false);
         }
     };
