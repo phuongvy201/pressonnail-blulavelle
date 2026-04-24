@@ -1069,7 +1069,7 @@ class CheckoutController extends Controller
                         Session::forget('shipping_details');
 
                         // Send order confirmation email to customer and admin
-                        $adminEmail = config('mail.from.address');
+                        $adminEmail = 'support@blulavelle.com';
                         try {
                             Mail::to($order->customer_email)->send(new OrderConfirmation($order));
                             Log::info('📧 Order confirmation email sent for Stripe payment', [
@@ -1078,7 +1078,7 @@ class CheckoutController extends Controller
                             ]);
 
                             if ($adminEmail) {
-                                Mail::to($adminEmail)->send(new OrderConfirmation($order));
+                                Mail::to($adminEmail)->send(new \App\Mail\NewOrderAdminNotification($order));
                                 Log::info('📧 Admin new-order email sent for Stripe payment', [
                                     'order_number' => $order->order_number,
                                     'email' => $adminEmail
@@ -1302,7 +1302,7 @@ class CheckoutController extends Controller
                             Session::forget('shipping_details');
 
                             // Send order confirmation email to customer and admin
-                            $adminEmail = config('mail.from.address');
+                            $adminEmail = 'support@blulavelle.com';
                             try {
                                 Mail::to($order->customer_email)->send(new OrderConfirmation($order));
                                 Log::info('📧 Order confirmation email sent for immediate LianLian payment', [
@@ -1311,7 +1311,7 @@ class CheckoutController extends Controller
                                 ]);
 
                                 if ($adminEmail) {
-                                    Mail::to($adminEmail)->send(new OrderConfirmation($order));
+                                    Mail::to($adminEmail)->send(new \App\Mail\NewOrderAdminNotification($order));
                                     Log::info('📧 Admin new-order email sent for immediate LianLian payment', [
                                         'order_number' => $order->order_number,
                                         'email' => $adminEmail
@@ -1985,7 +1985,7 @@ class CheckoutController extends Controller
             })->delete();
 
             // Send order confirmation email to customer and admin
-            $adminEmail = config('mail.from.address');
+            $adminEmail = 'support@blulavelle.com';
             try {
                 Mail::to($order->customer_email)->send(new OrderConfirmation($order));
                 Log::info('📧 Order confirmation email sent', [
@@ -1994,7 +1994,7 @@ class CheckoutController extends Controller
                 ]);
 
                 if ($adminEmail) {
-                    Mail::to($adminEmail)->send(new OrderConfirmation($order));
+                    Mail::to($adminEmail)->send(new \App\Mail\NewOrderAdminNotification($order));
                     Log::info('📧 Admin new-order email sent', [
                         'order_number' => $order->order_number,
                         'email' => $adminEmail
@@ -2084,7 +2084,7 @@ class CheckoutController extends Controller
             })->delete();
 
             // Send order confirmation email to customer and admin
-            $adminEmail = config('mail.from.address');
+            $adminEmail = 'support@blulavelle.com';
             try {
                 Mail::to($order->customer_email)->send(new OrderConfirmation($order));
                 Log::info('📧 Order confirmation email sent', [
@@ -2093,7 +2093,7 @@ class CheckoutController extends Controller
                 ]);
 
                 if ($adminEmail) {
-                    Mail::to($adminEmail)->send(new OrderConfirmation($order));
+                    Mail::to($adminEmail)->send(new \App\Mail\NewOrderAdminNotification($order));
                     Log::info('📧 Admin new-order email sent', [
                         'order_number' => $order->order_number,
                         'email' => $adminEmail

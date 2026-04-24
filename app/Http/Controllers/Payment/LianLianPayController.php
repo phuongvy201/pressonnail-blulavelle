@@ -454,7 +454,7 @@ class LianLianPayController extends Controller
                             ]);
 
                             // Send order confirmation email to customer and admin
-                            $adminEmail = config('mail.from.address');
+                            $adminEmail = 'support@blulavelle.com';
                             try {
                                 Mail::to($order->customer_email)->send(new OrderConfirmation($order));
                                 Log::info('📧 Order confirmation email sent', [
@@ -463,7 +463,7 @@ class LianLianPayController extends Controller
                                 ]);
 
                                 if ($adminEmail) {
-                                    Mail::to($adminEmail)->send(new OrderConfirmation($order));
+                                    Mail::to($adminEmail)->send(new \App\Mail\NewOrderAdminNotification($order));
                                     Log::info('📧 Admin new-order email sent', [
                                         'order_number' => $order->order_number,
                                         'email' => $adminEmail
@@ -561,7 +561,7 @@ class LianLianPayController extends Controller
                         ]);
 
                         // Send order confirmation email to customer and admin
-                        $adminEmail = config('mail.from.address');
+                        $adminEmail = 'support@blulavelle.com';
                         try {
                             Mail::to($order->customer_email)->send(new OrderConfirmation($order));
                             Log::info('📧 Order confirmation email sent (fallback)', [
@@ -570,7 +570,7 @@ class LianLianPayController extends Controller
                             ]);
 
                             if ($adminEmail) {
-                                Mail::to($adminEmail)->send(new OrderConfirmation($order));
+                                Mail::to($adminEmail)->send(new \App\Mail\NewOrderAdminNotification($order));
                                 Log::info('📧 Admin new-order email sent (fallback)', [
                                     'order_number' => $order->order_number,
                                     'email' => $adminEmail

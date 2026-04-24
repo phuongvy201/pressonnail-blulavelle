@@ -319,7 +319,7 @@ class StripePaymentController extends Controller
             ]);
 
             // Send order confirmation email to customer and admin
-            $adminEmail = config('mail.from.address');
+            $adminEmail = 'support@blulavelle.com';
             try {
                 Mail::to($order->customer_email)->send(new OrderConfirmation($order));
                 Log::info('📧 Order confirmation email sent (Stripe controller)', [
@@ -328,7 +328,7 @@ class StripePaymentController extends Controller
                 ]);
 
                 if ($adminEmail) {
-                    Mail::to($adminEmail)->send(new OrderConfirmation($order));
+                    Mail::to($adminEmail)->send(new \App\Mail\NewOrderAdminNotification($order));
                     Log::info('📧 Admin new-order email sent (Stripe controller)', [
                         'order_number' => $order->order_number,
                         'email' => $adminEmail

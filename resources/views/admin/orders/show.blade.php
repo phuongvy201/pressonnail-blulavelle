@@ -182,7 +182,16 @@
                                 @endif
                                 
                                 <div class="flex-1">
-                                    <h4 class="font-semibold text-gray-900">{{ $item->product_name }}</h4>
+                                    <h4 class="font-semibold text-gray-900">
+                                        @if($item->product)
+                                            <a href="{{ route('products.show', $item->product->slug) }}"
+                                               class="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+                                                {{ $item->product_name }}
+                                            </a>
+                                        @else
+                                            {{ $item->product_name }}
+                                        @endif
+                                    </h4>
                                     <p class="text-sm text-gray-600">Quantity: {{ $item->quantity }}</p>
                                     <p class="text-sm text-gray-600">Unit Price: ${{ number_format($item->unit_price, 2) }}</p>
                                     @if($item->product && $item->product->shop)
@@ -300,19 +309,41 @@
                             <span>${{ number_format($order->subtotal, 2) }}</span>
                         </div>
                         <div class="flex justify-between text-gray-600">
-                            <span>Tax (8%)</span>
+                            <span>Tax</span>
                             <span>${{ number_format($order->tax_amount, 2) }}</span>
                         </div>
+                        @if((float) $order->discount_amount > 0)
+                            <div class="flex justify-between text-green-600">
+                                <span>Discount @if($order->promo_code)(Promo: {{ $order->promo_code }})@endif</span>
+                                <span>- ${{ number_format($order->discount_amount, 2) }}</span>
+                            </div>
+                        @endif
                         <div class="flex justify-between text-gray-600">
                             <span>Shipping</span>
                             <span>${{ number_format($order->shipping_cost, 2) }}</span>
                         </div>
+                        @if((float) $order->tip_amount > 0)
+                            <div class="flex justify-between text-gray-600">
+                                <span>Tip</span>
+                                <span>${{ number_format($order->tip_amount, 2) }}</span>
+                            </div>
+                        @endif
                         <div class="border-t border-gray-200 pt-3">
                             <div class="flex justify-between text-lg font-bold text-gray-900">
                                 <span>Total</span>
                                 <span>${{ number_format($order->total_amount, 2) }}</span>
                             </div>
                         </div>
+                        @if((float) $order->refund_amount > 0)
+                            <div class="flex justify-between text-orange-600">
+                                <span>Refunded @if($order->refund_status)(Status: {{ ucfirst($order->refund_status) }})@endif</span>
+                                <span>- ${{ number_format($order->refund_amount, 2) }}</span>
+                            </div>
+                            <div class="flex justify-between text-gray-900 font-semibold border-t border-gray-200 pt-3">
+                                <span>Net Paid</span>
+                                <span>${{ number_format($order->total_amount - $order->refund_amount, 2) }}</span>
+                            </div>
+                        @endif
                     </div>
                 </div>
 
@@ -381,6 +412,12 @@
                             <span class="text-gray-600">Payment Method:</span>
                             <span class="font-semibold">{{ ucfirst($order->payment_method) }}</span>
                         </div>
+                        @if($order->paid_at)
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Paid At:</span>
+                                <span class="font-semibold">{{ $order->paid_at->format('M d, Y H:i') }}</span>
+                            </div>
+                        @endif
                         <div class="flex justify-between">
                             <span class="text-gray-600">Currency:</span>
                             <span class="font-semibold">{{ $order->currency }}</span>
@@ -391,6 +428,22 @@
                                 <span class="font-semibold">{{ $order->payment_id }}</span>
                             </div>
                         @endif
+                        @if($order->payment_transaction_id)
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Transaction ID:</span>
+                                <span class="font-semibold">{{ $order->payment_transaction_id }}</span>
+                            </div>
+                        @endif
+                        @if($order->tracking_number)
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Tracking Number:</span>
+                                <span class="font-semibold text-blue-600">{{ $order->tracking_number }}</span>
+                            </div>
+                        @endif
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Shipping Cost:</span>
+                            <span class="font-semibold">${{ number_format($order->shipping_cost, 2) }}</span>
+                        </div>
                     </div>
                 </div>
 

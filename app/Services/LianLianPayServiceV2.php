@@ -394,7 +394,7 @@ class LianLianPayServiceV2
                     }
 
                     // Send order confirmation email to customer and admin
-                    $adminEmail = config('mail.from.address');
+                    $adminEmail = 'support@blulavelle.com';
                     try {
                         \Illuminate\Support\Facades\Mail::to($order->customer_email)
                             ->send(new \App\Mail\OrderConfirmation($order));
@@ -405,7 +405,7 @@ class LianLianPayServiceV2
 
                         if ($adminEmail) {
                             \Illuminate\Support\Facades\Mail::to($adminEmail)
-                                ->send(new \App\Mail\OrderConfirmation($order));
+                                ->send(new \App\Mail\NewOrderAdminNotification($order));
                             Log::info('📧 Admin new-order email sent (webhook)', [
                                 'order_number' => $order->order_number,
                                 'email' => $adminEmail
