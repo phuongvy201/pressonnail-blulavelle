@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\OrderTrackingNotification;
 use App\Models\Order;
 use App\Models\OrderItem;
 use Illuminate\Support\Facades\Log;
@@ -10,6 +11,7 @@ use App\Services\StripeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 
 class OrderController extends Controller
 {
@@ -101,6 +103,8 @@ class OrderController extends Controller
             'notes' => 'nullable|string|max:1000'
         ]);
 
+        $previousTracking = trim((string) $order->tracking_number);
+
         $order->update([
             'status' => $request->status,
             'payment_status' => $request->payment_status,
@@ -109,7 +113,9 @@ class OrderController extends Controller
         ]);
 
         // Nếu có tracking_number và đơn PayPal đã có capture_id, đẩy tracking sang PayPal
+        $paypalTrackingSynced = null; // null = không gọi API, true/false = kết quả
         if ($request->filled('tracking_number') && $order->payment_method === 'paypal' && $order->paypal_capture_id) {
+            $paypalTrackingSynced = false;
             try {
                 $paypalOrderId = $order->payment_id; // lưu order_id trong payment_id
                 $captureId = $order->paypal_capture_id;
@@ -118,6 +124,7 @@ class OrderController extends Controller
 
                 $paypalService = new \App\Services\PayPalService();
                 $paypalService->addTracking($paypalOrderId, $captureId, $trackingNumber, $carrier, false);
+                $paypalTrackingSynced = true;
             } catch (\Exception $e) {
                 Log::error('❌ Failed to push tracking to PayPal', [
                     'order_id' => $order->id,
@@ -130,9 +137,43 @@ class OrderController extends Controller
             }
         }
 
+        $newTracking = trim((string) $request->input('tracking_number', ''));
+        $trackingJustSet = $newTracking !== ''
+            && $newTracking !== $previousTracking;
+
+        if ($trackingJustSet && filter_var($order->customer_email, FILTER_VALIDATE_EMAIL)) {
+            try {
+                $order->refresh();
+                $order->load(['items.product.shop']);
+                Mail::to($order->customer_email)->send(
+                    new OrderTrackingNotification($order, $newTracking, $order->status)
+                );
+            } catch (\Exception $e) {
+                Log::error('Failed to send tracking notification email (admin)', [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'to' => $order->customer_email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         // Stripe: bỏ xử lý push tracking (không dùng API tracking)
 
-        return redirect()->back()->with('success', 'Order updated successfully!');
+        $successParts = ['Order updated successfully!'];
+        if ($paypalTrackingSynced === true) {
+            $successParts[] = 'Tracking đã được ghi nhận trên PayPal (HTTP 2xx — chi tiết trong log: PayPal Add Tracking OK).';
+        }
+
+        $redirect = redirect()->back()->with('success', implode(' ', $successParts));
+        if ($paypalTrackingSynced === false) {
+            $redirect->with(
+                'error',
+                'Đơn đã lưu nhưng PayPal không nhận tracking. Kiểm tra storage/logs (PayPal Add Tracking Failed) hoặc PayPal Developer Dashboard.'
+            );
+        }
+
+        return $redirect;
     }
 
     public function destroy(Order $order)

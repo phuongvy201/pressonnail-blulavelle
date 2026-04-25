@@ -353,12 +353,22 @@ class PayPalService
                 'order_id' => $paypalOrderId,
                 'capture_id' => $captureId,
                 'tracking_number' => $trackingNumber,
-                'response' => $response->json()
+                'http_status' => $response->status(),
+                'response' => $response->json(),
             ]);
             throw new \Exception('Failed to add tracking to PayPal order');
         }
 
-        return $response->json();
+        $body = $response->json() ?? [];
+        Log::info('PayPal Add Tracking OK', [
+            'paypal_order_id' => $paypalOrderId,
+            'capture_id' => $captureId,
+            'tracking_number' => $trackingNumber,
+            'http_status' => $response->status(),
+            'response' => $body,
+        ]);
+
+        return $body;
     }
 
     /**

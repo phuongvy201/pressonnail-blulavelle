@@ -12,16 +12,16 @@
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f8f6f6;
+            background-color: #f0f7ff;
         }
         .container {
             background: white;
             border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(240, 66, 124, 0.12);
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.12);
             overflow: hidden;
         }
         .header {
-            background: linear-gradient(135deg, #f0427c 0%, #e03a70 100%);
+            background: linear-gradient(135deg, #2563EB 0%, #1d4ed8 100%);
             color: white;
             padding: 30px;
             text-align: center;
@@ -47,7 +47,7 @@
         }
         .order-info h3 {
             margin: 0 0 15px 0;
-            color: #f0427c;
+            color: #2563EB;
             font-size: 18px;
         }
         .info-row {
@@ -69,8 +69,8 @@
             color: #1e293b;
         }
         .tracking-section {
-            background: #ecfdf5;
-            border: 2px solid #10b981;
+            background: #eff6ff;
+            border: 2px solid #2563EB;
             border-radius: 8px;
             padding: 20px;
             margin: 20px 0;
@@ -79,13 +79,13 @@
         .tracking-number {
             font-size: 24px;
             font-weight: bold;
-            color: #059669;
+            color: #1e40af;
             background: white;
             padding: 10px 20px;
             border-radius: 6px;
             display: inline-block;
             margin: 10px 0;
-            border: 2px dashed #10b981;
+            border: 2px dashed #3b82f6;
         }
         .status-badge {
             display: inline-block;
@@ -98,7 +98,7 @@
         }
         .status-shipped {
             background: #dbeafe;
-            color: #1d4ed8;
+            color: #2563EB;
         }
         .status-processing {
             background: #fef3c7;
@@ -118,7 +118,7 @@
         }
         .button {
             display: inline-block;
-            background: linear-gradient(135deg, #f0427c 0%, #e03a70 100%);
+            background: linear-gradient(135deg, #2563EB 0%, #1d4ed8 100%);
             color: white;
             padding: 12px 24px;
             text-decoration: none;
@@ -130,12 +130,12 @@
             opacity: 0.95;
         }
         .footer {
-            background: #f8f6f6;
+            background: #f0f7ff;
             padding: 20px;
             text-align: center;
             color: #64748b;
             font-size: 14px;
-            border-top: 1px solid #fce7ef;
+            border-top: 1px solid #bfdbfe;
         }
         .items-list {
             margin: 20px 0;
@@ -169,7 +169,7 @@
         }
         .item-price {
             font-weight: 600;
-            color: #059669;
+            color: #2563EB;
         }
     </style>
 </head>
@@ -186,12 +186,21 @@
             <p>Hello {{ $order->customer_name }},</p>
             
             @if($trackingNumber)
+                @php
+                    $track17Url = 'https://t.17track.net/en#nums=' . rawurlencode($trackingNumber);
+                @endphp
                 <div class="tracking-section">
-                    <h3 style="margin: 0 0 15px 0; color: #059669;">🚚 Your Order Has Been Shipped!</h3>
+                    <h3 style="margin: 0 0 15px 0; color: #2563EB;">🚚 Your Order Has Been Shipped!</h3>
                     <p style="margin: 0 0 15px 0;">You can now track your package using the tracking number below:</p>
                     <div class="tracking-number">{{ $trackingNumber }}</div>
                     <p style="margin: 15px 0 0 0; font-size: 14px; color: #64748b;">
-                        You can track your package on the carrier's website or mobile app.
+                        Track worldwide on 17TRACK (auto-detect carrier):
+                    </p>
+                    <p style="margin: 12px 0 0 0;">
+                        <a href="{{ $track17Url }}" class="button" target="_blank" rel="noopener noreferrer">Track on 17TRACK</a>
+                    </p>
+                    <p style="margin: 12px 0 0 0; font-size: 13px; word-break: break-all;">
+                        <a href="{{ $track17Url }}" style="color: #2563EB;">{{ $track17Url }}</a>
                     </p>
                 </div>
             @endif
@@ -222,14 +231,14 @@
                 @if($trackingNumber)
                     <div class="info-row">
                         <span class="info-label">Tracking Number:</span>
-                        <span class="info-value" style="color: #059669; font-weight: bold;">{{ $trackingNumber }}</span>
+                        <span class="info-value" style="color: #2563EB; font-weight: bold;">{{ $trackingNumber }}</span>
                     </div>
                 @endif
             </div>
 
             <!-- Order Items -->
             <div class="items-list">
-                <h3 style="color: #f0427c; margin-bottom: 15px;">Order Items</h3>
+                <h3 style="color: #2563EB; margin-bottom: 15px;">Order Items</h3>
                 @foreach($order->items as $item)
                     <div class="item">
                         @php
