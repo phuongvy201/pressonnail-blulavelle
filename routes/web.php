@@ -685,7 +685,7 @@ Route::middleware('auth')->group(function () {
         Route::post('products/bulk-delete', [AdminProductController::class, 'bulkDelete'])->name('products.bulk-delete');
         Route::post('products/bulk-add-to-collection', [AdminProductController::class, 'bulkAddToCollection'])->name('products.bulk-add-to-collection');
         Route::post('products/{product}/duplicate', [AdminProductController::class, 'duplicate'])->name('products.duplicate');
-        Route::get('products/export/meta', [AdminProductController::class, 'exportToMeta'])->name('products.export.meta');
+        Route::post('products/export/meta', [AdminProductController::class, 'exportToMeta'])->name('products.export.meta');
 
         // Products Resource Route (must be last to avoid conflicts)
         Route::resource('products', AdminProductController::class);

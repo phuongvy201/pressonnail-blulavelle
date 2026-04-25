@@ -1281,15 +1281,32 @@ function exportToMeta() {
         return;
     }
     
-    // Build URL with product_ids
-    const baseUrl = '{{ route("admin.products.export.meta") }}';
-    const params = new URLSearchParams();
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ route("admin.products.export.meta") }}';
+    form.style.display = 'none';
+
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = '_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
     productIds.forEach(id => {
-        params.append('product_ids[]', id);
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'product_ids[]';
+        input.value = id;
+        form.appendChild(input);
     });
-    
-    // Open in new window to download CSV
-    window.location.href = baseUrl + '?' + params.toString();
+
+    document.body.appendChild(form);
+    form.submit();
+
+    setTimeout(function() {
+        document.body.removeChild(form);
+    }, 1000);
 }
 </script>
 @endsection
