@@ -14,5 +14,6 @@ class VerifyCsrfToken extends Middleware
     protected $except = [
         'api/*', // Exclude all API routes from CSRF protection
         'api/gmc/delete-product', // GMC delete product API (no CSRF needed)
+        'payment/stripe/webhook',
     ];
 }

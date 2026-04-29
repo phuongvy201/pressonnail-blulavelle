@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cart;
+use App\Models\CategoryCrossSell;
 use App\Models\Product;
 use App\Models\PromoCode;
 use App\Models\RecentProductView;
@@ -222,6 +223,8 @@ class CartController extends Controller
             }
         }
 
+        $cartMissingCrossSellProducts = $this->getMissingCrossSellProducts($cartItems, 8);
+
         return view('cart.index', compact(
             'cartItems',
             'subtotal',
@@ -238,7 +241,52 @@ class CartController extends Controller
             'availableZones',
             'currentDomain',
             'defaultZone',
-            'recentlyViewedProducts'
+            'recentlyViewedProducts',
+            'cartMissingCrossSellProducts'
         ));
+    }
+
+    private function getMissingCrossSellProducts($cartItems, int $limit = 8)
+    {
+        if ($cartItems->isEmpty()) {
+            return collect();
+        }
+
+        $cartProductIds = $cartItems->pluck('product_id')->filter()->unique()->values();
+        $sourceCategoryIds = $cartItems
+            ->map(fn($item) => $item->product?->template?->category_id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($sourceCategoryIds->isEmpty()) {
+            return collect();
+        }
+
+        $targetCategoryIds = CategoryCrossSell::query()
+            ->whereIn('source_category_id', $sourceCategoryIds->all())
+            ->orderBy('priority')
+            ->pluck('target_category_id')
+            ->unique()
+            ->values();
+
+        if ($targetCategoryIds->isEmpty()) {
+            return collect();
+        }
+
+        return Product::query()
+            ->availableForDisplay()
+            ->with(['shop', 'template'])
+            ->whereNotIn('id', $cartProductIds->all())
+            ->whereHas('template', function ($query) use ($targetCategoryIds) {
+                $query->whereIn('category_id', $targetCategoryIds->all());
+            })
+            // Bonus: prioritize glue when it's missing in cart.
+            ->orderByRaw("CASE WHEN LOWER(products.name) LIKE '%glue%' OR LOWER(products.slug) LIKE '%glue%' THEN 0 ELSE 1 END ASC")
+            ->orderBy('products.price', 'asc')
+            ->orderByDesc('products.created_at')
+            ->limit($limit)
+            ->get()
+            ->values();
     }
 }

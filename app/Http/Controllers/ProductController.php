@@ -12,6 +12,7 @@ use App\Models\OrderItem;
 use App\Models\Review;
 use App\Services\TikTokEventsService;
 use App\Services\CurrencyService;
+use App\Services\CrossSellService;
 use App\Support\ReferenceNailSizeChart;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
@@ -148,7 +149,7 @@ class ProductController extends Controller
      * @param  string  $slug
      * @return \Illuminate\View\View|\Illuminate\Http\RedirectResponse
      */
-    public function show(Request $request, $slug)
+    public function show(Request $request, $slug, CrossSellService $crossSellService)
     {
         // Get product and require all display conditions (segment số: coi như id — dùng khi slug DB trống / link export)
         $product = Product::query()
@@ -183,39 +184,13 @@ class ProductController extends Controller
             }
         }
 
-        // Related products from the same category (for "You may also like" fallback / other sections)
-        $relatedProducts = Product::whereHas('template', function ($q) use ($product) {
-            $q->where('category_id', $product->template->category_id);
-        })
-            ->where('id', '!=', $product->id)
-            ->availableForDisplay()
-            ->with(['shop', 'template'])
-            ->limit(8)
-            ->get();
-
-        // You may also: ưu tiên sản phẩm cùng collection; không có collection thì cùng category
-        $collectionIds = $product->collections->pluck('id')->toArray();
-        $youMayAlsoProducts = collect();
-        if (!empty($collectionIds)) {
-            $youMayAlsoProducts = Product::whereHas('collections', function ($q) use ($collectionIds) {
-                $q->whereIn('collections.id', $collectionIds);
-            })
-                ->where('id', '!=', $product->id)
-                ->availableForDisplay()
-                ->with(['shop', 'template'])
-                ->limit(8)
-                ->get();
-        }
-        if ($youMayAlsoProducts->isEmpty() && $product->template && $product->template->category_id) {
-            $youMayAlsoProducts = Product::whereHas('template', function ($q) use ($product) {
-                $q->where('category_id', $product->template->category_id);
-            })
-                ->where('id', '!=', $product->id)
-                ->availableForDisplay()
-                ->with(['shop', 'template'])
-                ->limit(8)
-                ->get();
-        }
+        $crossSellData = $crossSellService->getCrossSellData($product, 10);
+        $completeYourSetProducts = $crossSellData['complete_your_set'] ?? collect();
+        $completeYourSetTopProducts = $completeYourSetProducts->take(3)->values();
+        $completeYourSetRemainingProducts = $completeYourSetProducts->slice(3)->values();
+        $youMayAlsoProducts = $crossSellData['you_may_also_like'] ?? collect();
+        $trendingCrossSellProducts = $crossSellData['trending'] ?? collect();
+        $relatedProducts = $crossSellData['merged'] ?? collect();
 
         // Get breadcrumb data
         $breadcrumbs = [
@@ -306,8 +281,12 @@ class ProductController extends Controller
         return view('products.show', compact(
             'product',
             'relatedProducts',
+            'completeYourSetProducts',
+            'completeYourSetTopProducts',
+            'completeYourSetRemainingProducts',
             'recentlyViewedProducts',
             'youMayAlsoProducts',
+            'trendingCrossSellProducts',
             'breadcrumbs',
             'shopAvailable',
             'shippingZones',

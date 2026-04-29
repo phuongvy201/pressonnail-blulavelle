@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Payment;
 
+use App\Mail\CrossSellRecommendationsMail;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\ShippingCalculator;
+use App\Services\CrossSellService;
 use App\Services\TikTokEventsService;
 use App\Services\CurrencyService;
 use App\Mail\OrderConfirmation;
@@ -387,6 +389,13 @@ class StripePaymentController extends Controller
                     $this->handlePaymentIntentSucceeded($paymentIntent);
                     break;
 
+                case 'checkout.session.completed':
+                    $session = $event->data->object;
+                    if (!empty($session->payment_intent)) {
+                        $this->handlePaymentIntentSucceeded((object) ['id' => $session->payment_intent]);
+                    }
+                    break;
+
                 case 'payment_intent.payment_failed':
                     $paymentIntent = $event->data->object;
                     $this->handlePaymentIntentFailed($paymentIntent);
@@ -422,6 +431,10 @@ class StripePaymentController extends Controller
             ]);
 
             Log::info('Payment intent succeeded for order: ' . $order->order_number);
+        }
+
+        if ($order) {
+            $this->sendCrossSellEmail($order);
         }
     }
 
@@ -459,6 +472,38 @@ class StripePaymentController extends Controller
 
                 Log::info('Charge refunded for order: ' . $order->order_number);
             }
+        }
+    }
+
+    protected function sendCrossSellEmail(Order $order): void
+    {
+        try {
+            $cacheKey = 'cross_sell_email_sent:' . $order->payment_id;
+            if (cache()->has($cacheKey)) {
+                return;
+            }
+
+            $seedProduct = $order->items()->with('product.template.category')->first()?->product;
+            if (!$seedProduct) {
+                return;
+            }
+
+            /** @var CrossSellService $crossSellService */
+            $crossSellService = app(CrossSellService::class);
+            $data = $crossSellService->getCrossSellData($seedProduct, 4);
+            $products = collect($data['merged'] ?? [])->take(4);
+
+            if ($products->isEmpty() || empty($order->customer_email)) {
+                return;
+            }
+
+            Mail::to($order->customer_email)->send(new CrossSellRecommendationsMail($order, $products));
+            cache()->put($cacheKey, true, now()->addDays(7));
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send cross-sell recommendations email', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }

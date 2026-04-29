@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Exclude API routes from CSRF protection
         $middleware->validateCsrfTokens(except: [
             'api/*',
+            'payment/stripe/webhook', // Stripe Dashboard gửi POST, không có CSRF token
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

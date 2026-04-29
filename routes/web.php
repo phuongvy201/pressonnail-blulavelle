@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\CategoryCrossSellController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
@@ -29,6 +30,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\Api\CartController as ApiCartController;
+use App\Http\Controllers\Api\ProductCrossSellController;
 use App\Http\Controllers\Api\CustomFileController;
 use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\AnalyticsController;
@@ -527,6 +529,8 @@ Route::prefix('api/products')->middleware(['web'])->group(function () {
         ->name('api.products.create');
     Route::get('/{id}', [App\Http\Controllers\Api\ProductController::class, 'show'])
         ->name('api.products.show');
+    Route::get('/{id}/cross-sell', [ProductCrossSellController::class, 'show'])
+        ->name('api.products.cross-sell');
     Route::get('/', [App\Http\Controllers\Api\ProductController::class, 'index'])
         ->name('api.products.index');
 });
@@ -585,6 +589,10 @@ Route::middleware('auth')->group(function () {
         Route::resource('users', UserController::class);
         Route::resource('roles', RoleController::class);
         Route::resource('categories', AdminCategoryController::class);
+        Route::get('category-cross-sells', [CategoryCrossSellController::class, 'index'])->name('category-cross-sells.index');
+        Route::post('category-cross-sells', [CategoryCrossSellController::class, 'store'])->name('category-cross-sells.store');
+        Route::put('category-cross-sells/{categoryCrossSell}', [CategoryCrossSellController::class, 'update'])->name('category-cross-sells.update');
+        Route::delete('category-cross-sells/{categoryCrossSell}', [CategoryCrossSellController::class, 'destroy'])->name('category-cross-sells.destroy');
         Route::get('categories/featured/manage', [AdminCategoryController::class, 'featured'])->name('categories.featured');
         Route::put('categories/featured/update', [AdminCategoryController::class, 'updateFeatured'])->name('categories.update-featured');
 

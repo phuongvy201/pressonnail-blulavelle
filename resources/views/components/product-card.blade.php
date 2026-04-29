@@ -37,7 +37,7 @@
 @endphp
 
 <div
-    class="group bg-white rounded-xl overflow-hidden transition-all duration-300 shadow-md hover:shadow-2xl hover:shadow-gray-300/50 border border-gray-100 hover:border-gray-200"
+    class="group h-full flex flex-col bg-white rounded-xl overflow-hidden transition-all duration-300 shadow-md hover:shadow-2xl hover:shadow-gray-300/50 border border-gray-100 hover:border-gray-200"
     data-ga-select-item
     data-ga-item='@json($gaSelectItemPayload)'
     data-ga-list-name="{{ $itemListName ?: 'Product List' }}"
@@ -47,6 +47,8 @@
         @if($imageUrl)
             <img src="{{ $webpUrl ?: $imageUrl }}"
                  alt="{{ $imgAlt }}"
+                 loading="lazy"
+                 decoding="async"
                  class="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-110">
         @else
             <div class="w-full h-full flex items-center justify-center bg-gray-200">
@@ -85,8 +87,8 @@
     </div>
 
     {{-- Info --}}
-    <div class="p-3 sm:p-4">
-        <h3 class="font-semibold text-gray-900 mb-1 line-clamp-2 group-hover:text-[#005366] transition-colors text-sm sm:text-base">
+    <div class="p-3 sm:p-4 flex flex-col flex-1">
+        <h3 class="font-semibold text-gray-900 mb-1 line-clamp-2 min-h-[2.5rem] group-hover:text-[#005366] transition-colors text-sm sm:text-base">
             @if($productUrl)
                 <a href="{{ $productUrl }}" class="block" data-ga-select-item-link>
                     {{ Str::limit($product->name, 50) }}
@@ -95,19 +97,21 @@
                 <span class="block text-gray-700 cursor-default">{{ Str::limit($product->name, 50) }}</span>
             @endif
         </h3>
-        <p class="text-xs sm:text-sm text-gray-500 mb-1 line-clamp-1">By {{ $product->shop->shop_name ?? $product->shop->name ?? 'Shop' }}</p>
+        <p class="text-xs sm:text-sm text-gray-500 mb-1 line-clamp-1 min-h-[1.25rem]">By {{ $product->shop->shop_name ?? $product->shop->name ?? 'Shop' }}</p>
 
         {{-- Rating --}}
-        @if($reviewsCount > 0)
-        <div class="flex items-center gap-1 text-amber-500 mb-2">
-            <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-            <span class="text-xs font-semibold text-gray-600">{{ number_format($avgRating, 1) }}</span>
-            <span class="text-xs text-gray-600">({{ $reviewsCount }})</span>
+        <div class="flex items-center gap-1 text-amber-500 mb-2 min-h-[1.25rem]">
+            @if($reviewsCount > 0)
+                <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                <span class="text-xs font-semibold text-gray-600">{{ number_format($avgRating, 1) }}</span>
+                <span class="text-xs text-gray-600">({{ $reviewsCount }})</span>
+            @else
+                <span class="text-xs text-transparent select-none">placeholder</span>
+            @endif
         </div>
-        @endif
 
         {{-- Giá: hiển thị giá sale (giá hiện tại + giá gốc gạch ngang) khi có list_price > price --}}
-        <div class="flex flex-wrap items-baseline gap-2">
+        <div class="flex flex-wrap items-baseline gap-2 mt-auto">
             @if($onSale)
                 <span class="text-base sm:text-lg font-bold text-primary-fg">{{ format_price_usd($currentPriceUsd) }}</span>
                 <span class="text-xs sm:text-sm text-gray-600 line-through">{{ format_price_usd($originalPriceUsd) }}</span>

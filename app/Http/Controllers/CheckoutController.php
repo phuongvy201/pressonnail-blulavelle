@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\CategoryCrossSell;
 use App\Models\Product;
 use App\Models\PromoCode;
 use App\Models\Cart;
@@ -282,6 +283,8 @@ class CheckoutController extends Controller
             ]
         );
 
+        $checkoutMissingCrossSellProducts = $this->getMissingCrossSellProducts($cartItems, 6);
+
         return view('checkout.index', compact(
             'products',
             'cartItems',
@@ -304,8 +307,52 @@ class CheckoutController extends Controller
             'shippingZones',
             'availableZones',
             'defaultZone',
-            'defaultCountry'
+            'defaultCountry',
+            'checkoutMissingCrossSellProducts'
         ));
+    }
+
+    private function getMissingCrossSellProducts($cartItems, int $limit = 6)
+    {
+        if ($cartItems->isEmpty()) {
+            return collect();
+        }
+
+        $cartProductIds = $cartItems->pluck('product_id')->filter()->unique()->values();
+        $sourceCategoryIds = $cartItems
+            ->map(fn($item) => $item->product?->template?->category_id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($sourceCategoryIds->isEmpty()) {
+            return collect();
+        }
+
+        $targetCategoryIds = CategoryCrossSell::query()
+            ->whereIn('source_category_id', $sourceCategoryIds->all())
+            ->orderBy('priority')
+            ->pluck('target_category_id')
+            ->unique()
+            ->values();
+
+        if ($targetCategoryIds->isEmpty()) {
+            return collect();
+        }
+
+        return Product::query()
+            ->availableForDisplay()
+            ->with(['shop', 'template'])
+            ->whereNotIn('id', $cartProductIds->all())
+            ->whereHas('template', function ($query) use ($targetCategoryIds) {
+                $query->whereIn('category_id', $targetCategoryIds->all());
+            })
+            ->orderByRaw("CASE WHEN LOWER(products.name) LIKE '%glue%' OR LOWER(products.slug) LIKE '%glue%' THEN 0 ELSE 1 END ASC")
+            ->orderBy('products.price', 'asc')
+            ->orderByDesc('products.created_at')
+            ->limit($limit)
+            ->get()
+            ->values();
     }
 
     public function process(Request $request)

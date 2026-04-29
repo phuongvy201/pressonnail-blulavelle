@@ -250,6 +250,7 @@ class Product extends Model
         'media',
         'quantity',
         'status',
+        'requires_special_handling',
         'created_by',
         'api_token_id',
         // Meta fields for export
@@ -273,6 +274,7 @@ class Product extends Model
         'list_price' => 'decimal:2',
         'media' => 'array',
         'quantity' => 'integer',
+        'requires_special_handling' => 'boolean',
     ];
 
     // Relationships

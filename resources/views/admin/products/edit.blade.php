@@ -129,6 +129,16 @@
                         @enderror
                     </div>
 
+                    <div class="md:col-span-2">
+                        <label class="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 cursor-pointer">
+                            <input type="checkbox" name="requires_special_handling" value="1" {{ old('requires_special_handling', $product->requires_special_handling) ? 'checked' : '' }} class="mt-1 h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500">
+                            <span>
+                                <span class="block text-sm font-semibold text-amber-900">Special shipping handling</span>
+                                <span class="block text-xs text-amber-800">Show product-page note: "Ships separately to ensure product quality / Handled with extra care due to product nature".</span>
+                            </span>
+                        </label>
+                    </div>
+
                     <!-- Shop Assignment (Admin Only) -->
                     @if(auth()->user()->hasRole('admin') && $shops)
                     <div>

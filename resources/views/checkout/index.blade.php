@@ -1262,6 +1262,56 @@ function buildCheckoutCustomizationInputs(customizations) {
                         @endforeach
                     </div>
 
+                    @if(isset($checkoutMissingCrossSellProducts) && $checkoutMissingCrossSellProducts->isNotEmpty())
+                    <div class="border-t border-primary/10 pt-4 mb-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-sm font-extrabold text-slate-900">Complete your kit (Missing items)</h3>
+                            <div class="flex items-center gap-2">
+                                @if($checkoutMissingCrossSellProducts->count() > 2)
+                                    <button type="button" id="checkout-cross-sell-prev" class="h-7 w-7 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-100">&larr;</button>
+                                    <button type="button" id="checkout-cross-sell-next" class="h-7 w-7 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-100">&rarr;</button>
+                                @endif
+                                <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold">Funnel step: Checkout</span>
+                            </div>
+                        </div>
+                        <div id="checkout-cross-sell-slider" class="flex gap-2 overflow-x-hidden scroll-smooth">
+                            @foreach($checkoutMissingCrossSellProducts as $addon)
+                                @php
+                                    $addonPrice = (float) ($addon->price ?? $addon->template->base_price ?? 0);
+                                    $addonMedia = $addon->getEffectiveMedia();
+                                    $addonImage = null;
+                                    if (!empty($addonMedia)) {
+                                        if (is_string($addonMedia[0])) {
+                                            $addonImage = str_starts_with($addonMedia[0], 'http') ? $addonMedia[0] : asset('storage/' . $addonMedia[0]);
+                                        } elseif (is_array($addonMedia[0])) {
+                                            $raw = $addonMedia[0]['url'] ?? $addonMedia[0]['path'] ?? null;
+                                            $addonImage = $raw ? (str_starts_with($raw, 'http') ? $raw : asset('storage/' . $raw)) : null;
+                                        }
+                                    }
+                                    $isGlue = str_contains(strtolower($addon->name . ' ' . ($addon->slug ?? '')), 'glue');
+                                @endphp
+                                <label class="relative shrink-0 basis-[85%] sm:basis-[48%] rounded-lg border border-slate-200 p-2.5 bg-white cursor-pointer hover:border-primary/40">
+                                    <input type="checkbox" class="checkout-cross-sell-checkbox absolute right-2 top-2 h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary" value="{{ $addon->id }}" data-price="{{ number_format($addonPrice, 2, '.', '') }}">
+                                    @if($addonImage)
+                                        <img src="{{ $addonImage }}" alt="{{ $addon->name }}" loading="lazy" decoding="async" class="h-20 w-full rounded object-cover border border-slate-200 mb-2">
+                                    @endif
+                                    <div class="text-xs font-semibold text-slate-900 line-clamp-2 pr-8">{{ $addon->name }}</div>
+                                    @if($isGlue)
+                                        <span class="inline-block mt-1 text-[10px] font-bold px-1 py-0.5 rounded bg-emerald-100 text-emerald-700">Priority: Glue</span>
+                                    @endif
+                                    <div class="mt-1 text-xs font-bold text-primary">+{{ \App\Services\CurrencyService::formatPrice($addonPrice, $currency ?? 'USD') }}</div>
+                                </label>
+                            @endforeach
+                        </div>
+                        <div class="mt-3 flex items-center justify-between">
+                            <p id="checkout-cross-sell-selected" class="text-[11px] text-slate-600">0 items selected</p>
+                            <button type="button" id="checkout-cross-sell-add-btn" class="px-3 py-2 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary/90">
+                                Add selected
+                            </button>
+                        </div>
+                    </div>
+                    @endif
+
                     <!-- Tip Selection - primary pink -->
                     <div class="border-t border-primary/10 pt-4 mb-4">
                         <div class="flex items-center mb-3">
@@ -4291,6 +4341,65 @@ function saveCheckoutCartChanges(cartItemId) {
     }).then(r=>r.json()).then(data=>{ if(data.success){ window.location.reload(); } else { alert('Failed to update cart item'); }}).catch(err=>{ console.error(err); alert('An error occurred'); });
 }
 
+</script>
+
+<script>
+(function bindCheckoutCrossSell() {
+    var addBtn = document.getElementById('checkout-cross-sell-add-btn');
+    var counter = document.getElementById('checkout-cross-sell-selected');
+    var slider = document.getElementById('checkout-cross-sell-slider');
+    var prevBtn = document.getElementById('checkout-cross-sell-prev');
+    var nextBtn = document.getElementById('checkout-cross-sell-next');
+    if (!addBtn) return;
+
+    function selectedBoxes() {
+        return Array.from(document.querySelectorAll('.checkout-cross-sell-checkbox:checked'));
+    }
+
+    function updateCount() {
+        var n = selectedBoxes().length;
+        if (counter) counter.textContent = n + (n === 1 ? ' item selected' : ' items selected');
+    }
+
+    document.querySelectorAll('.checkout-cross-sell-checkbox').forEach(function (cb) {
+        cb.addEventListener('change', updateCount);
+    });
+    if (slider && prevBtn && nextBtn) {
+        var slide = function () { return Math.max(240, Math.floor(slider.clientWidth * 0.9)); };
+        prevBtn.addEventListener('click', function () { slider.scrollBy({ left: -slide(), behavior: 'smooth' }); });
+        nextBtn.addEventListener('click', function () { slider.scrollBy({ left: slide(), behavior: 'smooth' }); });
+    }
+    updateCount();
+
+    addBtn.addEventListener('click', async function () {
+        var selected = selectedBoxes();
+        if (!selected.length) return;
+
+        addBtn.disabled = true;
+        var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+
+        try {
+            for (const cb of selected) {
+                var formData = new FormData();
+                formData.append('_token', csrf);
+                formData.append('id', cb.value);
+                formData.append('quantity', '1');
+                formData.append('price', String(parseFloat(cb.getAttribute('data-price') || '0') || 0));
+
+                await fetch('{{ route("api.cart.add") }}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+            }
+            window.location.reload();
+        } catch (e) {
+            console.error(e);
+            addBtn.disabled = false;
+            alert('Could not add selected items. Please try again.');
+        }
+    });
+})();
 </script>
 
 <script>

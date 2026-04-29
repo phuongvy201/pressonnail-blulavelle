@@ -551,6 +551,59 @@
                         <label class="block text-sm font-bold text-slate-900 mb-3" for="order-note">Add an Order Note</label>
                         <textarea class="w-full rounded-xl border border-primary/20 bg-transparent focus:border-primary focus:ring-primary placeholder-slate-400 text-sm px-4 py-3" id="order-note" name="order_note" placeholder="Special instructions for your order..." rows="3"></textarea>
                     </div>
+
+                    @if(isset($cartMissingCrossSellProducts) && $cartMissingCrossSellProducts->isNotEmpty())
+                    <div class="bg-white rounded-xl border border-primary/10 p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-base font-extrabold text-slate-900">Complete your kit (Missing items)</h3>
+                            <div class="flex items-center gap-2">
+                                @if($cartMissingCrossSellProducts->count() > 2)
+                                    <button type="button" id="cart-cross-sell-prev" class="h-8 w-8 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-100">&larr;</button>
+                                    <button type="button" id="cart-cross-sell-next" class="h-8 w-8 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-100">&rarr;</button>
+                                @endif
+                                <span class="text-[11px] px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-bold">Funnel step: Cart</span>
+                            </div>
+                        </div>
+                        <div id="cart-cross-sell-slider" class="flex gap-3 overflow-x-hidden scroll-smooth">
+                            @foreach($cartMissingCrossSellProducts as $idx => $addon)
+                                @php
+                                    $addonMedia = $addon->getEffectiveMedia();
+                                    $addonImage = null;
+                                    if (!empty($addonMedia)) {
+                                        if (is_string($addonMedia[0])) {
+                                            $addonImage = str_starts_with($addonMedia[0], 'http') ? $addonMedia[0] : asset('storage/' . $addonMedia[0]);
+                                        } elseif (is_array($addonMedia[0])) {
+                                            $raw = $addonMedia[0]['url'] ?? $addonMedia[0]['path'] ?? null;
+                                            $addonImage = $raw ? (str_starts_with($raw, 'http') ? $raw : asset('storage/' . $raw)) : null;
+                                        }
+                                    }
+                                    $addonPrice = (float) ($addon->price ?? $addon->template->base_price ?? 0);
+                                    $isGlue = str_contains(strtolower($addon->name . ' ' . ($addon->slug ?? '')), 'glue');
+                                @endphp
+                                <label class="relative shrink-0 basis-[85%] sm:basis-[48%] lg:basis-[31%] rounded-xl border border-slate-200 p-3 bg-white cursor-pointer hover:border-primary/40">
+                                    <input type="checkbox" class="cart-cross-sell-checkbox absolute right-3 top-3 h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary" value="{{ $addon->id }}" data-price="{{ number_format($addonPrice, 2, '.', '') }}">
+                                    @if($addonImage)
+                                        <img src="{{ $addonImage }}" alt="{{ $addon->name }}" loading="lazy" decoding="async" class="h-24 w-full rounded-lg object-cover border border-slate-200 mb-2">
+                                    @endif
+                                    <div class="text-sm font-semibold text-slate-900 line-clamp-2 pr-8">
+                                        {{ $addon->name }}
+                                    </div>
+                                    @if($isGlue)
+                                        <span class="inline-block mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">Recommended first</span>
+                                    @endif
+                                    <div class="mt-1 text-xs text-primary font-bold">+{{ format_price($addonPrice) }}</div>
+                                    <div class="mt-2 text-[11px] text-slate-500">Tap checkbox to add</div>
+                                </label>
+                            @endforeach
+                        </div>
+                        <div class="mt-4 flex items-center justify-between">
+                            <p id="cart-cross-sell-selected" class="text-xs text-slate-600">0 items selected</p>
+                            <button type="button" id="cart-cross-sell-add-btn" class="px-4 py-2 rounded-lg bg-primary text-white text-sm font-bold hover:brightness-110">
+                                Add selected to cart
+                            </button>
+                        </div>
+                    </div>
+                    @endif
                 </div>
 
                 <!-- Right: Order Summary -->
@@ -886,6 +939,61 @@ function updateQuantity(cartItemId, newQuantity) {
     .catch(error => {
         console.error('Error:', error);
         alert('An error occurred');
+    });
+}
+
+function getSelectedCartCrossSellCheckboxes() {
+    return Array.from(document.querySelectorAll('.cart-cross-sell-checkbox:checked'));
+}
+
+function bindCartCrossSell() {
+    const addBtn = document.getElementById('cart-cross-sell-add-btn');
+    const counter = document.getElementById('cart-cross-sell-selected');
+    const slider = document.getElementById('cart-cross-sell-slider');
+    const prevBtn = document.getElementById('cart-cross-sell-prev');
+    const nextBtn = document.getElementById('cart-cross-sell-next');
+    if (!addBtn) return;
+
+    const updateCount = () => {
+        const selected = getSelectedCartCrossSellCheckboxes().length;
+        if (counter) counter.textContent = selected + (selected === 1 ? ' item selected' : ' items selected');
+    };
+
+    document.querySelectorAll('.cart-cross-sell-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateCount);
+    });
+    if (slider && prevBtn && nextBtn) {
+        const slide = () => Math.max(260, Math.floor(slider.clientWidth * 0.9));
+        prevBtn.addEventListener('click', () => slider.scrollBy({ left: -slide(), behavior: 'smooth' }));
+        nextBtn.addEventListener('click', () => slider.scrollBy({ left: slide(), behavior: 'smooth' }));
+    }
+    updateCount();
+
+    addBtn.addEventListener('click', async function () {
+        const selected = getSelectedCartCrossSellCheckboxes();
+        if (!selected.length) return;
+
+        addBtn.disabled = true;
+        try {
+            for (const cb of selected) {
+                const formData = new FormData();
+                formData.append('_token', csrfToken);
+                formData.append('id', cb.value);
+                formData.append('quantity', '1');
+                formData.append('price', String(parseFloat(cb.getAttribute('data-price') || '0') || 0));
+
+                await fetch('{{ route("api.cart.add") }}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+            }
+            location.reload();
+        } catch (e) {
+            console.error(e);
+            addBtn.disabled = false;
+            alert('Could not add selected items. Please try again.');
+        }
     });
 }
 
@@ -1697,6 +1805,7 @@ function initializeShippingCost() {
 document.addEventListener('DOMContentLoaded', function() {
     trackViewCart();
     initializeShippingCost();
+    bindCartCrossSell();
 });
 </script>
 

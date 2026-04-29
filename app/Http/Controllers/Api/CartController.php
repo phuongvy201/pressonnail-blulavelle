@@ -42,56 +42,53 @@ class CartController extends Controller
                 'quantity' => 'required|integer|min:1',
                 'price' => 'required|numeric|min:0',
                 'selectedVariant' => 'nullable|array',
-                'customizations' => 'nullable|array'
+                'customizations' => 'nullable|array',
+                'addons' => 'nullable|array|max:10',
+                'addons.*' => 'integer|exists:products,id|different:id',
             ]);
 
             $product = Product::findOrFail($request->id);
             $sessionId = session()->getId();
             $userId = Auth::id();
 
-            // Find existing cart item
-            $cartItems = Cart::where('product_id', $request->id)
-                ->where(function ($query) use ($sessionId, $userId) {
-                    if ($userId) {
-                        $query->where('user_id', $userId);
-                    } else {
-                        $query->where('session_id', $sessionId);
-                    }
-                })
-                ->get();
-
-            // Check for exact match manually to avoid JSON encoding issues
-            $existingCart = null;
-            foreach ($cartItems as $item) {
-                $variantMatch = $this->compareVariants($item->selected_variant, $request->selectedVariant ?? []);
-                $customizationMatch = $this->compareCustomizations($item->customizations, $request->customizations ?? []);
-
-                if ($variantMatch && $customizationMatch) {
-                    $existingCart = $item;
-                    break;
-                }
-            }
-
             $selectedVariant = $this->normalizeSelectedVariant($request->selectedVariant ?? []);
             $customizations = $this->normalizeCustomizations($request->customizations ?? []);
+            $cartItem = $this->upsertCartItem(
+                productId: (int) $request->id,
+                quantity: (int) $request->quantity,
+                price: (float) $request->price,
+                selectedVariant: $selectedVariant,
+                customizations: $customizations,
+                userId: $userId,
+                sessionId: $sessionId
+            );
 
-            if ($existingCart) {
-                // Update quantity and price (in case variant price changed)
-                $existingCart->increment('quantity', $request->quantity);
-                $existingCart->update(['price' => $request->price]);
-                $cartItem = $existingCart;
-            } else {
-                // Create new cart item with variant + customizations for correct production
-                $cartItem = Cart::create([
-                    'session_id' => $userId ? null : $sessionId,
-                    'user_id' => $userId,
-                    'product_id' => $request->id,
-                    'variant_id' => $selectedVariant['id'] ?? null,
-                    'quantity' => (int) $request->quantity,
-                    'price' => (float) $request->price,
-                    'selected_variant' => $selectedVariant ?: null,
-                    'customizations' => $customizations ?: null,
-                ]);
+            $addedAddonItems = [];
+            $addonIds = collect($request->input('addons', []))
+                ->map(fn($id) => (int) $id)
+                ->filter(fn($id) => $id > 0)
+                ->unique()
+                ->values();
+
+            if ($addonIds->isNotEmpty()) {
+                $addonProducts = Product::query()
+                    ->availableForDisplay()
+                    ->with('template:id,base_price')
+                    ->whereIn('id', $addonIds->all())
+                    ->get(['id', 'price', 'template_id']);
+
+                foreach ($addonProducts as $addonProduct) {
+                    $addonUnitPrice = (float) ($addonProduct->price ?? optional($addonProduct->template)->base_price ?? 0);
+                    $addedAddonItems[] = $this->upsertCartItem(
+                        productId: (int) $addonProduct->id,
+                        quantity: 1,
+                        price: $addonUnitPrice,
+                        selectedVariant: [],
+                        customizations: [],
+                        userId: $userId,
+                        sessionId: $sessionId
+                    );
+                }
             }
 
             Log::info('Item added to cart', [
@@ -126,6 +123,12 @@ class CartController extends Controller
                 'success' => true,
                 'message' => 'Item added to cart successfully',
                 'cart_item' => $cartItem,
+                'addons_added' => collect($addedAddonItems)->map(fn($item) => [
+                    'id' => $item->id,
+                    'product_id' => $item->product_id,
+                    'quantity' => $item->quantity,
+                    'price' => $item->price,
+                ])->values(),
             ]);
         } catch (\Exception $e) {
             Log::error('Error adding item to cart', [
@@ -694,6 +697,53 @@ class CartController extends Controller
         ksort($c1);
         ksort($c2);
         return $c1 === $c2;
+    }
+
+    private function upsertCartItem(
+        int $productId,
+        int $quantity,
+        float $price,
+        array $selectedVariant,
+        array $customizations,
+        ?int $userId,
+        string $sessionId
+    ): Cart {
+        $cartItems = Cart::where('product_id', $productId)
+            ->where(function ($query) use ($sessionId, $userId) {
+                if ($userId) {
+                    $query->where('user_id', $userId);
+                } else {
+                    $query->where('session_id', $sessionId);
+                }
+            })
+            ->get();
+
+        $existingCart = null;
+        foreach ($cartItems as $item) {
+            $variantMatch = $this->compareVariants($item->selected_variant, $selectedVariant);
+            $customizationMatch = $this->compareCustomizations($item->customizations, $customizations);
+            if ($variantMatch && $customizationMatch) {
+                $existingCart = $item;
+                break;
+            }
+        }
+
+        if ($existingCart) {
+            $existingCart->increment('quantity', $quantity);
+            $existingCart->update(['price' => $price]);
+            return $existingCart;
+        }
+
+        return Cart::create([
+            'session_id' => $userId ? null : $sessionId,
+            'user_id' => $userId,
+            'product_id' => $productId,
+            'variant_id' => $selectedVariant['id'] ?? null,
+            'quantity' => $quantity,
+            'price' => $price,
+            'selected_variant' => $selectedVariant ?: null,
+            'customizations' => $customizations ?: null,
+        ]);
     }
 
     private function trackTikTokAddToCartEvent(Request $request, Product $product, int $quantity, float $unitPrice): void

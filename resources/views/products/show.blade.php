@@ -513,10 +513,18 @@
                         <span id="product-price-note" class="text-sm font-bold text-[#0297FE] hidden"></span>
                     </div>
                     @php
+                        $showSpecialHandlingNote = (bool) ($product->requires_special_handling ?? false);
+
                         $tiersUi = collect($bulkDiscountRules)->filter(function($r) {
                             return !empty($r['min_qty']) && !empty($r['percent']);
                         })->sortBy('min_qty')->values()->take(3)->all();
                     @endphp
+                    @if($showSpecialHandlingNote)
+                        <div class="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                            <p>Ships separately to ensure product quality</p>
+                            <p>Handled with extra care due to product nature</p>
+                        </div>
+                    @endif
                     @if(!empty($tiersUi))
                         <div class="mt-2 bg-[#0297FE]/10 border border-[#0297FE]/20 rounded-2xl p-3">
                             <div class="text-center text-xs font-extrabold text-[#0297FE]">
@@ -674,6 +682,65 @@
                             </button>
                         </div>
                     </div>
+
+                    @if(isset($completeYourSetTopProducts) && $completeYourSetTopProducts->isNotEmpty())
+                    <div id="bundle-kit-box" class="space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                        <div class="flex items-start justify-between gap-2">
+                            <h3 class="text-sm font-extrabold text-slate-900">Complete your nail kit 💅</h3>
+                            <span class="text-[11px] px-2 py-1 rounded-full bg-rose-100 text-rose-700 font-semibold">Boost your look</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            @foreach($completeYourSetTopProducts as $idx => $addonProduct)
+                                @php
+                                    $addonPrice = (float) ($addonProduct->price ?? $addonProduct->template->base_price ?? 0);
+                                    $addonMedia = $addonProduct->getEffectiveMedia();
+                                    $addonImage = null;
+                                    if (!empty($addonMedia)) {
+                                        if (is_string($addonMedia[0])) {
+                                            $addonImage = str_starts_with($addonMedia[0], 'http') ? $addonMedia[0] : asset('storage/' . $addonMedia[0]);
+                                        } elseif (is_array($addonMedia[0])) {
+                                            $raw = $addonMedia[0]['url'] ?? $addonMedia[0]['path'] ?? null;
+                                            $addonImage = $raw ? (str_starts_with($raw, 'http') ? $raw : asset('storage/' . $raw)) : null;
+                                        }
+                                    }
+                                @endphp
+                                <label class="relative flex flex-col items-start gap-2 rounded-lg border border-slate-200 bg-white p-2 cursor-pointer hover:border-[#0297FE]/40 transition-colors min-h-[120px] {{ $idx === 0 ? 'ring-1 ring-[#0297FE]/20' : '' }}">
+                                    <input
+                                        type="checkbox"
+                                        class="bundle-addon-checkbox absolute right-2 top-2 h-5 w-5 rounded border-slate-300 text-[#0297FE] focus:ring-[#0297FE]"
+                                        value="{{ $addonProduct->id }}"
+                                        data-price="{{ number_format($addonPrice, 2, '.', '') }}"
+                                        @checked($idx === 0)
+                                    >
+                                    <div class="flex items-center gap-2">
+                                        @if($addonImage)
+                                            <img src="{{ $addonImage }}" alt="{{ $addonProduct->name }}" loading="lazy" decoding="async" class="h-10 w-10 rounded object-cover border border-slate-200">
+                                        @endif
+                                        <div class="min-w-0 flex-1">
+                                            <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-700">
+                                                {{ $addonProduct->cross_sell_rank ?? ($idx + 1) }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="text-xs font-semibold text-slate-900 line-clamp-2">{{ $addonProduct->name }}</div>
+                                    @if($idx === 0)
+                                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">Popular</span>
+                                    @endif
+                                    <div class="mt-auto text-xs font-bold text-[#0297FE]">+{{ format_price_usd($addonPrice) }}</div>
+                                </label>
+                            @endforeach
+                        </div>
+
+                        <div class="flex items-center justify-between text-xs">
+                            <span id="bundle-save-badge" class="hidden px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold">Save 10% bundle</span>
+                            <span id="bundle-selected-count" class="text-slate-600">0 add-ons selected</span>
+                        </div>
+                        <div class="text-sm font-bold text-slate-900">
+                            Total: <span id="bundle-total-price">{{ format_price_usd((float) ($productPrice ?? 0)) }}</span>
+                        </div>
+                    </div>
+                    @endif
 
                     {{-- Add to Cart + Favorite --}}
                     <div class="flex gap-3 pt-1">
@@ -1120,7 +1187,9 @@
             @endif
             @endif
 
-            <x-related-products :products="$youMayAlsoProducts ?? collect()" title="You may also like" :limit="5" />
+            <x-related-products :products="$completeYourSetRemainingProducts ?? collect()" title="Complete your kit" :limit="10" />
+
+            <x-related-products :products="$youMayAlsoProducts ?? collect()" title="You may also like" :limit="10" />
 
             <x-see-it-in-action />
 
@@ -1695,6 +1764,35 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         return total;
     }
+    function getBundleAddonState() {
+        var total = 0;
+        var ids = [];
+        var count = 0;
+        document.querySelectorAll('.bundle-addon-checkbox:checked').forEach(function(el) {
+            var id = parseInt(el.value, 10);
+            var price = parseFloat(el.getAttribute('data-price') || '0') || 0;
+            if (!isNaN(id)) ids.push(id);
+            total += price;
+            count += 1;
+        });
+        return { ids: ids, total: total, count: count };
+    }
+    function updateBundleUi(baseLineTotal) {
+        var totalEl = document.getElementById('bundle-total-price');
+        var countEl = document.getElementById('bundle-selected-count');
+        var saveEl = document.getElementById('bundle-save-badge');
+        if (!totalEl && !countEl && !saveEl) return;
+
+        var state = getBundleAddonState();
+        var grandTotal = (parseFloat(baseLineTotal) || 0) + state.total;
+
+        if (totalEl) totalEl.textContent = formatMoney(grandTotal);
+        if (countEl) countEl.textContent = state.count + (state.count === 1 ? ' add-on selected' : ' add-ons selected');
+        if (saveEl) {
+            if (state.count >= 2) saveEl.classList.remove('hidden');
+            else saveEl.classList.add('hidden');
+        }
+    }
     function updateDisplayedPrice() {
         var priceEl = document.getElementById('product-price');
         if (!priceEl) return;
@@ -1706,6 +1804,8 @@ document.addEventListener('DOMContentLoaded', function() {
         var customizationTotal = getCustomizationTotal();
         var finalPrice = baseToUse + customizationTotal;
         priceEl.textContent = formatMoney(finalPrice);
+        var qtyVal = Math.min(99, Math.max(1, parseInt(document.getElementById('product-quantity')?.value, 10) || 1));
+        updateBundleUi(finalPrice * qtyVal);
 
         var listPriceEl = document.getElementById('product-list-price');
         if (listPriceEl) {
@@ -1735,6 +1835,9 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.customization-field').forEach(function(field) {
         field.addEventListener('input', updateDisplayedPrice);
         field.addEventListener('change', updateDisplayedPrice);
+    });
+    document.querySelectorAll('.bundle-addon-checkbox').forEach(function(box) {
+        box.addEventListener('change', updateDisplayedPrice);
     });
 
     function parseCustomizationFilePayload(hiddenVal) {
@@ -1920,16 +2023,19 @@ document.addEventListener('DOMContentLoaded', function() {
             var n = Math.max(1, parseInt(qtyEl.value, 10) - 1);
             qtyEl.value = n;
             updateVolumeDiscountDynamicMessage();
+            updateDisplayedPrice();
         });
         document.getElementById('qty-plus') && document.getElementById('qty-plus').addEventListener('click', function() {
             var n = Math.min(99, (parseInt(qtyEl.value, 10) || 1) + 1);
             qtyEl.value = n;
             updateVolumeDiscountDynamicMessage();
+            updateDisplayedPrice();
         });
         qtyEl.addEventListener('change', function() {
             var n = Math.min(99, Math.max(1, parseInt(qtyEl.value, 10) || 1));
             qtyEl.value = n;
             updateVolumeDiscountDynamicMessage();
+            updateDisplayedPrice();
         });
 
         updateVolumeDiscountDynamicMessage();
@@ -2023,6 +2129,10 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.append('id', '{{ $product->id }}');
             formData.append('quantity', String(quantity));
             formData.append('price', String(unitPrice));
+            var bundleState = getBundleAddonState();
+            bundleState.ids.forEach(function(addonId) {
+                formData.append('addons[]', String(addonId));
+            });
 
             var matchingVariant = PRODUCT_VARIANTS.length > 0 ? getMatchingVariant(selectedSize, selectedShape) : null;
             if (matchingVariant) {
