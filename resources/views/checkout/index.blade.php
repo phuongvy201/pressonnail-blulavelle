@@ -328,6 +328,8 @@ const DEFAULT_SHIPPING_RATE = @json($defaultShippingRateData);
 const DEFAULT_SHIPPING_ZONE_ID = @json($defaultShippingRate ? $defaultShippingRate->shipping_zone_id : null);
 const CHECKOUT_BASE_SUBTOTAL = {{ $baseSubtotal }};
 const CHECKOUT_FREE_SHIP_THRESHOLD_USD = 150;
+/** Subtotal hàng hóa (USD) tối thiểu để áp dụng free shipping từ retention popup (đồng bộ CheckoutController) */
+const CHECKOUT_RETENTION_FREE_SHIP_MIN_SUBTOTAL_USD = 10;
 
 // GA4 ecommerce items shared across multiple checkout events.
 window.PRESSONNail_CHECKOUT_GA4_ITEMS = @json($gtagItems);
@@ -3624,10 +3626,19 @@ window.__PRESSONNailRetentionFreeShipActive = window.__PRESSONNailRetentionFreeS
         const shippingCostInput = document.getElementById('shipping_cost');
         const shippingZoneIdInput = document.getElementById('shipping_zone_id');
         const retentionFreeshipInput = document.getElementById('retention_free_shipping');
-        const retentionFreeShipActive = !!(
+        let retentionFreeShipActive = !!(
             window.__PRESSONNailRetentionFreeShipActive ||
             (retentionFreeshipInput && retentionFreeshipInput.value === '1')
         );
+        const baseSubForRetention = Number(CHECKOUT_BASE_SUBTOTAL) || 0;
+        if (retentionFreeShipActive && baseSubForRetention < CHECKOUT_RETENTION_FREE_SHIP_MIN_SUBTOTAL_USD) {
+            window.__PRESSONNailRetentionFreeShipActive = false;
+            if (retentionFreeshipInput) retentionFreeshipInput.value = '0';
+            try {
+                sessionStorage.removeItem('checkout_retention_free_shipping');
+            } catch (e) {}
+            retentionFreeShipActive = false;
+        }
 
         // Retention popup accepted free shipping: keep shipping = 0 and prevent zone recalculation overwrite.
         if (retentionFreeShipActive) {
@@ -3977,8 +3988,13 @@ window.__PRESSONNailRetentionFreeShipActive = window.__PRESSONNailRetentionFreeS
         var retentionFreeshipInput = document.getElementById('retention_free_shipping');
         try {
             if (sessionStorage.getItem('checkout_retention_free_shipping') === '1') {
-                window.__PRESSONNailRetentionFreeShipActive = true;
-                if (retentionFreeshipInput) retentionFreeshipInput.value = '1';
+                var baseSubInit = Number(CHECKOUT_BASE_SUBTOTAL) || 0;
+                if (baseSubInit >= CHECKOUT_RETENTION_FREE_SHIP_MIN_SUBTOTAL_USD) {
+                    window.__PRESSONNailRetentionFreeShipActive = true;
+                    if (retentionFreeshipInput) retentionFreeshipInput.value = '1';
+                } else {
+                    sessionStorage.removeItem('checkout_retention_free_shipping');
+                }
             }
         } catch (e) {}
 
@@ -4459,6 +4475,11 @@ function saveCheckoutCartChanges(cartItemId) {
     }
 
     function applyFreeShippingNow() {
+        var baseSub = Number(CHECKOUT_BASE_SUBTOTAL) || 0;
+        if (baseSub < CHECKOUT_RETENTION_FREE_SHIP_MIN_SUBTOTAL_USD) {
+            console.log('[Checkout Retention] free shipping skipped: subtotal below min USD', baseSub);
+            return;
+        }
         var shippingCostEl = document.getElementById('checkout-shipping-cost');
         var shippingLabelEl = document.getElementById('checkout-shipping-label');
         var shippingCostInput = document.getElementById('shipping_cost');
@@ -4515,12 +4536,19 @@ function saveCheckoutCartChanges(cartItemId) {
 
     window.showPromoPopup = function (triggerSource) {
         if (popupLocked || hasPopupShownInSession()) return;
+
+        var totalUsd = getCheckoutTotalInUsd();
+        var isGift = totalUsd >= 150;
+        var baseSubUsd = Number(CHECKOUT_BASE_SUBTOTAL) || 0;
+        if (!isGift && baseSubUsd < CHECKOUT_RETENTION_FREE_SHIP_MIN_SUBTOTAL_USD) {
+            console.log('[Checkout Retention] popup skipped: free shipping offer requires min subtotal USD', baseSubUsd);
+            return;
+        }
+
         popupLocked = true;
         markPopupShownInSession();
         cleanupPopupTriggers();
 
-        var totalUsd = getCheckoutTotalInUsd();
-        var isGift = totalUsd >= 150;
         var popupType = isGift ? 'gift' : 'free_shipping';
         var source = triggerSource || 'unknown';
         window.__checkoutRetentionPopupSource = source;

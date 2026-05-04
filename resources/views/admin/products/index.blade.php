@@ -166,6 +166,17 @@
                     @endif
                 </div>
             </div>
+            <div class="flex flex-wrap items-center gap-2 px-3 pb-3 border-t border-gray-100 pt-2.5">
+                <span class="text-xs text-gray-600 shrink-0">Xuất <strong>tất cả</strong> khớp bộ lọc (không giới hạn theo trang):</span>
+                <button type="button" onclick="exportAllFilteredToGmc()"
+                        class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 transition-colors">
+                    GMC — {{ $products->total() }} SP
+                </button>
+                <button type="button" onclick="exportAllFilteredToMeta()"
+                        class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md bg-purple-50 text-purple-800 border border-purple-200 hover:bg-purple-100 transition-colors">
+                    Meta — {{ $products->total() }} SP
+                </button>
+            </div>
         </form>
     </div>
 
@@ -1232,6 +1243,90 @@ function removeFilter(filterName) {
 //         });
 //     });
 // });
+
+function appendCurrentFilterParamsToForm(form) {
+    const filterForm = document.getElementById('filterForm');
+    if (!filterForm) return;
+    ['search', 'category_id', 'template_id', 'shop_id', 'collection_id'].forEach(function (name) {
+        const el = filterForm.querySelector('[name="' + name + '"]');
+        if (!el || el.value === '' || el.value == null) return;
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = el.value;
+        form.appendChild(input);
+    });
+}
+
+function exportAllFilteredToGmc() {
+    const total = {{ (int) $products->total() }};
+    if (total === 0) {
+        alert('Không có sản phẩm nào khớp bộ lọc hiện tại.');
+        return;
+    }
+    if (!confirm('Xuất file GMC cho ' + total + ' sản phẩm theo bộ lọc hiện tại?')) return;
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ route("admin.products.feed-to-gmc") }}';
+    form.style.display = 'none';
+
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = '_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    const exportAllInput = document.createElement('input');
+    exportAllInput.type = 'hidden';
+    exportAllInput.name = 'export_all';
+    exportAllInput.value = '1';
+    form.appendChild(exportAllInput);
+
+    appendCurrentFilterParamsToForm(form);
+
+    document.body.appendChild(form);
+    form.submit();
+    setTimeout(function () {
+        if (form.parentNode) document.body.removeChild(form);
+    }, 1000);
+}
+
+function exportAllFilteredToMeta() {
+    const total = {{ (int) $products->total() }};
+    if (total === 0) {
+        alert('Không có sản phẩm nào khớp bộ lọc hiện tại.');
+        return;
+    }
+    if (!confirm('Xuất file Meta cho ' + total + ' sản phẩm theo bộ lọc hiện tại?')) return;
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ route("admin.products.export.meta") }}';
+    form.style.display = 'none';
+
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = '_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    const exportAllInput = document.createElement('input');
+    exportAllInput.type = 'hidden';
+    exportAllInput.name = 'export_all';
+    exportAllInput.value = '1';
+    form.appendChild(exportAllInput);
+
+    appendCurrentFilterParamsToForm(form);
+
+    document.body.appendChild(form);
+    form.submit();
+    setTimeout(function () {
+        if (form.parentNode) document.body.removeChild(form);
+    }, 1000);
+}
 
 // Export selected products to GMC CSV file
 async function feedToGMC() {

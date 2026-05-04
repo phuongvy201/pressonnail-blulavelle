@@ -18,6 +18,7 @@ use App\Services\ProductMediaWebpService;
 use App\Services\ProductMediaKeywordsService;
 use App\Support\ReferenceNailSizeChart;
 use Exception;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Str;
@@ -105,21 +106,13 @@ class ProductController extends Controller
         }
     }
     /**
-     * Display a listing of the resource.
+     * Query sản phẩm admin/seller giống trang index (không phân trang), dùng cho export theo bộ lọc.
      */
-    public function index(Request $request)
+    protected function adminProductsFilteredQuery(Request $request): Builder
     {
         $user = auth()->user();
 
-        // Admin xem tất cả products; Seller xem products do mình tạo HOẶC thuộc shop của mình (kể cả khi admin tạo rồi gán shop)
-        $productsQuery = Product::with([
-            'template.category',
-            'template.user',
-            'user',
-            'shop',
-            'variants',
-            'collections:id,name,slug',
-        ]);
+        $productsQuery = Product::query();
 
         if (!$user->hasRole('admin')) {
             $productsQuery->where(function ($q) use ($user) {
@@ -130,7 +123,6 @@ class ProductController extends Controller
             });
         }
 
-        // Apply filters
         if ($request->filled('category_id')) {
             $productsQuery->whereHas('template', function ($q) use ($request) {
                 $q->where('category_id', $request->category_id);
@@ -162,6 +154,42 @@ class ProductController extends Controller
                     });
             });
         }
+
+        $productsQuery->orderBy('created_at', 'desc');
+
+        return $productsQuery;
+    }
+
+    /**
+     * Validate tham số filter khi export toàn bộ (tránh ID không hợp lệ).
+     */
+    protected function validateAdminProductListFilters(Request $request): void
+    {
+        $request->validate([
+            'category_id' => 'nullable|integer|exists:categories,id',
+            'template_id' => 'nullable|integer|exists:product_templates,id',
+            'shop_id' => 'nullable|integer|exists:shops,id',
+            'collection_id' => 'nullable|integer|exists:collections,id',
+            'search' => 'nullable|string|max:500',
+        ]);
+    }
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Request $request)
+    {
+        $user = auth()->user();
+
+        // Admin xem tất cả products; Seller xem products do mình tạo HOẶC thuộc shop của mình (kể cả khi admin tạo rồi gán shop)
+        $productsQuery = $this->adminProductsFilteredQuery($request)->with([
+            'template.category',
+            'template.user',
+            'user',
+            'shop',
+            'variants',
+            'collections:id,name,slug',
+        ]);
 
         // Get filter options for dropdowns
         $categories = Category::orderBy('name', 'asc')->get();
@@ -196,9 +224,6 @@ class ProductController extends Controller
             });
         }
         $collections = $collectionsQuery->get();
-
-        // Apply default sorting
-        $productsQuery->orderBy('created_at', 'desc');
 
         // Per-page selection
         $perPage = (int) $request->input('per_page', 12);
@@ -1358,25 +1383,32 @@ class ProductController extends Controller
         try {
             $user = auth()->user();
 
-            $request->validate([
-                'product_ids' => 'required|array',
-                'product_ids.*' => 'exists:products,id',
-            ]);
+            if ($request->boolean('export_all')) {
+                $this->validateAdminProductListFilters($request);
+                $products = $this->adminProductsFilteredQuery($request)
+                    ->with(['template.category', 'shop', 'variants'])
+                    ->get();
+            } else {
+                $request->validate([
+                    'product_ids' => 'required|array',
+                    'product_ids.*' => 'exists:products,id',
+                ]);
 
-            $productIds = $request->product_ids;
-            $productsQuery = Product::with(['template.category', 'shop', 'variants'])
-                ->whereIn('id', $productIds);
+                $productIds = $request->product_ids;
+                $productsQuery = Product::with(['template.category', 'shop', 'variants'])
+                    ->whereIn('id', $productIds);
 
-            if (!$user->hasRole('admin')) {
-                $productsQuery->where(function ($q) use ($user) {
-                    $q->where('user_id', $user->id)
-                        ->orWhereHas('shop', function ($shopQ) use ($user) {
-                            $shopQ->where('user_id', $user->id);
-                        });
-                });
+                if (!$user->hasRole('admin')) {
+                    $productsQuery->where(function ($q) use ($user) {
+                        $q->where('user_id', $user->id)
+                            ->orWhereHas('shop', function ($shopQ) use ($user) {
+                                $shopQ->where('user_id', $user->id);
+                            });
+                    });
+                }
+
+                $products = $productsQuery->get();
             }
-
-            $products = $productsQuery->get();
 
             if ($products->isEmpty()) {
                 if ($request->expectsJson() || $request->ajax()) {
@@ -2216,7 +2248,7 @@ class ProductController extends Controller
                 $sanitizeText($product->sku ?: ('PRD-' . $product->id)),
                 $sanitizeText($product->name),
                 $sanitizeText($product->description ?? '', true),
-                $baseUrl . '/product/' . $productIdentifier,
+                $baseUrl . '/products/' . $productIdentifier,
                 $primaryImage,
                 implode(',', $additionalImages),
                 implode(',', array_slice($videoLinks, 0, 10)),
@@ -2280,13 +2312,19 @@ class ProductController extends Controller
     {
         $user = auth()->user();
 
-        // Nếu có product_ids từ request (selected products), chỉ export những sản phẩm đó
-        if ($request->filled('product_ids')) {
+        $metaWith = ['template.category', 'template.user', 'user', 'shop', 'variants', 'collections'];
+
+        if ($request->boolean('export_all')) {
+            $this->validateAdminProductListFilters($request);
+            $products = $this->adminProductsFilteredQuery($request)
+                ->with($metaWith)
+                ->get();
+        } elseif ($request->filled('product_ids')) {
             $productIds = is_array($request->product_ids)
                 ? $request->product_ids
                 : explode(',', $request->product_ids);
 
-            $productsQuery = Product::with(['template.category', 'template.user', 'user', 'shop', 'variants', 'collections'])
+            $productsQuery = Product::with($metaWith)
                 ->whereIn('id', $productIds);
 
             if (!$user->hasRole('admin')) {
@@ -2300,55 +2338,12 @@ class ProductController extends Controller
 
             $products = $productsQuery->get();
         } else {
-            // Nếu không có product_ids, export tất cả (giữ nguyên logic cũ để tương thích)
-            $productsQuery = Product::with(['template.category', 'template.user', 'user', 'shop', 'variants', 'collections']);
-
-            if (!$user->hasRole('admin')) {
-                $productsQuery->where(function ($q) use ($user) {
-                    $q->where('user_id', $user->id)
-                        ->orWhereHas('shop', function ($shopQ) use ($user) {
-                            $shopQ->where('user_id', $user->id);
-                        });
-                });
-            }
-
-            // Apply filters from request
-            if ($request->filled('category_id')) {
-                $productsQuery->whereHas('template', function ($q) use ($request) {
-                    $q->where('category_id', $request->category_id);
-                });
-            }
-
-            if ($request->filled('template_id')) {
-                $productsQuery->where('template_id', $request->template_id);
-            }
-
-            if ($request->filled('shop_id')) {
-                $productsQuery->where('shop_id', $request->shop_id);
-            }
-
-            if ($request->filled('collection_id')) {
-                $productsQuery->whereHas('collections', function ($q) use ($request) {
-                    $q->where('collections.id', $request->collection_id);
-                });
-            }
-
-            if ($request->filled('search')) {
-                $search = $request->search;
-                $productsQuery->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('sku', 'like', "%{$search}%")
-                        ->orWhere('description', 'like', "%{$search}%")
-                        ->orWhereHas('template', function ($templateQuery) use ($search) {
-                            $templateQuery->where('name', 'like', "%{$search}%");
-                        });
-                });
-            }
-
-            // Only export active products
-            $productsQuery->where('status', 'active');
-
-            $products = $productsQuery->get();
+            // Không có product_ids: giữ tương thích — filter + chỉ sản phẩm active
+            $this->validateAdminProductListFilters($request);
+            $products = $this->adminProductsFilteredQuery($request)
+                ->with($metaWith)
+                ->where('status', 'active')
+                ->get();
         }
 
         // Get base URL for product links

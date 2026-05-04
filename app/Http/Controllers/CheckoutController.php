@@ -26,6 +26,11 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class CheckoutController extends Controller
 {
+    /**
+     * Subtotal hàng hóa (USD) tối thiểu để chấp nhận free shipping từ retention popup (bỏ qua khi subtotal dưới mức này).
+     */
+    private const RETENTION_FREE_SHIPPING_MIN_SUBTOTAL_USD = 10.0;
+
     public function index(Request $request)
     {
         $sessionId = session()->getId();
@@ -492,6 +497,14 @@ class CheckoutController extends Controller
                 $currencyRate = $defaultRates[$orderCurrency] ?? 1.0;
             }
 
+            // Subtotal hàng hóa (USD) — cần trước khi xử lý retention free shipping
+            $merchandiseSubtotalOrderCurrency = $cartItems->sum(function ($item) {
+                return $item->getTotalPriceWithCustomizations();
+            });
+            $baseMerchandiseSubtotalUsd = $orderCurrency !== 'USD'
+                ? ((float) $merchandiseSubtotalOrderCurrency / (float) $currencyRate)
+                : (float) $merchandiseSubtotalOrderCurrency;
+
             // Calculate totals
             $subtotal = 0;
             
@@ -506,6 +519,13 @@ class CheckoutController extends Controller
                 ? (float) $request->shipping_cost
                 : null;
             $retentionFreeShipping = $request->boolean('retention_free_shipping');
+            if ($retentionFreeShipping && $baseMerchandiseSubtotalUsd < self::RETENTION_FREE_SHIPPING_MIN_SUBTOTAL_USD) {
+                $retentionFreeShipping = false;
+                Log::info('checkout.retention_free_shipping_blocked_min_subtotal', [
+                    'base_merchandise_subtotal_usd' => $baseMerchandiseSubtotalUsd,
+                    'min_usd' => self::RETENTION_FREE_SHIPPING_MIN_SUBTOTAL_USD,
+                ]);
+            }
             $hasValidRequestShipping = $requestShippingCost !== null && $requestShippingCost >= 0;
 
             if ($hasValidRequestShipping && ($requestShippingCost > 0 || $retentionFreeShipping)) {
