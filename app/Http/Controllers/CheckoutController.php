@@ -1136,7 +1136,7 @@ class CheckoutController extends Controller
                         Session::forget('shipping_details');
 
                         // Send order confirmation email to customer and admin
-                        $adminEmail = 'support@blulavelle.com';
+                        $adminEmail = 'admin@blulavelle.com';
                         try {
                             Mail::to($order->customer_email)->send(new OrderConfirmation($order));
                             Log::info('📧 Order confirmation email sent for Stripe payment', [
@@ -1369,7 +1369,7 @@ class CheckoutController extends Controller
                             Session::forget('shipping_details');
 
                             // Send order confirmation email to customer and admin
-                            $adminEmail = 'support@blulavelle.com';
+                            $adminEmail = 'admin@blulavelle.com';
                             try {
                                 Mail::to($order->customer_email)->send(new OrderConfirmation($order));
                                 Log::info('📧 Order confirmation email sent for immediate LianLian payment', [
@@ -2052,7 +2052,7 @@ class CheckoutController extends Controller
             })->delete();
 
             // Send order confirmation email to customer and admin
-            $adminEmail = 'support@blulavelle.com';
+            $adminEmail = 'admin@blulavelle.com';
             try {
                 Mail::to($order->customer_email)->send(new OrderConfirmation($order));
                 Log::info('📧 Order confirmation email sent', [
@@ -2151,7 +2151,7 @@ class CheckoutController extends Controller
             })->delete();
 
             // Send order confirmation email to customer and admin
-            $adminEmail = 'support@blulavelle.com';
+            $adminEmail = 'admin@blulavelle.com';
             try {
                 Mail::to($order->customer_email)->send(new OrderConfirmation($order));
                 Log::info('📧 Order confirmation email sent', [
