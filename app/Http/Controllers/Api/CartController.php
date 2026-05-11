@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cart;
+use App\Models\GiftCard;
 use App\Models\Product;
 use App\Models\PromoCode;
 use App\Services\ShippingCalculator;
 use App\Services\CurrencyService;
+use App\Services\GiftCardService;
 use App\Services\PromoCodeSendService;
 use App\Services\TikTokEventsService;
 use Illuminate\Http\Request;
@@ -170,6 +172,13 @@ class CartController extends Controller
             $totalPrice = $cartItems->sum(function ($item) {
                 return $item->getTotalPriceWithCustomizations();
             });
+            $discountEligibleItems = $cartItems->filter(function ($item) {
+                return !((bool) optional($item->product)->is_gift_card);
+            });
+            $discountEligibleQty = (int) $discountEligibleItems->sum('quantity');
+            $discountEligibleSubtotal = (float) $discountEligibleItems->sum(function ($item) {
+                return $item->getTotalPriceWithCustomizations();
+            });
             // Choose ONE discount mode: volume OR promo (freeship can stack with either).
             $discountMode = session('discount_mode', 'volume');
             if (session()->has('applied_promo_code_id')) {
@@ -180,8 +189,8 @@ class CartController extends Controller
             $bulkDiscountPercent = 0.0;
             $bulkDiscount = 0.0;
             if ($discountMode === 'volume') {
-                $bulkDiscountPercent = (float) Cart::getComboDiscountPercentForQty((int) $totalItems);
-                $bulkDiscount = $bulkDiscountPercent > 0 ? round((float) $totalPrice * ($bulkDiscountPercent / 100), 2) : 0.0;
+                $bulkDiscountPercent = (float) Cart::getComboDiscountPercentForQty($discountEligibleQty);
+                $bulkDiscount = $bulkDiscountPercent > 0 ? round($discountEligibleSubtotal * ($bulkDiscountPercent / 100), 2) : 0.0;
             }
 
             // Get currency and rate
@@ -245,16 +254,17 @@ class CartController extends Controller
             $convertedSubtotalAfterBulk = $subtotalAfterBulk;
             // Free shipping should be based on subtotal BEFORE combo discount (USD)
             $subtotalUsdBeforeDiscount = $currency !== 'USD' ? $subtotal / $currencyRate : $subtotal;
+            $discountEligibleSubtotalUsd = $currency !== 'USD' ? ($discountEligibleSubtotal / $currencyRate) : $discountEligibleSubtotal;
             $subtotalUsd = $currency !== 'USD' ? $subtotalAfterBulk / $currencyRate : $subtotalAfterBulk;
 
             // Promo code discount (stored in session) - only when in promo mode
             $discount = 0.0;
             $appliedPromoCode = null;
             $promoId = session('applied_promo_code_id');
-            if ($discountMode === 'promo' && $promoId && $subtotalUsd > 0) {
+            if ($discountMode === 'promo' && $promoId && $discountEligibleSubtotalUsd > 0) {
                 $promo = PromoCode::find($promoId);
-                if ($promo && $promo->isValidForSubtotal($subtotalUsd)) {
-                    $discountUsd = $promo->calculateDiscountUsd($subtotalUsd);
+                if ($promo && $promo->isValidForSubtotal($discountEligibleSubtotalUsd)) {
+                    $discountUsd = $promo->calculateDiscountUsd($discountEligibleSubtotalUsd);
                     $discount = $currency !== 'USD' ? $discountUsd * $currencyRate : $discountUsd;
                     $appliedPromoCode = $promo->code;
                 } else {
@@ -264,14 +274,31 @@ class CartController extends Controller
                 }
             }
 
-            $total = $convertedSubtotalAfterBulk - $discount + $convertedShipping;
+            // Gift card discount can stack on final payable amount.
+            $giftCardDiscount = 0.0;
+            $appliedGiftCardCode = null;
+            $appliedGiftCardBalance = 0.0;
+            $giftCardCode = app(GiftCardService::class)->normalizeCode((string) session('applied_gift_card_code', ''));
+            if ($giftCardCode !== '') {
+                $giftCard = GiftCard::whereRaw('UPPER(code) = ?', [$giftCardCode])->first();
+                if ($giftCard && $giftCard->isUsable()) {
+                    $subtotalAfterPromoAndShipping = max(0.0, $convertedSubtotalAfterBulk - $discount + $convertedShipping);
+                    $giftCardDiscount = min((float) $giftCard->balance, $subtotalAfterPromoAndShipping);
+                    $appliedGiftCardCode = $giftCard->code;
+                    $appliedGiftCardBalance = (float) $giftCard->balance;
+                } else {
+                    session()->forget('applied_gift_card_code');
+                }
+            }
+
+            $total = $convertedSubtotalAfterBulk - $discount - $giftCardDiscount + $convertedShipping;
             $convertedTotal = $total;
 
             // Free shipping if subtotal BEFORE discount (USD) >= threshold
             if ($subtotalUsdBeforeDiscount >= Cart::FREE_SHIPPING_THRESHOLD_USD) {
                 $shipping = 0;
                 $convertedShipping = 0;
-                $total = $convertedSubtotalAfterBulk - $discount + $convertedShipping;
+                $total = $convertedSubtotalAfterBulk - $discount - $giftCardDiscount + $convertedShipping;
                 $convertedTotal = $total;
             }
 
@@ -288,6 +315,7 @@ class CartController extends Controller
                     'subtotal_after_bulk_discount' => $subtotalAfterBulk,
                     'shipping' => $shipping,
                     'discount' => $discount,
+                    'gift_card_discount' => $giftCardDiscount,
                     'total' => $total,
                     'converted_subtotal' => $convertedSubtotal,
                     'converted_bulk_discount' => $bulkDiscount,
@@ -295,8 +323,11 @@ class CartController extends Controller
                     'converted_subtotal_after_bulk_discount' => $convertedSubtotalAfterBulk,
                     'converted_shipping' => $convertedShipping,
                     'converted_discount' => $discount,
+                    'converted_gift_card_discount' => $giftCardDiscount,
                     'converted_total' => $convertedTotal,
                     'applied_promo_code' => $appliedPromoCode,
+                    'applied_gift_card_code' => $appliedGiftCardCode,
+                    'applied_gift_card_balance' => $appliedGiftCardBalance,
                 ],
                 'shipping_details' => $shippingDetails,
                 'currency' => $currency,
@@ -332,7 +363,7 @@ class CartController extends Controller
 
         $sessionId = session()->getId();
         $userId = Auth::id();
-        $cartItems = Cart::where(function ($query) use ($sessionId, $userId) {
+        $cartItems = Cart::with('product:id,is_gift_card')->where(function ($query) use ($sessionId, $userId) {
             if ($userId) {
                 $query->where('user_id', $userId);
             } else {
@@ -340,10 +371,19 @@ class CartController extends Controller
             }
         })->get();
 
-        $subtotal = $cartItems->sum(fn ($item) => $item->getTotalPriceWithCustomizations());
+        $discountEligibleSubtotal = $cartItems
+            ->filter(fn ($item) => !((bool) optional($item->product)->is_gift_card))
+            ->sum(fn ($item) => $item->getTotalPriceWithCustomizations());
         $currency = CurrencyService::getCurrencyForDomain() ?? 'USD';
         $currencyRate = CurrencyService::getCurrencyRateForDomain() ?: 1.0;
-        $subtotalUsd = $currency !== 'USD' ? $subtotal / $currencyRate : $subtotal;
+        $subtotalUsd = $currency !== 'USD' ? $discountEligibleSubtotal / $currencyRate : $discountEligibleSubtotal;
+
+        if ($subtotalUsd <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Promo codes cannot be applied to gift card products.',
+            ], 422);
+        }
 
         if (!$promo->isValidForSubtotal($subtotalUsd)) {
             if (!$promo->isValid()) {
@@ -382,6 +422,37 @@ class CartController extends Controller
         // When promo removed, default back to volume discount.
         session(['discount_mode' => 'volume']);
         return response()->json(['success' => true, 'message' => 'Promo code removed.']);
+    }
+
+    public function applyGiftCard(Request $request)
+    {
+        $request->validate(['code' => 'required|string|max:64']);
+        $service = app(GiftCardService::class);
+        $code = $service->normalizeCode($request->input('code'));
+        if ($code === '') {
+            return response()->json(['success' => false, 'message' => 'Please enter a gift card code.'], 422);
+        }
+
+        $giftCard = GiftCard::whereRaw('UPPER(code) = ?', [$code])->first();
+        if (!$giftCard || !$giftCard->isUsable()) {
+            return response()->json(['success' => false, 'message' => 'Gift card is invalid, inactive, expired, or empty.'], 422);
+        }
+
+        session(['applied_gift_card_code' => $giftCard->code]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Gift card applied.',
+            'applied_gift_card_code' => $giftCard->code,
+            'balance' => (float) $giftCard->balance,
+            'currency' => $giftCard->currency,
+        ]);
+    }
+
+    public function removeGiftCard()
+    {
+        session()->forget('applied_gift_card_code');
+        return response()->json(['success' => true, 'message' => 'Gift card removed.']);
     }
 
     public function show($id)

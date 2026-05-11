@@ -502,6 +502,8 @@ Route::prefix('api/cart')->middleware('web')->group(function () {
     Route::post('/discount-mode', [ApiCartController::class, 'setDiscountMode'])->name('api.cart.discount-mode');
     Route::post('/apply-promo', [ApiCartController::class, 'applyPromo'])->name('api.cart.apply-promo');
     Route::post('/remove-promo', [ApiCartController::class, 'removePromo'])->name('api.cart.remove-promo');
+    Route::post('/apply-gift-card', [ApiCartController::class, 'applyGiftCard'])->name('api.cart.apply-gift-card');
+    Route::post('/remove-gift-card', [ApiCartController::class, 'removeGiftCard'])->name('api.cart.remove-gift-card');
 });
 
 // Analytics API routes
@@ -607,6 +609,12 @@ Route::middleware('auth')->group(function () {
         Route::post('shipping-rates/{shippingRate}/unset-default', [ShippingRateController::class, 'unsetDefault'])->name('shipping-rates.unset-default');
 
         Route::resource('promo-codes', App\Http\Controllers\Admin\PromoCodeController::class);
+        Route::get('gift-cards', [App\Http\Controllers\Admin\GiftCardController::class, 'index'])->name('gift-cards.index');
+        Route::get('gift-cards/create', [App\Http\Controllers\Admin\GiftCardController::class, 'create'])->name('gift-cards.create');
+        Route::post('gift-cards', [App\Http\Controllers\Admin\GiftCardController::class, 'store'])->name('gift-cards.store');
+        Route::get('gift-cards/{giftCard}', [App\Http\Controllers\Admin\GiftCardController::class, 'show'])->name('gift-cards.show');
+        Route::post('gift-cards/{giftCard}/toggle-active', [App\Http\Controllers\Admin\GiftCardController::class, 'toggleActive'])->name('gift-cards.toggle-active');
+        Route::post('gift-cards/{giftCard}/adjust-balance', [App\Http\Controllers\Admin\GiftCardController::class, 'adjustBalance'])->name('gift-cards.adjust-balance');
 
         // Analytics settings
         Route::get('settings/analytics', [AnalyticsSettingsController::class, 'edit'])->name('settings.analytics.edit');

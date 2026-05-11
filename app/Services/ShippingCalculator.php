@@ -18,6 +18,33 @@ class ShippingCalculator
      */
     public function calculateShipping(Collection $cartItems, string $countryCode): array
     {
+        // Gift cards are digital products, so they should not contribute shipping fee.
+        $cartItems = $cartItems->filter(function ($item) {
+            $productId = $item['product_id'] ?? null;
+            if (!$productId) {
+                return false;
+            }
+            $product = Product::select('id', 'is_gift_card')->find($productId);
+            return $product ? !$product->is_gift_card : true;
+        })->values();
+
+        if ($cartItems->isEmpty()) {
+            return [
+                'success' => true,
+                'zone_id' => null,
+                'zone_name' => null,
+                'country' => $countryCode,
+                'total_shipping' => 0,
+                'items' => [],
+                'is_default' => false,
+                'breakdown' => [
+                    'total_items' => 0,
+                    'total_value' => 0,
+                    'currency' => 'USD'
+                ]
+            ];
+        }
+
         // Find shipping zone for the country
         $zone = ShippingZone::findByCountry($countryCode);
 
@@ -127,7 +154,7 @@ class ShippingCalculator
     protected function prepareItems(Collection $cartItems): Collection
     {
         return $cartItems->map(function ($item) {
-            $product = Product::find($item['product_id']);
+            $product = Product::select('id', 'name', 'price', 'is_gift_card')->find($item['product_id']);
 
             return [
                 'product_id' => $item['product_id'],
@@ -243,6 +270,15 @@ class ShippingCalculator
 
             return $start->format('M j') . '–' . ($start->format('M') === $end->format('M') ? $end->format('j') : $end->format('M j'));
         };
+
+        $cartItems = $cartItems->filter(function ($item) {
+            $productId = $item['product_id'] ?? null;
+            if (!$productId) {
+                return false;
+            }
+            $product = Product::select('id', 'is_gift_card')->find($productId);
+            return $product ? !$product->is_gift_card : true;
+        })->values();
 
         $zone = ShippingZone::findByCountry($countryCode);
         if (!$zone || $cartItems->isEmpty()) {

@@ -269,6 +269,15 @@
                             </span>
                         </label>
                     </div>
+                    <div class="md:col-span-2">
+                        <label class="flex items-start gap-3 rounded-lg border border-indigo-200 bg-indigo-50 p-3 cursor-pointer">
+                            <input type="checkbox" name="is_gift_card" value="1" {{ old('is_gift_card') ? 'checked' : '' }} class="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <span>
+                                <span class="block text-sm font-semibold text-indigo-900">Gift Card product</span>
+                                <span class="block text-xs text-indigo-800">Mark this product as Gift Card. It will be treated as digital balance and excluded from shipping fee calculation.</span>
+                            </span>
+                        </label>
+                    </div>
 
                     <!-- Shop Assignment (Admin Only) -->
                     @if(auth()->user()->hasRole('admin') && $shops)

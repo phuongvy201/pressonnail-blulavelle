@@ -6,6 +6,7 @@ use App\Services\CurrencyService;
 use App\Models\ChatMessage;
 use App\Models\Order;
 use App\Models\ReturnRequest;
+use App\Observers\OrderObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,6 +31,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Order::observe(OrderObserver::class);
+
         // Force HTTPS in production to avoid Mixed Content issues
         if (config('app.env') === 'production') {
             URL::forceScheme('https');

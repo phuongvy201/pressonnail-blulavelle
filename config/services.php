@@ -63,6 +63,8 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL') . '/auth/google/callback'),
         'tag_manager_id' => env('GOOGLE_TAG_MANAGER_ID', 'GTM-5T5M2NG4'),
         'ads_id' => env('GOOGLE_ADS_ID', 'AW-17718009492'),
+        /** Google Ads: nhãn conversion purchase dạng AW-123456789/AbC-dEfGhIjKlMnOpQrStUv (để gtag send_to) */
+        'ads_purchase_send_to' => env('GOOGLE_ADS_PURCHASE_SEND_TO'),
         'merchant_id' => env('GMC_MERCHANT_ID'),
         'data_source_id' => env('GMC_DATA_SOURCE_ID', 'PRODUCT_FEED_API'),
         'merchant_credentials_path' => env('GMC_CREDENTIALS_PATH', storage_path('app/gmc-credentials.json')),

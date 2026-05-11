@@ -23,7 +23,9 @@ class Order extends Model
         'subtotal',
         'tax_amount',
         'discount_amount',
+        'gift_card_amount',
         'promo_code',
+        'gift_card_code',
         'shipping_cost',
         'tip_amount',
         'total_amount',
@@ -47,6 +49,7 @@ class Order extends Model
         'subtotal' => 'decimal:2',
         'tax_amount' => 'decimal:2',
         'discount_amount' => 'decimal:2',
+        'gift_card_amount' => 'decimal:2',
         'shipping_cost' => 'decimal:2',
         'tip_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
@@ -68,6 +71,11 @@ class Order extends Model
     public function returnRequests(): HasMany
     {
         return $this->hasMany(ReturnRequest::class);
+    }
+
+    public function giftCardUsages(): HasMany
+    {
+        return $this->hasMany(OrderGiftCardUsage::class);
     }
 
     public static function generateOrderNumber(): string

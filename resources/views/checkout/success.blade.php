@@ -11,64 +11,171 @@
     $itemsSum = (float) ($order->items?->sum('total_price') ?? 0);
     $orderSubtotal = (float) ($order->subtotal ?? 0);
     $bulkDiscount = max(0, $itemsSum - $orderSubtotal);
-    $gaItems = $order->items->map(function($item, $index) {
-        return [
-            'item_id' => (string) $item->product_id,
+    $shouldTrackPurchase = ($order->payment_status ?? '') === 'paid';
+    $logClientPurchaseTracking = config('app.debug')
+        || filter_var(env('LOG_CLIENT_PURCHASE_TRACKING', false), FILTER_VALIDATE_BOOLEAN);
+    $__googleAdsPurchaseSendTo = \App\Support\Settings::get(
+        'analytics.google_ads_purchase_send_to',
+        config('services.google.ads_purchase_send_to')
+    );
+    $__googleAdsPurchaseSendTo = is_string($__googleAdsPurchaseSendTo) ? trim($__googleAdsPurchaseSendTo) : '';
+    $__googleAdsPurchaseSendTo = $__googleAdsPurchaseSendTo !== '' ? $__googleAdsPurchaseSendTo : null;
+    $gaItems = $order->items->map(function ($item, $index) {
+        $product = $item->product;
+        $categoryName = $product
+            ? optional($product->collections->first())->name
+            : null;
+        $line = [
+            'item_id' => (string) ($product->sku ?? $item->product_id),
             'item_name' => $item->product_name,
-            'price' => (float) $item->unit_price,
+            'price' => round((float) $item->unit_price, 2),
             'quantity' => (int) $item->quantity,
-            'index' => $index + 1
+            'index' => $index + 1,
         ];
+        if ($categoryName) {
+            $line['item_category'] = $categoryName;
+        }
+        if (!empty($item->product_options) && is_array($item->product_options)) {
+            $variantBits = [];
+            foreach ($item->product_options as $k => $v) {
+                if (is_scalar($v) && (string) $v !== '') {
+                    $variantBits[] = (is_numeric($k) ? '' : (string) $k . ': ') . (string) $v;
+                }
+            }
+            if (count($variantBits)) {
+                $line['item_variant'] = \Illuminate\Support\Str::limit(implode(', ', $variantBits), 120, '…');
+            }
+        }
+
+        return $line;
     })->values()->toArray();
 @endphp
+@if($shouldTrackPurchase)
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof fbq !== 'undefined') {
-        const productIds = [
-            @foreach($order->items as $item)
-                '{{ $item->product_id }}'{{ !$loop->last ? ',' : '' }}
-            @endforeach
-        ];
-        fbq('track', 'Purchase', {
-            content_ids: productIds,
-            content_type: 'product',
-            value: '{{ $order->total_amount }}',
-            currency: '{{ $currency ?? "USD" }}',
-            transaction_id: '{{ $order->order_number }}',
-            num_items: {{ $order->items->count() }}
-        });
+document.addEventListener('DOMContentLoaded', function () {
+    (function () {
+        const __logPurchase = @json($logClientPurchaseTracking);
+        const transactionId = @json($order->order_number);
+
+        if (sessionStorage.getItem('ga_purchase_' + transactionId)) {
+            if (__logPurchase) {
+                console.info('[PressOnNail purchase]', 'Bỏ qua — đã gửi trong tab này (sessionStorage)', { transactionId });
+            }
+            return;
+        }
+
+        const purchaseValue = {{ (float) $order->total_amount }};
+        const tax = {{ (float) ($order->tax_amount ?? 0) }};
+        const shipping = {{ (float) ($order->shipping_cost ?? 0) }};
+        const currency = @json($currency ?? 'USD');
+        const gaItems = @json($gaItems);
+        const productIds = @json($order->items->pluck('product_id')->map(fn ($id) => (string) $id)->values()->all());
+
+        const pushed = { dataLayer: false, facebook: false, gtag: false, tiktok: false };
+
+        window.dataLayer = window.dataLayer || [];
+        if (typeof dataLayer !== 'undefined') {
+            dataLayer.push({ ecommerce: null });
+            dataLayer.push({
+                event: 'purchase',
+                ecommerce: {
+                    currency: currency,
+                    transaction_id: transactionId,
+                    value: purchaseValue,
+                    tax: tax,
+                    shipping: shipping,
+                    items: gaItems
+                }
+            });
+            pushed.dataLayer = true;
+        }
+
+        if (typeof fbq !== 'undefined') {
+            try {
+                fbq('track', 'Purchase', {
+                    content_ids: productIds,
+                    content_type: 'product',
+                    value: purchaseValue,
+                    currency: currency,
+                    transaction_id: transactionId,
+                    num_items: {{ (int) $order->items->count() }}
+                }, { eventID: transactionId });
+                pushed.facebook = true;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
         localStorage.removeItem('cart');
         window.dispatchEvent(new CustomEvent('cartUpdated'));
-    }
-    if (typeof dataLayer !== 'undefined') {
-        dataLayer.push({ ecommerce: null });
-        dataLayer.push({
-            event: 'purchase',
-            ecommerce: {
-                currency: '{{ $currency ?? "USD" }}',
-                transaction_id: '{{ $order->order_number }}',
-                value: Number('{{ $order->total_amount }}') || 0,
-                tax: Number('{{ $order->tax_amount }}') || 0,
-                shipping: Number('{{ $order->shipping_cost }}') || 0,
-                items: @json($gaItems)
+
+        if (typeof gtag === 'function') {
+            try {
+                const payload = {
+                    transaction_id: transactionId,
+                    value: purchaseValue,
+                    tax: tax,
+                    shipping: shipping,
+                    currency: currency,
+                    items: gaItems
+                };
+                @if($order->promo_code && (float)($order->discount_amount ?? 0) > 0)
+                payload.coupon = @json($order->promo_code);
+                @endif
+                @if($__googleAdsPurchaseSendTo)
+                payload.send_to = @json($__googleAdsPurchaseSendTo);
+                @endif
+                gtag('event', 'purchase', payload);
+                pushed.gtag = true;
+            } catch (e) {
+                console.error(e);
             }
-        });
-    }
-    if (typeof window !== 'undefined' && window.ttq) {
-        const tiktokOrderContents = {!! $order->items->map(fn($item) => [
-            'content_id' => (string) $item->product_id,
-            'content_type' => 'product',
-            'content_name' => $item->product_name,
-            'quantity' => (int) $item->quantity,
-            'price' => (float) $item->unit_price,
-        ])->values()->toJson(JSON_UNESCAPED_UNICODE) !!};
-        try {
-            window.ttq.track('PlaceAnOrder', { contents: tiktokOrderContents, value: Number('{{ $order->total_amount }}') || 0, currency: '{{ $currency ?? "USD" }}', order_id: '{{ $order->order_number }}' });
-            window.ttq.track('Purchase', { contents: tiktokOrderContents, value: Number('{{ $order->total_amount }}') || 0, currency: '{{ $currency ?? "USD" }}', order_id: '{{ $order->order_number }}' });
-        } catch (e) {}
-    }
+        }
+
+        if (typeof window !== 'undefined' && window.ttq) {
+            const tiktokOrderContents = {!! $order->items->map(fn ($item) => [
+                'content_id' => (string) $item->product_id,
+                'content_type' => 'product',
+                'content_name' => $item->product_name,
+                'quantity' => (int) $item->quantity,
+                'price' => round((float) $item->unit_price, 2),
+            ])->values()->toJson(JSON_UNESCAPED_UNICODE) !!};
+            try {
+                window.ttq.track('PlaceAnOrder', { contents: tiktokOrderContents, value: purchaseValue, currency: currency, order_id: transactionId });
+                window.ttq.track('Purchase', { contents: tiktokOrderContents, value: purchaseValue, currency: currency, order_id: transactionId });
+                pushed.tiktok = true;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        if (__logPurchase) {
+            console.info('[PressOnNail purchase]', 'Đã đẩy / queue sự kiện (kiểm tra Network: collect, google, facebook)', {
+                transactionId,
+                value: purchaseValue,
+                tax,
+                shipping,
+                currency,
+                itemCount: gaItems.length,
+                channels: pushed,
+                dataLayerLength: typeof dataLayer !== 'undefined' ? dataLayer.length : null
+            });
+        }
+
+        sessionStorage.setItem('ga_purchase_' + transactionId, '1');
+    })();
 });
 </script>
+@elseif($logClientPurchaseTracking)
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    console.info('[PressOnNail purchase]', 'Không gửi tracking — đơn chưa paid', {
+        order_number: @json($order->order_number),
+        payment_status: @json($order->payment_status ?? null)
+    });
+});
+</script>
+@endif
 
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 

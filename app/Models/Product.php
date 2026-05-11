@@ -251,6 +251,7 @@ class Product extends Model
         'quantity',
         'status',
         'requires_special_handling',
+        'is_gift_card',
         'created_by',
         'api_token_id',
         // Meta fields for export
@@ -275,6 +276,7 @@ class Product extends Model
         'media' => 'array',
         'quantity' => 'integer',
         'requires_special_handling' => 'boolean',
+        'is_gift_card' => 'boolean',
     ];
 
     // Relationships

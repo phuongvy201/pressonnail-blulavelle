@@ -317,7 +317,10 @@ const CHECKOUT_DISCOUNT_MODE = @json($discountMode ?? 'volume');
 const CHECKOUT_DISCOUNT_MODE_URL = @json(route('api.cart.discount-mode'));
 const CHECKOUT_APPLY_PROMO_URL = @json(route('api.cart.apply-promo'));
 const CHECKOUT_REMOVE_PROMO_URL = @json(route('api.cart.remove-promo'));
+const CHECKOUT_APPLY_GIFT_CARD_URL = @json(route('api.cart.apply-gift-card'));
+const CHECKOUT_REMOVE_GIFT_CARD_URL = @json(route('api.cart.remove-gift-card'));
 const CHECKOUT_PROMO_DRAFT_KEY = 'checkout_promo_code_draft';
+const CHECKOUT_GIFT_CARD_DRAFT_KEY = 'checkout_gift_card_draft';
 const CHECKOUT_CURRENCY_SYMBOL = @json(\App\Services\CurrencyService::getCurrencySymbol($currency ?? 'USD'));
 const SHIPPING_RATES = @json($shippingRatesData);
 const SHIPPING_RATES_BY_ZONE = @json($shippingRatesByZone);
@@ -333,24 +336,58 @@ const CHECKOUT_RETENTION_FREE_SHIP_MIN_SUBTOTAL_USD = 10;
 
 // GA4 ecommerce items shared across multiple checkout events.
 window.PRESSONNail_CHECKOUT_GA4_ITEMS = @json($gtagItems);
+window.__PRESSONNailCheckoutRawConsole = window.__PRESSONNailCheckoutRawConsole || (function () {
+    if (typeof window === 'undefined' || !window.console) {
+        return null;
+    }
+    return {
+        log: typeof window.console.log === 'function' ? window.console.log.bind(window.console) : function () {},
+        info: typeof window.console.info === 'function' ? window.console.info.bind(window.console) : function () {},
+        warn: typeof window.console.warn === 'function' ? window.console.warn.bind(window.console) : function () {},
+        error: typeof window.console.error === 'function' ? window.console.error.bind(window.console) : function () {},
+        debug: typeof window.console.debug === 'function' ? window.console.debug.bind(window.console) : function () {},
+    };
+})();
+if (typeof window !== 'undefined' && window.console && !window.__PRESSONNailCheckoutSilenced) {
+    ['log', 'info', 'warn', 'error', 'debug'].forEach(function (method) {
+        if (typeof window.console[method] === 'function') {
+            window.console[method] = function () {};
+        }
+    });
+    window.__PRESSONNailCheckoutSilenced = true;
+}
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Event tracking được xử lý bởi GTM thông qua dataLayer
+    // Event tracking: push GTM dataLayer và gọi gtag trực tiếp (nếu có)
+    const checkoutItems = window.PRESSONNail_CHECKOUT_GA4_ITEMS || [];
+    const beginCheckoutValue = Number({{ $convertedTotal ?? $checkoutTotal }}) || 0;
     if (typeof dataLayer !== 'undefined') {
-        const checkoutItems = window.PRESSONNail_CHECKOUT_GA4_ITEMS || [];
         dataLayer.push({ ecommerce: null });
         dataLayer.push({
             event: 'begin_checkout',
             ecommerce: {
                 currency: '{{ $currency ?? "USD" }}',
-                value: Number({{ $convertedTotal ?? $checkoutTotal }}) || 0,
+                value: beginCheckoutValue,
                 items: checkoutItems
             }
         });
-        console.log('✅ GTM: begin_checkout tracked', {
-            items: checkoutItems.length,
-            value: {{ $checkoutTotal }}
-        });
+        if (window.__PRESSONNailCheckoutRawConsole && typeof window.__PRESSONNailCheckoutRawConsole.log === 'function') {
+            window.__PRESSONNailCheckoutRawConsole.log('✅ GTM: begin_checkout tracked', {
+                items: checkoutItems.length,
+                value: {{ $checkoutTotal }}
+            });
+        }
+    }
+    if (typeof gtag === 'function') {
+        try {
+            gtag('event', 'begin_checkout', {
+                currency: '{{ $currency ?? "USD" }}',
+                value: beginCheckoutValue,
+                items: checkoutItems
+            });
+        } catch (e) {
+            console.error('gtag begin_checkout error:', e);
+        }
     }
 
     if (typeof window !== 'undefined') {
@@ -704,6 +741,7 @@ function buildCheckoutCustomizationInputs(customizations) {
                         <input type="hidden" id="shipping_cost" name="shipping_cost" value="0">
                         <input type="hidden" id="shipping_zone_id" name="shipping_zone_id" value="">
                         <input type="hidden" id="retention_free_shipping" name="retention_free_shipping" value="0">
+                        <input type="hidden" id="gift_card_code" name="gift_card_code" value="{{ $appliedGiftCardCode ?? '' }}">
                         <input type="hidden" id="retention_popup_source" name="retention_popup_source" value="">
                         
                         <!-- Contact Information -->
@@ -1396,6 +1434,35 @@ function buildCheckoutCustomizationInputs(customizations) {
                             </div>
                             <p id="checkout-promo-message" class="text-xs hidden"></p>
                         </div>
+                        <div class="space-y-1">
+                            <div class="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-2">
+                                <input
+                                    type="text"
+                                    id="checkout-gift-card-input"
+                                    placeholder="Enter gift card code"
+                                    value="{{ $appliedGiftCardCode ?? '' }}"
+                                    class="w-full min-w-0 rounded-lg border border-primary/20 bg-slate-50 text-sm px-3 py-2 focus:ring-primary focus:border-primary sm:flex-1"
+                                    autocomplete="off"
+                                >
+                                <div class="flex w-full min-w-0 gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
+                                    <button
+                                        type="button"
+                                        id="checkout-gift-card-apply"
+                                        class="min-w-0 flex-1 px-3 py-2 sm:flex-none sm:px-4 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors"
+                                    >
+                                        Apply Gift Card
+                                    </button>
+                                    <button
+                                        type="button"
+                                        id="checkout-gift-card-remove"
+                                        class="min-w-0 flex-1 px-3 py-2 sm:flex-none sm:px-4 border border-primary/20 text-slate-700 rounded-lg text-xs font-bold hover:bg-primary/5 transition-colors {{ !empty($appliedGiftCardCode) ? '' : 'hidden' }}"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+                            <p id="checkout-gift-card-message" class="text-xs hidden"></p>
+                        </div>
                         <div class="flex justify-between text-slate-600">
                             <span>Subtotal</span>
                             <span class="subtotal-display" id="checkout-subtotal">
@@ -1408,10 +1475,20 @@ function buildCheckoutCustomizationInputs(customizations) {
                             <span class="bulk-discount-display" id="checkout-bulk-discount">-{{ \App\Services\CurrencyService::formatPrice($bulkDiscount ?? 0, $currency ?? 'USD') }}</span>
                         </div>
                         @endif
-                        @if(!empty($appliedPromoCode) && ($discount ?? 0) > 0)
+                        @if(!empty($appliedPromoCode) && (($discount ?? 0) - ($giftCardAmount ?? 0)) > 0)
                         <div class="flex justify-between text-emerald-600" id="checkout-promo-row">
                             <span>Promo ({{ $appliedPromoCode }})</span>
-                            <span class="promo-discount-display" id="checkout-promo-discount">-{{ \App\Services\CurrencyService::formatPrice($discount ?? 0, $currency ?? 'USD') }}</span>
+                            <span class="promo-discount-display" id="checkout-promo-discount">-{{ \App\Services\CurrencyService::formatPrice(max(0, ($discount ?? 0) - ($giftCardAmount ?? 0)), $currency ?? 'USD') }}</span>
+                        </div>
+                        @endif
+                        @if(!empty($appliedGiftCardCode) && ($giftCardAmount ?? 0) > 0)
+                        <div class="flex justify-between text-emerald-600" id="checkout-gift-card-row">
+                            <span>Gift Card ({{ $appliedGiftCardCode }})</span>
+                            <span id="checkout-gift-card-discount">-{{ \App\Services\CurrencyService::formatPrice($giftCardAmount ?? 0, $currency ?? 'USD') }}</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-slate-500 -mt-2" id="checkout-gift-card-remaining-row">
+                            <span>Remaining Balance</span>
+                            <span id="checkout-gift-card-remaining">{{ \App\Services\CurrencyService::formatPrice($appliedGiftCardRemainingBalance ?? 0, $currency ?? 'USD') }}</span>
                         </div>
                         @endif
                         <!-- Shipping Zone is auto-detected from country selection -->
@@ -2611,20 +2688,21 @@ document.addEventListener('DOMContentLoaded', function() {
     // Start checking for PayPal SDK
     initializePayPalSDK();
     
+    const getCheckoutGrandTotal = () => {
+        const subtotal = parseFloat(CHECKOUT_CONVERTED_SUBTOTAL || '{{ $subtotal }}');
+        const comboDiscount = parseFloat(CHECKOUT_BULK_DISCOUNT || 0);
+        const discount = parseFloat(CHECKOUT_DISCOUNT || 0);
+        const shippingCostEl = document.getElementById('checkout-shipping-cost');
+        const shippingCost = shippingCostEl ? parseFloat(shippingCostEl.textContent.replace(/[^0-9.-]/g, '')) || 0 : 0;
+        const tip = parseFloat(document.getElementById('tip_amount')?.value || 0);
+        const convertedTip = typeof convertFromUSD === 'function' ? convertFromUSD(tip, CHECKOUT_CURRENCY) : tip;
+        return subtotal - comboDiscount - discount + shippingCost + convertedTip;
+    };
+
     // Form submission handler
     form.addEventListener('submit', function(e) {
         e.preventDefault();
-        
-        // Check if payment method is selected
-        const selectedPaymentRadio = form.querySelector('input[name="payment_method"]:checked');
-        if (!selectedPaymentRadio) {
-            showToast('error', 'Payment Error', 'Please select a payment method');
-            return;
-        }
-        
-        const selectedPaymentMethod = selectedPaymentRadio.value;
-        console.log('💳 Selected payment method:', selectedPaymentMethod);
-        
+
         // Validate form data before proceeding
         const requiredFields = ['customer_name', 'customer_email', 'shipping_address', 'city', 'postal_code', 'country'];
         const missingFields = [];
@@ -2640,17 +2718,49 @@ document.addEventListener('DOMContentLoaded', function() {
             showToast('error', 'Form Error', 'Please fill in all required fields: ' + missingFields.join(', '));
             return;
         }
+
+        const grandTotal = getCheckoutGrandTotal();
+        if (grandTotal <= 0.0001) {
+            const checkoutForm = document.getElementById('checkout-form');
+            const orderData = {
+                customer_name: checkoutForm.querySelector('[name="customer_name"]')?.value?.trim() || '',
+                customer_email: checkoutForm.querySelector('[name="customer_email"]')?.value?.trim() || '',
+                customer_phone: checkoutForm.querySelector('[name="customer_phone"]')?.value?.trim() || '',
+                shipping_address: checkoutForm.querySelector('[name="shipping_address"]')?.value?.trim() || '',
+                city: checkoutForm.querySelector('[name="city"]')?.value?.trim() || '',
+                state: checkoutForm.querySelector('[name="state"]')?.value?.trim() || '',
+                postal_code: checkoutForm.querySelector('[name="postal_code"]')?.value?.trim() || '',
+                country: checkoutForm.querySelector('[name="country"]')?.value?.trim() || '',
+                notes: checkoutForm.querySelector('[name="notes"]')?.value?.trim() || '',
+                tip_amount: parseFloat(document.getElementById('tip_amount')?.value || 0),
+                shipping_cost: parseFloat(document.getElementById('shipping_cost')?.value || 0),
+                shipping_zone_id: document.getElementById('shipping_zone_id')?.value || '',
+                retention_free_shipping: parseInt(document.getElementById('retention_free_shipping')?.value || '0', 10) ? 1 : 0,
+                retention_popup_source: document.getElementById('retention_popup_source')?.value || '',
+                gift_card_code: document.getElementById('gift_card_code')?.value || '',
+                payment_method: 'free'
+            };
+
+            showLoading(true);
+            processUnifiedOrder(orderData).catch(() => {
+                showLoading(false);
+            });
+            return;
+        }
+
+        // Check if payment method is selected
+        const selectedPaymentRadio = form.querySelector('input[name="payment_method"]:checked');
+        if (!selectedPaymentRadio) {
+            showToast('error', 'Payment Error', 'Please select a payment method');
+            return;
+        }
+        
+        const selectedPaymentMethod = selectedPaymentRadio.value;
+        console.log('💳 Selected payment method:', selectedPaymentMethod);
         
         // Validate minimum order amount for Stripe
         if (selectedPaymentMethod === 'stripe') {
-            const subtotal = parseFloat(CHECKOUT_CONVERTED_SUBTOTAL || '{{ $subtotal }}');
-            const comboDiscount = parseFloat(CHECKOUT_BULK_DISCOUNT || 0);
-            const discount = parseFloat(CHECKOUT_DISCOUNT || 0);
-            const shippingCostEl = document.getElementById('checkout-shipping-cost');
-            const shippingCost = shippingCostEl ? parseFloat(shippingCostEl.textContent.replace(/[^0-9.-]/g, '')) || 0 : 0;
-            const tip = parseFloat(document.getElementById('tip_amount')?.value || 0);
-            const convertedTip = typeof convertFromUSD === 'function' ? convertFromUSD(tip, CHECKOUT_CURRENCY) : tip;
-            const total = subtotal - comboDiscount - discount + shippingCost + convertedTip;
+            const total = grandTotal;
             
             if (total < 0.5) {
                 showToast('error', 'Minimum Order Amount', 
@@ -3562,7 +3672,7 @@ window.__PRESSONNailRetentionFreeShipActive = window.__PRESSONNailRetentionFreeS
 
     window.__PRESSONNailLastShippingTier = window.__PRESSONNailLastShippingTier ?? null;
     window.__PRESSONNailTrackAddShippingInfo = function(shippingTier) {
-        if (typeof dataLayer === 'undefined') return;
+        if (typeof dataLayer === 'undefined' && typeof gtag !== 'function') return;
         if (!shippingTier) return;
 
         // Prevent duplicate pushes when user triggers multiple recalculations.
@@ -3572,21 +3682,32 @@ window.__PRESSONNailRetentionFreeShipActive = window.__PRESSONNailRetentionFreeS
         const items = window.PRESSONNail_CHECKOUT_GA4_ITEMS || [];
         const totalValue = __pressonGetCheckoutTotalValue();
 
-        dataLayer.push({ ecommerce: null });
-        dataLayer.push({
-            event: 'add_shipping_info',
-            ecommerce: {
-                currency: '{{ $currency ?? "USD" }}',
-                value: Number(totalValue) || 0,
-                shipping_tier: shippingTier,
-                items
+        const payload = {
+            currency: '{{ $currency ?? "USD" }}',
+            value: Number(totalValue) || 0,
+            shipping_tier: shippingTier,
+            items
+        };
+
+        if (typeof dataLayer !== 'undefined') {
+            dataLayer.push({ ecommerce: null });
+            dataLayer.push({
+                event: 'add_shipping_info',
+                ecommerce: payload
+            });
+        }
+        if (typeof gtag === 'function') {
+            try {
+                gtag('event', 'add_shipping_info', payload);
+            } catch (e) {
+                console.error('gtag add_shipping_info error:', e);
             }
-        });
+        }
     };
 
     window.__PRESSONNailLastPaymentType = window.__PRESSONNailLastPaymentType ?? null;
     window.__PRESSONNailTrackAddPaymentInfo = function(paymentType) {
-        if (typeof dataLayer === 'undefined') return;
+        if (typeof dataLayer === 'undefined' && typeof gtag !== 'function') return;
         if (!paymentType) return;
 
         if (window.__PRESSONNailLastPaymentType === paymentType) return;
@@ -3595,16 +3716,27 @@ window.__PRESSONNailRetentionFreeShipActive = window.__PRESSONNailRetentionFreeS
         const items = window.PRESSONNail_CHECKOUT_GA4_ITEMS || [];
         const totalValue = __pressonGetCheckoutTotalValue();
 
-        dataLayer.push({ ecommerce: null });
-        dataLayer.push({
-            event: 'add_payment_info',
-            ecommerce: {
-                currency: '{{ $currency ?? "USD" }}',
-                value: Number(totalValue) || 0,
-                payment_type: paymentType,
-                items
+        const payload = {
+            currency: '{{ $currency ?? "USD" }}',
+            value: Number(totalValue) || 0,
+            payment_type: paymentType,
+            items
+        };
+
+        if (typeof dataLayer !== 'undefined') {
+            dataLayer.push({ ecommerce: null });
+            dataLayer.push({
+                event: 'add_payment_info',
+                ecommerce: payload
+            });
+        }
+        if (typeof gtag === 'function') {
+            try {
+                gtag('event', 'add_payment_info', payload);
+            } catch (e) {
+                console.error('gtag add_payment_info error:', e);
             }
-        });
+        }
     };
 
     function updateCheckoutShippingDisplay(zoneId = null) {
@@ -3757,6 +3889,112 @@ window.__PRESSONNailRetentionFreeShipActive = window.__PRESSONNailRetentionFreeS
 
         btnVol.addEventListener('click', function () { setMode('volume'); });
         btnPromo.addEventListener('click', function () { setMode('promo'); });
+    })();
+
+    // Checkout gift card apply/remove
+    (function () {
+        var input = document.getElementById('checkout-gift-card-input');
+        var hiddenInput = document.getElementById('gift_card_code');
+        var applyBtn = document.getElementById('checkout-gift-card-apply');
+        var removeBtn = document.getElementById('checkout-gift-card-remove');
+        var message = document.getElementById('checkout-gift-card-message');
+        if (!input || !applyBtn) return;
+
+        try {
+            var savedCode = sessionStorage.getItem(CHECKOUT_GIFT_CARD_DRAFT_KEY) || '';
+            if (!input.value && savedCode) {
+                input.value = savedCode;
+            }
+        } catch (e) {}
+
+        var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+
+        function showMessage(text, isError) {
+            if (!message) return;
+            message.textContent = text;
+            message.className = 'text-xs ' + (isError ? 'text-red-600' : 'text-emerald-600');
+        }
+
+        applyBtn.addEventListener('click', function () {
+            var code = (input.value || '').trim();
+            if (!code) {
+                showMessage('Please enter a gift card code.', true);
+                return;
+            }
+
+            applyBtn.disabled = true;
+            fetch(CHECKOUT_APPLY_GIFT_CARD_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ code: code })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success) {
+                    if (hiddenInput) hiddenInput.value = data.applied_gift_card_code || code;
+                    try {
+                        sessionStorage.removeItem(CHECKOUT_GIFT_CARD_DRAFT_KEY);
+                    } catch (e) {}
+                    window.location.reload();
+                    return;
+                }
+                applyBtn.disabled = false;
+                showMessage(data.message || 'Gift card is invalid.', true);
+            })
+            .catch(function () {
+                applyBtn.disabled = false;
+                showMessage('Something went wrong.', true);
+            });
+        });
+
+        input.addEventListener('input', function () {
+            if (hiddenInput) hiddenInput.value = (input.value || '').trim();
+            try {
+                sessionStorage.setItem(CHECKOUT_GIFT_CARD_DRAFT_KEY, (input.value || '').trim());
+            } catch (e) {}
+        });
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyBtn.click();
+            }
+        });
+
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function () {
+                removeBtn.disabled = true;
+                fetch(CHECKOUT_REMOVE_GIFT_CARD_URL, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrf,
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        if (hiddenInput) hiddenInput.value = '';
+                        try {
+                            sessionStorage.removeItem(CHECKOUT_GIFT_CARD_DRAFT_KEY);
+                        } catch (e) {}
+                        window.location.reload();
+                        return;
+                    }
+                    removeBtn.disabled = false;
+                    showMessage(data.message || 'Cannot remove gift card right now.', true);
+                })
+                .catch(function () {
+                    removeBtn.disabled = false;
+                    showMessage('Something went wrong.', true);
+                });
+            });
+        }
     })();
 
     // Checkout promo code apply/remove

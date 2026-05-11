@@ -360,6 +360,13 @@
                             </svg>
                             Promo Codes
                         </a>
+                        <a href="{{ route('admin.gift-cards.index') }}" 
+                           class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 {{ request()->routeIs('admin.gift-cards.*') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                            <svg class="w-5 h-5 mr-3 flex-shrink-0 {{ request()->routeIs('admin.gift-cards.*') ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2v-7m16 0V8a2 2 0 00-2-2h-3l-1-2h-4L9 6H6a2 2 0 00-2 2v4m16 0H4m4-2v4m8-4v4"></path>
+                            </svg>
+                            Gift Cards
+                        </a>
 
                         <a href="{{ route('admin.live-chat.index') }}" 
                            class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 {{ request()->routeIs('admin.live-chat.*') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
@@ -662,6 +669,14 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
                         </svg>
                         Promo Codes
+                    </a>
+                    <a href="{{ route('admin.gift-cards.index') }}" 
+                       class="group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 {{ request()->routeIs('admin.gift-cards.*') ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                       @click="sidebarOpen = false">
+                        <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2v-7m16 0V8a2 2 0 00-2-2h-3l-1-2h-4L9 6H6a2 2 0 00-2 2v4m16 0H4m4-2v4m8-4v4"></path>
+                        </svg>
+                        Gift Cards
                     </a>
 
                     <a href="{{ route('admin.settings.bulk-discounts.edit') }}" 

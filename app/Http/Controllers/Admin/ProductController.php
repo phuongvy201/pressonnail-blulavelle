@@ -296,6 +296,7 @@ class ProductController extends Controller
                 'quantity' => 'required|integer|min:0',
                 'status' => 'required|in:active,inactive,draft',
                 'requires_special_handling' => 'nullable|boolean',
+                'is_gift_card' => 'nullable|boolean',
                 'shop_id' => $user->hasRole('admin') ? 'nullable|exists:shops,id' : 'nullable',
                 'media.*' => 'nullable|file|mimes:jpeg,jpg,png,gif,webp,avif,mp4,mov,avi,webm,ogg|mimetypes:image/jpeg,image/pjpeg,image/png,image/gif,image/webp,image/avif,video/mp4,video/quicktime,video/x-msvideo,video/webm,video/ogg|max:10240',
                 'variants' => 'nullable|array',
@@ -318,6 +319,7 @@ class ProductController extends Controller
             $data['sku'] = $this->generateUniqueSKU();
             $data['user_id'] = auth()->id(); // Set product owner
             $data['requires_special_handling'] = $request->boolean('requires_special_handling');
+            $data['is_gift_card'] = $request->boolean('is_gift_card');
 
             // Set shop_id based on user role
             if ($user->hasRole('admin')) {
@@ -669,6 +671,7 @@ class ProductController extends Controller
                 'quantity' => 'required|integer|min:0',
                 'status' => 'required|in:active,inactive,draft',
                 'requires_special_handling' => 'nullable|boolean',
+                'is_gift_card' => 'nullable|boolean',
                 'shop_id' => $user->hasRole('admin') ? 'nullable|exists:shops,id' : 'nullable',
                 'media.*' => 'nullable|file|mimes:jpeg,jpg,png,gif,webp,avif,mp4,mov,avi,webm,ogg|mimetypes:image/jpeg,image/pjpeg,image/png,image/gif,image/webp,image/avif,video/mp4,video/quicktime,video/x-msvideo,video/webm,video/ogg|max:10240',
                 'current_media_order' => 'nullable|array',
@@ -689,8 +692,10 @@ class ProductController extends Controller
                 'status',
                 'shop_id',
                 'requires_special_handling',
+                'is_gift_card',
             ]);
             $data['requires_special_handling'] = $request->boolean('requires_special_handling');
+            $data['is_gift_card'] = $request->boolean('is_gift_card');
 
             // Chỉ tạo slug mới nếu tên sản phẩm thay đổi
             if ($request->name !== $product->name) {

@@ -106,6 +106,23 @@ class ProductTemplateController extends Controller
     {
         set_time_limit(600); // 10 phút cho request có nhiều variant + upload S3
 
+        // Normalize attributes: remove empty rows created by UI.
+        if ($request->has('attributes') && is_array($request->attributes)) {
+            $normalizedAttributes = collect($request->attributes)
+                ->filter(function ($row) {
+                    if (!is_array($row)) {
+                        return false;
+                    }
+                    $name = trim((string) ($row['name'] ?? ''));
+                    $values = trim((string) ($row['values'] ?? ''));
+                    return $name !== '' && $values !== '';
+                })
+                ->values()
+                ->all();
+
+            $request->merge(['attributes' => $normalizedAttributes]);
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
@@ -122,8 +139,8 @@ class ProductTemplateController extends Controller
             'customizations.*.options' => 'nullable|string',
             'customizations.*.required' => 'nullable|boolean',
             'attributes' => 'nullable|array',
-            'attributes.*.name' => 'required_with:attributes|string|max:255',
-            'attributes.*.values' => 'required_with:attributes|string|max:500',
+            'attributes.*.name' => 'nullable|string|max:255',
+            'attributes.*.values' => 'nullable|string|max:500',
             'variants' => 'nullable|array',
             'variants.*.variant_name' => 'required_with:variants|string|max:255',
             'variants.*.variant_key' => 'nullable|string|max:255',
@@ -269,6 +286,40 @@ class ProductTemplateController extends Controller
             abort(403, 'Unauthorized action. You can only update your own templates.');
         }
 
+        // Normalize attributes: remove empty rows created by UI.
+        if ($request->has('attributes') && is_array($request->attributes)) {
+            $normalizedAttributes = collect($request->attributes)
+                ->filter(function ($row) {
+                    if (!is_array($row)) {
+                        return false;
+                    }
+                    $name = trim((string) ($row['name'] ?? ''));
+                    $values = trim((string) ($row['values'] ?? ''));
+                    return $name !== '' && $values !== '';
+                })
+                ->values()
+                ->all();
+
+            $request->merge(['attributes' => $normalizedAttributes]);
+        }
+
+        // Normalize customization rows: remove empty rows added accidentally in UI.
+        if ($request->has('customizations') && is_array($request->customizations)) {
+            $normalizedCustomizations = collect($request->customizations)
+                ->filter(function ($row) {
+                    if (!is_array($row)) {
+                        return false;
+                    }
+                    $label = trim((string) ($row['label'] ?? ''));
+                    $type = trim((string) ($row['type'] ?? ''));
+                    return $label !== '' && $type !== '';
+                })
+                ->values()
+                ->all();
+
+            $request->merge(['customizations' => $normalizedCustomizations]);
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
@@ -285,8 +336,8 @@ class ProductTemplateController extends Controller
             'customizations.*.options' => 'nullable|string',
             'customizations.*.required' => 'nullable|boolean',
             'attributes' => 'nullable|array',
-            'attributes.*.name' => 'required_with:attributes|string|max:255',
-            'attributes.*.values' => 'required_with:attributes|string|max:500',
+            'attributes.*.name' => 'nullable|string|max:255',
+            'attributes.*.values' => 'nullable|string|max:500',
             'variants' => 'nullable|array',
             'variants.*.variant_name' => 'required_with:variants|string|max:255',
             'variants.*.variant_key' => 'nullable|string|max:255',
@@ -444,7 +495,7 @@ class ProductTemplateController extends Controller
             Log::info('No variants data in request - keeping existing variants');
         }
 
-        return redirect()->route('admin.product-templates.index')
+        return redirect()->route('admin.product-templates.edit', $productTemplate->id)
             ->with('success', 'Template updated successfully.');
     }
 

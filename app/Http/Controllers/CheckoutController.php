@@ -7,12 +7,14 @@ use App\Models\OrderItem;
 use App\Models\CategoryCrossSell;
 use App\Models\Product;
 use App\Models\PromoCode;
+use App\Models\GiftCard;
 use App\Models\Cart;
 use App\Models\ShippingZone;
 use App\Services\PayPalService;
 use App\Services\ShippingCalculator;
 use App\Services\TikTokEventsService;
 use App\Services\CurrencyService;
+use App\Services\GiftCardService;
 use App\Mail\OrderConfirmation;
 use App\Services\PromoCodeSendService;
 use Illuminate\Http\Request;
@@ -68,6 +70,13 @@ class CheckoutController extends Controller
                 'total' => $itemTotal
             ];
         }
+        $discountEligibleItems = $cartItems->filter(function ($item) {
+            return !((bool) optional($item->product)->is_gift_card);
+        });
+        $discountEligibleQty = (int) $discountEligibleItems->sum('quantity');
+        $discountEligibleSubtotal = (float) $discountEligibleItems->sum(function ($item) {
+            return $item->getTotalPriceWithCustomizations();
+        });
 
         // Choose ONE discount mode: volume OR promo (freeship can stack with either).
         $discountMode = session('discount_mode', 'volume');
@@ -78,9 +87,8 @@ class CheckoutController extends Controller
 
         // Combo discount (quantity tiers) - applied on TOTAL cart quantity (only in volume mode)
         if ($discountMode === 'volume') {
-            $totalQty = (int) $cartItems->sum('quantity');
-            $bulkDiscountPercent = Cart::getComboDiscountPercentForQty($totalQty);
-            $bulkDiscount = $bulkDiscountPercent > 0 ? round((float) $subtotal * ($bulkDiscountPercent / 100), 2) : 0.0;
+            $bulkDiscountPercent = Cart::getComboDiscountPercentForQty($discountEligibleQty);
+            $bulkDiscount = $bulkDiscountPercent > 0 ? round($discountEligibleSubtotal * ($bulkDiscountPercent / 100), 2) : 0.0;
         } else {
             $bulkDiscountPercent = 0.0;
             $bulkDiscount = 0.0;
@@ -221,7 +229,7 @@ class CheckoutController extends Controller
         $discount = 0.0;
         $appliedPromoCode = null;
         $promoId = session('applied_promo_code_id');
-        $baseSubtotalForPromo = $currency !== 'USD' ? $subtotal / $currencyRate : $subtotal;
+        $baseSubtotalForPromo = $currency !== 'USD' ? $discountEligibleSubtotal / $currencyRate : $discountEligibleSubtotal;
         if ($discountMode === 'promo' && $promoId && $baseSubtotalForPromo > 0) {
             $promo = PromoCode::find($promoId);
             if ($promo && $promo->isValidForSubtotal($baseSubtotalForPromo)) {
@@ -237,6 +245,24 @@ class CheckoutController extends Controller
             }
         }
 
+        $giftCardService = app(GiftCardService::class);
+        $appliedGiftCardCode = $giftCardService->normalizeCode((string) session('applied_gift_card_code', ''));
+        $giftCardAmount = 0.0;
+        $appliedGiftCardRemainingBalance = null;
+        if ($appliedGiftCardCode !== '') {
+            $giftCard = GiftCard::whereRaw('UPPER(code) = ?', [$appliedGiftCardCode])->first();
+            if ($giftCard && $giftCard->isUsable()) {
+                $payableBeforeGiftCard = max(0.0, $subtotalAfterBulk - $discount + $shippingCost);
+                $giftCardAmount = min((float) $giftCard->balance, $payableBeforeGiftCard);
+                $appliedGiftCardCode = $giftCard->code;
+                $appliedGiftCardRemainingBalance = round(max(0, (float) $giftCard->balance - $giftCardAmount), 2);
+            } else {
+                session()->forget('applied_gift_card_code');
+                $appliedGiftCardCode = '';
+            }
+        }
+
+        $discount += $giftCardAmount;
         $total = $subtotalAfterBulk - $discount + $shippingCost;
         $convertedTotal = $subtotalAfterBulk - $discount + $convertedShipping;
 
@@ -302,6 +328,9 @@ class CheckoutController extends Controller
             'taxAmount',
             'discount',
             'appliedPromoCode',
+            'appliedGiftCardCode',
+            'giftCardAmount',
+            'appliedGiftCardRemainingBalance',
             'total',
             'currency',
             'currencyRate',
@@ -394,10 +423,11 @@ class CheckoutController extends Controller
             'state' => 'nullable|string|max:100',
             'postal_code' => 'required|string|max:20',
             'country' => 'required|string|max:100',
-            'payment_method' => 'required|in:paypal,lianlian_pay,stripe',
+            'payment_method' => 'required|in:paypal,lianlian_pay,stripe,free',
             'shipping_cost' => 'nullable|numeric|min:0',
             'retention_free_shipping' => 'nullable|boolean',
             'retention_popup_source' => 'nullable|string|max:100',
+            'gift_card_code' => 'nullable|string|max:64',
         ];
 
         // Add PayPal SDK specific validation if present
@@ -642,6 +672,13 @@ class CheckoutController extends Controller
                     'total' => $itemTotal
                 ];
             }
+            $discountEligibleItems = $cartItems->filter(function ($item) {
+                return !((bool) optional($item->product)->is_gift_card);
+            });
+            $discountEligibleQty = (int) $discountEligibleItems->sum('quantity');
+            $discountEligibleSubtotal = (float) $discountEligibleItems->sum(function ($item) {
+                return $item->getTotalPriceWithCustomizations();
+            });
 
             // Use the same discount mode logic as checkout index (volume OR promo).
             $discountMode = session('discount_mode', 'volume');
@@ -652,10 +689,9 @@ class CheckoutController extends Controller
             $bulkDiscountPercent = 0.0;
             $bulkDiscountAmount = 0.0;
             if ($discountMode === 'volume') {
-                $totalQty = (int) $cartItems->sum('quantity');
-                $bulkDiscountPercent = Cart::getComboDiscountPercentForQty($totalQty);
+                $bulkDiscountPercent = Cart::getComboDiscountPercentForQty($discountEligibleQty);
                 $bulkDiscountAmount = $bulkDiscountPercent > 0
-                    ? round((float) $subtotal * ($bulkDiscountPercent / 100), 2)
+                    ? round($discountEligibleSubtotal * ($bulkDiscountPercent / 100), 2)
                     : 0.0;
             }
             $subtotalAfterBulk = max(0, $subtotal - $bulkDiscountAmount);
@@ -685,10 +721,11 @@ class CheckoutController extends Controller
             $orderDiscount = 0.0;
             $orderPromoCode = null;
             $promoId = session('applied_promo_code_id');
-            if ($discountMode === 'promo' && $promoId && $baseSubtotalUSD > 0) {
+            $promoEligibleSubtotalUSD = $orderCurrency !== 'USD' ? ($discountEligibleSubtotal / $currencyRate) : $discountEligibleSubtotal;
+            if ($discountMode === 'promo' && $promoId && $promoEligibleSubtotalUSD > 0) {
                 $promo = PromoCode::find($promoId);
-                if ($promo && $promo->isValidForSubtotal($baseSubtotalUSD)) {
-                    $discountUsd = $promo->calculateDiscountUsd($baseSubtotalUSD);
+                if ($promo && $promo->isValidForSubtotal($promoEligibleSubtotalUSD)) {
+                    $discountUsd = $promo->calculateDiscountUsd($promoEligibleSubtotalUSD);
                     $orderDiscount = $orderCurrency !== 'USD'
                         ? CurrencyService::convertFromUSDWithRate($discountUsd, $orderCurrency, $currencyRate)
                         : $discountUsd;
@@ -696,7 +733,27 @@ class CheckoutController extends Controller
                 }
             }
 
-            $total = $subtotalAfterBulk - $orderDiscount + $shippingCost + $convertedTipAmount;
+            $giftCardService = app(GiftCardService::class);
+            $requestGiftCode = $giftCardService->normalizeCode((string) $request->input('gift_card_code', ''));
+            $sessionGiftCode = $giftCardService->normalizeCode((string) session('applied_gift_card_code', ''));
+            $orderGiftCardCode = $requestGiftCode !== '' ? $requestGiftCode : $sessionGiftCode;
+            $orderGiftCardAmount = 0.0;
+
+            if ($orderGiftCardCode !== '') {
+                $giftCard = GiftCard::whereRaw('UPPER(code) = ?', [$orderGiftCardCode])->first();
+                $cartHasGiftCardProduct = $cartItems->contains(fn ($cartItem) => (bool) optional($cartItem->product)->is_gift_card);
+                if ($giftCard && $giftCard->isUsable() && !$cartHasGiftCardProduct) {
+                    $payableBeforeGiftCard = max(0.0, $subtotalAfterBulk - $orderDiscount + $shippingCost + $convertedTipAmount);
+                    $orderGiftCardAmount = min((float) $giftCard->balance, $payableBeforeGiftCard);
+                    $orderGiftCardCode = $giftCard->code;
+                } else {
+                    $orderGiftCardCode = null;
+                }
+            } else {
+                $orderGiftCardCode = null;
+            }
+
+            $total = $subtotalAfterBulk - $orderDiscount - $orderGiftCardAmount + $shippingCost + $convertedTipAmount;
 
             // Log freeship application and currency conversion for debugging
             Log::info('🚚 CHECKOUT PROCESS - Shipping & Currency Conversion', [
@@ -715,6 +772,8 @@ class CheckoutController extends Controller
                 'totalAmount' => $total,
                 'discount_mode' => $discountMode,
                 'promo_discount_amount' => $orderDiscount,
+                'gift_card_discount_amount' => $orderGiftCardAmount,
+                'gift_card_code' => $orderGiftCardCode,
                 'currency' => $orderCurrency,
                 'currencyRate' => $currencyRate,
                 'note' => 'All amounts in order currency except baseSubtotalUSD and originalShippingCostUSD'
@@ -760,7 +819,9 @@ class CheckoutController extends Controller
                 'subtotal' => $subtotalAfterBulk,
                 'tax_amount' => $taxAmount,
                 'discount_amount' => $orderDiscount,
+                'gift_card_amount' => $orderGiftCardAmount,
                 'promo_code' => $orderPromoCode,
+                'gift_card_code' => $orderGiftCardCode,
                 'shipping_cost' => $shippingCost, // Converted to order currency
                 'tip_amount' => $convertedTipAmount, // Converted to order currency
                 'total_amount' => $total, // All in order currency
@@ -774,6 +835,9 @@ class CheckoutController extends Controller
             if ($orderPromoCode && $promoId) {
                 PromoCode::where('id', $promoId)->increment('used_count');
                 session()->forget(['applied_promo_code_id', 'applied_promo_code']);
+            }
+            if ($orderGiftCardAmount > 0) {
+                session()->forget('applied_gift_card_code');
             }
 
             $this->trackTikTokCheckoutEvent(
@@ -854,7 +918,63 @@ class CheckoutController extends Controller
             ]);
 
             // Handle payment based on method first, then check AJAX for non-PayPal SDK requests
-            if ($request->payment_method === 'paypal') {
+            if ($request->payment_method === 'free') {
+                Log::info('🎯 FREE CHECKOUT SECTION ENTERED', [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'total_amount' => $order->total_amount,
+                ]);
+
+                $order->update([
+                    'payment_status' => 'paid',
+                    'status' => 'processing',
+                    'payment_id' => 'FREE-' . $order->order_number,
+                    'payment_transaction_id' => 'FREE-' . $order->id,
+                    'paid_at' => now(),
+                ]);
+
+                $deletedCartCount = Cart::where(function ($query) use ($sessionId, $userId) {
+                    if ($userId) {
+                        $query->where('user_id', $userId);
+                    } else {
+                        $query->where('session_id', $sessionId);
+                    }
+                })->delete();
+
+                Log::info('🛒 Cart deletion result for free checkout', [
+                    'deleted_cart_items' => $deletedCartCount,
+                    'user_id' => $userId,
+                    'session_id' => $sessionId,
+                    'order_id' => $order->id
+                ]);
+
+                Session::forget('shipping_details');
+
+                $adminEmail = 'admin@blulavelle.com';
+                try {
+                    Mail::to($order->customer_email)->send(new OrderConfirmation($order));
+                    if ($adminEmail) {
+                        Mail::to($adminEmail)->send(new \App\Mail\NewOrderAdminNotification($order));
+                    }
+                } catch (\Exception $e) {
+                    Log::error('❌ Failed to send order confirmation email for free checkout', [
+                        'order_number' => $order->order_number,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+
+                if ($isAjaxRequest) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Order completed successfully',
+                        'order_number' => $order->order_number,
+                        'payment_completed' => true
+                    ]);
+                }
+
+                return redirect()->route('checkout.success', $order->order_number)
+                    ->with('success', 'Order completed successfully!');
+            } elseif ($request->payment_method === 'paypal') {
                 Log::info('PayPal Payment Method Detected', [
                     'has_paypal_order_id' => $request->has('paypal_order_id'),
                     'has_paypal_payer_id' => $request->has('paypal_payer_id'),
@@ -1704,7 +1824,7 @@ class CheckoutController extends Controller
 
     public function success($orderNumber)
     {
-        $order = Order::with(['items.product'])->where('order_number', $orderNumber)->firstOrFail();
+        $order = Order::with(['items.product.collections'])->where('order_number', $orderNumber)->firstOrFail();
 
         // Gửi email promo "thank you" (mỗi đơn chỉ gửi 1 lần)
         if ($order->customer_email) {
