@@ -137,6 +137,10 @@ class GiftCardService
             'ma_the_qua_tang',
             'ma_qua_tang',
         ]);
+        if ($existingCode === '') {
+            // Nhãn customization có thể là bất kỳ (vd. "Ghi chú"); quét giá trị ô để tìm mã thẻ đã có trong DB → top-up
+            $existingCode = $this->findExistingGiftCardCodeInCustomizationValues($customizations);
+        }
         $message = $this->extractValue($customizations, ['message', 'gift_message']);
 
         $amount = round(max(0.0, $amount), 2);
@@ -255,6 +259,34 @@ class GiftCardService
         }
 
         return str_contains($keyCollapsed, $candCollapsed) || str_contains($candCollapsed, $keyCollapsed);
+    }
+
+    /**
+     * Khi nhãn ô customization không trùng từ khóa, vẫn có thể top-up nếu giá trị ô là mã thẻ đã có trong DB
+     * (vd. nhãn "Ghi chú" nhưng khách dán GC-XXXX-XXXX-XXXX).
+     */
+    private function findExistingGiftCardCodeInCustomizationValues(array $customizations): string
+    {
+        foreach ($customizations as $entry) {
+            $raw = is_array($entry) ? trim((string) ($entry['value'] ?? '')) : trim((string) $entry);
+            if ($raw === '') {
+                continue;
+            }
+            if (preg_match_all('/\bGC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}\b/i', $raw, $matches)) {
+                foreach ($matches[0] as $token) {
+                    $n = $this->normalizeCode($token);
+                    if ($n !== '' && GiftCard::whereRaw('UPPER(code) = ?', [$n])->exists()) {
+                        return $token;
+                    }
+                }
+            }
+            $n = $this->normalizeCode($raw);
+            if ($n !== '' && GiftCard::whereRaw('UPPER(code) = ?', [$n])->exists()) {
+                return $raw;
+            }
+        }
+
+        return '';
     }
 
     private function generateUniqueCode(): string

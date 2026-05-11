@@ -58,6 +58,10 @@
         @apply bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800;
     }
 
+    .giftcard-applied {
+        @apply bg-gradient-to-r from-indigo-100 to-indigo-200 text-indigo-800;
+    }
+
     .stats-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         transition: all 0.3s ease;
@@ -343,6 +347,17 @@
                                                     @endif
                                                 </span>
                                             </div>
+                                            @if((float) ($order->gift_card_amount ?? 0) > 0 || !empty($order->gift_card_code))
+                                                <div class="flex items-center space-x-2">
+                                                    <span class="text-xs font-medium text-gray-500">Gift Card:</span>
+                                                    <span class="status-badge giftcard-applied" title="{{ $order->gift_card_code ? 'Code: ' . $order->gift_card_code : '' }}">
+                                                        🎁 Applied
+                                                        @if((float) ($order->gift_card_amount ?? 0) > 0)
+                                                            (-${{ number_format((float) $order->gift_card_amount, 2) }})
+                                                        @endif
+                                                    </span>
+                                                </div>
+                                            @endif
                                         </div>
                                     </div>
                                     

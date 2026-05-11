@@ -73,8 +73,7 @@ class GiftCardController extends Controller
         if ($existingCode !== '') {
             /** @var GiftCardService $giftCardService */
             $giftCardService = app(GiftCardService::class);
-            $normalized = $giftCardService->normalizeCode($existingCode);
-            $existing = GiftCard::whereRaw('UPPER(code) = ?', [$normalized])->first();
+            $existing = $giftCardService->findByCode($existingCode);
             if (!$existing) {
                 return redirect()->back()->withInput()->withErrors([
                     'existing_code' => 'No gift card found with this code.',
@@ -117,13 +116,13 @@ class GiftCardController extends Controller
 
         $code = $this->generateUniqueCode();
 
-        DB::transaction(function () use ($data, $amount, $code, $currency) {
+        DB::transaction(function () use ($request, $data, $amount, $code, $currency) {
             $giftCard = GiftCard::create([
                 'code' => $code,
                 'initial_balance' => $amount,
                 'balance' => $amount,
                 'currency' => $currency,
-                'is_active' => (bool) ($data['is_active'] ?? true),
+                'is_active' => $request->boolean('is_active', true),
                 'expires_at' => $data['expires_at'] ?? null,
                 'recipient_email' => $data['recipient_email'] ?? null,
                 'recipient_name' => $data['recipient_name'] ?? null,
@@ -145,6 +144,7 @@ class GiftCardController extends Controller
                 'meta' => [
                     'source' => 'admin_manual_create',
                     'note' => $data['note'] ?? null,
+                    'admin_id' => Auth::id(),
                 ],
             ]);
         });
@@ -163,7 +163,11 @@ class GiftCardController extends Controller
 
     public function toggleActive(GiftCard $giftCard)
     {
-        $giftCard->update(['is_active' => !$giftCard->is_active]);
+        DB::transaction(function () use ($giftCard) {
+            $locked = GiftCard::whereKey($giftCard->getKey())->lockForUpdate()->firstOrFail();
+            $locked->update(['is_active' => !$locked->is_active]);
+        });
+        $giftCard->refresh();
 
         return redirect()->route('admin.gift-cards.show', $giftCard)->with(
             'success',
@@ -179,19 +183,20 @@ class GiftCardController extends Controller
         ]);
 
         DB::transaction(function () use ($giftCard, $data) {
-            $before = (float) $giftCard->balance;
+            $locked = GiftCard::whereKey($giftCard->getKey())->lockForUpdate()->firstOrFail();
+            $before = (float) $locked->balance;
             $after = round((float) $data['new_balance'], 2);
             $delta = round($after - $before, 2);
 
-            $giftCard->update(['balance' => $after]);
+            $locked->update(['balance' => $after]);
 
             GiftCardTransaction::create([
-                'gift_card_id' => $giftCard->id,
+                'gift_card_id' => $locked->id,
                 'type' => 'adjustment',
                 'amount' => $delta,
                 'balance_before' => $before,
                 'balance_after' => $after,
-                'currency' => $giftCard->currency,
+                'currency' => $locked->currency,
                 'meta' => [
                     'source' => 'admin_adjustment',
                     'reason' => $data['reason'] ?? null,
@@ -200,6 +205,8 @@ class GiftCardController extends Controller
             ]);
         });
 
+        $giftCard->refresh();
+
         return redirect()->route('admin.gift-cards.show', $giftCard)->with('success', 'Gift card balance adjusted.');
     }
 
@@ -207,7 +214,7 @@ class GiftCardController extends Controller
     {
         do {
             $code = 'GC-' . strtoupper(Str::random(4)) . '-' . strtoupper(Str::random(4)) . '-' . strtoupper(Str::random(4));
-        } while (GiftCard::where('code', $code)->exists());
+        } while (GiftCard::whereRaw('UPPER(code) = ?', [strtoupper($code)])->exists());
 
         return $code;
     }

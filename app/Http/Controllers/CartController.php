@@ -42,20 +42,34 @@ class CartController extends Controller
             return $item->getTotalPriceWithCustomizations();
         });
 
+        $discountEligibleItems = $cartItems->filter(function ($item) {
+            return !((bool) optional($item->product)->is_gift_card);
+        });
+        $discountEligibleSubtotal = (float) $discountEligibleItems->sum(function ($item) {
+            return $item->getTotalPriceWithCustomizations();
+        });
+        $discountEligibleQty = (int) $discountEligibleItems->sum('quantity');
+
+        $cartContainsGiftCardProduct = $cartItems->contains(fn ($item) => (bool) optional($item->product)->is_gift_card);
+
         // Choose ONE discount mode: volume OR promo (freeship can stack with either).
         $discountMode = session('discount_mode', 'volume');
-        if (session()->has('applied_promo_code_id')) {
+        if (!$cartContainsGiftCardProduct && session()->has('applied_promo_code_id')) {
             $discountMode = 'promo';
             session(['discount_mode' => 'promo']);
+        }
+        if ($cartContainsGiftCardProduct) {
+            $discountMode = 'volume';
         }
 
         $bulkDiscountPercent = 0.0;
         $bulkDiscount = 0.0;
-        if ($discountMode === 'volume') {
-            // Combo discount (quantity tiers) - applied on TOTAL cart quantity
-            $totalQty = (int) $cartItems->sum('quantity');
-            $bulkDiscountPercent = Cart::getComboDiscountPercentForQty($totalQty);
-            $bulkDiscount = $bulkDiscountPercent > 0 ? round((float) $subtotal * ($bulkDiscountPercent / 100), 2) : 0.0;
+        if (!$cartContainsGiftCardProduct && $discountMode === 'volume') {
+            // Combo discount: tier theo số lượng & subtotal hàng vật lý (có gift card trong giỏ — không áp volume)
+            $bulkDiscountPercent = Cart::getComboDiscountPercentForQty($discountEligibleQty);
+            $bulkDiscount = $bulkDiscountPercent > 0
+                ? round($discountEligibleSubtotal * ($bulkDiscountPercent / 100), 2)
+                : 0.0;
         }
 
         $subtotalAfterBulk = max(0, (float) $subtotal - (float) $bulkDiscount);
@@ -158,21 +172,29 @@ class CartController extends Controller
         $baseSubtotalUsdBeforeDiscount = $currency !== 'USD' ? ((float) $subtotal / $currencyRate) : (float) $subtotal;
         $shipping = $baseSubtotalUsdBeforeDiscount >= Cart::FREE_SHIPPING_THRESHOLD_USD ? 0 : $shipping;
 
-        // Promo code discount (session) - only when in promo mode
+        // Promo code discount (session) — chỉ áp dụng trên subtotal hàng không phải gift card (đồng bộ Checkout + API cart)
         $discount = 0.0;
         $appliedPromoCode = null;
         $promoId = session('applied_promo_code_id');
-        if ($discountMode === 'promo' && $promoId && $subtotal > 0) {
-            $subtotalUsd = $currency !== 'USD' ? (float) $subtotal / $currencyRate : (float) $subtotal;
-            $promo = PromoCode::find($promoId);
-            if ($promo && $promo->isValidForSubtotal($subtotalUsd)) {
-                $discountUsd = $promo->calculateDiscountUsd($subtotalUsd);
-                $discount = $currency !== 'USD' ? $discountUsd * $currencyRate : $discountUsd;
-                $appliedPromoCode = $promo->code;
-            } else {
+        if (!$cartContainsGiftCardProduct && $discountMode === 'promo' && $promoId) {
+            if ($discountEligibleSubtotal <= 0) {
                 session()->forget(['applied_promo_code_id', 'applied_promo_code']);
                 session(['discount_mode' => 'volume']);
                 $discountMode = 'volume';
+            } else {
+                $promoEligibleUsd = $currency !== 'USD' && $currencyRate > 0
+                    ? (float) $discountEligibleSubtotal / $currencyRate
+                    : (float) $discountEligibleSubtotal;
+                $promo = PromoCode::find($promoId);
+                if ($promo && $promo->isValidForSubtotal($promoEligibleUsd)) {
+                    $discountUsd = $promo->calculateDiscountUsd($promoEligibleUsd);
+                    $discount = $currency !== 'USD' ? $discountUsd * $currencyRate : $discountUsd;
+                    $appliedPromoCode = $promo->code;
+                } else {
+                    session()->forget(['applied_promo_code_id', 'applied_promo_code']);
+                    session(['discount_mode' => 'volume']);
+                    $discountMode = 'volume';
+                }
             }
         }
 

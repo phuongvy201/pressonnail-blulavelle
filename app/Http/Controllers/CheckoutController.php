@@ -78,15 +78,25 @@ class CheckoutController extends Controller
             return $item->getTotalPriceWithCustomizations();
         });
 
+        $cartContainsGiftCardProduct = $cartItems->contains(fn ($item) => (bool) optional($item->product)->is_gift_card);
+        $cartHasPhysicalProduct = $discountEligibleSubtotal > 0;
+        if ($cartContainsGiftCardProduct) {
+            session()->forget(['applied_promo_code_id', 'applied_promo_code']);
+            session(['discount_mode' => 'volume']);
+        }
+
         // Choose ONE discount mode: volume OR promo (freeship can stack with either).
         $discountMode = session('discount_mode', 'volume');
-        if (session()->has('applied_promo_code_id')) {
+        if (!$cartContainsGiftCardProduct && session()->has('applied_promo_code_id')) {
             $discountMode = 'promo';
             session(['discount_mode' => 'promo']);
         }
+        if ($cartContainsGiftCardProduct) {
+            $discountMode = 'volume';
+        }
 
-        // Combo discount (quantity tiers) - applied on TOTAL cart quantity (only in volume mode)
-        if ($discountMode === 'volume') {
+        // Combo discount (quantity tiers) — không áp dụng khi giỏ có sản phẩm gift card (digital)
+        if (!$cartContainsGiftCardProduct && $discountMode === 'volume') {
             $bulkDiscountPercent = Cart::getComboDiscountPercentForQty($discountEligibleQty);
             $bulkDiscount = $bulkDiscountPercent > 0 ? round($discountEligibleSubtotal * ($bulkDiscountPercent / 100), 2) : 0.0;
         } else {
@@ -164,9 +174,11 @@ class CheckoutController extends Controller
         $originalShippingCostUSD = $shippingCostUSD ?? 0;
 
         // Apply freeship logic in checkout index view as well
-        // Check freeship based on base USD amount (150 USD) BEFORE discount
-        $baseSubtotal = $currency !== 'USD' ? $subtotal / $currencyRate : $subtotal;
-        $qualifiesForFreeShipping = $baseSubtotal >= Cart::FREE_SHIPPING_THRESHOLD_USD;
+        // Threshold applies to physical goods only (gift cards are digital, excluded from ship subtotal)
+        $physicalSubtotalUsd = $currency !== 'USD' && $currencyRate > 0
+            ? (float) $discountEligibleSubtotal / $currencyRate
+            : (float) $discountEligibleSubtotal;
+        $qualifiesForFreeShipping = $physicalSubtotalUsd >= Cart::FREE_SHIPPING_THRESHOLD_USD;
         $originalShippingCost = $shippingCost;
         $shippingCost = $qualifiesForFreeShipping ? 0 : $originalShippingCost;
 
@@ -230,7 +242,7 @@ class CheckoutController extends Controller
         $appliedPromoCode = null;
         $promoId = session('applied_promo_code_id');
         $baseSubtotalForPromo = $currency !== 'USD' ? $discountEligibleSubtotal / $currencyRate : $discountEligibleSubtotal;
-        if ($discountMode === 'promo' && $promoId && $baseSubtotalForPromo > 0) {
+        if (!$cartContainsGiftCardProduct && $discountMode === 'promo' && $promoId && $baseSubtotalForPromo > 0) {
             $promo = PromoCode::find($promoId);
             if ($promo && $promo->isValidForSubtotal($baseSubtotalForPromo)) {
                 $discountUsd = $promo->calculateDiscountUsd($baseSubtotalForPromo);
@@ -249,10 +261,12 @@ class CheckoutController extends Controller
         $appliedGiftCardCode = $giftCardService->normalizeCode((string) session('applied_gift_card_code', ''));
         $giftCardAmount = 0.0;
         $appliedGiftCardRemainingBalance = null;
-        if ($appliedGiftCardCode !== '') {
+        if ($cartHasPhysicalProduct && $appliedGiftCardCode !== '') {
             $giftCard = GiftCard::whereRaw('UPPER(code) = ?', [$appliedGiftCardCode])->first();
             if ($giftCard && $giftCard->isUsable()) {
-                $payableBeforeGiftCard = max(0.0, $subtotalAfterBulk - $discount + $shippingCost);
+                // Chỉ trừ gift card thanh toán vào phần hàng vật lý (+ ship), không trừ vào dòng mua gift card mới
+                $physicalSubtotalAfterBulk = max(0.0, $discountEligibleSubtotal - $bulkDiscount);
+                $payableBeforeGiftCard = max(0.0, $physicalSubtotalAfterBulk - $discount + $shippingCost);
                 $giftCardAmount = min((float) $giftCard->balance, $payableBeforeGiftCard);
                 $appliedGiftCardCode = $giftCard->code;
                 $appliedGiftCardRemainingBalance = round(max(0, (float) $giftCard->balance - $giftCardAmount), 2);
@@ -278,7 +292,7 @@ class CheckoutController extends Controller
             'bulkDiscount' => $bulkDiscount,
             'subtotalAfterBulk' => $subtotalAfterBulk,
             'convertedSubtotal' => $convertedSubtotal,
-            'baseSubtotal' => $baseSubtotal,
+            'physical_subtotal_usd' => $physicalSubtotalUsd,
             'qualifiesForFreeShipping' => $qualifiesForFreeShipping,
             'note' => $currencyChanged ? 'Currency changed, converted from USD again' : 'Currency unchanged, using already converted shippingCost',
             'source' => 'CheckoutController::index'
@@ -319,6 +333,8 @@ class CheckoutController extends Controller
         return view('checkout.index', compact(
             'products',
             'cartItems',
+            'cartContainsGiftCardProduct',
+            'cartHasPhysicalProduct',
             'subtotal',
             'bulkDiscount',
             'bulkDiscountPercent',
@@ -680,15 +696,21 @@ class CheckoutController extends Controller
                 return $item->getTotalPriceWithCustomizations();
             });
 
+            $cartContainsGiftCardProduct = $cartItems->contains(fn ($cartItem) => (bool) optional($cartItem->product)->is_gift_card);
+            $cartHasPhysicalProduct = $discountEligibleSubtotal > 0;
+
             // Use the same discount mode logic as checkout index (volume OR promo).
             $discountMode = session('discount_mode', 'volume');
-            if (session()->has('applied_promo_code_id')) {
+            if (!$cartContainsGiftCardProduct && session()->has('applied_promo_code_id')) {
                 $discountMode = 'promo';
+            }
+            if ($cartContainsGiftCardProduct) {
+                $discountMode = 'volume';
             }
 
             $bulkDiscountPercent = 0.0;
             $bulkDiscountAmount = 0.0;
-            if ($discountMode === 'volume') {
+            if (!$cartContainsGiftCardProduct && $discountMode === 'volume') {
                 $bulkDiscountPercent = Cart::getComboDiscountPercentForQty($discountEligibleQty);
                 $bulkDiscountAmount = $bulkDiscountPercent > 0
                     ? round($discountEligibleSubtotal * ($bulkDiscountPercent / 100), 2)
@@ -696,10 +718,11 @@ class CheckoutController extends Controller
             }
             $subtotalAfterBulk = max(0, $subtotal - $bulkDiscountAmount);
 
-            // Check freeship based on base USD amount (100 USD)
-            // Convert subtotal back to USD to check freeship threshold
-            $baseSubtotalUSD = $orderCurrency !== 'USD' ? ($subtotal / $currencyRate) : $subtotal;
-            $qualifiesForFreeShipping = $baseSubtotalUSD >= Cart::FREE_SHIPPING_THRESHOLD_USD;
+            // Free-ship threshold: physical goods only (exclude gift cards)
+            $physicalSubtotalUsd = $orderCurrency !== 'USD' && $currencyRate > 0
+                ? (float) $discountEligibleSubtotal / $currencyRate
+                : (float) $discountEligibleSubtotal;
+            $qualifiesForFreeShipping = $physicalSubtotalUsd >= Cart::FREE_SHIPPING_THRESHOLD_USD;
 
             // Convert shipping cost from USD to order currency
             $convertedShippingCost = $orderCurrency !== 'USD'
@@ -722,7 +745,7 @@ class CheckoutController extends Controller
             $orderPromoCode = null;
             $promoId = session('applied_promo_code_id');
             $promoEligibleSubtotalUSD = $orderCurrency !== 'USD' ? ($discountEligibleSubtotal / $currencyRate) : $discountEligibleSubtotal;
-            if ($discountMode === 'promo' && $promoId && $promoEligibleSubtotalUSD > 0) {
+            if (!$cartContainsGiftCardProduct && $discountMode === 'promo' && $promoId && $promoEligibleSubtotalUSD > 0) {
                 $promo = PromoCode::find($promoId);
                 if ($promo && $promo->isValidForSubtotal($promoEligibleSubtotalUSD)) {
                     $discountUsd = $promo->calculateDiscountUsd($promoEligibleSubtotalUSD);
@@ -741,9 +764,9 @@ class CheckoutController extends Controller
 
             if ($orderGiftCardCode !== '') {
                 $giftCard = GiftCard::whereRaw('UPPER(code) = ?', [$orderGiftCardCode])->first();
-                $cartHasGiftCardProduct = $cartItems->contains(fn ($cartItem) => (bool) optional($cartItem->product)->is_gift_card);
-                if ($giftCard && $giftCard->isUsable() && !$cartHasGiftCardProduct) {
-                    $payableBeforeGiftCard = max(0.0, $subtotalAfterBulk - $orderDiscount + $shippingCost + $convertedTipAmount);
+                if ($giftCard && $giftCard->isUsable() && $cartHasPhysicalProduct) {
+                    $physicalSubtotalAfterBulk = max(0.0, $discountEligibleSubtotal - $bulkDiscountAmount);
+                    $payableBeforeGiftCard = max(0.0, $physicalSubtotalAfterBulk - $orderDiscount + $shippingCost + $convertedTipAmount);
                     $orderGiftCardAmount = min((float) $giftCard->balance, $payableBeforeGiftCard);
                     $orderGiftCardCode = $giftCard->code;
                 } else {
@@ -762,7 +785,7 @@ class CheckoutController extends Controller
                 'bulk_discount_percent' => $bulkDiscountPercent,
                 'bulk_discount_amount' => $bulkDiscountAmount,
                 'subtotal_currency' => $orderCurrency,
-                'baseSubtotalUSD' => $baseSubtotalUSD,
+                'physical_subtotal_usd' => $physicalSubtotalUsd,
                 'originalShippingCostUSD' => $originalShippingCostUSD,
                 'convertedShippingCost' => $convertedShippingCost,
                 'qualifiesForFreeShipping' => $qualifiesForFreeShipping,
@@ -776,7 +799,7 @@ class CheckoutController extends Controller
                 'gift_card_code' => $orderGiftCardCode,
                 'currency' => $orderCurrency,
                 'currencyRate' => $currencyRate,
-                'note' => 'All amounts in order currency except baseSubtotalUSD and originalShippingCostUSD'
+                'note' => 'All amounts in order currency except physical_subtotal_usd and originalShippingCostUSD'
             ]);
 
             $eventItems = collect($products)->map(function ($item) {
@@ -1095,6 +1118,31 @@ class CheckoutController extends Controller
 
                         // Clear shipping session
                         Session::forget('shipping_details');
+
+                        // Send order confirmation email to customer and admin (same behavior as Stripe)
+                        $adminEmail = 'admin@blulavelle.com';
+                        try {
+                            Mail::to($order->customer_email)->send(new OrderConfirmation($order));
+                            Log::info('📧 Order confirmation email sent for PayPal payment', [
+                                'order_number' => $order->order_number,
+                                'email' => $order->customer_email
+                            ]);
+
+                            if ($adminEmail) {
+                                Mail::to($adminEmail)->send(new \App\Mail\NewOrderAdminNotification($order));
+                                Log::info('📧 Admin new-order email sent for PayPal payment', [
+                                    'order_number' => $order->order_number,
+                                    'email' => $adminEmail
+                                ]);
+                            }
+                        } catch (\Exception $e) {
+                            Log::error('❌ Failed to send order confirmation email for PayPal payment', [
+                                'order_number' => $order->order_number,
+                                'email' => $order->customer_email,
+                                'admin_email' => $adminEmail,
+                                'error' => $e->getMessage()
+                            ]);
+                        }
 
                         // Try to verify with PayPal API (optional, for logging - AFTER cart clearing)
                         try {

@@ -143,6 +143,14 @@
                     @if($orders->count() > 0)
                         <div class="space-y-6">
                             @foreach($orders as $order)
+                                @php
+                                    $onlyGiftCardLines = $order->items->isNotEmpty()
+                                        && $order->items->every(fn ($it) => (bool) optional($it->product)->is_gift_card);
+                                    $storedShipping = (float) ($order->shipping_cost ?? 0);
+                                    $displayOrderTotal = $onlyGiftCardLines
+                                        ? max(0, (float) $order->total_amount - $storedShipping)
+                                        : (float) $order->total_amount;
+                                @endphp
                                 <div class="bg-white border border-black/5 rounded-xl overflow-hidden shadow-sm">
                                     <div class="p-4 md:p-6 border-b border-black/5 flex flex-wrap justify-between items-center gap-4" style="background: rgba(1,149,254,.06);">
                                         <div class="flex flex-wrap gap-6">
@@ -156,7 +164,7 @@
                                             </div>
                                             <div class="flex flex-col">
                                                 <span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Total</span>
-                                                <span class="text-sm font-bold" style="color: {{ $primary }};">${{ number_format($order->total_amount, 2) }}</span>
+                                                <span class="text-sm font-bold" style="color: {{ $primary }};">${{ number_format($displayOrderTotal, 2) }}</span>
                                             </div>
                                         </div>
 

@@ -14,7 +14,10 @@
 @section('content')
 @php
     use Illuminate\Support\Collection;
-    
+
+    $checkoutCartHasGiftCard = (bool) ($cartContainsGiftCardProduct ?? false);
+    $checkoutAllowGiftCardPayment = (bool) ($cartHasPhysicalProduct ?? true);
+
     // Get currency and rate using helper functions
     $currentCurrency = currency();
     $currentCurrencyRate = currency_rate() ?? 1.0;
@@ -201,10 +204,13 @@
         ];
     }
     
-    // Calculate base subtotal in USD for shipping calculation
+    // Calculate base subtotal in USD for shipping (physical goods only — gift cards are digital, no ship)
     $baseSubtotal = 0;
     foreach ($products as $item) {
         $product = $item['product'];
+        if ($product && (bool) $product->is_gift_card) {
+            continue;
+        }
         $quantity = max(1, (int) ($item['quantity'] ?? 1));
         $lineTotal = (float) ($item['total'] ?? ($product->price ?? $product->base_price ?? 0) * $quantity);
         
@@ -314,6 +320,8 @@ const CHECKOUT_BULK_DISCOUNT = {{ $bulkDiscount ?? 0 }};
 const CHECKOUT_SUBTOTAL_AFTER_BULK = {{ $subtotalAfterBulk ?? ($convertedSubtotal ?? $subtotal) }};
 const CHECKOUT_BULK_DISCOUNT_PERCENT = {{ $bulkDiscountPercent ?? 0 }};
 const CHECKOUT_DISCOUNT_MODE = @json($discountMode ?? 'volume');
+const CHECKOUT_CART_HAS_GIFT_CARD_PRODUCT = @json($checkoutCartHasGiftCard);
+const CHECKOUT_ALLOW_GIFT_CARD_PAYMENT = @json($checkoutAllowGiftCardPayment);
 const CHECKOUT_DISCOUNT_MODE_URL = @json(route('api.cart.discount-mode'));
 const CHECKOUT_APPLY_PROMO_URL = @json(route('api.cart.apply-promo'));
 const CHECKOUT_REMOVE_PROMO_URL = @json(route('api.cart.remove-promo'));
@@ -1243,11 +1251,14 @@ function buildCheckoutCustomizationInputs(customizations) {
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-start justify-between gap-3">
                                         <h3 class="font-semibold text-gray-900 text-sm truncate">{{ Str::limit($item['product']->name, 42) }}</h3>
-                                        <div class="flex items-center gap-2 shrink-0">
-                                            <button onclick="openCheckoutEditCartModal({{ $item['cart_item']->id }})" class="p-1.5 text-slate-400 hover:text-primary transition-colors" title="Edit item">
+                                        <div class="flex items-center gap-1 shrink-0">
+                                            <button type="button" onclick="openCheckoutEditCartModal({{ $item['cart_item']->id }})" class="p-1.5 text-slate-400 hover:text-primary transition-colors" title="Chỉnh sửa">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                             </button>
-                                            <p class="font-semibold text-slate-900">
+                                            <button type="button" onclick="checkoutRemoveCartItem({{ $item['cart_item']->id }})" class="p-1.5 text-slate-400 hover:text-red-600 transition-colors" title="Xóa khỏi giỏ">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                            </button>
+                                            <p class="font-semibold text-slate-900 ml-1">
                                                 {{ \App\Services\CurrencyService::formatPrice($item['total'], $currency ?? 'USD') }}
                                             </p>
                                         </div>
@@ -1393,15 +1404,19 @@ function buildCheckoutCustomizationInputs(customizations) {
                     <!-- Order Totals -->
                     <div class="border-t border-primary/10 pt-4 space-y-3">
                         <div class="flex gap-2">
-                            <button type="button" id="checkout-mode-volume" class="flex-1 px-3 py-2 rounded-lg border text-xs font-bold transition-colors {{ ($discountMode ?? 'volume') === 'volume' ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-primary/20 hover:bg-primary/5' }}">
+                            <button type="button" id="checkout-mode-volume" title="{{ $checkoutCartHasGiftCard ? 'Not available when purchasing a gift card' : '' }}" @if($checkoutCartHasGiftCard) disabled @endif class="flex-1 px-3 py-2 rounded-lg border text-xs font-bold transition-colors {{ $checkoutCartHasGiftCard ? 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' : (($discountMode ?? 'volume') === 'volume' ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-primary/20 hover:bg-primary/5') }}">
                                 Volume
                             </button>
-                            <button type="button" id="checkout-mode-promo" class="flex-1 px-3 py-2 rounded-lg border text-xs font-bold transition-colors {{ ($discountMode ?? 'volume') === 'promo' ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-primary/20 hover:bg-primary/5' }}">
+                            <button type="button" id="checkout-mode-promo" title="{{ $checkoutCartHasGiftCard ? 'Not available when purchasing a gift card' : '' }}" @if($checkoutCartHasGiftCard) disabled @endif class="flex-1 px-3 py-2 rounded-lg border text-xs font-bold transition-colors {{ $checkoutCartHasGiftCard ? 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' : (($discountMode ?? 'volume') === 'promo' ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-primary/20 hover:bg-primary/5') }}">
                                 Promo code
                             </button>
                         </div>
                         <p class="text-[11px] leading-snug text-slate-500 px-0.5">
+                            @if($checkoutCartHasGiftCard)
+                                <span class="font-semibold text-slate-600">Gift card products</span> cannot use volume or promo discounts. @if($checkoutAllowGiftCardPayment)You can still apply a stored gift card toward <span class="font-semibold text-slate-600">physical items and shipping</span> in this order only.@else Add a physical product to pay with a gift card.@endif
+                            @else
                             <span class="font-semibold text-slate-600">Volume</span> is an automatic discount based on how many items are in this order—no code needed. Choose <span class="font-semibold text-slate-600">Promo code</span> if you have a coupon instead.
+                            @endif
                         </p>
                         <div class="space-y-1">
                             <div class="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-2">
@@ -1410,16 +1425,16 @@ function buildCheckoutCustomizationInputs(customizations) {
                                     id="checkout-promo-input"
                                     placeholder="Enter promo code"
                                     value="{{ $appliedPromoCode ?? '' }}"
-                                    class="w-full min-w-0 rounded-lg border border-primary/20 bg-slate-50 text-sm px-3 py-2 focus:ring-primary focus:border-primary sm:flex-1 {{ ($discountMode ?? 'volume') !== 'promo' ? 'opacity-60 cursor-not-allowed' : '' }}"
+                                    class="w-full min-w-0 rounded-lg border border-primary/20 bg-slate-50 text-sm px-3 py-2 focus:ring-primary focus:border-primary sm:flex-1 {{ ($checkoutCartHasGiftCard || ($discountMode ?? 'volume') !== 'promo') ? 'opacity-60 cursor-not-allowed' : '' }}"
                                     autocomplete="off"
-                                    {{ ($discountMode ?? 'volume') !== 'promo' ? 'disabled' : '' }}
+                                    {{ ($checkoutCartHasGiftCard || ($discountMode ?? 'volume') !== 'promo') ? 'disabled' : '' }}
                                 >
                                 <div class="flex w-full min-w-0 gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
                                     <button
                                         type="button"
                                         id="checkout-promo-apply"
-                                        class="min-w-0 flex-1 px-3 py-2 sm:flex-none sm:px-4 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors {{ ($discountMode ?? 'volume') !== 'promo' ? 'opacity-60 cursor-not-allowed' : '' }}"
-                                        {{ ($discountMode ?? 'volume') !== 'promo' ? 'disabled' : '' }}
+                                        class="min-w-0 flex-1 px-3 py-2 sm:flex-none sm:px-4 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors {{ ($checkoutCartHasGiftCard || ($discountMode ?? 'volume') !== 'promo') ? 'opacity-60 cursor-not-allowed' : '' }}"
+                                        {{ ($checkoutCartHasGiftCard || ($discountMode ?? 'volume') !== 'promo') ? 'disabled' : '' }}
                                     >
                                         Apply
                                     </button>
@@ -1427,6 +1442,7 @@ function buildCheckoutCustomizationInputs(customizations) {
                                         type="button"
                                         id="checkout-promo-remove"
                                         class="min-w-0 flex-1 px-3 py-2 sm:flex-none sm:px-4 border border-primary/20 text-slate-700 rounded-lg text-xs font-bold hover:bg-primary/5 transition-colors {{ !empty($appliedPromoCode) ? '' : 'hidden' }}"
+                                        @if($checkoutCartHasGiftCard) disabled @endif
                                     >
                                         Remove
                                     </button>
@@ -1441,14 +1457,16 @@ function buildCheckoutCustomizationInputs(customizations) {
                                     id="checkout-gift-card-input"
                                     placeholder="Enter gift card code"
                                     value="{{ $appliedGiftCardCode ?? '' }}"
-                                    class="w-full min-w-0 rounded-lg border border-primary/20 bg-slate-50 text-sm px-3 py-2 focus:ring-primary focus:border-primary sm:flex-1"
+                                    class="w-full min-w-0 rounded-lg border border-primary/20 bg-slate-50 text-sm px-3 py-2 focus:ring-primary focus:border-primary sm:flex-1 {{ !$checkoutAllowGiftCardPayment ? 'opacity-60 cursor-not-allowed' : '' }}"
                                     autocomplete="off"
+                                    @if(!$checkoutAllowGiftCardPayment) disabled @endif
                                 >
                                 <div class="flex w-full min-w-0 gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
                                     <button
                                         type="button"
                                         id="checkout-gift-card-apply"
-                                        class="min-w-0 flex-1 px-3 py-2 sm:flex-none sm:px-4 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors"
+                                        class="min-w-0 flex-1 px-3 py-2 sm:flex-none sm:px-4 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors {{ !$checkoutAllowGiftCardPayment ? 'opacity-60 cursor-not-allowed' : '' }}"
+                                        @if(!$checkoutAllowGiftCardPayment) disabled @endif
                                     >
                                         Apply Gift Card
                                     </button>
@@ -1456,6 +1474,7 @@ function buildCheckoutCustomizationInputs(customizations) {
                                         type="button"
                                         id="checkout-gift-card-remove"
                                         class="min-w-0 flex-1 px-3 py-2 sm:flex-none sm:px-4 border border-primary/20 text-slate-700 rounded-lg text-xs font-bold hover:bg-primary/5 transition-colors {{ !empty($appliedGiftCardCode) ? '' : 'hidden' }}"
+                                        @if(!$checkoutAllowGiftCardPayment) disabled @endif
                                     >
                                         Remove
                                     </button>
@@ -3054,14 +3073,18 @@ document.addEventListener('DOMContentLoaded', function() {
      * Get base subtotal for shipping calculation
      */
     function getCheckoutBaseSubtotal() {
-        // Use CHECKOUT_BASE_SUBTOTAL if available
-        if (typeof CHECKOUT_BASE_SUBTOTAL !== 'undefined' && CHECKOUT_BASE_SUBTOTAL > 0) {
+        // Use CHECKOUT_BASE_SUBTOTAL from server (includes 0 for gift-card-only carts)
+        if (typeof CHECKOUT_BASE_SUBTOTAL !== 'undefined') {
             return CHECKOUT_BASE_SUBTOTAL;
         }
         
         // Fallback: calculate from products
         let baseSubtotal = 0;
         checkoutProducts.forEach(item => {
+            const product = item.product || {};
+            if (product.is_gift_card) {
+                return;
+            }
             const lineTotal = parseFloat(item.total || (item.cart_item && item.cart_item.price ? item.cart_item.price * (item.quantity || 1) : 0) || 0);
             let baseLineTotal = CHECKOUT_CURRENCY !== 'USD' && CHECKOUT_CURRENCY_RATE > 0 
                 ? lineTotal / CHECKOUT_CURRENCY_RATE 
@@ -3076,7 +3099,12 @@ document.addEventListener('DOMContentLoaded', function() {
      * Get cart items data for shipping calculation
      */
     function getCheckoutCartItems() {
-        return checkoutProducts.map(item => {
+        return checkoutProducts
+            .filter(item => {
+                const product = item.product || {};
+                return !product.is_gift_card;
+            })
+            .map(item => {
             const product = item.product || {};
             const cartItem = item.cart_item || {};
             
@@ -3867,6 +3895,9 @@ window.__PRESSONNailRetentionFreeShipActive = window.__PRESSONNailRetentionFreeS
         if (!btnVol || !btnPromo) return;
 
         function setMode(mode) {
+            if (typeof CHECKOUT_CART_HAS_GIFT_CARD_PRODUCT !== 'undefined' && CHECKOUT_CART_HAS_GIFT_CARD_PRODUCT) {
+                return;
+            }
             var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
             var retentionInput = document.getElementById('retention_free_shipping');
             var retentionFreeShipping = retentionInput && retentionInput.value === '1' ? 1 : 0;
@@ -3887,12 +3918,21 @@ window.__PRESSONNailRetentionFreeShipActive = window.__PRESSONNailRetentionFreeS
             });
         }
 
-        btnVol.addEventListener('click', function () { setMode('volume'); });
-        btnPromo.addEventListener('click', function () { setMode('promo'); });
+        btnVol.addEventListener('click', function () {
+            if (typeof CHECKOUT_CART_HAS_GIFT_CARD_PRODUCT !== 'undefined' && CHECKOUT_CART_HAS_GIFT_CARD_PRODUCT) return;
+            setMode('volume');
+        });
+        btnPromo.addEventListener('click', function () {
+            if (typeof CHECKOUT_CART_HAS_GIFT_CARD_PRODUCT !== 'undefined' && CHECKOUT_CART_HAS_GIFT_CARD_PRODUCT) return;
+            setMode('promo');
+        });
     })();
 
     // Checkout gift card apply/remove
     (function () {
+        if (typeof CHECKOUT_ALLOW_GIFT_CARD_PAYMENT !== 'undefined' && !CHECKOUT_ALLOW_GIFT_CARD_PAYMENT) {
+            return;
+        }
         var input = document.getElementById('checkout-gift-card-input');
         var hiddenInput = document.getElementById('gift_card_code');
         var applyBtn = document.getElementById('checkout-gift-card-apply');
@@ -3999,6 +4039,9 @@ window.__PRESSONNailRetentionFreeShipActive = window.__PRESSONNailRetentionFreeS
 
     // Checkout promo code apply/remove
     (function () {
+        if (typeof CHECKOUT_CART_HAS_GIFT_CARD_PRODUCT !== 'undefined' && CHECKOUT_CART_HAS_GIFT_CARD_PRODUCT) {
+            return;
+        }
         var input = document.getElementById('checkout-promo-input');
         var applyBtn = document.getElementById('checkout-promo-apply');
         var removeBtn = document.getElementById('checkout-promo-remove');
@@ -4393,6 +4436,7 @@ document.addEventListener('DOMContentLoaded', function () {
             'product' => [
                 'id' => $checkoutProduct->id,
                 'name' => $checkoutProduct->name,
+                'is_gift_card' => (bool) $checkoutProduct->is_gift_card,
                 'sku' => $checkoutProduct->sku ?? null,
                 'variants' => $checkoutProduct->variants,
                 'media' => $checkoutMedia,
@@ -4422,6 +4466,39 @@ document.addEventListener('DOMContentLoaded', function () {
 <script>
 const checkoutItemsData = @json($checkoutItems);
 const checkoutCsrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+const CHECKOUT_API_CART_REMOVE = @json(route('api.cart.remove', ['id' => '__CART_ITEM_ID__']));
+
+function checkoutRemoveCartItem(cartItemId) {
+    if (!cartItemId) return;
+    if (!confirm('Xóa sản phẩm này khỏi giỏ hàng?')) return;
+    var url = CHECKOUT_API_CART_REMOVE.replace('__CART_ITEM_ID__', encodeURIComponent(String(cartItemId)));
+    var csrf = checkoutCsrfToken || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    fetch(url, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': csrf,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.success) {
+                try {
+                    var cart = JSON.parse(localStorage.getItem('cart') || '[]');
+                    cart = cart.filter(function (item) { return String(item.id) !== String(cartItemId); });
+                    localStorage.setItem('cart', JSON.stringify(cart));
+                    window.dispatchEvent(new CustomEvent('cartUpdated'));
+                } catch (e) {}
+                window.location.reload();
+            } else {
+                alert(data.message || 'Không xóa được sản phẩm.');
+            }
+        })
+        .catch(function () {
+            alert('Có lỗi xảy ra. Vui lòng thử lại.');
+        });
+}
 
 function openCheckoutEditCartModal(cartItemId) {
     const ci = checkoutItemsData.find(i => i.id === cartItemId);

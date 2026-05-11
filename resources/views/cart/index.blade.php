@@ -9,9 +9,14 @@
     $currentCurrencyRate = currency_rate() ?? 1.0;
     $discount = $discount ?? 0;
     $appliedPromoCode = $appliedPromoCode ?? null;
-    // Combo discount (based on total cart quantity) - keep display consistent with cart popup
-    $bulkDiscountPercent = $bulkDiscountPercent ?? (\App\Models\Cart::getComboDiscountPercentForQty((int) $cartItems->sum('quantity')));
-    $bulkDiscount = $bulkDiscount ?? ((float) $bulkDiscountPercent > 0 ? round((float) $subtotal * ((float) $bulkDiscountPercent / 100), 2) : 0.0);
+    // Combo discount: tier theo SL & subtotal hàng không phải gift card (đồng bộ CartController / checkout)
+    $volumeEligibleItems = ($cartItems ?? collect())->filter(function ($item) {
+        return !((bool) optional($item->product)->is_gift_card);
+    });
+    $volumeEligibleQty = (int) $volumeEligibleItems->sum('quantity');
+    $volumeEligibleSubtotal = (float) $volumeEligibleItems->sum(fn ($item) => $item->getTotalPriceWithCustomizations());
+    $bulkDiscountPercent = $bulkDiscountPercent ?? (\App\Models\Cart::getComboDiscountPercentForQty($volumeEligibleQty));
+    $bulkDiscount = $bulkDiscount ?? ((float) $bulkDiscountPercent > 0 ? round($volumeEligibleSubtotal * ((float) $bulkDiscountPercent / 100), 2) : 0.0);
     $subtotalAfterBulk = $subtotalAfterBulk ?? max(0, (float) $subtotal - (float) $bulkDiscount);
     $discountMode = $discountMode ?? session('discount_mode', $appliedPromoCode ? 'promo' : 'volume');
 
@@ -353,9 +358,12 @@
         }
     }
     
-    // Calculate base subtotal in USD for free-shipping (based on subtotal BEFORE discount)
+    // Base subtotal in USD for free-shipping progress (physical goods only — gift cards digital, no ship)
     $baseSubtotal = 0;
     foreach ($cartItems as $item) {
+        if ($item->product && (bool) $item->product->is_gift_card) {
+            continue;
+        }
         $itemPrice = (float) $item->price;
         $basePrice = $currentCurrency !== 'USD' && $currentCurrencyRate > 0
             ? $itemPrice / $currentCurrencyRate
@@ -1449,14 +1457,16 @@ function trackInitiateCheckout(event) {
  * @returns {Object} - Object containing shipping cost details
  */
 function calculateShippingCost(cartItems, baseSubtotal, zoneId = null) {
-    if (!cartItems || cartItems.length === 0) {
+    const shipItems = (cartItems || []).filter(it => !(it.product && it.product.is_gift_card));
+    if (!shipItems || shipItems.length === 0) {
         return {
             cost: 0,
             costConverted: 0,
             rate: null,
             name: null,
             zoneId: null,
-            zoneName: null
+            zoneName: null,
+            available: true
         };
     }
 
@@ -1518,11 +1528,11 @@ function calculateShippingCost(cartItems, baseSubtotal, zoneId = null) {
         }
     }
 
-    // 2) Prepare items, totalItems, and apply-first-item-to-most-expensive
-    const totalItems = cartItems.reduce((sum, it) => sum + (parseInt(it.quantity, 10) || 0), 0);
-    const totalValue = parseFloat(baseSubtotal) || 0; // USD
+    // 2) Prepare items, totalItems, and apply-first-item-to-most-expensive (shipItems = non–gift-card only)
+    const totalItems = shipItems.reduce((sum, it) => sum + (parseInt(it.quantity, 10) || 0), 0);
+    const totalValue = parseFloat(baseSubtotal) || 0; // USD (caller should pass physical-only subtotal)
 
-    const itemsWithMeta = cartItems.map(it => {
+    const itemsWithMeta = shipItems.map(it => {
         const qty = parseInt(it.quantity, 10) || 0;
         const unitPrice = parseFloat(it.price) || 0;
         const unitUsd = (CURRENT_CURRENCY !== 'USD' && CURRENT_CURRENCY_RATE > 0) ? (unitPrice / CURRENT_CURRENCY_RATE) : unitPrice;
@@ -1722,7 +1732,10 @@ function formatPrice(amount) {
  */
 function calculateBaseSubtotal(cartItems) {
     let baseSubtotal = 0;
-    cartItems.forEach(item => {
+    (cartItems || []).forEach(item => {
+        if (item.product && item.product.is_gift_card) {
+            return;
+        }
         const itemPrice = parseFloat(item.price) || 0;
         let basePrice = CURRENT_CURRENCY !== 'USD' && CURRENT_CURRENCY_RATE > 0
             ? itemPrice / CURRENT_CURRENCY_RATE

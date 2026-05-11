@@ -26,8 +26,27 @@ class CartController extends Controller
 
         $mode = $request->input('mode');
 
-        // Keep applied promo in session when switching mode.
-        // The active mode still decides whether promo discount is used.
+        $sessionId = session()->getId();
+        $userId = Auth::id();
+        $cartContainsGiftCardProduct = Cart::with('product:id,is_gift_card')
+            ->where(function ($query) use ($sessionId, $userId) {
+                if ($userId) {
+                    $query->where('user_id', $userId);
+                } else {
+                    $query->where('session_id', $sessionId);
+                }
+            })
+            ->get()
+            ->contains(fn ($item) => (bool) optional($item->product)->is_gift_card);
+
+        if ($cartContainsGiftCardProduct) {
+            session(['discount_mode' => 'volume']);
+
+            return response()->json([
+                'success' => true,
+                'mode' => 'volume',
+            ]);
+        }
 
         session(['discount_mode' => $mode]);
 
@@ -179,16 +198,21 @@ class CartController extends Controller
             $discountEligibleSubtotal = (float) $discountEligibleItems->sum(function ($item) {
                 return $item->getTotalPriceWithCustomizations();
             });
+            $cartContainsGiftCardProduct = $cartItems->contains(fn ($item) => (bool) optional($item->product)->is_gift_card);
+
             // Choose ONE discount mode: volume OR promo (freeship can stack with either).
             $discountMode = session('discount_mode', 'volume');
-            if (session()->has('applied_promo_code_id')) {
+            if (!$cartContainsGiftCardProduct && session()->has('applied_promo_code_id')) {
                 $discountMode = 'promo';
                 session(['discount_mode' => 'promo']);
+            }
+            if ($cartContainsGiftCardProduct) {
+                $discountMode = 'volume';
             }
 
             $bulkDiscountPercent = 0.0;
             $bulkDiscount = 0.0;
-            if ($discountMode === 'volume') {
+            if (!$cartContainsGiftCardProduct && $discountMode === 'volume') {
                 $bulkDiscountPercent = (float) Cart::getComboDiscountPercentForQty($discountEligibleQty);
                 $bulkDiscount = $bulkDiscountPercent > 0 ? round($discountEligibleSubtotal * ($bulkDiscountPercent / 100), 2) : 0.0;
             }
@@ -261,7 +285,7 @@ class CartController extends Controller
             $discount = 0.0;
             $appliedPromoCode = null;
             $promoId = session('applied_promo_code_id');
-            if ($discountMode === 'promo' && $promoId && $discountEligibleSubtotalUsd > 0) {
+            if (!$cartContainsGiftCardProduct && $discountMode === 'promo' && $promoId && $discountEligibleSubtotalUsd > 0) {
                 $promo = PromoCode::find($promoId);
                 if ($promo && $promo->isValidForSubtotal($discountEligibleSubtotalUsd)) {
                     $discountUsd = $promo->calculateDiscountUsd($discountEligibleSubtotalUsd);
@@ -279,10 +303,12 @@ class CartController extends Controller
             $appliedGiftCardCode = null;
             $appliedGiftCardBalance = 0.0;
             $giftCardCode = app(GiftCardService::class)->normalizeCode((string) session('applied_gift_card_code', ''));
-            if ($giftCardCode !== '') {
+            $cartHasPhysicalProduct = $discountEligibleSubtotal > 0;
+            if ($cartHasPhysicalProduct && $giftCardCode !== '') {
                 $giftCard = GiftCard::whereRaw('UPPER(code) = ?', [$giftCardCode])->first();
                 if ($giftCard && $giftCard->isUsable()) {
-                    $subtotalAfterPromoAndShipping = max(0.0, $convertedSubtotalAfterBulk - $discount + $convertedShipping);
+                    $physicalSubtotalAfterBulk = max(0.0, $discountEligibleSubtotal - $bulkDiscount);
+                    $subtotalAfterPromoAndShipping = max(0.0, $physicalSubtotalAfterBulk - $discount + $convertedShipping);
                     $giftCardDiscount = min((float) $giftCard->balance, $subtotalAfterPromoAndShipping);
                     $appliedGiftCardCode = $giftCard->code;
                     $appliedGiftCardBalance = (float) $giftCard->balance;
@@ -371,6 +397,13 @@ class CartController extends Controller
             }
         })->get();
 
+        if ($cartItems->contains(fn ($item) => (bool) optional($item->product)->is_gift_card)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Promo codes cannot be applied when your cart contains a gift card product.',
+            ], 422);
+        }
+
         $discountEligibleSubtotal = $cartItems
             ->filter(fn ($item) => !((bool) optional($item->product)->is_gift_card))
             ->sum(fn ($item) => $item->getTotalPriceWithCustomizations());
@@ -431,6 +464,29 @@ class CartController extends Controller
         $code = $service->normalizeCode($request->input('code'));
         if ($code === '') {
             return response()->json(['success' => false, 'message' => 'Please enter a gift card code.'], 422);
+        }
+
+        $sessionId = session()->getId();
+        $userId = Auth::id();
+        $cartItems = Cart::with('product:id,is_gift_card')
+            ->where(function ($query) use ($sessionId, $userId) {
+                if ($userId) {
+                    $query->where('user_id', $userId);
+                } else {
+                    $query->where('session_id', $sessionId);
+                }
+            })
+            ->get();
+
+        $physicalSubtotal = (float) $cartItems
+            ->filter(fn ($item) => !((bool) optional($item->product)->is_gift_card))
+            ->sum(fn ($item) => $item->getTotalPriceWithCustomizations());
+
+        if ($physicalSubtotal <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Add at least one physical product to your cart to pay with a gift card.',
+            ], 422);
         }
 
         $giftCard = GiftCard::whereRaw('UPPER(code) = ?', [$code])->first();

@@ -48,6 +48,10 @@
         @apply bg-gray-100 text-gray-800;
     }
 
+    .giftcard-applied {
+        @apply bg-indigo-100 text-indigo-800;
+    }
+
     .product-item {
         transition: all 0.3s ease;
     }
@@ -102,6 +106,16 @@
                                     {{ ucfirst($order->payment_status) }}
                                 </span>
                             </div>
+                            @if((float) ($order->gift_card_amount ?? 0) > 0 || !empty($order->gift_card_code))
+                                <div>
+                                    <span class="status-badge giftcard-applied" title="{{ $order->gift_card_code ? 'Code: ' . $order->gift_card_code : '' }}">
+                                        🎁 Gift Card
+                                        @if((float) ($order->gift_card_amount ?? 0) > 0)
+                                            (-${{ number_format((float) $order->gift_card_amount, 2) }})
+                                        @endif
+                                    </span>
+                                </div>
+                            @endif
                         </div>
                         <div class="text-right">
                             <p class="text-sm text-gray-600">Order Date</p>
@@ -412,6 +426,21 @@
                             <span class="text-gray-600">Payment Method:</span>
                             <span class="font-semibold">{{ ucfirst($order->payment_method) }}</span>
                         </div>
+                        @if((float) ($order->gift_card_amount ?? 0) > 0 || !empty($order->gift_card_code))
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Gift Card Used:</span>
+                                <span class="font-semibold">
+                                    @if(!empty($order->gift_card_code))
+                                        {{ $order->gift_card_code }}
+                                    @else
+                                        Yes
+                                    @endif
+                                    @if((float) ($order->gift_card_amount ?? 0) > 0)
+                                        <span class="text-indigo-700">(-${{ number_format((float) $order->gift_card_amount, 2) }})</span>
+                                    @endif
+                                </span>
+                            </div>
+                        @endif
                         @if($order->paid_at)
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Paid At:</span>
