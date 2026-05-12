@@ -528,7 +528,7 @@
                             <p>Handled with extra care due to product nature</p>
                         </div>
                     @endif
-                    @if(!empty($tiersUi))
+                    @if(!empty($tiersUi) && !($product->is_gift_card ?? false))
                         <div class="mt-2 bg-[#0297FE]/10 border border-[#0297FE]/20 rounded-2xl p-3">
                             <div class="text-center text-xs font-extrabold text-[#0297FE]">
                                 Buy More, Save More
