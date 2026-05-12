@@ -7,6 +7,9 @@
     $currentCurrency = currency();
     $currencySymbol = currency_symbol();
     $analyticsDebugOn = $analyticsDebugOn ?? (bool) request()->boolean('analytics_debug', false);
+    $productRelativePath = route('products.show', $product->slug, false);
+    $appBaseUrl = rtrim((string) config('app.url', ''), '/');
+    $publicProductUrl = $appBaseUrl !== '' ? ($appBaseUrl . $productRelativePath) : route('products.show', $product->slug);
     // Gallery = ảnh product trước, sau đó + media từ template (ảnh + video)
     $galleryItems = [];
     $gallerySlot = 0;
@@ -2200,12 +2203,23 @@ document.addEventListener('DOMContentLoaded', function() {
     var shareBtn = document.getElementById('product-share-btn');
     if (shareBtn) {
         shareBtn.addEventListener('click', function() {
-            var url = window.location.href;
-            var title = (document.querySelector('h1') && document.querySelector('h1').textContent) ? document.querySelector('h1').textContent.trim() : @json($product->name);
+            var pageUrl = @json($publicProductUrl) || window.location.href;
+            var productTitle = (document.querySelector('h1') && document.querySelector('h1').textContent) ? document.querySelector('h1').textContent.trim() : @json($product->name);
+            var shareQuote = @json('Check this out: ') + productTitle;
+            var fbShareUrl = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(pageUrl) + '&quote=' + encodeURIComponent(shareQuote);
+
+            var popup = window.open(fbShareUrl, 'facebook-share-dialog', 'width=626,height=436');
+            if (popup) {
+                popup.focus();
+                return;
+            }
+
             if (navigator.share) {
-                navigator.share({ title: title, url: url }).catch(function() {});
+                navigator.share({ title: productTitle, text: shareQuote, url: pageUrl }).catch(function() {});
             } else if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(url).then(function() { showToast('Link copied!', 'success'); }).catch(function() {});
+                navigator.clipboard.writeText(pageUrl).then(function() {
+                    showToast('Copied product link.', 'success');
+                }).catch(function() {});
             }
         });
     }

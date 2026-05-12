@@ -1,6 +1,13 @@
 ﻿<!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
+    @php
+        // false = tạm tắt shim gtag (Consent Mode) + không tải gtag/js theo google_ads_id. true = bật lại.
+        $__pressOnNailGtagEnabled = false;
+        $googleTagManagerId = \App\Support\Settings::get('analytics.google_tag_manager_id', config('services.google.tag_manager_id'));
+        $__gtmId = $googleTagManagerId ? trim((string) $googleTagManagerId) : '';
+    @endphp
+    @if($__pressOnNailGtagEnabled)
     <!-- Google Consent Mode -->
     <script>
         // Define dataLayer and the gtag function.
@@ -25,6 +32,31 @@
           'analytics_storage': 'denied'
         });
     </script>
+    @else
+    {{-- gtag shim + Consent Mode tạm tắt; giữ dataLayer cho GTM / dataLayer.push --}}
+    <script>window.dataLayer = window.dataLayer || [];</script>
+    @endif
+
+    @if($__gtmId !== '')
+        <!-- Google Tag Manager: highest priority — immediately after dataLayer / consent -->
+        <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+        new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+        j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+        'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+        })(window,document,'script','dataLayer',@json($__gtmId));</script>
+        <!-- End Google Tag Manager -->
+    @endif
+
+    @php
+        $metaPixelId = \App\Support\Settings::get('analytics.meta_pixel_id', config('services.meta.pixel_id'));
+        $tiktokPixelId = \App\Support\Settings::get('analytics.tiktok_pixel_id', config('services.tiktok.pixel_id'));
+        $googleAdsId = \App\Support\Settings::get('analytics.google_ads_id', config('services.google.ads_id'));
+
+        // Currency configuration - available in all views
+        $siteCurrency = currency();
+        $siteCurrencyRate = currency_rate();
+        $siteCurrencySymbol = currency_symbol();
+    @endphp
 
     {{-- Helper: trÃ¬ hoÃ£n script tracking cho Ä‘áº¿n khi user tÆ°Æ¡ng tÃ¡c (scroll/move/touch/keydown) hoáº·c sau ~4s --}}
     <script>
@@ -56,30 +88,6 @@
         }, { once: true });
     })();
     </script>
-
-    @php
-        $metaPixelId = \App\Support\Settings::get('analytics.meta_pixel_id', config('services.meta.pixel_id'));
-        $tiktokPixelId = \App\Support\Settings::get('analytics.tiktok_pixel_id', config('services.tiktok.pixel_id'));
-        $googleTagManagerId = \App\Support\Settings::get('analytics.google_tag_manager_id', config('services.google.tag_manager_id'));
-        $googleAdsId = \App\Support\Settings::get('analytics.google_ads_id', config('services.google.ads_id'));
-        
-        // Currency configuration - available in all views
-        $siteCurrency = currency();
-        $siteCurrencyRate = currency_rate();
-        $siteCurrencySymbol = currency_symbol();
-    @endphp
-    @php
-        $__gtmId = $googleTagManagerId ? trim((string) $googleTagManagerId) : '';
-    @endphp
-    @if($__gtmId !== '')
-        <!-- Google Tag Manager -->
-        <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-        new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-        j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-        'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-        })(window,document,'script','dataLayer',@json($__gtmId));</script>
-        <!-- End Google Tag Manager -->
-    @endif
     
     <!-- Currency Configuration for JavaScript -->
     <script>
@@ -87,30 +95,12 @@
         window.SITE_CURRENCY_SYMBOL = @json($siteCurrencySymbol);
     </script>
 
-    {{-- Cookie Script: táº£i sau idle/load â€” trÃ¡nh cháº·n render (Lighthouse render-blocking) --}}
-    <script>
-    (function () {
-        var src = 'https://cdn.cookie-script.com/s/4a353d27e80af68f255e8b4bff37f75c.js';
-        function inject() {
-            var s = document.createElement('script');
-            s.type = 'text/javascript';
-            s.charset = 'UTF-8';
-            s.async = true;
-            s.src = src;
-            (document.head || document.documentElement).appendChild(s);
-        }
-        if ('requestIdleCallback' in window) {
-            window.requestIdleCallback(inject, { timeout: 2500 });
-        } else {
-            window.addEventListener('load', inject, { once: true });
-        }
-    })();
-    </script>
+    {{-- Cookie Script: tạm tắt (đã gỡ script inject cdn.cookie-script.com). Bật lại bằng git history nếu cần. --}}
 
     @php
         $__adsId = $googleAdsId ? trim((string) $googleAdsId) : '';
     @endphp
-    @if($__adsId !== '')
+    @if($__adsId !== '' && !empty($__pressOnNailGtagEnabled))
         {{-- gtag (GA4 G- / Ads AW-): trÃ¬ hoÃ£n tá»›i khi user tÆ°Æ¡ng tÃ¡c (hoáº·c sau ~4s). --}}
         <script>
         (function () {
@@ -267,7 +257,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="google-site-verification" content="gGIR-fmeNV2oZz1duWvcwwKqTbqtvKM2OsiaTUyiLZc" />
-    <meta name="description" content="Premium press-on nails with free shipping. Discover reusable, salon-quality nails at Blulavelle.">
+    @php
+        $defaultSiteDescription = 'Premium press-on nails with free shipping. Discover reusable, salon-quality nails at Blulavelle.';
+        $metaDescription = trim((string) $__env->yieldContent('meta_description', $defaultSiteDescription));
+        $metaTitle = trim((string) $__env->yieldContent('meta_title', config('app.name', 'Blulavelle') . ' - ' . ($title ?? 'Home')));
+        $ogType = trim((string) $__env->yieldContent('og_type', 'website'));
+        $ogUrl = trim((string) $__env->yieldContent('og_url', url()->current()));
+        $ogImage = trim((string) $__env->yieldContent('og_image', asset('favicon.png')));
+    @endphp
+    <meta name="description" content="{{ $metaDescription }}">
+    <meta property="og:type" content="{{ $ogType }}">
+    <meta property="og:title" content="{{ $metaTitle }}">
+    <meta property="og:description" content="{{ $metaDescription }}">
+    <meta property="og:image" content="{{ $ogImage }}">
+    <meta property="og:url" content="{{ $ogUrl }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ $metaTitle }}">
+    <meta name="twitter:description" content="{{ $metaDescription }}">
+    <meta name="twitter:image" content="{{ $ogImage }}">
 
     <title>{{ config('app.name', 'Blulavelle') }} - {{ $title ?? 'Home' }}</title>
 
