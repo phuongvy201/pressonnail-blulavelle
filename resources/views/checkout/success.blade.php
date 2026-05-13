@@ -11,7 +11,7 @@
     $itemsSum = (float) ($order->items?->sum('total_price') ?? 0);
     $orderSubtotal = (float) ($order->subtotal ?? 0);
     $bulkDiscount = max(0, $itemsSum - $orderSubtotal);
-    {{-- Purchase (Pixel/GA/TikTok): bắn khi đơn đã lên thank-you. "pending"/"processing" vẫn có vì checkout/index đôi khi redirect success trước khi DB kịp "paid". --}}
+    // Purchase (Pixel/GA/TikTok): thank-you page; pending/processing vì checkout đôi khi redirect success trước khi DB = paid.
     $shouldTrackPurchase = in_array(
         (string) ($order->payment_status ?? ''),
         ['paid', 'pending', 'processing'],
