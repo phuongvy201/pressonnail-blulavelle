@@ -56,6 +56,19 @@
                 </svg>
                 Export to Meta (<span id="metaSelectedCount">0</span>)
             </button>
+
+            <!-- Export to TikTok Button (Hidden by default) -->
+            <button id="exportToTikTokBtn" onclick="exportToTikTok()"
+                    style="display: none;"
+                    class="inline-flex items-center whitespace-nowrap shrink-0 px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-700 transition-colors shadow-md"
+                    title="Export selected products to TikTok Catalog format (CSV)">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-2v13"></path>
+                    <circle cx="6" cy="18" r="3"></circle>
+                    <circle cx="18" cy="16" r="3"></circle>
+                </svg>
+                Export to TikTok (<span id="tiktokSelectedCount">0</span>)
+            </button>
             
             <a id="headerImportProductsBtn" href="{{ route('admin.products.import') }}" 
                class="inline-flex items-center whitespace-nowrap shrink-0 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-md">
@@ -175,6 +188,10 @@
                 <button type="button" onclick="exportAllFilteredToMeta()"
                         class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md bg-purple-50 text-purple-800 border border-purple-200 hover:bg-purple-100 transition-colors">
                     Meta — {{ $products->total() }} SP
+                </button>
+                <button type="button" onclick="exportAllFilteredToTikTok()"
+                        class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md bg-gray-100 text-gray-900 border border-gray-300 hover:bg-gray-200 transition-colors">
+                    TikTok — {{ $products->total() }} SP
                 </button>
             </div>
         </form>
@@ -931,9 +948,11 @@ function updateBulkDeleteButton() {
     const bulkAddToCollectionBtn = document.getElementById('bulkAddToCollectionBtn');
     const feedToGMCBtn = document.getElementById('feedToGMCBtn');
     const exportToMetaBtn = document.getElementById('exportToMetaBtn');
+    const exportToTikTokBtn = document.getElementById('exportToTikTokBtn');
     const selectedCount = document.getElementById('selectedCount');
     const gmcSelectedCount = document.getElementById('gmcSelectedCount');
     const metaSelectedCount = document.getElementById('metaSelectedCount');
+    const tiktokSelectedCount = document.getElementById('tiktokSelectedCount');
     const collectionBulkSelectedCount = document.getElementById('collectionBulkSelectedCount');
     const selectAllCheckbox = document.getElementById('selectAll');
     const headerImportProductsBtn = document.getElementById('headerImportProductsBtn');
@@ -944,9 +963,11 @@ function updateBulkDeleteButton() {
         if (bulkAddToCollectionBtn) bulkAddToCollectionBtn.style.display = 'inline-flex';
         if (feedToGMCBtn) feedToGMCBtn.style.display = 'inline-flex';
         exportToMetaBtn.style.display = 'inline-flex';
+        if (exportToTikTokBtn) exportToTikTokBtn.style.display = 'inline-flex';
         selectedCount.textContent = checkedBoxes.length;
         gmcSelectedCount.textContent = checkedBoxes.length;
         metaSelectedCount.textContent = checkedBoxes.length;
+        if (tiktokSelectedCount) tiktokSelectedCount.textContent = checkedBoxes.length;
         if (collectionBulkSelectedCount) collectionBulkSelectedCount.textContent = checkedBoxes.length;
         if (headerImportProductsBtn) headerImportProductsBtn.style.display = 'none';
         if (headerAddProductBtn) headerAddProductBtn.style.display = 'none';
@@ -955,6 +976,7 @@ function updateBulkDeleteButton() {
         if (bulkAddToCollectionBtn) bulkAddToCollectionBtn.style.display = 'none';
         if (feedToGMCBtn) feedToGMCBtn.style.display = 'none';
         exportToMetaBtn.style.display = 'none';
+        if (exportToTikTokBtn) exportToTikTokBtn.style.display = 'none';
         if (headerImportProductsBtn) headerImportProductsBtn.style.display = 'inline-flex';
         if (headerAddProductBtn) headerAddProductBtn.style.display = 'inline-flex';
     }
@@ -1328,6 +1350,41 @@ function exportAllFilteredToMeta() {
     }, 1000);
 }
 
+function exportAllFilteredToTikTok() {
+    const total = {{ (int) $products->total() }};
+    if (total === 0) {
+        alert('Không có sản phẩm nào khớp bộ lọc hiện tại.');
+        return;
+    }
+    if (!confirm('Xuất file TikTok cho ' + total + ' sản phẩm theo bộ lọc hiện tại?')) return;
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ route("admin.products.export.tiktok") }}';
+    form.style.display = 'none';
+
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = '_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    const exportAllInput = document.createElement('input');
+    exportAllInput.type = 'hidden';
+    exportAllInput.name = 'export_all';
+    exportAllInput.value = '1';
+    form.appendChild(exportAllInput);
+
+    appendCurrentFilterParamsToForm(form);
+
+    document.body.appendChild(form);
+    form.submit();
+    setTimeout(function () {
+        if (form.parentNode) document.body.removeChild(form);
+    }, 1000);
+}
+
 // Export selected products to GMC CSV file
 async function feedToGMC() {
     const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
@@ -1380,6 +1437,44 @@ function exportToMeta() {
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = '{{ route("admin.products.export.meta") }}';
+    form.style.display = 'none';
+
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = '_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    productIds.forEach(id => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'product_ids[]';
+        input.value = id;
+        form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+
+    setTimeout(function() {
+        document.body.removeChild(form);
+    }, 1000);
+}
+
+// Export to TikTok function
+function exportToTikTok() {
+    const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
+    const productIds = Array.from(checkedBoxes).map(cb => cb.value);
+
+    if (productIds.length === 0) {
+        alert('Vui lòng chọn ít nhất một sản phẩm để export.');
+        return;
+    }
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ route("admin.products.export.tiktok") }}';
     form.style.display = 'none';
 
     const csrfInput = document.createElement('input');

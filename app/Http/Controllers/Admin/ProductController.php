@@ -2663,4 +2663,304 @@ class ProductController extends Controller
             'Expires' => '0',
         ]);
     }
+
+    /**
+     * Export products to TikTok Catalog format (CSV)
+     */
+    public function exportToTikTok(Request $request)
+    {
+        $user = auth()->user();
+
+        $metaWith = ['template.category', 'template.user', 'user', 'shop', 'variants', 'collections'];
+
+        if ($request->boolean('export_all')) {
+            $this->validateAdminProductListFilters($request);
+            $products = $this->adminProductsFilteredQuery($request)
+                ->with($metaWith)
+                ->get();
+        } elseif ($request->filled('product_ids')) {
+            $productIds = is_array($request->product_ids)
+                ? $request->product_ids
+                : explode(',', $request->product_ids);
+
+            $productsQuery = Product::with($metaWith)
+                ->whereIn('id', $productIds);
+
+            if (!$user->hasRole('admin')) {
+                $productsQuery->where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id)
+                        ->orWhereHas('shop', function ($shopQ) use ($user) {
+                            $shopQ->where('user_id', $user->id);
+                        });
+                });
+            }
+
+            $products = $productsQuery->get();
+        } else {
+            $this->validateAdminProductListFilters($request);
+            $products = $this->adminProductsFilteredQuery($request)
+                ->with($metaWith)
+                ->where('status', 'active')
+                ->get();
+        }
+
+        $baseUrl = config('app.url');
+        $csvData = [];
+
+        $header = [
+            'columns',
+            'sku_id',
+            'title',
+            'description',
+            'availability',
+            'condition',
+            'price',
+            'link',
+            'image_link',
+            'video_link',
+            'brand',
+            'additional_image_link',
+            'age_group',
+            'color',
+            'gender',
+            'item_group_id',
+            'google_product_category',
+            'material',
+            'pattern',
+            'product_type',
+            'sale_price',
+            'sale_price_effective_date',
+            'shipping',
+            'shipping_weight',
+            'gtin',
+            'mpn',
+            'size',
+            'tax',
+            'ios_url',
+            'ios_app_store_id',
+            'ios_app_name',
+            'iPhone_url',
+            'iPhone_app_store_id',
+            'iPhone_app_name',
+            'iPad_url',
+            'iPad_app_store_id',
+            'iPad_app_name',
+            'android_url',
+            'android_package',
+            'android_app_name',
+            'custom_label_0',
+            'custom_label_1',
+            'custom_label_2',
+            'custom_label_3',
+            'custom_label_4',
+        ];
+
+        $csvData[] = $header;
+
+        $formatField = function ($value, $maxLength = null) {
+            if (empty($value)) {
+                return '';
+            }
+            $value = trim((string) $value);
+            if ($maxLength) {
+                $value = mb_substr($value, 0, $maxLength);
+            }
+            return $value;
+        };
+
+        $validateGender = function ($gender) {
+            $gender = strtolower(trim((string) $gender));
+            $validGenders = ['female', 'male', 'unisex'];
+            return in_array($gender, $validGenders, true) ? $gender : '';
+        };
+
+        $validateAgeGroup = function ($ageGroup) {
+            $ageGroup = strtolower(trim((string) $ageGroup));
+            $validAgeGroups = ['newborn', 'infant', 'toddler', 'kids', 'teen', 'adult', 'all ages'];
+            return in_array($ageGroup, $validAgeGroups, true) ? $ageGroup : '';
+        };
+
+        $supportedVideoFormats = [
+            '.3g2', '.3gp', '.3gpp', '.asf', '.avi', '.dat', '.divx', '.dv', '.f4v',
+            '.flv', '.gif', '.m2ts', '.m4v', '.mkv', '.mod', '.mov', '.mp4', '.mpe',
+            '.mpeg', '.mpeg4', '.mpg', '.mts', '.nsv', '.ogm', '.ogv', '.qt', '.tod',
+            '.ts', '.vob', '.wmv'
+        ];
+
+        $videoPlayerDomains = [
+            'youtube.com',
+            'youtu.be',
+            'vimeo.com',
+            'dailymotion.com',
+            'facebook.com',
+            'instagram.com',
+            'tiktok.com',
+            'twitch.tv'
+        ];
+
+        foreach ($products as $product) {
+            $media = $product->getEffectiveMedia();
+
+            $imageCandidates = [];
+            $videoUrl = '';
+
+            if (!empty($media)) {
+                foreach ($media as $mediaItem) {
+                    $mediaUrl = is_string($mediaItem) ? $mediaItem : ($mediaItem['url'] ?? $mediaItem['path'] ?? '');
+                    if (empty($mediaUrl)) {
+                        continue;
+                    }
+
+                    $lowerUrl = strtolower($mediaUrl);
+                    $isVideoPlayer = false;
+                    foreach ($videoPlayerDomains as $domain) {
+                        if (str_contains($lowerUrl, $domain)) {
+                            $isVideoPlayer = true;
+                            break;
+                        }
+                    }
+
+                    $isSupportedVideo = false;
+                    foreach ($supportedVideoFormats as $format) {
+                        if (str_ends_with($lowerUrl, $format)) {
+                            $isSupportedVideo = true;
+                            break;
+                        }
+                    }
+
+                    if ($isSupportedVideo && !$isVideoPlayer && $videoUrl === '') {
+                        if (!filter_var($mediaUrl, FILTER_VALIDATE_URL)) {
+                            $videoUrl = (str_starts_with($mediaUrl, '/storage/') || str_starts_with($mediaUrl, '/'))
+                                ? $baseUrl . $mediaUrl
+                                : $baseUrl . '/storage/' . $mediaUrl;
+                        } else {
+                            $videoUrl = $mediaUrl;
+                        }
+                        continue;
+                    }
+
+                    if (!$isSupportedVideo) {
+                        if (!filter_var($mediaUrl, FILTER_VALIDATE_URL)) {
+                            $mediaUrl = (str_starts_with($mediaUrl, '/storage/') || str_starts_with($mediaUrl, '/'))
+                                ? $baseUrl . $mediaUrl
+                                : $baseUrl . '/storage/' . $mediaUrl;
+                        }
+                        $imageCandidates[] = $mediaUrl;
+                    }
+                }
+            }
+
+            $imageLink = $imageCandidates[0] ?? '';
+            if (empty($imageLink)) {
+                continue;
+            }
+
+            $additionalImageLink = '';
+            if (count($imageCandidates) > 1) {
+                $additionalImageLink = implode(',', array_slice($imageCandidates, 1, 10));
+            }
+
+            $basePrice = $product->price ?? $product->template->base_price ?? 0;
+            if ($basePrice <= 0) {
+                continue;
+            }
+
+            $description = strip_tags($product->description ?? $product->template->description ?? '');
+            if (empty($description)) {
+                $description = $product->name;
+            }
+            $description = str_replace(["\r\n", "\r", "\n"], ' ', $description);
+            $description = mb_strtolower($description, 'UTF-8');
+            $description = $formatField($description, 9999);
+
+            $skuId = $product->sku
+                ? $formatField($product->sku, 100)
+                : $formatField('PROD_' . $product->id, 100);
+
+            $productLink = $baseUrl . '/products/' . ($product->slug ?? $product->id);
+            $quantity = max(1, (int) ($product->quantity ?? 100));
+            $gender = $product->gender ? $validateGender($product->gender) : 'female';
+            $ageGroup = $product->age_group ? $validateAgeGroup($product->age_group) : 'adult';
+
+            $row = [
+                '',
+                $skuId,
+                $formatField($product->name, 200),
+                $description,
+                $quantity > 0 ? 'in stock' : 'out of stock',
+                'new',
+                number_format((float) $basePrice, 2, '.', '') . ' USD',
+                $productLink,
+                $imageLink,
+                $videoUrl,
+                $formatField('Bluprinter', 100),
+                $additionalImageLink,
+                $ageGroup,
+                $formatField($product->color ?? '', 100),
+                $gender,
+                '',
+                $formatField(
+                    $product->google_product_category
+                    ?? 'health & beauty > beauty > nail care > artificial nails & accessories > manicure tool sets',
+                    750
+                ),
+                $formatField($product->material ?? 'stainless steel', 200),
+                $formatField($product->pattern ?? 'graphic', 100),
+                $formatField(optional(optional($product->template)->category)->name ?? '', 750),
+                '',
+                '',
+                $formatField($product->shipping ?? 'US::USPS:5.99 USD', 200),
+                $formatField($product->shipping_weight ?? '200g', 50),
+                '',
+                $formatField($product->mpn ?? '', 100),
+                $formatField($product->size ?? 'S (15/11/12/11/9mm)', 100),
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                $formatField(optional($product->collections->first())->name ?? '', 100),
+                '',
+                '',
+                '',
+                '',
+            ];
+
+            $csvData[] = $row;
+        }
+
+        $filename = 'tiktok_products_export_' . date('Y-m-d_His') . '.csv';
+        $csvContent = "\xEF\xBB\xBF";
+
+        foreach ($csvData as $row) {
+            $escapedRow = array_map(function ($field) {
+                $field = (string) $field;
+                if (
+                    strpos($field, ',') !== false ||
+                    strpos($field, '"') !== false ||
+                    strpos($field, "\n") !== false ||
+                    strpos($field, "\r") !== false
+                ) {
+                    return '"' . str_replace('"', '""', $field) . '"';
+                }
+                return $field;
+            }, $row);
+
+            $csvContent .= implode(',', $escapedRow) . "\n";
+        }
+
+        return Response::make($csvContent, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ]);
+    }
 }

@@ -113,10 +113,10 @@
         {{-- Giá: hiển thị giá sale (giá hiện tại + giá gốc gạch ngang) khi có list_price > price --}}
         <div class="flex flex-wrap items-baseline gap-2 mt-auto">
             @if($onSale)
-                <span class="text-base sm:text-lg font-bold text-primary-fg">{{ format_price_usd($currentPriceUsd) }}</span>
-                <span class="text-xs sm:text-sm text-gray-600 line-through">{{ format_price_usd($originalPriceUsd) }}</span>
+                <span class="text-base sm:text-lg font-bold text-primary">{{ format_price_usd($currentPriceUsd) }}</span>
+                <span class="text-xs sm:text-sm text-gray-500 line-through">{{ format_price_usd($originalPriceUsd) }}</span>
             @else
-                <span class="text-base sm:text-lg font-bold text-gray-900">{{ format_price_usd($currentPriceUsd) }}</span>
+                <span class="text-base sm:text-lg font-bold text-primary">{{ format_price_usd($currentPriceUsd) }}</span>
             @endif
         </div>
     </div>

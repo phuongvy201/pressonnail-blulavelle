@@ -100,7 +100,8 @@ class ProductController extends Controller
                 $query->orderBy('created_at', 'desc');
         }
 
-        $products = $query->paginate(20)->withQueryString();
+        // 18 = bội số của 3 (lưới 3 sản phẩm / hàng) để các trang đầy hàng
+        $products = $query->paginate(18)->withQueryString();
 
         // Get filter data
         $collections = Collection::active()

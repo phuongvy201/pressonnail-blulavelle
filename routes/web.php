@@ -702,6 +702,7 @@ Route::middleware('auth')->group(function () {
         Route::post('products/bulk-add-to-collection', [AdminProductController::class, 'bulkAddToCollection'])->name('products.bulk-add-to-collection');
         Route::post('products/{product}/duplicate', [AdminProductController::class, 'duplicate'])->name('products.duplicate');
         Route::post('products/export/meta', [AdminProductController::class, 'exportToMeta'])->name('products.export.meta');
+        Route::post('products/export/tiktok', [AdminProductController::class, 'exportToTikTok'])->name('products.export.tiktok');
 
         // Products Resource Route (must be last to avoid conflicts)
         Route::resource('products', AdminProductController::class);

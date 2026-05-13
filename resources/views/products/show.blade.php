@@ -779,12 +779,27 @@
                         </div>
                     </div>
 
-                    {{-- Product Details (trong sticky sidebar) --}}
+                    {{-- Product Details (trong sticky sidebar) — thu gọn / mở rộng --}}
                     <div class="pt-6 border-t border-slate-200">
                         <h3 class="text-lg font-extrabold text-slate-900 mb-3">Product Details</h3>
-                        <div class="text-slate-600 text-sm leading-relaxed space-y-2 product-detail-description">
-                            {!! nl2br(e(strip_tags($product->getEffectiveDescription()))) !!}
+                        <div id="product-detail-description-root" class="relative">
+                            <div id="product-detail-description-body" class="text-slate-600 text-sm leading-relaxed space-y-2 overflow-hidden transition-[max-height] duration-300 ease-out max-h-[8.5rem]">
+                                {!! nl2br(e(strip_tags($product->getEffectiveDescription()))) !!}
+                            </div>
+                            <div id="product-detail-description-fade" class="pointer-events-none absolute left-0 right-0 bottom-0 h-12 bg-gradient-to-t from-white via-white/95 to-transparent opacity-0 transition-opacity duration-300" aria-hidden="true"></div>
                         </div>
+                        <button type="button" id="product-detail-description-toggle"
+                            class="group mt-3 hidden w-full sm:w-auto min-w-0 inline-flex items-center justify-center gap-0 rounded-xl border border-[#0297FE]/25 bg-[#0297FE]/8 py-2.5 px-5 text-sm font-extrabold text-[#0297FE] shadow-sm shadow-slate-900/5 transition-all duration-200 hover:border-[#0297FE]/45 hover:bg-[#0297FE]/14 hover:shadow-md hover:shadow-[#0297FE]/10 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0297FE]/35 focus-visible:ring-offset-2"
+                            aria-expanded="false" aria-controls="product-detail-description-body">
+                            <span class="product-detail-description-more inline-flex items-center justify-center gap-1.5">
+                                <span class="material-symbols-outlined text-[20px] leading-none transition-transform duration-200 group-hover:translate-y-0.5" aria-hidden="true">expand_more</span>
+                                Show more
+                            </span>
+                            <span class="product-detail-description-less hidden inline-flex items-center justify-center gap-1.5">
+                                <span class="material-symbols-outlined text-[20px] leading-none transition-transform duration-200 group-hover:-translate-y-0.5" aria-hidden="true">expand_less</span>
+                                Show less
+                            </span>
+                        </button>
                     </div>
 
                     {{-- Shipping and return policies (nằm dưới Product Details, vẫn trong right content) --}}
@@ -2349,6 +2364,58 @@ document.addEventListener('DOMContentLoaded', function() {
             closeReviewImageModal();
         }
     });
+
+    (function () {
+        var body = document.getElementById('product-detail-description-body');
+        var btn = document.getElementById('product-detail-description-toggle');
+        var fade = document.getElementById('product-detail-description-fade');
+        var more = btn ? btn.querySelector('.product-detail-description-more') : null;
+        var less = btn ? btn.querySelector('.product-detail-description-less') : null;
+        if (!body || !btn) return;
+
+        function applyCollapsed() {
+            body.classList.add('max-h-[8.5rem]', 'overflow-hidden');
+            body.classList.remove('max-h-none');
+        }
+        function applyExpanded() {
+            body.classList.remove('max-h-[8.5rem]', 'overflow-hidden');
+            body.classList.add('max-h-none');
+        }
+        function setFade(show) {
+            if (!fade) return;
+            fade.classList.toggle('opacity-0', !show);
+            fade.classList.toggle('opacity-100', !!show);
+        }
+        function setExpanded(expanded) {
+            btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            if (more) more.classList.toggle('hidden', expanded);
+            if (less) less.classList.toggle('hidden', !expanded);
+            if (expanded) {
+                applyExpanded();
+                setFade(false);
+            } else {
+                applyCollapsed();
+                setFade(true);
+            }
+        }
+
+        requestAnimationFrame(function () {
+            applyCollapsed();
+            if (body.scrollHeight > body.clientHeight + 2) {
+                btn.classList.remove('hidden');
+                setFade(true);
+            } else {
+                applyExpanded();
+                btn.classList.add('hidden');
+                setFade(false);
+            }
+        });
+
+        btn.addEventListener('click', function () {
+            var expanded = btn.getAttribute('aria-expanded') === 'true';
+            setExpanded(!expanded);
+        });
+    })();
 });
 </script>
 @endsection

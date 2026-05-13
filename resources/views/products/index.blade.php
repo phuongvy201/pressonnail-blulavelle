@@ -146,10 +146,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 <a href="{{ route('products.index') }}" class="inline-flex items-center px-6 py-3 bg-primary text-white rounded-lg font-bold hover:opacity-90 transition-opacity">View All</a>
             </div>
             @else
-            <div class="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-8 sm:gap-x-8 sm:gap-y-12">
+            @php
+                $gridProductCount = $products->count();
+                $fillerCellsLg = $gridProductCount > 0 ? (3 - ($gridProductCount % 3)) % 3 : 0;
+            @endphp
+            <div class="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-8 sm:gap-x-8 sm:gap-y-12">
                 @foreach($products as $product)
                     <x-product-card :product="$product" :show-quick-view="true" />
                 @endforeach
+                @for($f = 0; $f < $fillerCellsLg; $f++)
+                    <div class="hidden lg:block min-h-0 pointer-events-none" aria-hidden="true"></div>
+                @endfor
             </div>
 
             {{-- Load more / Pagination --}}
