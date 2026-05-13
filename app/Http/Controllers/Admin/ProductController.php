@@ -2391,6 +2391,7 @@ class ProductController extends Controller
         ];
 
         $csvData[] = $header;
+        $columnIndex = array_flip($header);
 
         // Helper function to validate and format fields
         $formatField = function ($value, $maxLength = null) {
@@ -2756,6 +2757,7 @@ class ProductController extends Controller
         ];
 
         $csvData[] = $header;
+        $columnIndex = array_flip($header);
 
         $formatField = function ($value, $maxLength = null) {
             if (empty($value)) {
@@ -2882,56 +2884,34 @@ class ProductController extends Controller
             $gender = $product->gender ? $validateGender($product->gender) : 'female';
             $ageGroup = $product->age_group ? $validateAgeGroup($product->age_group) : 'adult';
 
-            $row = [
-                '',
-                $skuId,
-                $formatField($product->name, 200),
-                $description,
-                $quantity > 0 ? 'in stock' : 'out of stock',
-                'new',
-                number_format((float) $basePrice, 2, '.', '') . ' USD',
-                $productLink,
-                $imageLink,
-                $videoUrl,
-                $formatField('Bluprinter', 100),
-                $additionalImageLink,
-                $ageGroup,
-                $formatField($product->color ?? '', 100),
-                $gender,
-                '',
-                $formatField(
-                    $product->google_product_category
-                    ?? 'health & beauty > beauty > nail care > artificial nails & accessories > manicure tool sets',
-                    750
-                ),
-                $formatField($product->material ?? 'stainless steel', 200),
-                $formatField($product->pattern ?? 'graphic', 100),
-                $formatField(optional(optional($product->template)->category)->name ?? '', 750),
-                '',
-                '',
-                $formatField($product->shipping ?? 'US::USPS:5.99 USD', 200),
-                $formatField($product->shipping_weight ?? '200g', 50),
-                '',
-                $formatField($product->mpn ?? '', 100),
-                $formatField($product->size ?? 'S (15/11/12/11/9mm)', 100),
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                $formatField(optional($product->collections->first())->name ?? '', 100),
-                '',
-                '',
-                '',
-                '',
-            ];
+            $row = array_fill(0, count($header), '');
+            $row[$columnIndex['sku_id']] = $skuId;
+            $row[$columnIndex['title']] = $formatField($product->name, 200);
+            $row[$columnIndex['description']] = $description;
+            $row[$columnIndex['availability']] = $quantity > 0 ? 'in stock' : 'out of stock';
+            $row[$columnIndex['condition']] = 'new';
+            $row[$columnIndex['price']] = number_format((float) $basePrice, 2, '.', '') . ' USD';
+            $row[$columnIndex['link']] = $productLink;
+            $row[$columnIndex['image_link']] = $imageLink;
+            $row[$columnIndex['video_link']] = $videoUrl;
+            $row[$columnIndex['brand']] = $formatField('Bluprinter', 100);
+            $row[$columnIndex['additional_image_link']] = $additionalImageLink;
+            $row[$columnIndex['age_group']] = $ageGroup;
+            $row[$columnIndex['color']] = $formatField($product->color ?? '', 100);
+            $row[$columnIndex['gender']] = $gender;
+            $row[$columnIndex['google_product_category']] = $formatField(
+                $product->google_product_category
+                ?? 'health & beauty > beauty > nail care > artificial nails & accessories > manicure tool sets',
+                750
+            );
+            $row[$columnIndex['material']] = $formatField($product->material ?? 'stainless steel', 200);
+            $row[$columnIndex['pattern']] = $formatField($product->pattern ?? 'graphic', 100);
+            $row[$columnIndex['product_type']] = $formatField(optional(optional($product->template)->category)->name ?? '', 750);
+            $row[$columnIndex['shipping']] = $formatField($product->shipping ?? 'US::USPS:5.99 USD', 200);
+            $row[$columnIndex['shipping_weight']] = $formatField($product->shipping_weight ?? '200g', 50);
+            $row[$columnIndex['mpn']] = $formatField($product->mpn ?? '', 100);
+            $row[$columnIndex['size']] = $formatField($product->size ?? 'S (15/11/12/11/9mm)', 100);
+            $row[$columnIndex['custom_label_0']] = $formatField(optional($product->collections->first())->name ?? '', 100);
 
             $csvData[] = $row;
         }
