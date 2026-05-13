@@ -128,7 +128,7 @@
     
     
     @if($metaPixelId)
-        {{-- Pixel Meta: táº£i sau tÆ°Æ¡ng tÃ¡c / idle â€” giáº£m táº£i main thread; fbevents.js váº«n lÃ  bundle legacy cá»§a Meta (khÃ´ng chá»‰nh Ä‘Æ°á»£c). --}}
+        {{-- Pixel Meta: load ngay (fbq stub + fbevents.js async) --}}
         <script>
         (function () {
             var id = @json($metaPixelId);
@@ -145,21 +145,7 @@
                 fbq('init', id);
                 fbq('track', 'PageView');
             }
-            if ('requestIdleCallback' in window) {
-                if (window.__runAfterInteraction) {
-                    window.__runAfterInteraction(function () {
-                        window.requestIdleCallback(boot, { timeout: 4000 });
-                    });
-                } else {
-                    window.requestIdleCallback(boot, { timeout: 4000 });
-                }
-            } else {
-                if (window.__runAfterInteraction) {
-                    window.__runAfterInteraction(boot);
-                } else {
-                    window.addEventListener('load', function () { setTimeout(boot, 0); }, { once: true });
-                }
-            }
+            boot();
         })();
         </script>
         <noscript><img height="1" width="1" style="display:none"

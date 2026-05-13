@@ -11,7 +11,12 @@
     $itemsSum = (float) ($order->items?->sum('total_price') ?? 0);
     $orderSubtotal = (float) ($order->subtotal ?? 0);
     $bulkDiscount = max(0, $itemsSum - $orderSubtotal);
-    $shouldTrackPurchase = ($order->payment_status ?? '') === 'paid';
+    {{-- Purchase (Pixel/GA/TikTok): bắn khi đơn đã lên thank-you. "pending"/"processing" vẫn có vì checkout/index đôi khi redirect success trước khi DB kịp "paid". --}}
+    $shouldTrackPurchase = in_array(
+        (string) ($order->payment_status ?? ''),
+        ['paid', 'pending', 'processing'],
+        true
+    );
     $logClientPurchaseTracking = config('app.debug')
         || filter_var(env('LOG_CLIENT_PURCHASE_TRACKING', false), FILTER_VALIDATE_BOOLEAN);
     $__googleAdsPurchaseSendTo = \App\Support\Settings::get(
@@ -20,6 +25,8 @@
     );
     $__googleAdsPurchaseSendTo = is_string($__googleAdsPurchaseSendTo) ? trim($__googleAdsPurchaseSendTo) : '';
     $__googleAdsPurchaseSendTo = $__googleAdsPurchaseSendTo !== '' ? $__googleAdsPurchaseSendTo : null;
+    $__metaPixelId = trim((string) \App\Support\Settings::get('analytics.meta_pixel_id', config('services.meta.pixel_id') ?? ''));
+    $__metaPixelConfigured = $__metaPixelId !== '';
     $gaItems = $order->items->map(function ($item, $index) {
         $product = $item->product;
         $categoryName = $product
@@ -90,7 +97,12 @@ document.addEventListener('DOMContentLoaded', function () {
             pushed.dataLayer = true;
         }
 
-        if (typeof fbq !== 'undefined') {
+        const __metaPixelConfigured = @json($__metaPixelConfigured);
+        var __metaPurchaseSent = false;
+
+        function trackMetaPurchase() {
+            if (__metaPurchaseSent) return true;
+            if (typeof fbq === 'undefined') return false;
             try {
                 fbq('track', 'Purchase', {
                     content_ids: productIds,
@@ -100,14 +112,58 @@ document.addEventListener('DOMContentLoaded', function () {
                     transaction_id: transactionId,
                     num_items: {{ (int) $order->items->count() }}
                 }, { eventID: transactionId });
+                __metaPurchaseSent = true;
                 pushed.facebook = true;
+                return true;
             } catch (e) {
                 console.error(e);
+                return false;
             }
         }
 
-        localStorage.removeItem('cart');
-        window.dispatchEvent(new CustomEvent('cartUpdated'));
+        function logPurchaseAndMarkSent() {
+            if (__logPurchase) {
+                console.info('[PressOnNail purchase]', 'Đã đẩy / queue sự kiện (kiểm tra Network: collect, google, facebook)', {
+                    transactionId,
+                    value: purchaseValue,
+                    tax,
+                    shipping,
+                    currency,
+                    itemCount: gaItems.length,
+                    channels: pushed,
+                    dataLayerLength: typeof dataLayer !== 'undefined' ? dataLayer.length : null
+                });
+            }
+            sessionStorage.setItem('ga_purchase_' + transactionId, '1');
+        }
+
+        function waitForFbqThenTrack() {
+            if (!__metaPixelConfigured) {
+                logPurchaseAndMarkSent();
+                return;
+            }
+            if (trackMetaPurchase()) {
+                logPurchaseAndMarkSent();
+                return;
+            }
+            var polls = 0;
+            var maxPolls = 120;
+            var intervalMs = 100;
+            var t = setInterval(function () {
+                if (trackMetaPurchase()) {
+                    clearInterval(t);
+                    logPurchaseAndMarkSent();
+                    return;
+                }
+                if (++polls >= maxPolls) {
+                    clearInterval(t);
+                    if (__logPurchase) {
+                        console.warn('[PressOnNail purchase]', 'fbq chưa sẵn sàng sau ~' + (maxPolls * intervalMs / 1000) + 's — Pixel được load trễ trong layout (idle/interaction). Kiểm tra META_PIXEL_ID và mạng.', { transactionId });
+                    }
+                    logPurchaseAndMarkSent();
+                }
+            }, intervalMs);
+        }
 
         if (typeof gtag === 'function') {
             try {
@@ -149,27 +205,17 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
-        if (__logPurchase) {
-            console.info('[PressOnNail purchase]', 'Đã đẩy / queue sự kiện (kiểm tra Network: collect, google, facebook)', {
-                transactionId,
-                value: purchaseValue,
-                tax,
-                shipping,
-                currency,
-                itemCount: gaItems.length,
-                channels: pushed,
-                dataLayerLength: typeof dataLayer !== 'undefined' ? dataLayer.length : null
-            });
-        }
+        localStorage.removeItem('cart');
+        window.dispatchEvent(new CustomEvent('cartUpdated'));
 
-        sessionStorage.setItem('ga_purchase_' + transactionId, '1');
+        waitForFbqThenTrack();
     })();
 });
 </script>
 @elseif($logClientPurchaseTracking)
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    console.info('[PressOnNail purchase]', 'Không gửi tracking — đơn chưa paid', {
+    console.info('[PressOnNail purchase]', 'Không gửi tracking — payment_status không nằm trong paid/pending/processing', {
         order_number: @json($order->order_number),
         payment_status: @json($order->payment_status ?? null)
     });
