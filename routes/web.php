@@ -18,6 +18,7 @@ use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\Admin\AnalyticsSettingsController;
 use App\Http\Controllers\Admin\BulkDiscountSettingsController;
+use App\Http\Controllers\Admin\AffiliateProgramSettingsController;
 use App\Http\Controllers\Admin\ShopController as AdminShopController;
 use App\Http\Controllers\Admin\PageController as AdminPageController;
 use App\Http\Controllers\Seller\SellerDashboardController;
@@ -37,23 +38,19 @@ use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\Admin\ShippingZoneController;
 use App\Http\Controllers\Admin\ShippingRateController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Cache\RateLimiting\Limit;
 use App\Http\Controllers\Customer\ReturnRequestController;
 use App\Http\Controllers\ReviewListingController;
 use App\Http\Controllers\PublicMediaResizeController;
 use App\Http\Controllers\TelegramWebhookController;
 
-RateLimiter::for('register', function (Request $request) {
-    return Limit::perMinute(5)->by($request->ip());
-});
-
 use App\Http\Controllers\SupportController;
 use App\Http\Controllers\BulkOrderController;
 use App\Http\Controllers\PromoCodeController;
+use App\Http\Controllers\Admin\AffiliateApplicationAdminController;
+use App\Http\Controllers\Admin\AffiliateController;
+use App\Http\Controllers\Admin\AffiliateSampleRequestAdminController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\SellerApplicationController;
 use App\Http\Controllers\Admin\SellerApplicationAdminController;
@@ -608,7 +605,14 @@ Route::middleware('auth')->group(function () {
         Route::post('shipping-rates/{shippingRate}/set-default', [ShippingRateController::class, 'setDefault'])->name('shipping-rates.set-default');
         Route::post('shipping-rates/{shippingRate}/unset-default', [ShippingRateController::class, 'unsetDefault'])->name('shipping-rates.unset-default');
 
+        Route::get('promo-codes/suggest-code', [App\Http\Controllers\Admin\PromoCodeController::class, 'suggestCode'])
+            ->name('promo-codes.suggest-code');
         Route::resource('promo-codes', App\Http\Controllers\Admin\PromoCodeController::class);
+        Route::get('affiliates/analytics', [\App\Http\Controllers\Admin\AffiliateAdminAnalyticsController::class, 'index'])
+            ->name('affiliates.analytics.index');
+        Route::get('affiliates/{affiliate}/analytics', [\App\Http\Controllers\Admin\AffiliateAdminAnalyticsController::class, 'show'])
+            ->name('affiliates.analytics.show');
+        Route::resource('affiliates', AffiliateController::class)->except(['show']);
         Route::get('gift-cards', [App\Http\Controllers\Admin\GiftCardController::class, 'index'])->name('gift-cards.index');
         Route::get('gift-cards/create', [App\Http\Controllers\Admin\GiftCardController::class, 'create'])->name('gift-cards.create');
         Route::post('gift-cards', [App\Http\Controllers\Admin\GiftCardController::class, 'store'])->name('gift-cards.store');
@@ -623,6 +627,9 @@ Route::middleware('auth')->group(function () {
         // Pricing settings: quantity/bulk discounts
         Route::get('settings/bulk-discounts', [BulkDiscountSettingsController::class, 'edit'])->name('settings.bulk-discounts.edit');
         Route::put('settings/bulk-discounts', [BulkDiscountSettingsController::class, 'update'])->name('settings.bulk-discounts.update');
+
+        Route::get('settings/affiliate-program', [AffiliateProgramSettingsController::class, 'edit'])->name('settings.affiliate-program.edit');
+        Route::put('settings/affiliate-program', [AffiliateProgramSettingsController::class, 'update'])->name('settings.affiliate-program.update');
 
         // Return Requests (Refund/Exchange)
         Route::get('returns', [AdminReturnRequestController::class, 'index'])->name('returns.index');
@@ -640,6 +647,19 @@ Route::middleware('auth')->group(function () {
         Route::get('seller-applications/{sellerApplication}', [SellerApplicationAdminController::class, 'show'])->name('seller-applications.show');
         Route::post('seller-applications/{sellerApplication}/approve', [SellerApplicationAdminController::class, 'approve'])->name('seller-applications.approve');
         Route::post('seller-applications/{sellerApplication}/reject', [SellerApplicationAdminController::class, 'reject'])->name('seller-applications.reject');
+
+        // KOC / Affiliate applications (creator portal)
+        Route::get('affiliate-applications', [AffiliateApplicationAdminController::class, 'index'])->name('affiliate-applications.index');
+        Route::get('affiliate-applications/{affiliateApplication}', [AffiliateApplicationAdminController::class, 'show'])->name('affiliate-applications.show');
+        Route::post('affiliate-applications/{affiliateApplication}/approve', [AffiliateApplicationAdminController::class, 'approve'])->name('affiliate-applications.approve');
+        Route::post('affiliate-applications/{affiliateApplication}/reject', [AffiliateApplicationAdminController::class, 'reject'])->name('affiliate-applications.reject');
+
+        Route::get('sample-requests', [AffiliateSampleRequestAdminController::class, 'index'])->name('sample-requests.index');
+        Route::get('sample-requests/{sampleRequest}', [AffiliateSampleRequestAdminController::class, 'show'])->name('sample-requests.show');
+        Route::post('sample-requests/{sampleRequest}/approve', [AffiliateSampleRequestAdminController::class, 'approve'])->name('sample-requests.approve');
+        Route::post('sample-requests/{sampleRequest}/reject', [AffiliateSampleRequestAdminController::class, 'reject'])->name('sample-requests.reject');
+        Route::post('sample-requests/{sampleRequest}/ship', [AffiliateSampleRequestAdminController::class, 'ship'])->name('sample-requests.ship');
+        Route::post('sample-requests/{sampleRequest}/deliver', [AffiliateSampleRequestAdminController::class, 'deliver'])->name('sample-requests.deliver');
 
         // Content blocks API (inline edit trang chủ / trang tĩnh)
         Route::get('api/content-blocks', [App\Http\Controllers\Admin\ContentBlockController::class, 'index'])->name('api.content-blocks.index');
@@ -700,9 +720,16 @@ Route::middleware('auth')->group(function () {
         Route::post('products/feed-to-gmc', [AdminProductController::class, 'feedToGMC'])->name('products.feed-to-gmc');
         Route::post('products/bulk-delete', [AdminProductController::class, 'bulkDelete'])->name('products.bulk-delete');
         Route::post('products/bulk-add-to-collection', [AdminProductController::class, 'bulkAddToCollection'])->name('products.bulk-add-to-collection');
+        Route::post('products/bulk-affiliate-eligible', [AdminProductController::class, 'bulkAffiliateEligible'])->name('products.bulk-affiliate-eligible');
+        Route::post('products/bulk-affiliate-eligible-all-filtered', [AdminProductController::class, 'bulkAffiliateEligibleAllFiltered'])->name('products.bulk-affiliate-eligible-all-filtered');
+        Route::post('products/{product}/toggle-affiliate-eligible', [AdminProductController::class, 'toggleAffiliateEligible'])->name('products.toggle-affiliate-eligible');
+        Route::post('products/bulk-sample-request', [AdminProductController::class, 'bulkSampleRequest'])->name('products.bulk-sample-request');
+        Route::post('products/bulk-sample-request-all-filtered', [AdminProductController::class, 'bulkSampleRequestAllFiltered'])->name('products.bulk-sample-request-all-filtered');
+        Route::post('products/{product}/toggle-sample-request', [AdminProductController::class, 'toggleSampleRequest'])->name('products.toggle-sample-request');
         Route::post('products/{product}/duplicate', [AdminProductController::class, 'duplicate'])->name('products.duplicate');
         Route::post('products/export/meta', [AdminProductController::class, 'exportToMeta'])->name('products.export.meta');
         Route::post('products/export/tiktok', [AdminProductController::class, 'exportToTikTok'])->name('products.export.tiktok');
+        Route::post('products/export/pinterest', [AdminProductController::class, 'exportToPinterest'])->name('products.export.pinterest');
 
         // Products Resource Route (must be last to avoid conflicts)
         Route::resource('products', AdminProductController::class);

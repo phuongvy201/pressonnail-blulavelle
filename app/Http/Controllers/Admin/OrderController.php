@@ -89,7 +89,13 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
-        $order->load(['user', 'items.product.shop']);
+        $order->load([
+            'user',
+            'items.product.shop',
+            'affiliate:id,code,display_name,tier,user_id',
+            'affiliate.user:id,name,email',
+            'affiliateCommission',
+        ]);
 
         return view('admin.orders.show', compact('order'));
     }
@@ -100,26 +106,54 @@ class OrderController extends Controller
             'status' => 'required|in:pending,processing,shipped,delivered,cancelled',
             'payment_status' => 'required|in:pending,paid,failed,refunded',
             'tracking_number' => 'nullable|string|max:100',
-            'notes' => 'nullable|string|max:1000'
+            'notes' => 'nullable|string|max:1000',
+            'refund_amount' => 'nullable|numeric|min:0',
+            'refund_status' => 'nullable|in:pending,processing,completed,failed',
+            'dispute_status' => 'nullable|in:open,won,lost',
         ]);
 
         $previousTracking = trim((string) $order->tracking_number);
+        $newTracking = trim((string) $request->input('tracking_number', ''));
 
-        $order->update([
-            'status' => $request->status,
+        $orderStatus = $request->status;
+        if ($newTracking !== '') {
+            $orderStatus = 'shipped';
+        }
+
+        $payload = [
+            'status' => $orderStatus,
             'payment_status' => $request->payment_status,
-            'tracking_number' => $request->tracking_number,
-            'notes' => $request->notes
-        ]);
+            'tracking_number' => $newTracking !== '' ? $newTracking : null,
+            'notes' => $request->notes,
+        ];
+
+        if ($request->has('refund_amount')) {
+            $payload['refund_amount'] = $request->filled('refund_amount') ? $request->refund_amount : null;
+        }
+        if ($request->has('refund_status')) {
+            $payload['refund_status'] = $request->refund_status ?: null;
+        }
+        if ($request->has('dispute_status')) {
+            $dispute = $request->dispute_status ?: null;
+            $payload['dispute_status'] = $dispute;
+            if ($dispute === 'open' && ! $order->disputed_at) {
+                $payload['disputed_at'] = now();
+            }
+            if ($dispute === null) {
+                $payload['disputed_at'] = null;
+            }
+        }
+
+        $order->update($payload);
 
         // Nếu có tracking_number và đơn PayPal đã có capture_id, đẩy tracking sang PayPal
         $paypalTrackingSynced = null; // null = không gọi API, true/false = kết quả
-        if ($request->filled('tracking_number') && $order->payment_method === 'paypal' && $order->paypal_capture_id) {
+        if ($newTracking !== '' && $order->payment_method === 'paypal' && $order->paypal_capture_id) {
             $paypalTrackingSynced = false;
             try {
                 $paypalOrderId = $order->payment_id; // lưu order_id trong payment_id
                 $captureId = $order->paypal_capture_id;
-                $trackingNumber = $request->tracking_number;
+                $trackingNumber = $newTracking;
                 $carrier = 'OTHER'; // carrier mặc định, có thể thay đổi theo dữ liệu thực tế
 
                 $paypalService = new \App\Services\PayPalService();
@@ -137,7 +171,6 @@ class OrderController extends Controller
             }
         }
 
-        $newTracking = trim((string) $request->input('tracking_number', ''));
         $trackingJustSet = $newTracking !== ''
             && $newTracking !== $previousTracking;
 
@@ -161,6 +194,9 @@ class OrderController extends Controller
         // Stripe: bỏ xử lý push tracking (không dùng API tracking)
 
         $successParts = ['Order updated successfully!'];
+        if ($newTracking !== '' && $request->status !== 'shipped') {
+            $successParts[] = 'Trạng thái đơn đã chuyển thành Shipped.';
+        }
         if ($paypalTrackingSynced === true) {
             $successParts[] = 'Tracking đã được ghi nhận trên PayPal (HTTP 2xx — chi tiết trong log: PayPal Add Tracking OK).';
         }

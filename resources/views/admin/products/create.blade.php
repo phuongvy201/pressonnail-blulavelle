@@ -271,13 +271,26 @@
                     </div>
                     <div class="md:col-span-2">
                         <label class="flex items-start gap-3 rounded-lg border border-indigo-200 bg-indigo-50 p-3 cursor-pointer">
-                            <input type="checkbox" name="is_gift_card" value="1" {{ old('is_gift_card') ? 'checked' : '' }} class="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <input type="checkbox" name="is_gift_card" value="1" id="is_gift_card" {{ old('is_gift_card') ? 'checked' : '' }} class="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
                             <span>
                                 <span class="block text-sm font-semibold text-indigo-900">Gift Card product</span>
                                 <span class="block text-xs text-indigo-800">Mark this product as Gift Card. It will be treated as digital balance and excluded from shipping fee calculation.</span>
                             </span>
                         </label>
                     </div>
+                    <div class="md:col-span-2" id="affiliate_eligible_wrap">
+                        <label class="flex items-start gap-3 rounded-lg border border-rose-200 bg-rose-50 p-3 cursor-pointer">
+                            <input type="checkbox" name="affiliate_eligible" value="1" id="affiliate_eligible"
+                                   {{ old('affiliate_eligible') ? 'checked' : '' }}
+                                   class="mt-1 h-4 w-4 rounded border-gray-300 text-rose-600 focus:ring-rose-500">
+                            <span>
+                                <span class="block text-sm font-semibold text-rose-900">Affiliate eligible</span>
+                                <span class="block text-xs text-rose-800">Chỉ có hiệu lực khi SP đủ điều kiện hiển thị trên shop (active, ảnh, tồn kho). Gift card không thể bật.</span>
+                            </span>
+                        </label>
+                    </div>
+
+                    @include('admin.products.partials.sample-request-settings')
 
                     <!-- Shop Assignment (Admin Only) -->
                     @if(auth()->user()->hasRole('admin') && $shops)
@@ -842,8 +855,29 @@ function validateForm() {
     return true;
 }
 
+function syncAffiliateWithGiftCard() {
+    const gift = document.getElementById('is_gift_card');
+    const aff = document.getElementById('affiliate_eligible');
+    const wrap = document.getElementById('affiliate_eligible_wrap');
+    if (!gift || !aff) return;
+    if (gift.checked) {
+        aff.checked = false;
+        aff.disabled = true;
+        if (wrap) wrap.classList.add('opacity-50');
+    } else {
+        aff.disabled = false;
+        if (wrap) wrap.classList.remove('opacity-50');
+    }
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
+    const giftCard = document.getElementById('is_gift_card');
+    if (giftCard) {
+        giftCard.addEventListener('change', syncAffiliateWithGiftCard);
+        syncAffiliateWithGiftCard();
+    }
+
     // Load template if there's old value
     const templateId = document.getElementById('template_id').value;
     if (templateId) {

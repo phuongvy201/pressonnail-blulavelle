@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\AffiliateTier;
 use App\Services\ProductMediaKeywordsService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -252,6 +253,12 @@ class Product extends Model
         'status',
         'requires_special_handling',
         'is_gift_card',
+        'affiliate_eligible',
+        'sample_request_enabled',
+        'sample_min_tier',
+        'sample_max_quantity_per_request',
+        'sample_quota_per_affiliate',
+        'sample_requires_approval',
         'created_by',
         'api_token_id',
         // Meta fields for export
@@ -277,7 +284,83 @@ class Product extends Model
         'quantity' => 'integer',
         'requires_special_handling' => 'boolean',
         'is_gift_card' => 'boolean',
+        'affiliate_eligible' => 'boolean',
+        'sample_request_enabled' => 'boolean',
+        'sample_max_quantity_per_request' => 'integer',
+        'sample_quota_per_affiliate' => 'integer',
+        'sample_requires_approval' => 'boolean',
     ];
+
+    public function scopeAffiliateEligible($query)
+    {
+        return $query->where('affiliate_eligible', true);
+    }
+
+    public function scopeSampleRequestEnabled($query)
+    {
+        return $query->where('sample_request_enabled', true);
+    }
+
+    /** SP đủ điều kiện hiển thị trên storefront (dùng cho affiliate link / bật affiliate). */
+    public function isAvailableForDisplay(): bool
+    {
+        return static::query()->whereKey($this->getKey())->availableForDisplay()->exists();
+    }
+
+    /** Có thể bật affiliate: không gift card và đủ điều kiện hiển thị. */
+    public function canEnableAffiliate(): bool
+    {
+        return ! $this->is_gift_card && $this->isAvailableForDisplay();
+    }
+
+    /** Sản phẩm được tính hoa hồng affiliate (opt-in + đủ điều kiện hiển thị). */
+    public function isEligibleForAffiliateCommission(): bool
+    {
+        return (bool) $this->affiliate_eligible
+            && ! $this->is_gift_card
+            && $this->isAvailableForDisplay();
+    }
+
+    /** Có thể bật sample request: không gift card và đủ điều kiện hiển thị shop. */
+    public function canEnableSampleRequest(): bool
+    {
+        return ! $this->is_gift_card && $this->isAvailableForDisplay();
+    }
+
+    public function isSampleRequestEnabled(): bool
+    {
+        return (bool) $this->sample_request_enabled
+            && $this->canEnableSampleRequest();
+    }
+
+    public function isSampleEligibleForTier(string $affiliateTier): bool
+    {
+        if (! $this->isSampleRequestEnabled()) {
+            return false;
+        }
+
+        return AffiliateTier::meetsMinimum(
+            $affiliateTier,
+            $this->sample_min_tier ? AffiliateTier::normalize($this->sample_min_tier) : null
+        );
+    }
+
+    public function maxSampleQuantityPerRequest(): int
+    {
+        $productMax = $this->sample_max_quantity_per_request;
+        $globalMax = max(1, (int) config('affiliate.sample_max_quantity_per_request', 1));
+
+        if ($productMax !== null && (int) $productMax > 0) {
+            return max(1, (int) $productMax);
+        }
+
+        return $globalMax;
+    }
+
+    public function sampleMinTierLabel(): string
+    {
+        return AffiliateTier::label($this->sample_min_tier);
+    }
 
     // Relationships
     public function template(): BelongsTo
@@ -513,16 +596,18 @@ class Product extends Model
     /**
      * Scope: Chỉ lấy sản phẩm đủ điều kiện hiển thị
      * - Status = active
-     * - Shop tồn tại và active
+     * - Không có shop HOẶC shop active (SP catalog chính thường shop_id = null)
      * - Có quantity > 0 HOẶC có variants với quantity > 0
      * - Có media (từ product hoặc template)
      */
     public function scopeAvailableForDisplay($query)
     {
         return $query->where('products.status', 'active')
-            // Kiểm tra shop active
-            ->whereHas('shop', function ($q) {
-                $q->where('shop_status', 'active');
+            ->where(function ($q) {
+                $q->whereNull('products.shop_id')
+                    ->orWhereHas('shop', function ($shopQ) {
+                        $shopQ->where('shop_status', 'active');
+                    });
             })
             // Kiểm tra có quantity HOẶC có variants với quantity
             ->where(function ($q) {
@@ -564,18 +649,6 @@ class Product extends Model
 
         // Check variants
         return $this->variants()->where('quantity', '>', 0)->exists();
-    }
-
-    /**
-     * Check if product is available for display
-     */
-    public function isAvailableForDisplay(): bool
-    {
-        return $this->status === 'active'
-            && $this->shop
-            && $this->shop->shop_status === 'active'
-            && $this->hasStock()
-            && $this->hasMedia();
     }
 
     /**

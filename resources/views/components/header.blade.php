@@ -106,6 +106,9 @@
                         @if(auth()->user()->hasAnyRole(['admin', 'seller', 'ad-partner']))
                             <a href="{{ route('dashboard') }}" class="flex items-center px-4 py-2.5 text-base text-gray-700 hover:bg-gray-50">Dashboard</a>
                         @endif
+                        @if(auth()->user()->canAccessCreatorAffiliateFeatures())
+                            <a href="{{ \App\Support\CreatorPortal::dashboardUrl() }}" class="flex items-center px-4 py-2.5 text-base text-primary hover:bg-primary/5 font-medium">Creator dashboard</a>
+                        @endif
                         @if(!auth()->user()->hasVerifiedEmail())
                             <a href="{{ route('verification.notice') }}" class="flex items-center px-4 py-2.5 text-base text-orange-600 hover:bg-orange-50">Verify Email</a>
                         @endif

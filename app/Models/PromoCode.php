@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Carbon\Carbon;
 
 class PromoCode extends Model
@@ -17,6 +18,7 @@ class PromoCode extends Model
         'starts_at',
         'expires_at',
         'is_active',
+        'affiliate_id',
         'send_on_trigger',
     ];
 
@@ -28,10 +30,39 @@ class PromoCode extends Model
         'starts_at' => 'datetime',
         'expires_at' => 'datetime',
         'is_active' => 'boolean',
+        'affiliate_id' => 'integer',
     ];
 
+    public function affiliate(): BelongsTo
+    {
+        return $this->belongsTo(Affiliate::class);
+    }
+
     /**
-     * Kiểm tra code có hợp lệ không (trạng thái, thời hạn, số lần dùng).
+     * Generate a unique promo code (uppercase, avoids ambiguous chars 0/O, 1/I).
+     */
+    public static function generateUniqueCode(int $length = 8, int $maxAttempts = 25): string
+    {
+        $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        $charsMax = strlen($chars) - 1;
+
+        for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
+            $suffix = '';
+            for ($i = 0; $i < $length; $i++) {
+                $suffix .= $chars[random_int(0, $charsMax)];
+            }
+            $code = 'PON-' . $suffix;
+
+            if (!static::whereRaw('UPPER(TRIM(code)) = ?', [strtoupper($code)])->exists()) {
+                return $code;
+            }
+        }
+
+        throw new \RuntimeException('Could not generate a unique promo code.');
+    }
+
+    /**
+     * Whether the code is valid (active, within date range, under max uses).
      */
     public function isValid(): bool
     {
@@ -51,7 +82,7 @@ class PromoCode extends Model
     }
 
     /**
-     * Kiểm tra có áp dụng được cho đơn hàng (subtotal USD) không.
+     * Whether the code can be applied for the given cart subtotal (USD).
      */
     public function isValidForSubtotal(float $subtotalUsd): bool
     {
@@ -65,8 +96,7 @@ class PromoCode extends Model
     }
 
     /**
-     * Tính số tiền giảm (trả về USD).
-     * $subtotalUsd = subtotal của giỏ hàng tính bằng USD.
+     * Discount amount in USD for a cart subtotal in USD.
      */
     public function calculateDiscountUsd(float $subtotalUsd): float
     {

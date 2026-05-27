@@ -15,6 +15,7 @@ use App\Services\ShippingCalculator;
 use App\Services\TikTokEventsService;
 use App\Services\CurrencyService;
 use App\Services\GiftCardService;
+use App\Services\AffiliateAttributionService;
 use App\Mail\OrderConfirmation;
 use App\Services\PromoCodeSendService;
 use Illuminate\Http\Request;
@@ -78,7 +79,7 @@ class CheckoutController extends Controller
             return $item->getTotalPriceWithCustomizations();
         });
 
-        $cartContainsGiftCardProduct = $cartItems->contains(fn ($item) => (bool) optional($item->product)->is_gift_card);
+        $cartContainsGiftCardProduct = $cartItems->contains(fn($item) => (bool) optional($item->product)->is_gift_card);
         $cartHasPhysicalProduct = $discountEligibleSubtotal > 0;
         if ($cartContainsGiftCardProduct) {
             session()->forget(['applied_promo_code_id', 'applied_promo_code']);
@@ -133,7 +134,7 @@ class CheckoutController extends Controller
             'EUR' => 'DE'
         ];
         $defaultCountry = $currencyToCountry[$currency] ?? 'US';
-        
+
         $shippingCost = 0;
         $shippingDetails = session()->get('shipping_details');
 
@@ -509,7 +510,7 @@ class CheckoutController extends Controller
                     'payment_method' => $request->payment_method,
                     'is_ajax' => $isAjaxRequest
                 ]);
-                
+
                 if ($isAjaxRequest) {
                     return response()->json([
                         'success' => false,
@@ -553,14 +554,14 @@ class CheckoutController extends Controller
 
             // Calculate totals
             $subtotal = 0;
-            
+
             // PRIORITY: Use shipping_cost and shipping_zone_id from request if provided
             // This ensures we use the exact shipping cost calculated on the frontend based on selected country/zone
             $originalShippingCostUSD = null;
             $shippingZoneId = null;
             $shippingDetails = null;
             $useRequestShippingCost = false;
-            
+
             $requestShippingCost = $request->has('shipping_cost') && $request->shipping_cost !== null && $request->shipping_cost !== ''
                 ? (float) $request->shipping_cost
                 : null;
@@ -578,7 +579,7 @@ class CheckoutController extends Controller
                 $originalShippingCostUSD = $retentionFreeShipping ? 0.0 : $requestShippingCost;
                 $shippingZoneId = $request->shipping_zone_id ?? null;
                 $useRequestShippingCost = true;
-                
+
                 Log::info('🚚 Using shipping cost from request', [
                     'shipping_cost_usd' => $originalShippingCostUSD,
                     'shipping_zone_id' => $shippingZoneId,
@@ -586,7 +587,7 @@ class CheckoutController extends Controller
                     'retention_free_shipping' => $retentionFreeShipping,
                     'retention_popup_source' => $request->input('retention_popup_source'),
                 ]);
-                
+
                 // Still calculate shipping details for order items breakdown
                 // But use the zone_id from request if provided
                 $items = $cartItems->map(function ($item) {
@@ -598,12 +599,12 @@ class CheckoutController extends Controller
                 });
 
                 $calculator = new ShippingCalculator();
-                
+
                 // If we have zone_id from request, we need to find country from zone or use provided country
                 // For now, use the country from request and let calculator find the zone
                 // But we'll override the total_shipping with the value from request
                 $shippingDetails = $calculator->calculateShipping($items, $request->country);
-                
+
                 // Override total_shipping with the value from request
                 if ($shippingDetails['success']) {
                     $shippingDetails['total_shipping'] = $originalShippingCostUSD;
@@ -624,11 +625,11 @@ class CheckoutController extends Controller
                         'items' => [],
                         'is_default' => false
                     ];
-                    
+
                     // Distribute shipping cost evenly across items
                     $itemsCount = $cartItems->sum('quantity');
                     $costPerItem = $itemsCount > 0 ? ($originalShippingCostUSD / $itemsCount) : 0;
-                    
+
                     foreach ($cartItems as $cartItem) {
                         $shippingDetails['items'][] = [
                             'product_id' => $cartItem->product_id,
@@ -665,10 +666,10 @@ class CheckoutController extends Controller
                         return back()->withInput()->withErrors(['shipping' => $shippingDetails['message']]);
                     }
                 }
-                
+
                 $originalShippingCostUSD = $shippingDetails['total_shipping']; // Shipping cost in USD
                 $shippingZoneId = $shippingDetails['zone_id'] ?? null;
-                
+
                 Log::info('🚚 Calculated shipping cost from session/calculator', [
                     'shipping_cost_usd' => $originalShippingCostUSD,
                     'shipping_zone_id' => $shippingZoneId,
@@ -696,7 +697,7 @@ class CheckoutController extends Controller
                 return $item->getTotalPriceWithCustomizations();
             });
 
-            $cartContainsGiftCardProduct = $cartItems->contains(fn ($cartItem) => (bool) optional($cartItem->product)->is_gift_card);
+            $cartContainsGiftCardProduct = $cartItems->contains(fn($cartItem) => (bool) optional($cartItem->product)->is_gift_card);
             $cartHasPhysicalProduct = $discountEligibleSubtotal > 0;
 
             // Use the same discount mode logic as checkout index (volume OR promo).
@@ -744,10 +745,12 @@ class CheckoutController extends Controller
             $orderDiscount = 0.0;
             $orderPromoCode = null;
             $promoId = session('applied_promo_code_id');
+            $appliedPromoModel = null;
             $promoEligibleSubtotalUSD = $orderCurrency !== 'USD' ? ($discountEligibleSubtotal / $currencyRate) : $discountEligibleSubtotal;
             if (!$cartContainsGiftCardProduct && $discountMode === 'promo' && $promoId && $promoEligibleSubtotalUSD > 0) {
                 $promo = PromoCode::find($promoId);
                 if ($promo && $promo->isValidForSubtotal($promoEligibleSubtotalUSD)) {
+                    $appliedPromoModel = $promo;
                     $discountUsd = $promo->calculateDiscountUsd($promoEligibleSubtotalUSD);
                     $orderDiscount = $orderCurrency !== 'USD'
                         ? CurrencyService::convertFromUSDWithRate($discountUsd, $orderCurrency, $currencyRate)
@@ -755,6 +758,8 @@ class CheckoutController extends Controller
                     $orderPromoCode = $promo->code;
                 }
             }
+
+            $affiliateAttrs = app(AffiliateAttributionService::class)->buildOrderAttributes($request, $appliedPromoModel);
 
             $giftCardService = app(GiftCardService::class);
             $requestGiftCode = $giftCardService->normalizeCode((string) $request->input('gift_card_code', ''));
@@ -830,6 +835,9 @@ class CheckoutController extends Controller
             $order = Order::create([
                 'order_number' => Order::generateOrderNumber(),
                 'user_id' => Auth::id(),
+                'affiliate_id' => $affiliateAttrs['affiliate_id'],
+                'affiliate_attribution' => $affiliateAttrs['affiliate_attribution'],
+                'utm_snapshot' => $affiliateAttrs['utm_snapshot'],
                 'customer_name' => $request->customer_name,
                 'customer_email' => $request->customer_email,
                 'customer_phone' => $request->customer_phone,
@@ -882,8 +890,8 @@ class CheckoutController extends Controller
 
             // Calculate adjustment ratio if using shipping cost from request
             $calculatedTotalShipping = collect($shippingDetails['items'] ?? [])->sum('shipping_cost');
-            $adjustmentRatio = ($calculatedTotalShipping > 0 && $useRequestShippingCost) 
-                ? ($originalShippingCostUSD / $calculatedTotalShipping) 
+            $adjustmentRatio = ($calculatedTotalShipping > 0 && $useRequestShippingCost)
+                ? ($originalShippingCostUSD / $calculatedTotalShipping)
                 : 1.0;
 
             // Create order items with shipping details
@@ -893,7 +901,7 @@ class CheckoutController extends Controller
 
                 // Get item shipping cost in USD
                 // Apply adjustment ratio if using shipping cost from request
-                $itemShippingCostUSD = ($itemShipping && isset($itemShipping['shipping_cost'])) 
+                $itemShippingCostUSD = ($itemShipping && isset($itemShipping['shipping_cost']))
                     ? ($itemShipping['shipping_cost'] * $adjustmentRatio)
                     : 0;
 

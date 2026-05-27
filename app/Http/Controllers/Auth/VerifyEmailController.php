@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\AffiliateOnboardingDraft;
+use App\Support\CreatorPortal;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\RedirectResponse;
@@ -86,6 +88,11 @@ class VerifyEmailController extends Controller
      */
     private function redirectAfterVerification(User $user): RedirectResponse
     {
+        if (AffiliateOnboardingDraft::has(request())) {
+            return redirect()->to(CreatorPortal::url('/affiliate/apply/verify-email'))
+                ->with('success', 'Email verified. You can now submit your creator application.');
+        }
+
         // Redirect based on role
         if ($user->hasRole('admin')) {
             return redirect()->route('admin.dashboard')->with('verified', '1');

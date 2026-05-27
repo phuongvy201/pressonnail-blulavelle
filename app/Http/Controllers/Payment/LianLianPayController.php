@@ -1165,10 +1165,15 @@ class LianLianPayController extends Controller
                 $orderCurrency = $countryToCurrency[strtoupper($orderData['country'])] ?? 'USD';
             }
 
+            $affiliateAttrs = app(\App\Services\AffiliateAttributionService::class)->buildOrderAttributes(request(), null);
+
             // Create order
             $order = \App\Models\Order::create([
                 'user_id' => $userId,
                 'order_number' => 'ORD-' . strtoupper(uniqid()),
+                'affiliate_id' => $affiliateAttrs['affiliate_id'],
+                'affiliate_attribution' => $affiliateAttrs['affiliate_attribution'],
+                'utm_snapshot' => $affiliateAttrs['utm_snapshot'],
                 'customer_name' => $orderData['customer_name'],
                 'customer_email' => $orderData['customer_email'],
                 'customer_phone' => $orderData['customer_phone'],

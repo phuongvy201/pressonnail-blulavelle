@@ -1,8 +1,8 @@
-@extends('layouts.admin')
+@extends('layouts.app')
 
 @section('title', 'My Orders - Seller')
 
-@section('content')
+@push('styles')
 <style>
     .order-card {
         transition: all 0.3s ease;
@@ -96,9 +96,10 @@
         overflow: hidden;
     }
 </style>
+@endpush
 
-<div class="min-h-screen bg-gray-50 py-8">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+@section('content')
+@include('customer.profile.partials.account-wrap-open')
         <!-- Header -->
         <div class="order-header mb-8">
             <div class="flex items-center justify-between">
@@ -568,6 +569,5 @@
                 </div>
             @endif
         </div>
-    </div>
-</div>
+@include('customer.profile.partials.account-wrap-close')
 @endsection

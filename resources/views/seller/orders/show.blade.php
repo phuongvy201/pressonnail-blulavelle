@@ -1,8 +1,8 @@
-@extends('layouts.admin')
+@extends('layouts.app')
 
 @section('title', 'Order Details - Seller')
 
-@section('content')
+@push('styles')
 <style>
     .order-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -57,9 +57,10 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 </style>
+@endpush
 
-<div class="min-h-screen bg-gray-50 py-8">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+@section('content')
+@include('customer.profile.partials.account-wrap-open')
         <!-- Header -->
         <div class="mb-8">
             <div class="flex items-center justify-between">
@@ -362,6 +363,5 @@
                 </div>
             </div>
         </div>
-    </div>
-</div>
+@include('customer.profile.partials.account-wrap-close')
 @endsection

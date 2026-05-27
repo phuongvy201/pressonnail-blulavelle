@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Collection;
 use App\Models\Product;
+use App\Services\CollectionAutoAssignService;
+use App\Support\CollectionKeywordRules;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -98,11 +100,17 @@ class CollectionController extends Controller
             'products' => 'nullable|array',
             'products.*' => 'exists:products,id',
             'auto_rules' => 'nullable|array',
+            'match_keywords' => 'nullable|string|max:5000',
+            'keyword_auto_assign' => 'nullable|boolean',
         ]);
 
-        $data = $request->all();
+        $data = $request->except(['image', 'products', 'match_keywords', 'keyword_auto_assign', 'auto_rules']);
         $data['user_id'] = auth()->id();
         $data['slug'] = Collection::generateSlug($request->name);
+        $data['auto_rules'] = CollectionKeywordRules::buildFromRequest(
+            CollectionKeywordRules::isCheckboxChecked($request->input('keyword_auto_assign')),
+            (string) $request->input('match_keywords', '')
+        );
 
         // Set shop_id if user has shop
         if (auth()->user()->hasShop()) {
@@ -128,8 +136,16 @@ class CollectionController extends Controller
             $collection->products()->attach($request->products);
         }
 
+        $success = 'Collection created successfully! 🎉';
+        if ($collection->keywordAutoAssignEnabled()) {
+            $stats = app(CollectionAutoAssignService::class)->syncCollection($collection);
+            if ($stats['attached'] > 0) {
+                $success .= " Auto-added {$stats['attached']} product(s) by keywords.";
+            }
+        }
+
         return redirect()->route('admin.collections.index')
-            ->with('success', 'Collection created successfully! 🎉');
+            ->with('success', $success);
     }
 
     /**
@@ -195,9 +211,16 @@ class CollectionController extends Controller
             'products' => 'nullable|array',
             'products.*' => 'exists:products,id',
             'auto_rules' => 'nullable|array',
+            'match_keywords' => 'nullable|string|max:5000',
+            'keyword_auto_assign' => 'nullable|boolean',
         ]);
 
-        $data = $request->except(['image']);
+        $data = $request->except(['image', 'products', 'match_keywords', 'keyword_auto_assign', 'auto_rules']);
+        $data['auto_rules'] = CollectionKeywordRules::buildFromRequest(
+            CollectionKeywordRules::isCheckboxChecked($request->input('keyword_auto_assign')),
+            (string) $request->input('match_keywords', ''),
+            is_array($collection->auto_rules) ? $collection->auto_rules : null
+        );
 
         // Update slug if name changed
         if ($request->name !== $collection->name) {
@@ -259,8 +282,17 @@ class CollectionController extends Controller
             }
         }
 
+        $success = 'Collection updated successfully! 🎉';
+        $collection->refresh();
+        if ($collection->keywordAutoAssignEnabled()) {
+            $stats = app(CollectionAutoAssignService::class)->syncCollection($collection);
+            if ($stats['attached'] > 0) {
+                $success .= " Auto-added {$stats['attached']} product(s) by keywords.";
+            }
+        }
+
         return redirect()->route('admin.collections.index')
-            ->with('success', 'Collection updated successfully! 🎉');
+            ->with('success', $success);
     }
 
     /**

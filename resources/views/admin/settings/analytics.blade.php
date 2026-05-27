@@ -7,7 +7,7 @@
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900 mb-2">Cấu hình Tracking & Pixels</h1>
                     <p class="text-gray-600">
-                        Thay đổi ID tích hợp (Meta Pixel, TikTok Pixel, Google Tag Manager, Google Ads) trực tiếp trong admin.
+                        Thay đổi ID tích hợp (Meta Pixel, TikTok Pixel, Pinterest Tag, Google Tag Manager, Google Ads) trực tiếp trong admin.
                         Để trống một trường sẽ quay về giá trị mặc định đang cấu hình trong hệ thống.
                     </p>
                 </div>
@@ -84,6 +84,56 @@
                         @enderror
                         <p class="mt-2 text-xs text-gray-500">
                             Để trống nếu đang chạy sự kiện live.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label for="pinterest_tag_id" class="block text-sm font-semibold text-gray-900 mb-1">
+                            Pinterest Tag ID
+                        </label>
+                        <input
+                            type="text"
+                            name="pinterest_tag_id"
+                            id="pinterest_tag_id"
+                            inputmode="numeric"
+                            pattern="[0-9]*"
+                            value="{{ old('pinterest_tag_id', $settings['pinterest_tag_id']) }}"
+                            placeholder="{{ $defaults['pinterest_tag_id'] }}"
+                            class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
+                        >
+                        @error('pinterest_tag_id')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                        <p class="mt-2 text-xs text-gray-500">
+                            Lấy trong <strong>Pinterest Ads → Conversions → Pinterest Tag</strong> (chỉ số).
+                        </p>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                name="pinterest_test_mode"
+                                value="1"
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                @checked(old('pinterest_test_mode', $settings['pinterest_test_mode']) === '1')
+                            >
+                            <span class="text-sm font-medium text-gray-900">Pinterest — chế độ debug (log sự kiện ra Console)</span>
+                        </label>
+                        <p class="mt-2 text-xs text-gray-500">
+                            Bật khi kiểm tra bằng Pinterest Tag Helper hoặc Events Manager.
+                        </p>
+                    </div>
+
+                    <div class="md:col-span-2 rounded-xl border border-red-100 bg-red-50/60 px-4 py-3">
+                        <p class="text-sm font-semibold text-gray-900 mb-1">Sự kiện Pinterest conversion (tự động trên shop)</p>
+                        <ul class="text-xs text-gray-600 list-disc list-inside space-y-0.5">
+                            <li><code>pagevisit</code> — catalog / trang sản phẩm</li>
+                            <li><code>addtocart</code> — thêm vào giỏ (trang SP)</li>
+                            <li><code>checkout</code> — trang cảm ơn sau đặt hàng thành công (không gửi ở form checkout)</li>
+                        </ul>
+                        <p class="mt-2 text-xs text-gray-500">
+                            Xác minh trong Pinterest Ads → Conversions → Events.
                         </p>
                     </div>
 

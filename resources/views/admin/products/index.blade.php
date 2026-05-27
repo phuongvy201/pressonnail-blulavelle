@@ -11,7 +11,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
             <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Products</h1>
-            <p class="mt-1 text-sm text-gray-600">Manage products created from templates</p>
+            <p class="mt-1 text-sm text-gray-600">Affiliate chỉ bật được khi SP <strong>đủ điều kiện hiển thị</strong> trên shop (active, ảnh, tồn kho, shop hợp lệ).</p>
         </div>
         <div class="mt-4 sm:mt-0 flex flex-wrap items-center gap-3">
             <!-- Bulk Delete Button (Hidden by default) -->
@@ -35,6 +35,35 @@
                 Thêm vào collection (<span id="collectionBulkSelectedCount">0</span>)
             </button>
             @endif
+
+            <button type="button" id="bulkAffiliateOnBtn" onclick="bulkSetAffiliateEligible(true)"
+                    style="display: none;"
+                    class="inline-flex items-center whitespace-nowrap shrink-0 px-4 py-2 bg-rose-600 text-white text-sm font-medium rounded-lg hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500 transition-colors shadow-md"
+                    title="Bật affiliate cho các sản phẩm đã chọn">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                </svg>
+                Bật Affiliate (<span id="affiliateBulkSelectedCount">0</span>)
+            </button>
+            <button type="button" id="bulkAffiliateOffBtn" onclick="bulkSetAffiliateEligible(false)"
+                    style="display: none;"
+                    class="inline-flex items-center whitespace-nowrap shrink-0 px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors shadow-md"
+                    title="Tắt affiliate cho các sản phẩm đã chọn">
+                Tắt Affiliate (<span id="affiliateBulkOffCount">0</span>)
+            </button>
+
+            <button type="button" id="bulkSampleOnBtn" onclick="bulkSetSampleRequest(true)"
+                    style="display: none;"
+                    class="inline-flex items-center whitespace-nowrap shrink-0 px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 transition-colors shadow-md"
+                    title="Bật sample request cho các sản phẩm đã chọn">
+                Bật Sample (<span id="sampleBulkOnCount">0</span>)
+            </button>
+            <button type="button" id="bulkSampleOffBtn" onclick="bulkSetSampleRequest(false)"
+                    style="display: none;"
+                    class="inline-flex items-center whitespace-nowrap shrink-0 px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors shadow-md"
+                    title="Tắt sample request cho các sản phẩm đã chọn">
+                Tắt Sample (<span id="sampleBulkOffCount">0</span>)
+            </button>
             
             <!-- Export GMC File Button (Hidden by default) -->
             <button id="feedToGMCBtn" onclick="feedToGMC()" 
@@ -69,6 +98,17 @@
                 </svg>
                 Export to TikTok (<span id="tiktokSelectedCount">0</span>)
             </button>
+
+            <!-- Export to Pinterest Button (Hidden by default) -->
+            <button id="exportToPinterestBtn" onclick="exportToPinterest()"
+                    style="display: none;"
+                    class="inline-flex items-center whitespace-nowrap shrink-0 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors shadow-md"
+                    title="Export selected products to Pinterest Catalog format (CSV)">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.402.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.357-.629-2.746-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/>
+                </svg>
+                Export to Pinterest (<span id="pinterestSelectedCount">0</span>)
+            </button>
             
             <a id="headerImportProductsBtn" href="{{ route('admin.products.import') }}" 
                class="inline-flex items-center whitespace-nowrap shrink-0 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-md">
@@ -90,35 +130,13 @@
     <!-- Filters Section - Compact -->
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
         <form method="GET" action="{{ route('admin.products.index') }}" id="filterForm">
+            <input type="hidden" name="per_page" value="{{ request('per_page', $perPage ?? 12) }}">
             <div class="flex items-center gap-3 p-3">
                 <!-- Search -->
                 <div class="flex-1 min-w-[200px]">
                     <input type="text" name="search" value="{{ request('search') }}" 
                            placeholder="Search..."
                            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
-                </div>
-
-                <!-- Per Page -->
-                <div class="w-28">
-                    <select name="per_page" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
-                        @foreach([12, 25, 50, 100, 200, 500] as $size)
-                            <option value="{{ $size }}" {{ (int)request('per_page', $perPage ?? 12) === $size ? 'selected' : '' }}>
-                                {{ $size }}/page
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <!-- Category -->
-                <div class="w-48">
-                    <select name="category_id" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">All Categories</option>
-                        @foreach($categories as $category)
-                            <option value="{{ $category->id }}" {{ request('category_id') == $category->id ? 'selected' : '' }}>
-                                {{ $category->name }}
-                            </option>
-                        @endforeach
-                    </select>
                 </div>
 
                 <!-- Template -->
@@ -133,19 +151,22 @@
                     </select>
                 </div>
 
-                <!-- Shop (Admin only) -->
-                @if(auth()->user()->hasRole('admin') && $shops)
-                <div class="w-48">
-                    <select name="shop_id" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">All Shops</option>
-                        @foreach($shops as $shop)
-                            <option value="{{ $shop->id }}" {{ request('shop_id') == $shop->id ? 'selected' : '' }}>
-                                {{ Str::limit($shop->shop_name, 25) }}
-                            </option>
-                        @endforeach
+                <!-- Affiliate eligible -->
+                <div class="w-40">
+                    <select name="affiliate_eligible" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Affiliate: All</option>
+                        <option value="1" {{ request('affiliate_eligible') === '1' ? 'selected' : '' }}>Affiliate ON</option>
+                        <option value="0" {{ request('affiliate_eligible') === '0' ? 'selected' : '' }}>Affiliate OFF</option>
                     </select>
                 </div>
-                @endif
+
+                <div class="w-40">
+                    <select name="sample_request_enabled" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-violet-500 focus:border-violet-500">
+                        <option value="">Sample: All</option>
+                        <option value="1" {{ request('sample_request_enabled') === '1' ? 'selected' : '' }}>Sample ON</option>
+                        <option value="0" {{ request('sample_request_enabled') === '0' ? 'selected' : '' }}>Sample OFF</option>
+                    </select>
+                </div>
 
                 <!-- Collection -->
                 <div class="w-48">
@@ -168,7 +189,7 @@
                         </svg>
                         Filter
                     </button>
-                    @if(request()->anyFilled(['category_id', 'template_id', 'shop_id', 'collection_id', 'search']))
+                    @if(request()->anyFilled(['template_id', 'collection_id', 'search', 'affiliate_eligible', 'sample_request_enabled']))
                         <a href="{{ route('admin.products.index') }}" 
                            class="inline-flex items-center px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -193,12 +214,38 @@
                         class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md bg-gray-100 text-gray-900 border border-gray-300 hover:bg-gray-200 transition-colors">
                     TikTok — {{ $products->total() }} SP
                 </button>
+                <button type="button" onclick="exportAllFilteredToPinterest()"
+                        class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md bg-red-50 text-red-800 border border-red-200 hover:bg-red-100 transition-colors">
+                    Pinterest — {{ $products->total() }} SP
+                </button>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 px-3 pb-3 border-t border-gray-100 pt-2.5">
+                <span class="text-xs text-gray-600 shrink-0">Affiliate <strong>hàng loạt</strong> (tất cả khớp bộ lọc, không giới hạn 500/trang):</span>
+                <button type="button" onclick="bulkAffiliateAllFiltered(true)"
+                        class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md bg-rose-50 text-rose-800 border border-rose-200 hover:bg-rose-100 transition-colors">
+                    Bật Affiliate — {{ $products->total() }} SP
+                </button>
+                <button type="button" onclick="bulkAffiliateAllFiltered(false)"
+                        class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 transition-colors">
+                    Tắt Affiliate — {{ $products->total() }} SP
+                </button>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 px-3 pb-3 border-t border-gray-100 pt-2.5">
+                <span class="text-xs text-gray-600 shrink-0">Sample <strong>hàng loạt</strong> (tất cả khớp bộ lọc, không giới hạn theo trang):</span>
+                <button type="button" onclick="bulkSampleRequestAllFiltered(true)"
+                        class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md bg-violet-50 text-violet-800 border border-violet-200 hover:bg-violet-100 transition-colors">
+                    Bật Sample — {{ $products->total() }} SP
+                </button>
+                <button type="button" onclick="bulkSampleRequestAllFiltered(false)"
+                        class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 transition-colors">
+                    Tắt Sample — {{ $products->total() }} SP
+                </button>
             </div>
         </form>
     </div>
 
     <!-- Active Filters Display - Compact -->
-    @if(request()->anyFilled(['category_id', 'template_id', 'shop_id', 'collection_id', 'search']))
+    @if(request()->anyFilled(['template_id', 'collection_id', 'search', 'affiliate_eligible', 'sample_request_enabled']))
     <div class="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
         <div class="flex items-center justify-between flex-wrap gap-2">
             <div class="flex items-center flex-wrap gap-2">
@@ -209,28 +256,28 @@
                         <button onclick="removeFilter('search')" class="ml-1.5 text-blue-600 hover:text-blue-900">×</button>
                     </span>
                 @endif
-                @if(request('category_id'))
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-200 text-blue-800">
-                        {{ $categories->firstWhere('id', request('category_id'))->name ?? 'N/A' }}
-                        <button onclick="removeFilter('category_id')" class="ml-1.5 text-blue-600 hover:text-blue-900">×</button>
-                    </span>
-                @endif
                 @if(request('template_id'))
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-200 text-blue-800">
                         {{ Str::limit($templates->firstWhere('id', request('template_id'))->name ?? 'N/A', 20) }}
                         <button onclick="removeFilter('template_id')" class="ml-1.5 text-blue-600 hover:text-blue-900">×</button>
                     </span>
                 @endif
-                @if(request('shop_id') && $shops)
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-200 text-blue-800">
-                        {{ Str::limit($shops->firstWhere('id', request('shop_id'))->shop_name ?? 'N/A', 20) }}
-                        <button onclick="removeFilter('shop_id')" class="ml-1.5 text-blue-600 hover:text-blue-900">×</button>
-                    </span>
-                @endif
                 @if(request('collection_id'))
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-200 text-blue-800">
                         {{ Str::limit($collections->firstWhere('id', request('collection_id'))->name ?? 'N/A', 20) }}
                         <button onclick="removeFilter('collection_id')" class="ml-1.5 text-blue-600 hover:text-blue-900">×</button>
+                    </span>
+                @endif
+                @if(request()->filled('affiliate_eligible'))
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-rose-200 text-rose-900">
+                        Affiliate: {{ request('affiliate_eligible') === '1' ? 'ON' : 'OFF' }}
+                        <button onclick="removeFilter('affiliate_eligible')" class="ml-1.5 text-rose-700 hover:text-rose-900">×</button>
+                    </span>
+                @endif
+                @if(request()->filled('sample_request_enabled'))
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-violet-200 text-violet-900">
+                        Sample: {{ request('sample_request_enabled') === '1' ? 'ON' : 'OFF' }}
+                        <button onclick="removeFilter('sample_request_enabled')" class="ml-1.5 text-violet-700 hover:text-violet-900">×</button>
                     </span>
                 @endif
             </div>
@@ -299,16 +346,17 @@
                                 <span>Collections</span>
                             </div>
                         </th>
-                        @if(auth()->user()->hasRole('admin'))
-                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider" style="min-width: 200px;">
-                            <div class="flex items-center space-x-2">
-                                <svg class="w-4 h-4 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                        <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider" style="min-width: 110px;">
+                            <div class="flex items-center justify-center space-x-2">
+                                <svg class="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
                                 </svg>
-                                <span>Shop</span>
+                                <span>Affiliate</span>
                             </div>
                         </th>
-                        @endif
+                        <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider" style="min-width: 90px;">
+                            <span class="text-violet-700">Sample</span>
+                        </th>
                         <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider" style="min-width: 120px;">
                             <div class="flex items-center space-x-2">
                                 <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -333,6 +381,16 @@
                                 <span>Variants</span>
                             </div>
                         </th>
+                        @if(auth()->user()->hasRole('admin'))
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider" style="min-width: 200px;">
+                            <div class="flex items-center space-x-2">
+                                <svg class="w-4 h-4 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                                </svg>
+                                <span>Shop</span>
+                            </div>
+                        </th>
+                        @endif
                         <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider" style="min-width: 120px;">
                             <div class="flex items-center space-x-2">
                                 <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -471,40 +529,71 @@
                             @endif
                         </td>
                         
-                        <!-- Shop (Admin only) -->
-                        @if(auth()->user()->hasRole('admin'))
-                        <td class="px-6 py-4">
-                            @if($product->shop)
-                            <div class="flex items-center space-x-2">
-                                <div class="w-10 h-10 rounded-lg bg-gradient-to-r from-pink-500 to-rose-600 flex items-center justify-center text-white font-bold shadow-sm">
-                                    @if($product->shop->shop_logo)
-                                        <img src="{{ $product->shop->shop_logo }}" alt="{{ $product->shop->shop_name }}" class="w-full h-full rounded-lg object-cover">
-                                    @else
-                                        {{ substr($product->shop->shop_name, 0, 2) }}
-                                    @endif
-                                </div>
-                                <div style="max-width: 150px;">
-                                    <p class="text-sm font-semibold text-gray-900 truncate" title="{{ $product->shop->shop_name }}">
-                                        {{ Str::limit($product->shop->shop_name, 20) }}
-                                    </p>
-                                    <div class="flex items-center space-x-1 mt-1">
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium 
-                                            {{ $product->shop->shop_status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                            {{ $product->shop->shop_status === 'active' ? '✓ Active' : '⚠ ' . ucfirst($product->shop->shop_status) }}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
+                        <!-- Affiliate eligible -->
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            @php
+                                $canEnableAffiliate = in_array($product->id, $affiliateDisplayableIds ?? [], true);
+                            @endphp
+                            @if($product->is_gift_card)
+                                <span class="text-xs text-gray-400" title="Gift card không hỗ trợ affiliate">—</span>
+                            @elseif(!$canEnableAffiliate)
+                                <span class="text-xs text-amber-700" title="Chưa đủ điều kiện hiển thị shop (ảnh, tồn kho, active, shop)">N/A</span>
+                                @if($product->affiliate_eligible)
+                                    <span class="block text-xs text-rose-600">ON*</span>
+                                @endif
+                            @elseif($canEdit)
+                                <label class="inline-flex items-center cursor-pointer" title="Bật/tắt affiliate cho sản phẩm này">
+                                    <input type="checkbox"
+                                           class="affiliate-eligible-toggle w-5 h-5 text-rose-600 rounded border-gray-300 focus:ring-rose-500"
+                                           data-product-id="{{ $product->id }}"
+                                           {{ $product->affiliate_eligible ? 'checked' : '' }}
+                                           onchange="toggleAffiliateEligible(this)">
+                                </label>
                             @else
-                                <div class="flex items-center space-x-2 text-gray-400">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
-                                    </svg>
-                                    <span class="text-xs italic">Chưa gán shop</span>
-                                </div>
+                                @if($product->affiliate_eligible)
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-800">ON</span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">OFF</span>
+                                @endif
                             @endif
                         </td>
-                        @endif
+
+                        <!-- Sample request -->
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            @php
+                                $canEnableSample = in_array($product->id, $affiliateDisplayableIds ?? [], true);
+                            @endphp
+                            @if($product->is_gift_card)
+                                <span class="text-xs text-gray-400" title="Gift card không hỗ trợ sample">—</span>
+                            @elseif(!$canEnableSample)
+                                <span class="text-xs text-amber-700" title="Chưa đủ điều kiện hiển thị shop">N/A</span>
+                                @if($product->sample_request_enabled)
+                                    <span class="block text-xs text-violet-600">ON*</span>
+                                @endif
+                            @elseif($canEdit)
+                                <label class="inline-flex flex-col items-center cursor-pointer gap-0.5" title="Bật/tắt sample request">
+                                    <input type="checkbox"
+                                           class="sample-request-toggle w-5 h-5 text-violet-600 rounded border-gray-300 focus:ring-violet-500"
+                                           data-product-id="{{ $product->id }}"
+                                           {{ $product->sample_request_enabled ? 'checked' : '' }}
+                                           onchange="toggleSampleRequest(this)">
+                                    @if($product->sample_request_enabled && $product->sample_min_tier)
+                                        <span class="text-[10px] text-violet-700">{{ ucfirst($product->sample_min_tier) }}+</span>
+                                    @endif
+                                </label>
+                            @else
+                                @if($product->sample_request_enabled)
+                                    <span class="inline-flex flex-col items-center gap-0.5">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-800">ON</span>
+                                        @if($product->sample_min_tier)
+                                            <span class="text-[10px] text-violet-700">{{ ucfirst($product->sample_min_tier) }}+</span>
+                                        @endif
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">OFF</span>
+                                @endif
+                            @endif
+                        </td>
                         
                         <!-- Price -->
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -540,6 +629,41 @@
                                 </span>
                             </div>
                         </td>
+
+                        <!-- Shop (Admin only) -->
+                        @if(auth()->user()->hasRole('admin'))
+                        <td class="px-6 py-4">
+                            @if($product->shop)
+                            <div class="flex items-center space-x-2">
+                                <div class="w-10 h-10 rounded-lg bg-gradient-to-r from-pink-500 to-rose-600 flex items-center justify-center text-white font-bold shadow-sm">
+                                    @if($product->shop->shop_logo)
+                                        <img src="{{ $product->shop->shop_logo }}" alt="{{ $product->shop->shop_name }}" class="w-full h-full rounded-lg object-cover">
+                                    @else
+                                        {{ substr($product->shop->shop_name, 0, 2) }}
+                                    @endif
+                                </div>
+                                <div style="max-width: 150px;">
+                                    <p class="text-sm font-semibold text-gray-900 truncate" title="{{ $product->shop->shop_name }}">
+                                        {{ Str::limit($product->shop->shop_name, 20) }}
+                                    </p>
+                                    <div class="flex items-center space-x-1 mt-1">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium 
+                                            {{ $product->shop->shop_status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                            {{ $product->shop->shop_status === 'active' ? '✓ Active' : '⚠ ' . ucfirst($product->shop->shop_status) }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            @else
+                                <div class="flex items-center space-x-2 text-gray-400">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                                    </svg>
+                                    <span class="text-xs italic">Chưa gán shop</span>
+                                </div>
+                            @endif
+                        </td>
+                        @endif
                         
                         <!-- Status -->
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -696,9 +820,9 @@
     </div>
     @endif
 
-    <!-- Pagination -->
-    @if($products->hasPages())
-    <div class="bg-white px-6 py-4 flex items-center justify-between border-t border-gray-200 rounded-b-xl shadow-md">
+    <!-- Pagination + per page -->
+    @if($products->count() > 0)
+    <div class="bg-white px-4 sm:px-6 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-gray-200 rounded-b-xl shadow-md">
         <div class="flex-1 flex justify-between sm:hidden">
             @if($products->onFirstPage())
                 <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-500 bg-white cursor-not-allowed">
@@ -720,21 +844,43 @@
                 </span>
             @endif
         </div>
-        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div>
-                <p class="text-sm text-gray-600">
-                    Showing
-                    <span class="font-semibold text-gray-900">{{ $products->firstItem() }}</span>
-                    to
-                    <span class="font-semibold text-gray-900">{{ $products->lastItem() }}</span>
-                    of
-                    <span class="font-semibold text-gray-900">{{ $products->total() }}</span>
-                    results
-                </p>
-            </div>
-            <div>
-                {{ $products->links() }}
-            </div>
+        <div class="hidden sm:block">
+            <p class="text-sm text-gray-600">
+                Showing
+                <span class="font-semibold text-gray-900">{{ $products->firstItem() }}</span>
+                to
+                <span class="font-semibold text-gray-900">{{ $products->lastItem() }}</span>
+                of
+                <span class="font-semibold text-gray-900">{{ $products->total() }}</span>
+                results
+            </p>
+        </div>
+        <div class="flex flex-wrap items-center justify-end gap-3 sm:gap-4">
+            <form method="GET" action="{{ route('admin.products.index') }}" class="flex items-center gap-2">
+                @foreach(request()->except(['per_page', 'page']) as $filterKey => $filterValue)
+                    @if(is_array($filterValue))
+                        @foreach($filterValue as $item)
+                            <input type="hidden" name="{{ $filterKey }}[]" value="{{ $item }}">
+                        @endforeach
+                    @elseif($filterValue !== null && $filterValue !== '')
+                        <input type="hidden" name="{{ $filterKey }}" value="{{ $filterValue }}">
+                    @endif
+                @endforeach
+                <label for="per_page_footer" class="text-sm text-gray-600 whitespace-nowrap">Per page</label>
+                <select name="per_page" id="per_page_footer" onchange="this.form.submit()"
+                        class="w-28 px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                    @foreach([12, 25, 50, 100, 200, 500] as $size)
+                        <option value="{{ $size }}" {{ (int) request('per_page', $perPage ?? 12) === $size ? 'selected' : '' }}>
+                            {{ $size }}
+                        </option>
+                    @endforeach
+                </select>
+            </form>
+            @if($products->hasPages())
+                <div class="hidden sm:block">
+                    {{ $products->links() }}
+                </div>
+            @endif
         </div>
     </div>
     @endif
@@ -933,6 +1079,138 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+async function toggleAffiliateEligible(checkbox) {
+    const productId = checkbox.dataset.productId;
+    const prev = !checkbox.checked;
+    checkbox.disabled = true;
+    try {
+        const response = await fetch('{{ url('admin/products') }}/' + productId + '/toggle-affiliate-eligible', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            checkbox.checked = prev;
+            alert(data.message || 'Could not update affiliate setting.');
+            return;
+        }
+        checkbox.checked = !!data.affiliate_eligible;
+    } catch (e) {
+        checkbox.checked = prev;
+        alert('Could not update affiliate setting.');
+    } finally {
+        checkbox.disabled = false;
+    }
+}
+
+async function toggleSampleRequest(checkbox) {
+    const productId = checkbox.dataset.productId;
+    const prev = !checkbox.checked;
+    checkbox.disabled = true;
+    try {
+        const response = await fetch('{{ url('admin/products') }}/' + productId + '/toggle-sample-request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            checkbox.checked = prev;
+            alert(data.message || 'Could not update sample setting.');
+            return;
+        }
+        checkbox.checked = !!data.sample_request_enabled;
+    } catch (e) {
+        checkbox.checked = prev;
+        alert('Could not update sample setting.');
+    } finally {
+        checkbox.disabled = false;
+    }
+}
+
+async function bulkSetSampleRequest(enabled) {
+    const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+        showNoSelectionModal();
+        return;
+    }
+    const productIds = Array.from(checkedBoxes).map(cb => cb.value);
+    const btnOn = document.getElementById('bulkSampleOnBtn');
+    const btnOff = document.getElementById('bulkSampleOffBtn');
+    if (btnOn) btnOn.disabled = true;
+    if (btnOff) btnOff.disabled = true;
+    try {
+        const response = await fetch('{{ route('admin.products.bulk-sample-request') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ product_ids: productIds, enabled: enabled }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            alert(data.message || 'Bulk update failed.');
+            return;
+        }
+        alert(data.message || 'Done.');
+        window.location.reload();
+    } catch (e) {
+        alert('Bulk update failed.');
+    } finally {
+        if (btnOn) btnOn.disabled = false;
+        if (btnOff) btnOff.disabled = false;
+    }
+}
+
+async function bulkSetAffiliateEligible(eligible) {
+    const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+        showNoSelectionModal();
+        return;
+    }
+    const productIds = Array.from(checkedBoxes).map(cb => cb.value);
+    const btnOn = document.getElementById('bulkAffiliateOnBtn');
+    const btnOff = document.getElementById('bulkAffiliateOffBtn');
+    if (btnOn) btnOn.disabled = true;
+    if (btnOff) btnOff.disabled = true;
+    try {
+        const response = await fetch('{{ route('admin.products.bulk-affiliate-eligible') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ product_ids: productIds, eligible: eligible }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            alert(data.message || 'Bulk update failed.');
+            return;
+        }
+        alert(data.message || 'Done.');
+        window.location.reload();
+    } catch (e) {
+        alert('Bulk update failed.');
+    } finally {
+        if (btnOn) btnOn.disabled = false;
+        if (btnOff) btnOff.disabled = false;
+    }
+}
+
 // Bulk Delete Functions
 function toggleSelectAll(checkbox) {
     const productCheckboxes = document.querySelectorAll('.product-checkbox');
@@ -946,14 +1224,24 @@ function updateBulkDeleteButton() {
     const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
     const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
     const bulkAddToCollectionBtn = document.getElementById('bulkAddToCollectionBtn');
+    const bulkAffiliateOnBtn = document.getElementById('bulkAffiliateOnBtn');
+    const bulkAffiliateOffBtn = document.getElementById('bulkAffiliateOffBtn');
+    const bulkSampleOnBtn = document.getElementById('bulkSampleOnBtn');
+    const bulkSampleOffBtn = document.getElementById('bulkSampleOffBtn');
     const feedToGMCBtn = document.getElementById('feedToGMCBtn');
     const exportToMetaBtn = document.getElementById('exportToMetaBtn');
     const exportToTikTokBtn = document.getElementById('exportToTikTokBtn');
+    const exportToPinterestBtn = document.getElementById('exportToPinterestBtn');
     const selectedCount = document.getElementById('selectedCount');
     const gmcSelectedCount = document.getElementById('gmcSelectedCount');
     const metaSelectedCount = document.getElementById('metaSelectedCount');
     const tiktokSelectedCount = document.getElementById('tiktokSelectedCount');
+    const pinterestSelectedCount = document.getElementById('pinterestSelectedCount');
     const collectionBulkSelectedCount = document.getElementById('collectionBulkSelectedCount');
+    const affiliateBulkSelectedCount = document.getElementById('affiliateBulkSelectedCount');
+    const affiliateBulkOffCount = document.getElementById('affiliateBulkOffCount');
+    const sampleBulkOnCount = document.getElementById('sampleBulkOnCount');
+    const sampleBulkOffCount = document.getElementById('sampleBulkOffCount');
     const selectAllCheckbox = document.getElementById('selectAll');
     const headerImportProductsBtn = document.getElementById('headerImportProductsBtn');
     const headerAddProductBtn = document.getElementById('headerAddProductBtn');
@@ -961,22 +1249,37 @@ function updateBulkDeleteButton() {
     if (checkedBoxes.length > 0) {
         bulkDeleteBtn.style.display = 'inline-flex';
         if (bulkAddToCollectionBtn) bulkAddToCollectionBtn.style.display = 'inline-flex';
+        if (bulkAffiliateOnBtn) bulkAffiliateOnBtn.style.display = 'inline-flex';
+        if (bulkAffiliateOffBtn) bulkAffiliateOffBtn.style.display = 'inline-flex';
+        if (bulkSampleOnBtn) bulkSampleOnBtn.style.display = 'inline-flex';
+        if (bulkSampleOffBtn) bulkSampleOffBtn.style.display = 'inline-flex';
         if (feedToGMCBtn) feedToGMCBtn.style.display = 'inline-flex';
         exportToMetaBtn.style.display = 'inline-flex';
         if (exportToTikTokBtn) exportToTikTokBtn.style.display = 'inline-flex';
+        if (exportToPinterestBtn) exportToPinterestBtn.style.display = 'inline-flex';
         selectedCount.textContent = checkedBoxes.length;
         gmcSelectedCount.textContent = checkedBoxes.length;
         metaSelectedCount.textContent = checkedBoxes.length;
         if (tiktokSelectedCount) tiktokSelectedCount.textContent = checkedBoxes.length;
+        if (pinterestSelectedCount) pinterestSelectedCount.textContent = checkedBoxes.length;
         if (collectionBulkSelectedCount) collectionBulkSelectedCount.textContent = checkedBoxes.length;
+        if (affiliateBulkSelectedCount) affiliateBulkSelectedCount.textContent = checkedBoxes.length;
+        if (affiliateBulkOffCount) affiliateBulkOffCount.textContent = checkedBoxes.length;
+        if (sampleBulkOnCount) sampleBulkOnCount.textContent = checkedBoxes.length;
+        if (sampleBulkOffCount) sampleBulkOffCount.textContent = checkedBoxes.length;
         if (headerImportProductsBtn) headerImportProductsBtn.style.display = 'none';
         if (headerAddProductBtn) headerAddProductBtn.style.display = 'none';
     } else {
         bulkDeleteBtn.style.display = 'none';
         if (bulkAddToCollectionBtn) bulkAddToCollectionBtn.style.display = 'none';
+        if (bulkAffiliateOnBtn) bulkAffiliateOnBtn.style.display = 'none';
+        if (bulkAffiliateOffBtn) bulkAffiliateOffBtn.style.display = 'none';
+        if (bulkSampleOnBtn) bulkSampleOnBtn.style.display = 'none';
+        if (bulkSampleOffBtn) bulkSampleOffBtn.style.display = 'none';
         if (feedToGMCBtn) feedToGMCBtn.style.display = 'none';
         exportToMetaBtn.style.display = 'none';
         if (exportToTikTokBtn) exportToTikTokBtn.style.display = 'none';
+        if (exportToPinterestBtn) exportToPinterestBtn.style.display = 'none';
         if (headerImportProductsBtn) headerImportProductsBtn.style.display = 'inline-flex';
         if (headerAddProductBtn) headerAddProductBtn.style.display = 'inline-flex';
     }
@@ -1269,7 +1572,7 @@ function removeFilter(filterName) {
 function appendCurrentFilterParamsToForm(form) {
     const filterForm = document.getElementById('filterForm');
     if (!filterForm) return;
-    ['search', 'category_id', 'template_id', 'shop_id', 'collection_id'].forEach(function (name) {
+    ['search', 'template_id', 'collection_id', 'affiliate_eligible', 'sample_request_enabled', 'per_page'].forEach(function (name) {
         const el = filterForm.querySelector('[name="' + name + '"]');
         if (!el || el.value === '' || el.value == null) return;
         const input = document.createElement('input');
@@ -1278,6 +1581,76 @@ function appendCurrentFilterParamsToForm(form) {
         input.value = el.value;
         form.appendChild(input);
     });
+}
+
+function bulkAffiliateAllFiltered(enable) {
+    const total = {{ (int) $products->total() }};
+    if (total === 0) {
+        alert('Không có sản phẩm nào khớp bộ lọc hiện tại.');
+        return;
+    }
+    const action = enable ? 'BẬT' : 'TẮT';
+    if (!confirm(action + ' affiliate cho tối đa ' + total + ' sản phẩm theo bộ lọc hiện tại?\n(Gift card sẽ bỏ qua. Không phụ thuộc số SP trên trang.)')) {
+        return;
+    }
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ route('admin.products.bulk-affiliate-eligible-all-filtered') }}';
+    form.style.display = 'none';
+
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = '_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    const eligibleInput = document.createElement('input');
+    eligibleInput.type = 'hidden';
+    eligibleInput.name = 'eligible';
+    eligibleInput.value = enable ? '1' : '0';
+    form.appendChild(eligibleInput);
+
+    appendCurrentFilterParamsToForm(form);
+
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function bulkSampleRequestAllFiltered(enable) {
+    const total = {{ (int) $products->total() }};
+    if (total === 0) {
+        alert('Không có sản phẩm nào khớp bộ lọc hiện tại.');
+        return;
+    }
+    const action = enable ? 'BẬT' : 'TẮT';
+    if (!confirm(action + ' sample request cho tối đa ' + total + ' sản phẩm theo bộ lọc hiện tại?\n(Gift card bỏ qua. Khi bật, chỉ SP đủ điều kiện hiển thị shop.)')) {
+        return;
+    }
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ route('admin.products.bulk-sample-request-all-filtered') }}';
+    form.style.display = 'none';
+
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = '_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    const enabledInput = document.createElement('input');
+    enabledInput.type = 'hidden';
+    enabledInput.name = 'enabled';
+    enabledInput.value = enable ? '1' : '0';
+    form.appendChild(enabledInput);
+
+    appendCurrentFilterParamsToForm(form);
+
+    document.body.appendChild(form);
+    form.submit();
 }
 
 function exportAllFilteredToGmc() {
@@ -1362,6 +1735,41 @@ function exportAllFilteredToTikTok() {
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = '{{ route("admin.products.export.tiktok") }}';
+    form.style.display = 'none';
+
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = '_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    const exportAllInput = document.createElement('input');
+    exportAllInput.type = 'hidden';
+    exportAllInput.name = 'export_all';
+    exportAllInput.value = '1';
+    form.appendChild(exportAllInput);
+
+    appendCurrentFilterParamsToForm(form);
+
+    document.body.appendChild(form);
+    form.submit();
+    setTimeout(function () {
+        if (form.parentNode) document.body.removeChild(form);
+    }, 1000);
+}
+
+function exportAllFilteredToPinterest() {
+    const total = {{ (int) $products->total() }};
+    if (total === 0) {
+        alert('Không có sản phẩm nào khớp bộ lọc hiện tại.');
+        return;
+    }
+    if (!confirm('Xuất file Pinterest cho ' + total + ' sản phẩm theo bộ lọc hiện tại?')) return;
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ route("admin.products.export.pinterest") }}';
     form.style.display = 'none';
 
     const csrfInput = document.createElement('input');
@@ -1475,6 +1883,44 @@ function exportToTikTok() {
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = '{{ route("admin.products.export.tiktok") }}';
+    form.style.display = 'none';
+
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = '_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    productIds.forEach(id => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'product_ids[]';
+        input.value = id;
+        form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+
+    setTimeout(function() {
+        document.body.removeChild(form);
+    }, 1000);
+}
+
+// Export to Pinterest function
+function exportToPinterest() {
+    const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
+    const productIds = Array.from(checkedBoxes).map(cb => cb.value);
+
+    if (productIds.length === 0) {
+        alert('Vui lòng chọn ít nhất một sản phẩm để export.');
+        return;
+    }
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ route("admin.products.export.pinterest") }}';
     form.style.display = 'none';
 
     const csrfInput = document.createElement('input');

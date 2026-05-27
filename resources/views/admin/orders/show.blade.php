@@ -76,6 +76,14 @@
                     </a>
                     <h1 class="text-3xl font-bold text-gray-900">Order Details</h1>
                     <p class="text-gray-600 mt-2">Order #{{ $order->order_number }}</p>
+                    @if($order->affiliate_id && $order->relationLoaded('affiliate') && $order->affiliate)
+                        <p class="mt-1 text-sm text-violet-700">
+                            Creator: <span class="font-mono font-semibold">{{ $order->affiliate->code }}</span>
+                            @if($order->affiliate->display_name)
+                                · {{ $order->affiliate->display_name }}
+                            @endif
+                        </p>
+                    @endif
                 </div>
                 <div class="flex space-x-3">
                     <button onclick="window.print()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors">
@@ -358,8 +366,75 @@
                                 <span>${{ number_format($order->total_amount - $order->refund_amount, 2) }}</span>
                             </div>
                         @endif
+                        @if($order->dispute_status)
+                            <div class="flex justify-between text-red-700 font-medium">
+                                <span>Payment dispute</span>
+                                <span class="capitalize">{{ $order->dispute_status }}</span>
+                            </div>
+                        @endif
                     </div>
                 </div>
+
+                @if($order->affiliate_id && $order->affiliate)
+                @php
+                    $aff = $order->affiliate;
+                    $comm = $order->affiliateCommission;
+                @endphp
+                <div class="bg-white rounded-xl shadow-lg p-6 border border-violet-100">
+                    <div class="flex items-center justify-between gap-3 mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Affiliate / Creator</h3>
+                        @if(Route::has('admin.affiliates.analytics.show'))
+                            <a href="{{ route('admin.affiliates.analytics.show', $aff) }}" class="text-sm font-medium text-violet-600 hover:underline">Analytics →</a>
+                        @endif
+                    </div>
+                    <dl class="space-y-2 text-sm">
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-gray-600">Creator</dt>
+                            <dd class="text-right font-medium">
+                                {{ $aff->display_name ?? $aff->user?->name ?? '—' }}
+                                <span class="block font-mono text-violet-700 text-xs">{{ $aff->code }}</span>
+                            </dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-gray-600">Tier</dt>
+                            <dd class="capitalize font-medium">{{ $aff->tier }}</dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-gray-600">Attribution</dt>
+                            <dd class="capitalize">{{ $order->affiliate_attribution ?? '—' }}</dd>
+                        </div>
+                        @if($order->promo_code)
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-gray-600">Promo code</dt>
+                                <dd class="font-mono">{{ $order->promo_code }}</dd>
+                            </div>
+                        @endif
+                        @if($comm)
+                            <div class="flex justify-between gap-3 border-t border-gray-100 pt-2 mt-2">
+                                <dt class="text-gray-600">Commission</dt>
+                                <dd class="text-right">
+                                    <span class="font-semibold text-emerald-700">${{ number_format($comm->commission_amount, 2) }}</span>
+                                    <span class="block text-xs capitalize text-gray-500">{{ $comm->status }} · {{ rtrim(rtrim(number_format($comm->commission_rate, 2), '0'), '.') }}%</span>
+                                </dd>
+                            </div>
+                        @elseif($order->affiliate_commission_eligibility === 'ineligible')
+                            <div class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 mt-2">
+                                <p class="text-xs font-semibold text-amber-900">No commission</p>
+                                <p class="text-xs text-amber-800 mt-1 leading-snug">
+                                    {{ \App\Support\AffiliateCommissionEligibility::label($order->affiliate_commission_note) }}
+                                </p>
+                            </div>
+                        @elseif($order->payment_status === 'paid')
+                            <div class="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2 mt-2 text-xs text-gray-600">
+                                Chưa có bản ghi commission (có thể do quy tắc khách mới / sản phẩm).
+                            </div>
+                        @endif
+                    </dl>
+                    @if(Route::has('admin.affiliates.edit'))
+                        <a href="{{ route('admin.affiliates.edit', $aff) }}" class="mt-4 inline-block text-sm text-violet-600 hover:underline">Edit affiliate profile →</a>
+                    @endif
+                </div>
+                @endif
 
                 @if(auth()->user()->hasRole('admin'))
                 <!-- Update Order Status -->
@@ -397,6 +472,35 @@
                                        value="{{ old('tracking_number', $order->tracking_number) }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                        placeholder="Enter tracking number">
+                                <p class="mt-1 text-xs text-gray-500">Khi lưu tracking, trạng thái đơn sẽ tự chuyển thành <strong>Shipped</strong>.</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Refund amount (USD)</label>
+                                <input type="number" name="refund_amount" step="0.01" min="0"
+                                       value="{{ old('refund_amount', $order->refund_amount) }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                       placeholder="Partial refund reduces KOL commission">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Refund status</label>
+                                <select name="refund_status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">—</option>
+                                    @foreach (['pending', 'processing', 'completed', 'failed'] as $rs)
+                                        <option value="{{ $rs }}" @selected($order->refund_status === $rs)>{{ ucfirst($rs) }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Payment dispute</label>
+                                <select name="dispute_status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">None</option>
+                                    <option value="open" @selected($order->dispute_status === 'open')>Open — void KOL commission</option>
+                                    <option value="won" @selected($order->dispute_status === 'won')>Won (merchant)</option>
+                                    <option value="lost" @selected($order->dispute_status === 'lost')>Lost (chargeback)</option>
+                                </select>
                             </div>
 
                             <div>

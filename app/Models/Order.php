@@ -5,13 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends Model
 {
     protected $fillable = [
         'order_number',
         'user_id',
+        'affiliate_id',
+        'affiliate_attribution',
+        'affiliate_commission_eligibility',
+        'affiliate_commission_note',
+        'utm_snapshot',
         'customer_name',
         'customer_email',
         'customer_phone',
@@ -40,6 +45,8 @@ class Order extends Model
         'refund_amount',
         'refund_reason',
         'refund_status',
+        'dispute_status',
+        'disputed_at',
         'notes',
         'tracking_number',
         'promo_email_sent_at',
@@ -55,7 +62,9 @@ class Order extends Model
         'total_amount' => 'decimal:2',
         'refund_amount' => 'decimal:2',
         'paid_at' => 'datetime',
+        'disputed_at' => 'datetime',
         'promo_email_sent_at' => 'datetime',
+        'utm_snapshot' => 'array',
     ];
 
     public function user(): BelongsTo
@@ -76,6 +85,21 @@ class Order extends Model
     public function giftCardUsages(): HasMany
     {
         return $this->hasMany(OrderGiftCardUsage::class);
+    }
+
+    public function affiliate(): BelongsTo
+    {
+        return $this->belongsTo(Affiliate::class);
+    }
+
+    public function affiliateCommission(): HasOne
+    {
+        return $this->hasOne(AffiliateCommission::class);
+    }
+
+    public function hasActivePaymentDispute(): bool
+    {
+        return in_array($this->dispute_status, ['open', 'lost'], true);
     }
 
     public static function generateOrderNumber(): string

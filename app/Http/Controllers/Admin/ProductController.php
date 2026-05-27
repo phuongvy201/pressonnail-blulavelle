@@ -10,6 +10,7 @@ use App\Models\Shop;
 use App\Models\Category;
 use App\Models\Collection;
 use App\Models\GmcConfig;
+use App\Services\CollectionAutoAssignService;
 use App\Services\GoogleMerchantCenterService;
 use App\Services\GoogleSheetsProductExportService;
 use App\Services\OpenAIService;
@@ -20,6 +21,7 @@ use App\Support\ReferenceNailSizeChart;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
@@ -34,14 +36,47 @@ class ProductController extends Controller
     }
 
     /**
+     * Đường dẫn file tạm an toàn để đọc upload (Windows đôi khi getRealPath() rỗng).
+     */
+    protected function localPathForUploadedMedia(UploadedFile $file): ?string
+    {
+        if (! $file->isValid()) {
+            return null;
+        }
+
+        $realPath = $file->getRealPath();
+        if (is_string($realPath) && $realPath !== '' && is_readable($realPath)) {
+            return $realPath;
+        }
+
+        $pathname = $file->getPathname();
+        if (is_string($pathname) && $pathname !== '' && is_readable($pathname)) {
+            return $pathname;
+        }
+
+        return null;
+    }
+
+    /**
      * Upload một file media (ảnh hoặc video) lên S3. Video thì tạo poster bằng FFmpeg.
      * Trả về URL string hoặc ['type'=>'video','url'=>...,'poster'=>...].
      */
     protected function uploadOneProductMediaFile($file, string $baseSlug, int $index, ?int $timestamp = null): string|array|null
     {
-        if (!$file->isValid()) {
+        if (! $file instanceof UploadedFile) {
             return null;
         }
+
+        $localPath = $this->localPathForUploadedMedia($file);
+        if ($localPath === null) {
+            Log::warning('Skipping product media upload: missing or unreadable temp file', [
+                'original_name' => $file->getClientOriginalName(),
+                'error' => $file->getError(),
+            ]);
+
+            return null;
+        }
+
         try {
             $timestamp = $timestamp ?? time();
             $safeSlug = Str::slug($baseSlug);
@@ -49,8 +84,11 @@ class ProductController extends Controller
                 $safeSlug = 'product';
             }
             $ext = strtolower((string) $file->getClientOriginalExtension());
+            if ($ext === '') {
+                $ext = strtolower((string) ($file->guessExtension() ?: 'bin'));
+            }
             $fileName = $safeSlug . '-' . $timestamp . '-' . str_pad((string) $index, 2, '0', STR_PAD_LEFT) . '.' . $ext;
-            $filePath = Storage::disk('s3')->putFileAs('products', $file, $fileName);
+            $filePath = Storage::disk('s3')->putFileAs('products', $localPath, $fileName);
             if (!$filePath) {
                 return null;
             }
@@ -97,7 +135,7 @@ class ProductController extends Controller
             }
 
             return $fileUrl;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error uploading product media', [
                 'file' => $file->getClientOriginalName(),
                 'error' => $e->getMessage(),
@@ -155,6 +193,22 @@ class ProductController extends Controller
             });
         }
 
+        if ($request->filled('affiliate_eligible')) {
+            if ($request->affiliate_eligible === '1') {
+                $productsQuery->where('affiliate_eligible', true);
+            } elseif ($request->affiliate_eligible === '0') {
+                $productsQuery->where('affiliate_eligible', false);
+            }
+        }
+
+        if ($request->filled('sample_request_enabled')) {
+            if ($request->sample_request_enabled === '1') {
+                $productsQuery->where('sample_request_enabled', true);
+            } elseif ($request->sample_request_enabled === '0') {
+                $productsQuery->where('sample_request_enabled', false);
+            }
+        }
+
         $productsQuery->orderBy('created_at', 'desc');
 
         return $productsQuery;
@@ -171,7 +225,239 @@ class ProductController extends Controller
             'shop_id' => 'nullable|integer|exists:shops,id',
             'collection_id' => 'nullable|integer|exists:collections,id',
             'search' => 'nullable|string|max:500',
+            'affiliate_eligible' => 'nullable|in:0,1',
+            'sample_request_enabled' => 'nullable|in:0,1',
         ]);
+    }
+
+    public function toggleAffiliateEligible(Product $product)
+    {
+        $user = auth()->user();
+
+        if (! $product->canEdit($user)) {
+            return response()->json(['success' => false, 'message' => 'No permission to edit this product.'], 403);
+        }
+
+        if ($product->is_gift_card) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gift card products cannot be affiliate eligible.',
+            ], 422);
+        }
+
+        $turningOn = ! $product->affiliate_eligible;
+        if ($turningOn && ! $product->canEnableAffiliate()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sản phẩm chưa đủ điều kiện hiển thị trên shop (active, có ảnh, tồn kho, shop hợp lệ).',
+            ], 422);
+        }
+
+        $product->update(['affiliate_eligible' => ! $product->affiliate_eligible]);
+
+        return response()->json([
+            'success' => true,
+            'affiliate_eligible' => (bool) $product->affiliate_eligible,
+        ]);
+    }
+
+    public function toggleSampleRequest(Product $product)
+    {
+        $user = auth()->user();
+
+        if (! $product->canEdit($user)) {
+            return response()->json(['success' => false, 'message' => 'No permission to edit this product.'], 403);
+        }
+
+        if ($product->is_gift_card) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gift card products cannot accept sample requests.',
+            ], 422);
+        }
+
+        $turningOn = ! $product->sample_request_enabled;
+        if ($turningOn && ! $product->canEnableSampleRequest()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sản phẩm chưa đủ điều kiện hiển thị trên shop (active, có ảnh, tồn kho, shop hợp lệ).',
+            ], 422);
+        }
+
+        $product->update(['sample_request_enabled' => ! $product->sample_request_enabled]);
+
+        return response()->json([
+            'success' => true,
+            'sample_request_enabled' => (bool) $product->sample_request_enabled,
+        ]);
+    }
+
+    public function bulkSampleRequest(Request $request)
+    {
+        $request->validate([
+            'product_ids' => 'required|array',
+            'product_ids.*' => 'exists:products,id',
+            'enabled' => 'required|boolean',
+        ]);
+
+        $user = auth()->user();
+        $enabled = $request->boolean('enabled');
+        $updated = 0;
+        $skipped = 0;
+
+        $products = Product::query()->whereIn('id', $request->product_ids)->get();
+
+        foreach ($products as $product) {
+            if (! $product->canEdit($user)) {
+                $skipped++;
+
+                continue;
+            }
+
+            if ($product->is_gift_card) {
+                $skipped++;
+
+                continue;
+            }
+
+            if ($enabled && ! $product->canEnableSampleRequest()) {
+                $skipped++;
+
+                continue;
+            }
+
+            $product->update(['sample_request_enabled' => $enabled]);
+            $updated++;
+        }
+
+        $label = $enabled ? 'bật' : 'tắt';
+
+        return response()->json([
+            'success' => true,
+            'message' => "Đã {$label} sample request cho {$updated} sản phẩm." . ($skipped > 0 ? " ({$skipped} bỏ qua — gift card hoặc chưa đủ điều kiện hiển thị)" : ''),
+            'updated' => $updated,
+            'skipped' => $skipped,
+        ]);
+    }
+
+    public function bulkAffiliateEligible(Request $request)
+    {
+        $request->validate([
+            'product_ids' => 'required|array',
+            'product_ids.*' => 'exists:products,id',
+            'eligible' => 'required|boolean',
+        ]);
+
+        $user = auth()->user();
+        $eligible = $request->boolean('eligible');
+        $updated = 0;
+        $skipped = 0;
+
+        $products = Product::query()->whereIn('id', $request->product_ids)->get();
+
+        foreach ($products as $product) {
+            if (! $product->canEdit($user)) {
+                $skipped++;
+
+                continue;
+            }
+
+            if ($product->is_gift_card) {
+                $skipped++;
+
+                continue;
+            }
+
+            if ($eligible && ! $product->canEnableAffiliate()) {
+                $skipped++;
+
+                continue;
+            }
+
+            $product->update(['affiliate_eligible' => $eligible]);
+            $updated++;
+        }
+
+        $label = $eligible ? 'bật' : 'tắt';
+
+        return response()->json([
+            'success' => true,
+            'message' => "Đã {$label} affiliate cho {$updated} sản phẩm." . ($skipped > 0 ? " ({$skipped} bỏ qua — gift card hoặc chưa đủ điều kiện hiển thị)" : ''),
+            'updated' => $updated,
+            'skipped' => $skipped,
+        ]);
+    }
+
+    /**
+     * Bật/tắt affiliate cho mọi SP khớp bộ lọc hiện tại (không giới hạn per_page).
+     */
+    public function bulkAffiliateEligibleAllFiltered(Request $request)
+    {
+        $request->validate([
+            'eligible' => 'required|in:0,1',
+        ]);
+
+        $this->validateAdminProductListFilters($request);
+
+        $eligible = $request->input('eligible') === '1';
+
+        $query = $this->adminProductsFilteredQuery($request)->where('is_gift_card', false);
+
+        if ($eligible) {
+            $query->availableForDisplay();
+        }
+
+        $updated = $query->update(['affiliate_eligible' => $eligible]);
+
+        $label = $eligible ? 'bật' : 'tắt';
+        $skipNote = $eligible ? ' (chỉ SP đủ điều kiện hiển thị; gift card bỏ qua)' : ' (gift card bỏ qua)';
+
+        return redirect()
+            ->route('admin.products.index', $request->only([
+                'search',
+                'template_id',
+                'collection_id',
+                'affiliate_eligible',
+                'sample_request_enabled',
+                'per_page',
+            ]))
+            ->with('success', "Đã {$label} affiliate cho {$updated} sản phẩm theo bộ lọc hiện tại{$skipNote}.");
+    }
+
+    /**
+     * Bật/tắt sample request cho mọi SP khớp bộ lọc hiện tại (không giới hạn per_page).
+     */
+    public function bulkSampleRequestAllFiltered(Request $request)
+    {
+        $request->validate([
+            'enabled' => 'required|in:0,1',
+        ]);
+
+        $this->validateAdminProductListFilters($request);
+
+        $enabled = $request->input('enabled') === '1';
+
+        $query = $this->adminProductsFilteredQuery($request)->where('is_gift_card', false);
+
+        if ($enabled) {
+            $query->availableForDisplay();
+        }
+
+        $updated = $query->update(['sample_request_enabled' => $enabled]);
+
+        $label = $enabled ? 'bật' : 'tắt';
+        $skipNote = $enabled ? ' (chỉ SP đủ điều kiện hiển thị; gift card bỏ qua)' : ' (gift card bỏ qua)';
+
+        return redirect()
+            ->route('admin.products.index', $request->only([
+                'search',
+                'template_id',
+                'collection_id',
+                'affiliate_eligible',
+                'sample_request_enabled',
+                'per_page',
+            ]))
+            ->with('success', "Đã {$label} sample request cho {$updated} sản phẩm theo bộ lọc hiện tại{$skipNote}.");
     }
 
     /**
@@ -235,10 +521,25 @@ class ProductController extends Controller
         // Paginate
         $products = $productsQuery->paginate($perPage)->withQueryString();
 
+        $affiliateDisplayableIds = Product::query()
+            ->whereIn('id', $products->pluck('id'))
+            ->availableForDisplay()
+            ->pluck('id')
+            ->all();
+
         // GMC/domain config không còn dùng theo domain
         $availableGmcConfigs = collect();
 
-        return view('admin.products.index', compact('products', 'categories', 'templates', 'shops', 'collections', 'availableGmcConfigs', 'perPage'));
+        return view('admin.products.index', compact(
+            'products',
+            'categories',
+            'templates',
+            'shops',
+            'collections',
+            'availableGmcConfigs',
+            'perPage',
+            'affiliateDisplayableIds',
+        ));
     }
 
     /**
@@ -297,6 +598,8 @@ class ProductController extends Controller
                 'status' => 'required|in:active,inactive,draft',
                 'requires_special_handling' => 'nullable|boolean',
                 'is_gift_card' => 'nullable|boolean',
+                'affiliate_eligible' => 'nullable|boolean',
+                ...$this->sampleRequestValidationRules(),
                 'shop_id' => $user->hasRole('admin') ? 'nullable|exists:shops,id' : 'nullable',
                 'media.*' => 'nullable|file|mimes:jpeg,jpg,png,gif,webp,avif,mp4,mov,avi,webm,ogg|mimetypes:image/jpeg,image/pjpeg,image/png,image/gif,image/webp,image/avif,video/mp4,video/quicktime,video/x-msvideo,video/webm,video/ogg|max:10240',
                 'variants' => 'nullable|array',
@@ -320,6 +623,8 @@ class ProductController extends Controller
             $data['user_id'] = auth()->id(); // Set product owner
             $data['requires_special_handling'] = $request->boolean('requires_special_handling');
             $data['is_gift_card'] = $request->boolean('is_gift_card');
+            // Mặc định bật affiliate cho sản phẩm mới (trừ gift card).
+            $data['affiliate_eligible'] = ! $data['is_gift_card'];
 
             // Set shop_id based on user role
             if ($user->hasRole('admin')) {
@@ -373,15 +678,32 @@ class ProductController extends Controller
             // Handle media upload to S3 (ảnh + video; video có poster từ FFmpeg)
             if ($request->hasFile('media')) {
                 $mediaFiles = $request->file('media');
-                $mediaOrder = $request->input('media_order');
-                $orderedIndices = $mediaOrder ? explode(',', $mediaOrder) : null;
+                if (! is_array($mediaFiles)) {
+                    $mediaFiles = [$mediaFiles];
+                }
+                $mediaFiles = array_values(array_filter(
+                    $mediaFiles,
+                    fn ($f) => $f instanceof UploadedFile
+                ));
 
-                if ($orderedIndices && count($orderedIndices) === count($mediaFiles)) {
+                $mediaOrder = trim((string) $request->input('media_order', ''));
+                $orderedIndices = $mediaOrder !== ''
+                    ? array_values(array_filter(array_map('trim', explode(',', $mediaOrder)), fn ($v) => $v !== ''))
+                    : null;
+
+                if ($orderedIndices !== null && count($orderedIndices) === count($mediaFiles)) {
                     $orderedFiles = [];
                     foreach ($orderedIndices as $index) {
-                        $orderedFiles[] = $mediaFiles[(int)$index];
+                        $idx = (int) $index;
+                        if (! array_key_exists($idx, $mediaFiles)) {
+                            $orderedFiles = [];
+                            break;
+                        }
+                        $orderedFiles[] = $mediaFiles[$idx];
                     }
-                    $mediaFiles = $orderedFiles;
+                    if ($orderedFiles !== []) {
+                        $mediaFiles = $orderedFiles;
+                    }
                 }
 
                 $mediaUrls = [];
@@ -425,6 +747,15 @@ class ProductController extends Controller
             }
 
             $product = Product::create($data);
+
+            if ($wantAffiliate && $product->canEnableAffiliate()) {
+                $product->update(['affiliate_eligible' => true]);
+            }
+
+            $product->refresh();
+            $this->applySampleRequestSettings($product, $request);
+            $product->refresh();
+            $this->syncProductCollectionKeywords($product);
 
             // Best-effort export to Google Sheets when a new product is created.
             try {
@@ -672,6 +1003,8 @@ class ProductController extends Controller
                 'status' => 'required|in:active,inactive,draft',
                 'requires_special_handling' => 'nullable|boolean',
                 'is_gift_card' => 'nullable|boolean',
+                'affiliate_eligible' => 'nullable|boolean',
+                ...$this->sampleRequestValidationRules(),
                 'shop_id' => $user->hasRole('admin') ? 'nullable|exists:shops,id' : 'nullable',
                 'media.*' => 'nullable|file|mimes:jpeg,jpg,png,gif,webp,avif,mp4,mov,avi,webm,ogg|mimetypes:image/jpeg,image/pjpeg,image/png,image/gif,image/webp,image/avif,video/mp4,video/quicktime,video/x-msvideo,video/webm,video/ogg|max:10240',
                 'current_media_order' => 'nullable|array',
@@ -693,9 +1026,17 @@ class ProductController extends Controller
                 'shop_id',
                 'requires_special_handling',
                 'is_gift_card',
+                'affiliate_eligible',
             ]);
             $data['requires_special_handling'] = $request->boolean('requires_special_handling');
             $data['is_gift_card'] = $request->boolean('is_gift_card');
+            // Khi edit, giữ nguyên trạng thái affiliate_eligible nếu không gửi field;
+            // nếu có gửi thì bật mặc định (trừ gift card) nhưng ưu tiên checkbox.
+            if ($request->has('affiliate_eligible')) {
+                $data['affiliate_eligible'] = ! $data['is_gift_card'] && $request->boolean('affiliate_eligible', true);
+            } else {
+                unset($data['affiliate_eligible']);
+            }
 
             // Chỉ tạo slug mới nếu tên sản phẩm thay đổi
             if ($request->name !== $product->name) {
@@ -732,7 +1073,14 @@ class ProductController extends Controller
                 $uploadTs = time();
                 $startIndex = count($orderedExistingMedia) + 1;
                 $i = 0;
-                foreach ($request->file('media') as $file) {
+                $newMediaFiles = $request->file('media');
+                if (! is_array($newMediaFiles)) {
+                    $newMediaFiles = [$newMediaFiles];
+                }
+                foreach ($newMediaFiles as $file) {
+                    if (! $file instanceof UploadedFile) {
+                        continue;
+                    }
                     $item = $this->uploadOneProductMediaFile($file, (string) ($data['slug'] ?? $product->slug ?? 'product'), $startIndex + $i, $uploadTs);
                     if ($item !== null) {
                         $orderedExistingMedia[] = $item;
@@ -782,6 +1130,17 @@ class ProductController extends Controller
                     }
                 }
             }
+
+            $product->refresh();
+            $affiliateEligible = $wantAffiliate && $product->canEnableAffiliate();
+            if ((bool) $product->affiliate_eligible !== $affiliateEligible) {
+                $product->update(['affiliate_eligible' => $affiliateEligible]);
+            }
+
+            $product->refresh();
+            $this->applySampleRequestSettings($product, $request);
+            $product->refresh();
+            $this->syncProductCollectionKeywords($product);
 
             return redirect()->route('admin.products.index')
                 ->with('success', 'Product updated successfully!');
@@ -1053,9 +1412,9 @@ class ProductController extends Controller
         $collection->products()->syncWithoutDetaching($allowedIds);
 
         $skipped = count($request->product_ids) - count($allowedIds);
-        $msg = 'Đã thêm '.count($allowedIds).' sản phẩm vào collection «'.$collection->name.'».';
+        $msg = 'Đã thêm ' . count($allowedIds) . ' sản phẩm vào collection «' . $collection->name . '».';
         if ($skipped > 0) {
-            $msg .= ' ('.$skipped.' sản phẩm bỏ qua do không có quyền.)';
+            $msg .= ' (' . $skipped . ' sản phẩm bỏ qua do không có quyền.)';
         }
 
         return response()->json([
@@ -1081,11 +1440,11 @@ class ProductController extends Controller
         if (! in_array($dir, ['products', 'products/posters'], true)) {
             return null;
         }
-        if (! str_starts_with($base, $oldSlug.'-')) {
+        if (! str_starts_with($base, $oldSlug . '-')) {
             return null;
         }
 
-        return $dir.'/'.$newSlug.substr($base, strlen($oldSlug));
+        return $dir . '/' . $newSlug . substr($base, strlen($oldSlug));
     }
 
     /**
@@ -1187,7 +1546,7 @@ class ProductController extends Controller
             }
             $meta = $successful[$resolved['key']];
 
-            return rtrim($meta['base'], '/').'/'.$meta['new'];
+            return rtrim($meta['base'], '/') . '/' . $meta['new'];
         };
 
         $out = [];
@@ -2783,10 +3142,36 @@ class ProductController extends Controller
         };
 
         $supportedVideoFormats = [
-            '.3g2', '.3gp', '.3gpp', '.asf', '.avi', '.dat', '.divx', '.dv', '.f4v',
-            '.flv', '.gif', '.m2ts', '.m4v', '.mkv', '.mod', '.mov', '.mp4', '.mpe',
-            '.mpeg', '.mpeg4', '.mpg', '.mts', '.nsv', '.ogm', '.ogv', '.qt', '.tod',
-            '.ts', '.vob', '.wmv'
+            '.3g2',
+            '.3gp',
+            '.3gpp',
+            '.asf',
+            '.avi',
+            '.dat',
+            '.divx',
+            '.dv',
+            '.f4v',
+            '.flv',
+            '.gif',
+            '.m2ts',
+            '.m4v',
+            '.mkv',
+            '.mod',
+            '.mov',
+            '.mp4',
+            '.mpe',
+            '.mpeg',
+            '.mpeg4',
+            '.mpg',
+            '.mts',
+            '.nsv',
+            '.ogm',
+            '.ogv',
+            '.qt',
+            '.tod',
+            '.ts',
+            '.vob',
+            '.wmv'
         ];
 
         $videoPlayerDomains = [
@@ -2901,7 +3286,7 @@ class ProductController extends Controller
             $row[$columnIndex['gender']] = $gender;
             $row[$columnIndex['google_product_category']] = $formatField(
                 $product->google_product_category
-                ?? 'health & beauty > beauty > nail care > artificial nails & accessories > manicure tool sets',
+                    ?? 'health & beauty > beauty > nail care > artificial nails & accessories > manicure tool sets',
                 750
             );
             $row[$columnIndex['material']] = $formatField($product->material ?? 'stainless steel', 200);
@@ -2942,5 +3327,298 @@ class ProductController extends Controller
             'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
             'Expires' => '0',
         ]);
+    }
+
+    /**
+     * Export products to Pinterest Catalog format (CSV — Google Merchant-style columns).
+     */
+    public function exportToPinterest(Request $request)
+    {
+        $user = auth()->user();
+
+        $with = ['template.category', 'template.user', 'user', 'shop', 'variants', 'collections'];
+
+        if ($request->boolean('export_all')) {
+            $this->validateAdminProductListFilters($request);
+            $products = $this->adminProductsFilteredQuery($request)
+                ->with($with)
+                ->get();
+        } elseif ($request->filled('product_ids')) {
+            $productIds = is_array($request->product_ids)
+                ? $request->product_ids
+                : explode(',', $request->product_ids);
+
+            $productsQuery = Product::with($with)
+                ->whereIn('id', $productIds);
+
+            if (! $user->hasRole('admin')) {
+                $productsQuery->where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id)
+                        ->orWhereHas('shop', function ($shopQ) use ($user) {
+                            $shopQ->where('user_id', $user->id);
+                        });
+                });
+            }
+
+            $products = $productsQuery->get();
+        } else {
+            $this->validateAdminProductListFilters($request);
+            $products = $this->adminProductsFilteredQuery($request)
+                ->with($with)
+                ->where('status', 'active')
+                ->get();
+        }
+
+        $baseUrl = config('app.url');
+        $csvData = [];
+
+        $header = [
+            'id',
+            'item_group_id',
+            'title',
+            'description',
+            'link',
+            'image_link',
+            'price',
+            'availability',
+            'condition',
+            'google_product_category',
+            'product_type',
+            'additional_image_link',
+            'sale_price',
+            'brand',
+            'gender',
+            'age_group',
+            'size',
+            'size_type',
+            'shipping',
+            'custom_label_0',
+            'adwords_redirect',
+        ];
+
+        $csvData[] = $header;
+        $columnIndex = array_flip($header);
+
+        $formatField = function ($value, $maxLength = null) {
+            if (empty($value)) {
+                return '';
+            }
+            $value = trim((string) $value);
+            if ($maxLength) {
+                $value = mb_substr($value, 0, $maxLength);
+            }
+
+            return $value;
+        };
+
+        $validateGender = function ($gender) {
+            $gender = strtolower(trim((string) $gender));
+            $validGenders = ['female', 'male', 'unisex'];
+
+            return in_array($gender, $validGenders, true) ? $gender : '';
+        };
+
+        $validateAgeGroup = function ($ageGroup) {
+            $ageGroup = strtolower(trim((string) $ageGroup));
+            $validAgeGroups = ['newborn', 'infant', 'toddler', 'kids', 'teen', 'adult', 'all ages'];
+
+            return in_array($ageGroup, $validAgeGroups, true) ? $ageGroup : '';
+        };
+
+        $toAbsoluteUrl = function (string $url) use ($baseUrl): string {
+            if ($url === '' || filter_var($url, FILTER_VALIDATE_URL)) {
+                return $url;
+            }
+            if (str_starts_with($url, '/storage/') || str_starts_with($url, '/')) {
+                return $baseUrl . $url;
+            }
+
+            return $baseUrl . '/storage/' . $url;
+        };
+
+        foreach ($products as $product) {
+            $media = $product->getEffectiveMedia();
+            $imageCandidates = [];
+
+            if (! empty($media)) {
+                foreach ($media as $mediaItem) {
+                    $mediaUrl = is_string($mediaItem) ? $mediaItem : ($mediaItem['url'] ?? $mediaItem['path'] ?? '');
+                    if ($mediaUrl === '') {
+                        continue;
+                    }
+                    $lowerUrl = strtolower($mediaUrl);
+                    $videoExtensions = ['.mp4', '.mov', '.webm', '.avi', '.mkv'];
+                    $isVideo = false;
+                    foreach ($videoExtensions as $ext) {
+                        if (str_ends_with($lowerUrl, $ext)) {
+                            $isVideo = true;
+                            break;
+                        }
+                    }
+                    if ($isVideo) {
+                        continue;
+                    }
+                    $imageCandidates[] = $toAbsoluteUrl($mediaUrl);
+                }
+            }
+
+            $imageLink = $imageCandidates[0] ?? '';
+            if ($imageLink === '') {
+                continue;
+            }
+
+            $additionalImageLink = '';
+            if (count($imageCandidates) > 1) {
+                $additionalImageLink = implode(',', array_slice($imageCandidates, 1, 10));
+            }
+
+            $basePrice = (float) ($product->price ?? $product->template->base_price ?? 0);
+            if ($basePrice <= 0) {
+                continue;
+            }
+
+            $listPrice = $product->list_price !== null ? (float) $product->list_price : null;
+            $priceFormatted = number_format($basePrice, 2, '.', '') . ' USD';
+            $salePriceFormatted = '';
+            if ($listPrice !== null && $listPrice > $basePrice) {
+                $priceFormatted = number_format($listPrice, 2, '.', '') . ' USD';
+                $salePriceFormatted = number_format($basePrice, 2, '.', '') . ' USD';
+            }
+
+            $description = strip_tags($product->description ?? $product->template->description ?? '');
+            if ($description === '') {
+                $description = $product->name;
+            }
+            $description = str_replace(["\r\n", "\r", "\n"], ' ', $description);
+            $description = $formatField($description, 9999);
+
+            $productId = $product->sku
+                ? $formatField($product->sku, 100)
+                : $formatField('PROD_' . $product->id, 100);
+
+            $productLink = $baseUrl . '/products/' . ($product->slug ?? $product->id);
+            $quantity = max(0, (int) ($product->quantity ?? 0));
+            $gender = $product->gender ? $validateGender($product->gender) : 'female';
+            $ageGroup = $product->age_group ? $validateAgeGroup($product->age_group) : 'adult';
+            $googleCategory = $formatField(
+                $product->google_product_category
+                    ?? 'health & beauty > beauty > nail care > artificial nails & accessories > manicure tool sets',
+                750
+            );
+            $productType = $formatField(optional(optional($product->template)->category)->name ?? '', 750);
+
+            $row = array_fill(0, count($header), '');
+            $row[$columnIndex['id']] = $productId;
+            $row[$columnIndex['item_group_id']] = '';
+            $row[$columnIndex['title']] = $formatField($product->name, 200);
+            $row[$columnIndex['description']] = $description;
+            $row[$columnIndex['link']] = $productLink;
+            $row[$columnIndex['image_link']] = $imageLink;
+            $row[$columnIndex['price']] = $priceFormatted;
+            $row[$columnIndex['availability']] = $quantity > 0 ? 'in stock' : 'out of stock';
+            $row[$columnIndex['condition']] = 'new';
+            $row[$columnIndex['google_product_category']] = $googleCategory;
+            $row[$columnIndex['product_type']] = $productType;
+            $row[$columnIndex['additional_image_link']] = $additionalImageLink;
+            $row[$columnIndex['sale_price']] = $salePriceFormatted;
+            $row[$columnIndex['brand']] = $formatField('Bluprinter', 100);
+            $row[$columnIndex['gender']] = $gender;
+            $row[$columnIndex['age_group']] = $ageGroup;
+            $row[$columnIndex['size']] = $formatField($product->size ?? 'S (15/11/12/11/9mm)', 100);
+            $row[$columnIndex['size_type']] = 'regular';
+            $row[$columnIndex['shipping']] = $formatField($product->shipping ?? 'US::USPS:5.99 USD', 200);
+            $row[$columnIndex['custom_label_0']] = $formatField(optional($product->collections->first())->name ?? '', 100);
+            $row[$columnIndex['adwords_redirect']] = '';
+
+            $csvData[] = $row;
+        }
+
+        $filename = 'pinterest_products_export_' . date('Y-m-d_His') . '.csv';
+        $csvContent = "\xEF\xBB\xBF";
+
+        foreach ($csvData as $row) {
+            $escapedRow = array_map(function ($field) {
+                $field = (string) $field;
+                if (
+                    strpos($field, ',') !== false ||
+                    strpos($field, '"') !== false ||
+                    strpos($field, "\n") !== false ||
+                    strpos($field, "\r") !== false
+                ) {
+                    return '"' . str_replace('"', '""', $field) . '"';
+                }
+
+                return $field;
+            }, $row);
+
+            $csvContent .= implode(',', $escapedRow) . "\n";
+        }
+
+        return Response::make($csvContent, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ]);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function sampleRequestValidationRules(): array
+    {
+        return [
+            'sample_request_enabled' => 'nullable|boolean',
+            'sample_min_tier' => 'nullable|in:basic,silver,gold,diamond',
+            'sample_max_quantity_per_request' => 'nullable|integer|min:1|max:10',
+            'sample_quota_per_affiliate' => 'nullable|integer|min:1|max:99',
+            'sample_requires_approval' => 'nullable|boolean',
+        ];
+    }
+
+    protected function applySampleRequestSettings(Product $product, Request $request): void
+    {
+        $wantSample = ! $request->boolean('is_gift_card') && $request->boolean('sample_request_enabled');
+
+        if (! $wantSample) {
+            $product->update(['sample_request_enabled' => false]);
+
+            return;
+        }
+
+        if (! $product->canEnableSampleRequest()) {
+            $product->update(['sample_request_enabled' => false]);
+
+            return;
+        }
+
+        $product->update([
+            'sample_request_enabled' => true,
+            'sample_min_tier' => $request->filled('sample_min_tier') ? $request->input('sample_min_tier') : null,
+            'sample_max_quantity_per_request' => $request->filled('sample_max_quantity_per_request')
+                ? (int) $request->input('sample_max_quantity_per_request')
+                : null,
+            'sample_quota_per_affiliate' => $request->filled('sample_quota_per_affiliate')
+                ? (int) $request->input('sample_quota_per_affiliate')
+                : null,
+            'sample_requires_approval' => $request->boolean('sample_requires_approval', true),
+        ]);
+    }
+
+    protected function syncProductCollectionKeywords(Product $product): void
+    {
+        if ($product->status !== 'active') {
+            return;
+        }
+
+        try {
+            app(CollectionAutoAssignService::class)->forgetCache();
+            app(CollectionAutoAssignService::class)->syncProduct($product);
+        } catch (\Throwable $e) {
+            Log::warning('Collection keyword auto-assign failed after product save.', [
+                'product_id' => $product->id,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 }

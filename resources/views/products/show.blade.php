@@ -7,6 +7,7 @@
     $currentCurrency = currency();
     $currencySymbol = currency_symbol();
     $analyticsDebugOn = $analyticsDebugOn ?? (bool) request()->boolean('analytics_debug', false);
+    $productShowPinterestEventId = 'pagevisit-product-' . ($product->sku ?? $product->id) . '-' . session()->getId();
     $productRelativePath = route('products.show', $product->slug, false);
     $appBaseUrl = rtrim((string) config('app.url', ''), '/');
     $publicProductUrl = $appBaseUrl !== '' ? ($appBaseUrl . $productRelativePath) : route('products.show', $product->slug);
@@ -1225,53 +1226,7 @@
 </div>
 
 {{-- Size guide modal --}}
-<div id="size-guide-modal" class="size-guide-modal-root fixed inset-0 z-[120] hidden flex items-center justify-center p-3 sm:p-4" role="dialog" aria-modal="true" aria-labelledby="size-guide-modal-title">
-    <div class="absolute inset-0 size-guide-modal-backdrop" data-size-guide-modal-close aria-hidden="true"></div>
-    <div class="relative z-10 w-full max-w-lg max-h-[min(90vh,90dvh)] flex flex-col rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden pointer-events-auto">
-        <div class="flex items-start justify-between gap-3 px-4 py-3 border-b border-slate-100 bg-gradient-to-r from-[#0297FE]/10 to-white shrink-0">
-            <div class="min-w-0 pr-2">
-                <h2 id="size-guide-modal-title" class="text-base font-extrabold text-slate-900">Size Guide</h2>
-                <p class="text-xs text-slate-600 mt-0.5 leading-snug">mm per finger; numbers in ( ) are sample tip numbers.</p>
-            </div>
-            <button type="button" class="shrink-0 w-10 h-10 rounded-full border border-slate-200 bg-white flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors" data-size-guide-modal-close aria-label="Close size guide">
-                <span class="material-symbols-outlined text-2xl">close</span>
-            </button>
-        </div>
-        <div class="overflow-y-auto overscroll-contain px-4 py-4">
-            <div class="overflow-x-auto rounded-lg border border-slate-200">
-                <table class="min-w-full text-left text-xs sm:text-sm">
-                    <thead>
-                        <tr class="bg-[#0297FE] text-white">
-                            <th class="px-3 py-2.5 font-bold uppercase tracking-wide whitespace-nowrap">Preset</th>
-                            <th class="px-3 py-2.5 font-bold uppercase tracking-wide whitespace-nowrap">Thumb</th>
-                            <th class="px-3 py-2.5 font-bold uppercase tracking-wide whitespace-nowrap">Index</th>
-                            <th class="px-3 py-2.5 font-bold uppercase tracking-wide whitespace-nowrap">Middle</th>
-                            <th class="px-3 py-2.5 font-bold uppercase tracking-wide whitespace-nowrap">Ring</th>
-                            <th class="px-3 py-2.5 font-bold uppercase tracking-wide whitespace-nowrap">Pinky</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        @foreach($sizeChartTable as $row)
-                        <tr class="hover:bg-[#0297FE]/5 transition-colors">
-                            <td class="px-3 py-2.5 font-bold text-[#0297FE] whitespace-nowrap">{{ $row['preset'] }}</td>
-                            <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ $row['thumb']['mm'] }}mm ({{ $row['thumb']['num'] }})</td>
-                            <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ $row['index']['mm'] }}mm ({{ $row['index']['num'] }})</td>
-                            <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ $row['middle']['mm'] }}mm ({{ $row['middle']['num'] }})</td>
-                            <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ $row['ring']['mm'] }}mm ({{ $row['ring']['num'] }})</td>
-                            <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ $row['pinky']['mm'] }}mm ({{ $row['pinky']['num'] }})</td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-            <p class="mt-3 text-[11px] text-slate-500 italic">Approximate reference — shape and fit can vary.</p>
-            <a href="{{ route('sizing-kit.index') }}#size-chart" class="mt-4 inline-flex items-center gap-1 text-sm font-bold text-[#0297FE] hover:underline">
-                Full guide &amp; sizing kit
-                <span class="material-symbols-outlined text-base">arrow_forward</span>
-            </a>
-        </div>
-    </div>
-</div>
+@include('products.partials.size-guide-modal')
 
 {{-- Review image lightbox (same behavior as shops/reviews). No backdrop-blur: blur on fixed layers flickers when body scroll locks. --}}
 <div id="review-image-modal" class="review-image-modal-root fixed inset-0 z-[110] hidden flex items-center justify-center p-2 sm:p-3" role="dialog" aria-modal="true" aria-labelledby="review-image-modal-title">
@@ -1334,6 +1289,14 @@ document.addEventListener('DOMContentLoaded', function() {
     /** GTM dataLayer: view_item + add_to_cart */
     var ANALYTICS_DEBUG = @json($analyticsDebugOn);
     var GTM_CURRENCY = @json($currentCurrency);
+    function pinterestSetEnhancedMatch() {
+        var em = (typeof window.PINTEREST_EM === 'string' && window.PINTEREST_EM) ? window.PINTEREST_EM : '';
+        if (em && typeof pintrk === 'function') {
+            try {
+                pintrk('set', { em: em });
+            } catch (e) {}
+        }
+    }
     var GTM_PRODUCT_ITEM = {
         item_id: @json($product->sku ?? (string) $product->id),
         item_name: @json($product->name),
@@ -1438,9 +1401,39 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             } catch (e) {}
         }
+        if (typeof pintrk === 'function') {
+            try {
+                pinterestSetEnhancedMatch();
+                pintrk('track', 'addtocart', {
+                    event_id: 'addtocart-' + String(GTM_PRODUCT_ITEM.item_id) + '-' + Date.now(),
+                    value: value,
+                    order_quantity: qty,
+                    currency: GTM_CURRENCY
+                });
+                if (window.__pinterestTagTestMode && ANALYTICS_DEBUG) {
+                    console.info('[Pinterest addtocart]', { value: value, order_quantity: qty, currency: GTM_CURRENCY });
+                }
+            } catch (e) {
+                if (ANALYTICS_DEBUG) console.error('pintrk addtocart error:', e);
+            }
+        }
     }
 
     pushViewItemAnalytics();
+
+    if (typeof pintrk === 'function') {
+        try {
+            pinterestSetEnhancedMatch();
+            pintrk('track', 'pagevisit', {
+                event_id: @json($productShowPinterestEventId)
+            });
+            if (window.__pinterestTagTestMode && ANALYTICS_DEBUG) {
+                console.info('[Pinterest pagevisit]', { event_id: @json($productShowPinterestEventId) });
+            }
+        } catch (e) {
+            if (ANALYTICS_DEBUG) console.error('pintrk pagevisit error:', e);
+        }
+    }
 
     var CUSTOM_FILE_PRODUCT_ID = {{ (int) $product->id }};
     var CUSTOM_FILE_UPLOAD_URL = @json(route('api.custom-files.upload'));

@@ -89,6 +89,12 @@ return [
         'endpoint' => env('TIKTOK_EVENTS_ENDPOINT', 'https://business-api.tiktok.com/open_api/v1.3/event/track/'),
     ],
 
+    'pinterest' => [
+        /** Pinterest Tag ID (số, lấy trong Pinterest Ads → Conversions → Pinterest Tag) */
+        'tag_id' => env('PINTEREST_TAG_ID'),
+        'test_mode' => filter_var(env('PINTEREST_TAG_TEST_MODE', false), FILTER_VALIDATE_BOOLEAN),
+    ],
+
     'recaptcha' => [
         'site_key' => env('RECAPTCHA_SITE_KEY'),
         'secret_key' => env('RECAPTCHA_SECRET_KEY'),

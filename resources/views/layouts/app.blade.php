@@ -50,6 +50,21 @@
     @php
         $metaPixelId = \App\Support\Settings::get('analytics.meta_pixel_id', config('services.meta.pixel_id'));
         $tiktokPixelId = \App\Support\Settings::get('analytics.tiktok_pixel_id', config('services.tiktok.pixel_id'));
+        $pinterestTagId = trim((string) \App\Support\Settings::get('analytics.pinterest_tag_id', config('services.pinterest.tag_id') ?? ''));
+        $pinterestTestMode = filter_var(
+            \App\Support\Settings::get('analytics.pinterest_test_mode', config('services.pinterest.test_mode') ? '1' : '0'),
+            FILTER_VALIDATE_BOOLEAN
+        );
+        // Pinterest enhanced match (JS tag tự hash email; noscript dùng SHA256)
+        $pinterestEmPlain = null;
+        $pinterestEmHash = null;
+        if (auth()->check()) {
+            $pinterestEmail = strtolower(trim((string) (auth()->user()->email ?? '')));
+            if ($pinterestEmail !== '') {
+                $pinterestEmPlain = $pinterestEmail;
+                $pinterestEmHash = hash('sha256', $pinterestEmail);
+            }
+        }
         $googleAdsId = \App\Support\Settings::get('analytics.google_ads_id', config('services.google.ads_id'));
 
         // Currency configuration - available in all views
@@ -173,6 +188,35 @@
           }
         }(window, document, 'ttq');
         </script>
+    @endif
+
+    @if($pinterestTagId !== '')
+        <!-- Pinterest Tag -->
+        <script>
+        !function(e){if(!window.pintrk){window.pintrk = function () {
+        window.pintrk.queue.push(Array.prototype.slice.call(arguments))};var
+          n=window.pintrk;n.queue=[],n.version="3.0";var
+          t=document.createElement("script");t.async=!0,t.src=e;var
+          r=document.getElementsByTagName("script")[0];
+          r.parentNode.insertBefore(t,r)}}("https://s.pinimg.com/ct/core.js");
+        @if($pinterestEmPlain)
+        pintrk('load', @json($pinterestTagId), {em: @json($pinterestEmPlain)});
+        @else
+        pintrk('load', @json($pinterestTagId));
+        @endif
+        pintrk('page');
+        @if($pinterestTestMode)
+        window.__pinterestTagTestMode = true;
+        @endif
+        @if($pinterestEmPlain)
+        window.PINTEREST_EM = @json($pinterestEmPlain);
+        @endif
+        </script>
+        <noscript>
+            <img height="1" width="1" style="display:none;" alt=""
+              src="https://ct.pinterest.com/v3/?event=init&tid={{ $pinterestTagId }}@if($pinterestEmHash)&pd[em]={{ $pinterestEmHash }}@endif&noscript=1" />
+        </noscript>
+        <!-- end Pinterest Tag -->
     @endif
 
     @auth
@@ -410,9 +454,9 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         <!-- FAQ Section (Minimalist Footer) â€” ná»™i dung: layout.footer_faq (content_block) -->
         <section class="px-4 sm:px-6 lg:px-20 py-10 sm:py-14 lg:py-20 bg-white" id="footer-faq" data-content-block="layout.footer_faq" @if($footerFaqBgCustom) style="background-color: {{ $footerFaqBgCustom }};" @endif>
             <div class="max-w-3xl mx-auto">
-                @if(isset($canEdit) && $canEdit && isset($editMode) && $editMode)
+                @if(!empty($canEdit) && !empty($editMode))
                 <div class="flex justify-end mb-2">
-                    <button type="button" class="inline-edit-trigger px-3 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-lg hover:opacity-90" data-block="layout.footer_faq">Chá»‰nh sá»­a FAQ</button>
+                    <button type="button" class="inline-edit-trigger px-3 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-lg hover:opacity-90" data-block="layout.footer_faq">Chỉnh sửa FAQ</button>
                 </div>
                 @endif
                 <h2 class="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 text-center mb-8 sm:mb-12" data-content-field="section_heading">{{ $footerFaq['section_heading'] ?? 'Your Questions, Answered' }}</h2>
@@ -1305,7 +1349,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         });
     </script>
 
-    <!-- Toast + Newsletter: toast Ä‘áº¹p thay cho alert -->
+            <!-- Toast + Newsletter: toast đẹp thay cho alert -->
     <script>
     (function() {
         function showToast(message, type) {
@@ -1391,7 +1435,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         from { opacity: 1; transform: translateX(0); }
         to { opacity: 0; transform: translateX(100%); }
     }
-    /* Rung icon chat khi cÃ³ tin nháº¯n má»›i (nhÆ° Ä‘iá»‡n thoáº¡i Ä‘á»• chuÃ´ng) */
+    /* Rung icon chat khi có tin nhắn mới (như điện thoại đổ chuông) */
     @keyframes liveChatRing {
         0%, 100% { transform: translateX(0) rotate(0deg); }
         10% { transform: translateX(-2px) rotate(-8deg); }
@@ -1407,7 +1451,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
     #live-chat-toggle-wrap.live-chat-ring .live-chat-ring-target {
         animation: liveChatRing 0.5s ease-in-out 6 forwards;
     }
-    /* Live chat responsive: bottom sheet trÃªn mobile, trÃ¡nh safe area */
+    /* Live chat responsive: bottom sheet trên mobile, tránh safe area */
     @media (max-width: 639px) {
         #live-chat-panel.live-chat-panel {
             bottom: max(5rem, calc(env(safe-area-inset-bottom, 0px) + 3.5rem));
@@ -1416,7 +1460,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
     }
     </style>
 
-    <!-- Live Chat widget: khÃ¡ch hÃ ng chat vá»›i seller -->
+    <!-- Live Chat widget: Khách hàng chat với seller -->
     <script>
     (function() {
         var startUrl = '{{ route("live-chat.start") }}';
@@ -1799,6 +1843,21 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         window.addEventListener('load', function () { setTimeout(loadWishlist, 2000); }, { once: true });
     })();
     </script>
+
+    @include('partials.inline-edit-toolbar')
+
+    @push('inline_edit_config')
+    <script>
+    Object.assign(window.CONTENT_BLOCK_SCHEMAS, {
+        'layout.footer_faq': @json(footer_faq_block_schema()),
+    });
+    Object.assign(window.CONTENT_BLOCK_DATA, {
+        'layout.footer_faq': @json($footerFaq),
+    });
+    </script>
+    @endpush
+
+    @include('partials.inline-edit-assets')
 </body>
 </html>
 

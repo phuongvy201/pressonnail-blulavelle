@@ -3,7 +3,10 @@
 use App\Models\Product;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Storage;
+
+Schedule::command('affiliate:recalculate-tiers')->monthlyOn(1, '02:00');
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());

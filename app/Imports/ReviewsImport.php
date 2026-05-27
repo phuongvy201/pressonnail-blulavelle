@@ -20,10 +20,14 @@ class ReviewsImport implements ToModel, WithHeadingRow, WithValidation, SkipsEmp
 {
     protected array $errors = [];
     protected int $successCount = 0;
+    protected int $duplicateCount = 0;
     protected User $user;
 
     /** @var array<int, Product> cache product_id => Product */
     protected array $productCache = [];
+
+    /** @var array<string, true> fingerprint đã import trong file hiện tại */
+    protected array $importedFingerprints = [];
 
     public function __construct(?User $user = null)
     {
@@ -39,6 +43,18 @@ class ReviewsImport implements ToModel, WithHeadingRow, WithValidation, SkipsEmp
             return null;
         }
 
+        $customerName = trim((string) ($row['customer_name'] ?? ''));
+        $reviewText = trim((string) ($row['review_text'] ?? ''));
+        $reviewTextForDb = $reviewText !== '' ? $reviewText : null;
+
+        if ($this->isDuplicateReview($productId, $customerName, $reviewTextForDb)) {
+            $this->duplicateCount++;
+            $preview = $reviewText !== '' ? Str::limit($reviewText, 60) : '(không có nội dung)';
+            $this->errors[] = "Review đã tồn tại: {$customerName} — {$preview} (product_id: {$productId})";
+
+            return null;
+        }
+
         $rating = isset($row['rating']) ? (int) $row['rating'] : 5;
         $rating = max(1, min(5, $rating));
 
@@ -48,13 +64,15 @@ class ReviewsImport implements ToModel, WithHeadingRow, WithValidation, SkipsEmp
             $imageUrl = $rawImageUrl; // fallback giữ URL gốc nếu upload S3 thất bại
         }
 
+        $this->importedFingerprints[$this->reviewFingerprint($productId, $customerName, $reviewTextForDb)] = true;
+
         $review = new Review([
             'product_id' => $productId,
             'user_id' => null,
-            'customer_name' => trim((string) ($row['customer_name'] ?? '')),
+            'customer_name' => $customerName,
             'customer_email' => trim((string) ($row['customer_email'] ?? '')) ?: null,
             'rating' => $rating,
-            'review_text' => trim((string) ($row['review_text'] ?? '')) ?: null,
+            'review_text' => $reviewTextForDb,
             'image_url' => $imageUrl,
             'title' => trim((string) ($row['title'] ?? '')) ?: null,
             // Luôn mặc định verified theo yêu cầu.
@@ -64,6 +82,37 @@ class ReviewsImport implements ToModel, WithHeadingRow, WithValidation, SkipsEmp
 
         $this->successCount++;
         return $review;
+    }
+
+    protected function reviewFingerprint(int $productId, string $customerName, ?string $reviewText): string
+    {
+        $name = Str::lower(trim($customerName));
+        $text = Str::lower(trim((string) $reviewText));
+
+        return $productId.'|'.$name.'|'.$text;
+    }
+
+    protected function isDuplicateReview(int $productId, string $customerName, ?string $reviewText): bool
+    {
+        $fingerprint = $this->reviewFingerprint($productId, $customerName, $reviewText);
+
+        if (isset($this->importedFingerprints[$fingerprint])) {
+            return true;
+        }
+
+        $query = Review::query()
+            ->where('product_id', $productId)
+            ->where('customer_name', $customerName);
+
+        if ($reviewText === null || $reviewText === '') {
+            $query->where(function ($q) {
+                $q->whereNull('review_text')->orWhere('review_text', '');
+            });
+        } else {
+            $query->where('review_text', $reviewText);
+        }
+
+        return $query->exists();
     }
 
     protected function resolveProductId(array $row): ?int
@@ -485,5 +534,10 @@ class ReviewsImport implements ToModel, WithHeadingRow, WithValidation, SkipsEmp
     public function getSuccessCount(): int
     {
         return $this->successCount;
+    }
+
+    public function getDuplicateCount(): int
+    {
+        return $this->duplicateCount;
     }
 }

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Support\CollectionKeywordRules;
 use Illuminate\Support\Str;
 
 class Collection extends Model
@@ -254,5 +255,18 @@ class Collection extends Model
     public function isPending(): bool
     {
         return $this->admin_approved === false;
+    }
+
+    public function keywordAutoAssignEnabled(): bool
+    {
+        return CollectionKeywordRules::isEnabledForCollection($this);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function autoAssignKeywords(): array
+    {
+        return CollectionKeywordRules::keywordsFromCollection($this);
     }
 }

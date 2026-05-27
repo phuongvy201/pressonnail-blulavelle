@@ -8,6 +8,7 @@
     $currencySymbol = currency_symbol();
 @endphp
 @php
+    $productsIndexPinterestEventId = 'pagevisit-products-' . session()->getId();
     $gtagItems = collect($products->items())->map(function ($product, $loopIndex) use ($products) {
         $primaryCategory = optional($product->category)->name ?? optional($product->template->category)->name ?? null;
         return [
@@ -35,6 +36,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 items: @json($gtagItems)
             }
         });
+    }
+    if (typeof pintrk === 'function') {
+        try {
+            pintrk('track', 'pagevisit', {
+                event_id: @json($productsIndexPinterestEventId)
+            });
+            if (window.__pinterestTagTestMode) {
+                console.info('[Pinterest pagevisit]', { event_id: @json($productsIndexPinterestEventId) });
+            }
+        } catch (e) {
+            console.error('pintrk pagevisit error:', e);
+        }
     }
 });
 </script>

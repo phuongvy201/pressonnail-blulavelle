@@ -27,6 +27,14 @@
     $__googleAdsPurchaseSendTo = $__googleAdsPurchaseSendTo !== '' ? $__googleAdsPurchaseSendTo : null;
     $__metaPixelId = trim((string) \App\Support\Settings::get('analytics.meta_pixel_id', config('services.meta.pixel_id') ?? ''));
     $__metaPixelConfigured = $__metaPixelId !== '';
+    $__pinterestCheckoutEm = null;
+    $__orderEmailForPinterest = strtolower(trim((string) ($order->customer_email ?? '')));
+    if ($__orderEmailForPinterest === '' && auth()->check()) {
+        $__orderEmailForPinterest = strtolower(trim((string) (auth()->user()->email ?? '')));
+    }
+    if ($__orderEmailForPinterest !== '') {
+        $__pinterestCheckoutEm = $__orderEmailForPinterest;
+    }
     $gaItems = $order->items->map(function ($item, $index) {
         $product = $item->product;
         $categoryName = $product
@@ -78,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const gaItems = @json($gaItems);
         const productIds = @json($order->items->pluck('product_id')->map(fn ($id) => (string) $id)->values()->all());
 
-        const pushed = { dataLayer: false, facebook: false, gtag: false, tiktok: false };
+        const pushed = { dataLayer: false, facebook: false, gtag: false, tiktok: false, pinterest: false };
 
         window.dataLayer = window.dataLayer || [];
         if (typeof dataLayer !== 'undefined') {
@@ -183,6 +191,32 @@ document.addEventListener('DOMContentLoaded', function () {
                 @endif
                 gtag('event', 'purchase', payload);
                 pushed.gtag = true;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        if (typeof pintrk === 'function') {
+            try {
+                @if($__pinterestCheckoutEm)
+                pintrk('set', { em: @json($__pinterestCheckoutEm) });
+                @endif
+                pintrk('track', 'checkout', {
+                    event_id: transactionId,
+                    order_id: transactionId,
+                    value: purchaseValue,
+                    order_quantity: {{ (int) $order->items->sum('quantity') }},
+                    currency: currency
+                });
+                pushed.pinterest = true;
+                if (window.__pinterestTagTestMode) {
+                    console.info('[Pinterest checkout]', {
+                        order_id: transactionId,
+                        value: purchaseValue,
+                        currency: currency,
+                        enhanced_match: @json($__pinterestCheckoutEm !== null)
+                    });
+                }
             } catch (e) {
                 console.error(e);
             }

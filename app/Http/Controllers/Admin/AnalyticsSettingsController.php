@@ -18,6 +18,8 @@ class AnalyticsSettingsController extends Controller
             'tiktok_test_event_code' => config('services.tiktok.test_event_code'),
             'google_tag_manager_id' => config('services.google.tag_manager_id'),
             'google_ads_id' => config('services.google.ads_id'),
+            'pinterest_tag_id' => config('services.pinterest.tag_id'),
+            'pinterest_test_mode' => config('services.pinterest.test_mode') ? '1' : '0',
             // GA4 (Google Analytics 4)
             'google_analytics_property_id' => config('services.google.analytics.property_id'),
             'google_analytics_credentials_path' => config('services.google.analytics.credentials_path'),
@@ -37,6 +39,8 @@ class AnalyticsSettingsController extends Controller
             'tiktok_test_event_code' => Settings::get('analytics.tiktok_test_event_code', $defaults['tiktok_test_event_code']),
             'google_tag_manager_id' => Settings::get('analytics.google_tag_manager_id', $defaults['google_tag_manager_id']),
             'google_ads_id' => Settings::get('analytics.google_ads_id', $defaults['google_ads_id']),
+            'pinterest_tag_id' => Settings::get('analytics.pinterest_tag_id', $defaults['pinterest_tag_id']),
+            'pinterest_test_mode' => Settings::get('analytics.pinterest_test_mode', $defaults['pinterest_test_mode']),
             // GA4 (Google Analytics 4)
             'google_analytics_property_id' => Settings::get('analytics.google_analytics_property_id', $defaults['google_analytics_property_id']),
             'google_analytics_credentials_path' => Settings::get('analytics.google_analytics_credentials_path', $defaults['google_analytics_credentials_path']),
@@ -62,6 +66,8 @@ class AnalyticsSettingsController extends Controller
             'tiktok_test_event_code' => ['nullable', 'string', 'max:64'],
             'google_tag_manager_id' => ['nullable', 'string', 'max:64'],
             'google_ads_id' => ['nullable', 'string', 'max:64'],
+            'pinterest_tag_id' => ['nullable', 'string', 'max:32', 'regex:/^[0-9]+$/'],
+            'pinterest_test_mode' => ['nullable', 'boolean'],
             // GA4 (Google Analytics 4)
             'google_analytics_property_id' => ['nullable', 'string', 'max:64'],
             'google_analytics_credentials_path' => ['nullable', 'string', 'max:512'],
@@ -85,8 +91,10 @@ class AnalyticsSettingsController extends Controller
             }
         }
 
+        $validated['pinterest_test_mode'] = $request->boolean('pinterest_test_mode') ? '1' : '0';
+
         foreach ($validated as $key => $value) {
-            if ($key === 'show_product_social_proof') {
+            if (in_array($key, ['show_product_social_proof', 'pinterest_test_mode'], true)) {
                 continue;
             }
             $namespace = match (true) {
@@ -103,6 +111,7 @@ class AnalyticsSettingsController extends Controller
         }
 
         Settings::set('gmc.show_product_social_proof', $request->boolean('show_product_social_proof') ? '1' : '0');
+        Settings::set('analytics.pinterest_test_mode', $validated['pinterest_test_mode']);
 
         return redirect()
             ->route('admin.settings.analytics.edit')

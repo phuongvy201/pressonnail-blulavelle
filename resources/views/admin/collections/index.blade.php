@@ -96,10 +96,20 @@
                 </div>
                 
                 <!-- Type Badge -->
-                <div class="absolute top-3 right-3">
+                <div class="absolute top-3 right-3 flex flex-col items-end gap-1">
                     <span class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
                         {{ $collection->type === 'manual' ? '📝 Manual' : '🤖 Auto' }}
                     </span>
+                    @php
+                        $kwRules = is_array($collection->auto_rules) ? $collection->auto_rules : [];
+                        $kwCount = count(\App\Support\CollectionKeywordRules::keywordsFromRules($kwRules));
+                        $kwOn = \App\Support\CollectionKeywordRules::isEnabled($kwRules);
+                    @endphp
+                    @if($kwOn && $kwCount > 0)
+                        <span class="inline-flex items-center px-2 py-1 bg-violet-100 text-violet-800 rounded-full text-xs font-semibold" title="Auto-add by keywords">
+                            🔑 {{ $kwCount }} kw
+                        </span>
+                    @endif
                 </div>
             </div>
             

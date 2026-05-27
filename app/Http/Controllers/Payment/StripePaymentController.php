@@ -245,10 +245,15 @@ class StripePaymentController extends Controller
                 $orderCurrency = $countryToCurrency[strtoupper($validated['country'])] ?? 'USD';
             }
 
+            $affiliateAttrs = app(\App\Services\AffiliateAttributionService::class)->buildOrderAttributes($request, null);
+
             // Create order
             $order = Order::create([
                 'user_id' => $userId,
                 'order_number' => 'ORD-' . strtoupper(uniqid()),
+                'affiliate_id' => $affiliateAttrs['affiliate_id'],
+                'affiliate_attribution' => $affiliateAttrs['affiliate_attribution'],
+                'utm_snapshot' => $affiliateAttrs['utm_snapshot'],
                 'customer_name' => $validated['customer_name'],
                 'customer_email' => $validated['customer_email'],
                 'customer_phone' => $validated['customer_phone'],
@@ -406,6 +411,17 @@ class StripePaymentController extends Controller
                     $this->handleChargeRefunded($charge);
                     break;
 
+                case 'charge.dispute.created':
+                    $dispute = $event->data->object;
+                    $this->handleChargeDispute($dispute, 'open');
+                    break;
+
+                case 'charge.dispute.closed':
+                    $dispute = $event->data->object;
+                    $status = ($dispute->status ?? '') === 'won' ? 'won' : 'lost';
+                    $this->handleChargeDispute($dispute, $status);
+                    break;
+
                 default:
                     Log::info('Unhandled Stripe webhook event: ' . $event->type);
             }
@@ -460,19 +476,64 @@ class StripePaymentController extends Controller
      */
     protected function handleChargeRefunded($charge)
     {
-        // Find order by payment intent ID
-        if (isset($charge->payment_intent)) {
-            $order = Order::where('payment_id', $charge->payment_intent)->first();
-
-            if ($order) {
-                $order->update([
-                    'payment_status' => 'refunded',
-                    'order_status' => 'refunded',
-                ]);
-
-                Log::info('Charge refunded for order: ' . $order->order_number);
-            }
+        if (! isset($charge->payment_intent)) {
+            return;
         }
+
+        $order = Order::where('payment_id', $charge->payment_intent)->first();
+        if (! $order) {
+            return;
+        }
+
+        $refundedUsd = round(((int) ($charge->amount_refunded ?? 0)) / 100, 2);
+        $total = (float) ($order->total_amount ?? 0);
+        $fullRefund = $total > 0 && $refundedUsd >= ($total - 0.01);
+
+        $order->update([
+            'payment_status' => $fullRefund ? 'refunded' : 'paid',
+            'status' => $fullRefund ? 'cancelled' : $order->status,
+            'refund_amount' => $refundedUsd > 0 ? $refundedUsd : $total,
+            'refund_status' => 'completed',
+        ]);
+
+        Log::info('Charge refunded for order: '.$order->order_number, [
+            'refund_amount' => $refundedUsd,
+            'full_refund' => $fullRefund,
+        ]);
+    }
+
+    protected function handleChargeDispute($dispute, string $status): void
+    {
+        $chargeId = $dispute->charge ?? null;
+        if (! $chargeId) {
+            return;
+        }
+
+        try {
+            $stripe = new \Stripe\StripeClient(config('services.stripe.secret'));
+            $charge = $stripe->charges->retrieve($chargeId);
+            $paymentIntentId = $charge->payment_intent ?? null;
+        } catch (\Throwable $e) {
+            Log::error('Stripe dispute: could not load charge', ['error' => $e->getMessage()]);
+
+            return;
+        }
+
+        if (! $paymentIntentId) {
+            return;
+        }
+
+        $order = Order::where('payment_id', $paymentIntentId)->first();
+        if (! $order) {
+            return;
+        }
+
+        $order->update([
+            'dispute_status' => $status,
+            'disputed_at' => $status === 'open' ? now() : $order->disputed_at,
+        ]);
+
+        Log::info('Stripe dispute '.$status.' for order: '.$order->order_number);
     }
 
     protected function sendCrossSellEmail(Order $order): void

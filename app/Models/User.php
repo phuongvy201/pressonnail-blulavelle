@@ -46,6 +46,69 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(CartItem::class);
     }
 
+    public function affiliate(): HasOne
+    {
+        return $this->hasOne(Affiliate::class);
+    }
+
+    public function affiliateApplications(): HasMany
+    {
+        return $this->hasMany(AffiliateApplication::class);
+    }
+
+    public function latestAffiliateApplication(): HasOne
+    {
+        return $this->hasOne(AffiliateApplication::class)->latestOfMany();
+    }
+
+    public function hasActiveAffiliate(): bool
+    {
+        return $this->affiliate()->where('is_active', true)->exists();
+    }
+
+    public function hasPendingAffiliateApplication(): bool
+    {
+        return $this->affiliateApplications()
+            ->where('status', AffiliateApplication::STATUS_PENDING)
+            ->exists();
+    }
+
+    /**
+     * Application to show on creator status page (pending first, then latest).
+     */
+    public function affiliateApplicationForStatus(): ?AffiliateApplication
+    {
+        $pending = $this->affiliateApplications()
+            ->where('status', AffiliateApplication::STATUS_PENDING)
+            ->latest('id')
+            ->first();
+
+        if ($pending) {
+            return $pending;
+        }
+
+        $latest = $this->affiliateApplications()->latest('id')->first();
+
+        if ($latest) {
+            return $latest;
+        }
+
+        return AffiliateApplication::query()
+            ->where('status', AffiliateApplication::STATUS_PENDING)
+            ->whereRaw('LOWER(email) = ?', [strtolower($this->email)])
+            ->where(function ($query) {
+                $query->whereNull('user_id')->orWhere('user_id', $this->id);
+            })
+            ->latest('id')
+            ->first();
+    }
+
+    /** Creator dashboard & affiliate tools (approved + active profile). */
+    public function canAccessCreatorAffiliateFeatures(): bool
+    {
+        return $this->hasActiveAffiliate();
+    }
+
     // Helper methods
     public function hasShop(): bool
     {

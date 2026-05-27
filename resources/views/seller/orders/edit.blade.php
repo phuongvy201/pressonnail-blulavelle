@@ -1,10 +1,9 @@
-@extends('layouts.admin')
+@extends('layouts.app')
 
 @section('title', 'Edit Order - Seller')
 
 @section('content')
-<div class="min-h-screen bg-gray-50 py-8">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+@include('customer.profile.partials.account-wrap-open')
         <!-- Header -->
         <div class="mb-8">
             <div class="flex items-center justify-between">
@@ -87,6 +86,5 @@
                 </div>
             </form>
         </div>
-    </div>
-</div>
+@include('customer.profile.partials.account-wrap-close')
 @endsection

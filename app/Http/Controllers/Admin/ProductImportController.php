@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Imports\ProductsImport;
 use App\Models\ProductTemplate;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
@@ -135,25 +136,38 @@ class ProductImportController extends Controller
             // Generate unique progress key
             $progressKey = 'import_progress_' . uniqid();
 
-            // Count total rows (excluding header) - memory efficient
             $file = $request->file('file');
-            $totalRows = $this->countRows($file);
+            [$importPath, $deleteImportFile] = $this->resolveImportFilePath($file);
 
-            // Ensure totalRows is at least 1
-            if ($totalRows < 1) {
-                $totalRows = 1; // Fallback to 1 if count fails
+            if ($importPath === null) {
+                throw new \RuntimeException('Cannot read uploaded import file.');
             }
 
-            Log::info("Starting import", [
-                'total_rows' => $totalRows,
-                'progress_key' => $progressKey,
-                'file_size' => $file->getSize(),
-                'file_type' => $file->getClientOriginalExtension()
-            ]);
+            $extension = strtolower((string) $file->getClientOriginalExtension());
 
-            // Create import instance with progress key
-            $import = new ProductsImport(auth()->user(), $progressKey);
-            $import->setTotalRows($totalRows);
+            try {
+                // Count total rows (excluding header) - memory efficient
+                $totalRows = $this->countRowsFromPath($importPath, $extension, $file);
+
+                // Ensure totalRows is at least 1
+                if ($totalRows < 1) {
+                    $totalRows = 1;
+                }
+
+                Log::info("Starting import", [
+                    'total_rows' => $totalRows,
+                    'progress_key' => $progressKey,
+                    'file_size' => $file->getSize(),
+                    'file_type' => $extension,
+                    'import_path' => $importPath,
+                ]);
+
+                // Create import instance with progress key
+                $import = new ProductsImport(auth()->user(), $progressKey);
+                $import->setTotalRows($totalRows);
+
+                // Maatwebsite Excel on Windows needs a real file path (not UploadedFile — getRealPath() is empty).
+                $importTarget = $importPath;
 
             // If AJAX request, return progress key immediately
             if ($request->ajax() || $request->wantsJson()) {
@@ -174,20 +188,24 @@ class ProductImportController extends Controller
 
                     // Continue import in background
                     try {
-                        Excel::import($import, $file);
+                        Excel::import($import, $importTarget);
                         $errors = $import->getErrors();
                         $successCount = $import->getSuccessCount();
                         $import->markCompleted();
-                    } catch (\Exception $e) {
+                    } catch (\Throwable $e) {
                         $import->markFailed($e->getMessage());
                         Log::error("Import failed: " . $e->getMessage());
+                    } finally {
+                        if ($deleteImportFile) {
+                            @unlink($importPath);
+                        }
                     }
                     return $response;
                 } else {
                     // For non-FastCGI, run import synchronously but return response first
                     // Start import in a way that allows progress updates
                     try {
-                        Excel::import($import, $file);
+                        Excel::import($import, $importTarget);
                         $errors = $import->getErrors();
                         $successCount = $import->getSuccessCount();
                         $import->markCompleted();
@@ -202,19 +220,24 @@ class ProductImportController extends Controller
                             'errors' => array_slice($errors, 0, 10),
                             'message' => "Successfully imported {$successCount} products!" . (count($errors) > 0 ? " (" . count($errors) . " errors)" : ''),
                         ]);
-                    } catch (\Exception $e) {
+                    } catch (\Throwable $e) {
                         $import->markFailed($e->getMessage());
+
                         return response()->json([
                             'success' => false,
                             'progress_key' => $progressKey,
                             'error' => 'Import failed: ' . $e->getMessage(),
                         ], 500);
+                    } finally {
+                        if ($deleteImportFile) {
+                            @unlink($importPath);
+                        }
                     }
                 }
             }
 
             // Regular form submission (non-AJAX)
-            Excel::import($import, $file);
+            Excel::import($import, $importTarget);
 
             $errors = $import->getErrors();
             $successCount = $import->getSuccessCount();
@@ -234,7 +257,12 @@ class ProductImportController extends Controller
 
             return redirect()->route('admin.products.index')
                 ->with('success', "Successfully imported {$successCount} products!");
-        } catch (\Exception $e) {
+            } finally {
+                if ($deleteImportFile && isset($importPath) && is_string($importPath) && file_exists($importPath)) {
+                    @unlink($importPath);
+                }
+            }
+        } catch (\Throwable $e) {
             Log::error("Import exception: " . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
                 'file' => $e->getFile(),
@@ -283,78 +311,91 @@ class ProductImportController extends Controller
     }
 
     /**
-     * Count total rows in file (excluding header) - Memory efficient
-     * Uses streaming to avoid loading entire file into memory
+     * Copy file upload vào storage/app/temp — path ổn định cho cả countRows và Excel::import.
+     * Không dùng trực tiếp C:\Windows\Temp\php*.tmp (PHP có thể xóa trước khi import chạy).
+     *
+     * @return array{0: string|null, 1: bool} [path, shouldDeleteAfterUse]
      */
-    protected function countRows($file): int
+    protected function resolveImportFilePath(UploadedFile $file): array
+    {
+        if (! $file->isValid()) {
+            return [null, false];
+        }
+
+        $ext = strtolower((string) $file->getClientOriginalExtension()) ?: 'tmp';
+        $dir = storage_path('app/temp');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $dest = $dir . DIRECTORY_SEPARATOR . uniqid('import_', true) . '.' . $ext;
+
+        $source = null;
+        foreach ([$file->getRealPath(), $file->getPathname()] as $candidate) {
+            if (is_string($candidate) && $candidate !== '' && is_readable($candidate)) {
+                $source = $candidate;
+                break;
+            }
+        }
+
+        if ($source !== null && @copy($source, $dest)) {
+            return [$dest, true];
+        }
+
+        $pathname = $file->getPathname();
+        if (is_string($pathname) && $pathname !== '') {
+            $contents = @file_get_contents($pathname);
+            if ($contents !== false && @file_put_contents($dest, $contents) !== false) {
+                return [$dest, true];
+            }
+        }
+
+        return [null, false];
+    }
+
+    /**
+     * Count total rows in file (excluding header) - Memory efficient
+     */
+    protected function countRowsFromPath(string $path, string $extension, UploadedFile $file): int
     {
         try {
-            $extension = strtolower($file->getClientOriginalExtension());
-            $tempPath = $file->getRealPath();
-
-            // If file is uploaded (not real path), store temporarily
-            if (!$tempPath || !file_exists($tempPath)) {
-                $tempPath = $file->store('temp');
-                $tempPath = storage_path('app/' . $tempPath);
-                $isTempFile = true;
-            } else {
-                $isTempFile = false;
-            }
-
             $count = 0;
 
-            // For CSV files, count line by line (memory efficient)
             if ($extension === 'csv') {
-                $handle = fopen($tempPath, 'r');
+                $handle = fopen($path, 'r');
                 if ($handle) {
-                    // Skip header row
                     fgetcsv($handle);
-                    // Count remaining rows
                     while (($line = fgetcsv($handle)) !== false) {
-                        // Only count non-empty rows
-                        if (!empty(array_filter($line))) {
+                        if (! empty(array_filter($line))) {
                             $count++;
                         }
                     }
                     fclose($handle);
                 }
             } else {
-                // For Excel files, use streaming reader (more memory efficient)
-                // Use a simple row counter that doesn't load data
                 $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReader(
                     $extension === 'xlsx' ? 'Xlsx' : 'Xls'
                 );
-                $reader->setReadDataOnly(true); // Only read data, not formatting
+                $reader->setReadDataOnly(true);
                 $reader->setReadEmptyCells(false);
 
-                $spreadsheet = $reader->load($tempPath);
+                $spreadsheet = $reader->load($path);
                 $worksheet = $spreadsheet->getActiveSheet();
+                $count = $worksheet->getHighestRow() - 1;
 
-                // Count non-empty rows (skip header)
-                $highestRow = $worksheet->getHighestRow();
-                $count = $highestRow - 1; // Subtract header
-
-                // Clean up spreadsheet from memory
                 $spreadsheet->disconnectWorksheets();
                 unset($spreadsheet, $worksheet, $reader);
             }
 
-            // Clean up temp file if we created one
-            if ($isTempFile && file_exists($tempPath)) {
-                @unlink($tempPath);
-            }
-
             return max(0, $count);
-        } catch (\Exception $e) {
-            Log::warning("Failed to count rows efficiently: " . $e->getMessage() . " - Using fallback estimation");
+        } catch (\Throwable $e) {
+            Log::warning('Failed to count rows efficiently: '.$e->getMessage().' - Using fallback estimation');
 
-            // Fallback: estimate based on file size (rough estimate)
-            // This is less accurate but doesn't use memory
             $fileSize = $file->getSize();
-            // Rough estimate: ~300 bytes per row for CSV, ~500 for Excel
-            $bytesPerRow = (strtolower($file->getClientOriginalExtension()) === 'csv') ? 300 : 500;
-            $estimated = max(1, intval($fileSize / $bytesPerRow));
+            $bytesPerRow = $extension === 'csv' ? 300 : 500;
+            $estimated = max(1, (int) ($fileSize / $bytesPerRow));
             Log::info("Estimated rows based on file size: {$estimated} rows");
+
             return $estimated;
         }
     }

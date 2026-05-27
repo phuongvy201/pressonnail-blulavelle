@@ -73,6 +73,43 @@ if (! function_exists('content_block')) {
     }
 }
 
+if (! function_exists('content_block_section_bg_schema')) {
+    /**
+     * Schema field màu nền section (inline edit).
+     */
+    function content_block_section_bg_schema(): array
+    {
+        return [
+            'key' => 'bg_color',
+            'label' => 'Màu nền section (HEX, vd: #f8f9ff hoặc #eff4ff) — để trống dùng màu mặc định',
+            'type' => 'text',
+        ];
+    }
+}
+
+if (! function_exists('content_block_section_bg_style')) {
+    /**
+     * Inline style an toàn cho background section từ content block.
+     */
+    function content_block_section_bg_style(?string $color): string
+    {
+        $color = trim((string) $color);
+        if ($color === '') {
+            return '';
+        }
+
+        if (preg_match('/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/', $color)) {
+            return 'background-color: '.$color.';';
+        }
+
+        if (preg_match('/^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*[\d.]+\s*)?\)$/i', $color)) {
+            return 'background-color: '.$color.';';
+        }
+
+        return '';
+    }
+}
+
 if (! function_exists('footer_faq_block_defaults')) {
     /**
      * Nội dung mặc định block FAQ chân trang (layout.footer_faq).
@@ -110,6 +147,169 @@ if (! function_exists('footer_faq_block_schema')) {
             ['key' => 'q4', 'label' => 'Câu hỏi 4', 'type' => 'text'],
             ['key' => 'a4', 'label' => 'Trả lời 4', 'type' => 'textarea'],
         ];
+    }
+}
+
+if (! function_exists('creator_layout_footer_block_defaults')) {
+    function creator_layout_footer_block_defaults(): array
+    {
+        $portal = config('creator.portal_name', config('app.name'));
+
+        return [
+            'tagline' => $portal.' — Elevating creator partnerships with clear commissions and a single storefront checkout.',
+            'bg_color' => '#eff4ff',
+        ];
+    }
+}
+
+if (! function_exists('creator_layout_footer_block_schema')) {
+    function creator_layout_footer_block_schema(): array
+    {
+        return [
+            ['key' => 'tagline', 'label' => 'Mô tả footer portal', 'type' => 'textarea'],
+            content_block_section_bg_schema(),
+        ];
+    }
+}
+
+if (! function_exists('creator_home_hero_block_defaults')) {
+    function creator_home_hero_block_defaults(): array
+    {
+        return [
+            'badge' => 'Exclusive Opportunity',
+            'heading_brand' => config('app.name'),
+            'heading_highlight' => 'Creator Program',
+            'subheading' => 'Turn your passion for beauty into professional rewards. Earn premium commissions and access exclusive luxury releases while growing your digital presence.',
+            'cta_primary_label' => 'Become a Creator',
+            'cta_secondary_label' => 'Explore Benefits',
+            'hero_image' => 'https://lh3.googleusercontent.com/aida-public/AB6AXuCm2K2Hu6djcrEZp_mO6c6MgTb2LiWtULO9aOgclmuWsplOW5YstRPJca9lL5MoAYccbDgW-zMeU7cLtsqsT2ThM0S63_n2cYgCnKFa7WbVjSS6pbTDaWTEDlMf8zfmDpdm9cNd7HbVxn9sjYSVxWZ06Ngqj2NywCHFyQmwIvvJ_DSHoZx-oOY_w410gtlhY11QkKcqhnpybDBFqmEGA0pPMC-gIrgq30qkTLY-LWEcqYVh0QpSCnS_qtZ3X-qrOfZp7kh995ke0vZQ',
+            'stat_clicks_value' => '12.4k',
+            'stat_clicks_change' => '+14% this week',
+            'stat_commission_value' => '$2,840.50',
+            'stat_commission_bar' => '75',
+            'bg_color' => '',
+        ];
+    }
+}
+
+if (! function_exists('creator_home_hero_block_schema')) {
+    function creator_home_hero_block_schema(): array
+    {
+        return [
+            content_block_section_bg_schema(),
+            ['key' => 'badge', 'label' => 'Badge', 'type' => 'text'],
+            ['key' => 'heading_brand', 'label' => 'Tiêu đề — tên thương hiệu', 'type' => 'text'],
+            ['key' => 'heading_highlight', 'label' => 'Tiêu đề — dòng nổi bật (italic)', 'type' => 'text'],
+            ['key' => 'subheading', 'label' => 'Mô tả', 'type' => 'textarea'],
+            ['key' => 'cta_primary_label', 'label' => 'Nút chính', 'type' => 'text'],
+            ['key' => 'cta_secondary_label', 'label' => 'Nút phụ', 'type' => 'text'],
+            ['key' => 'hero_image', 'label' => 'Ảnh hero', 'type' => 'image'],
+            ['key' => 'stat_clicks_value', 'label' => 'Thẻ Clicks — số liệu', 'type' => 'text'],
+            ['key' => 'stat_clicks_change', 'label' => 'Thẻ Clicks — dòng phụ (vd: +14% this week)', 'type' => 'text'],
+            ['key' => 'stat_commission_value', 'label' => 'Thẻ Commission — số tiền', 'type' => 'text'],
+            ['key' => 'stat_commission_bar', 'label' => 'Thẻ Commission — thanh % (0–100)', 'type' => 'text'],
+        ];
+    }
+}
+
+if (! function_exists('creator_home_faq_block_defaults')) {
+    function creator_home_faq_block_defaults(): array
+    {
+        return [
+            'section_heading' => 'Frequently Asked',
+            'q1' => 'How are commissions calculated?',
+            'a1' => 'Commissions are calculated as a percentage of the final order value (excluding taxes and shipping) for all purchases made through your link.',
+            'q2' => 'How long do cookies last?',
+            'a2' => 'Cookie duration follows your program terms. Check your affiliate dashboard after approval for the exact attribution window.',
+            'q3' => 'When do I get my payouts?',
+            'a3' => 'Payouts are processed on a regular schedule once your balance reaches the minimum threshold. You will receive details by email when your account is activated.',
+            'q4' => 'How often can I request free samples?',
+            'a4' => 'Sample eligibility depends on your tier and campaign availability. Our team will outline sample policies when you are onboarded.',
+            'bg_color' => '',
+        ];
+    }
+}
+
+if (! function_exists('creator_home_faq_block_schema')) {
+    function creator_home_faq_block_schema(): array
+    {
+        return [
+            content_block_section_bg_schema(),
+            ['key' => 'section_heading', 'label' => 'Tiêu đề FAQ', 'type' => 'text'],
+            ['key' => 'q1', 'label' => 'Câu hỏi 1', 'type' => 'text'],
+            ['key' => 'a1', 'label' => 'Trả lời 1', 'type' => 'textarea'],
+            ['key' => 'q2', 'label' => 'Câu hỏi 2', 'type' => 'text'],
+            ['key' => 'a2', 'label' => 'Trả lời 2', 'type' => 'textarea'],
+            ['key' => 'q3', 'label' => 'Câu hỏi 3', 'type' => 'text'],
+            ['key' => 'a3', 'label' => 'Trả lời 3', 'type' => 'textarea'],
+            ['key' => 'q4', 'label' => 'Câu hỏi 4', 'type' => 'text'],
+            ['key' => 'a4', 'label' => 'Trả lời 4', 'type' => 'textarea'],
+        ];
+    }
+}
+
+if (! function_exists('content_block_asset_url')) {
+    function content_block_asset_url(?string $path): string
+    {
+        $path = trim((string) $path);
+        if ($path === '') {
+            return '';
+        }
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        return asset($path);
+    }
+}
+
+if (! function_exists('creator_home_page_block')) {
+    function creator_home_page_block(string $blockKey): array
+    {
+        return content_block($blockKey, \App\Support\CreatorHomePageBlocks::defaults($blockKey));
+    }
+}
+
+if (! function_exists('creator_home_tiers_block')) {
+    function creator_home_tiers_block(): array
+    {
+        $data = content_block('creator.home.tiers', \App\Support\CreatorHomePageBlocks::homeTiersDefaults());
+
+        return \App\Support\CreatorHomePageBlocks::normalizeTiersContent($data);
+    }
+}
+
+if (! function_exists('creator_home_sample_request_url')) {
+    function creator_home_sample_request_url(): string
+    {
+        $user = auth()->user();
+
+        if ($user && $user->canAccessCreatorAffiliateFeatures()) {
+            return route('creator.sample-requests.create');
+        }
+
+        return route('creator.affiliate.apply');
+    }
+}
+
+if (! function_exists('creator_home_page_schema')) {
+    function creator_home_page_schema(string $blockKey): array
+    {
+        return \App\Support\CreatorHomePageBlocks::schema($blockKey);
+    }
+}
+
+if (! function_exists('creator_home_features_list')) {
+    /**
+     * @return list<string>
+     */
+    function creator_home_features_list(?string $text): array
+    {
+        if ($text === null || trim($text) === '') {
+            return [];
+        }
+
+        return array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $text))));
     }
 }
 

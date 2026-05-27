@@ -75,6 +75,8 @@
             </div>
         </div>
 
+        @include('admin.collections._keyword_rules')
+
         <!-- Collection Image -->
         <div class="border-b border-gray-200 pb-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -245,6 +247,12 @@
                                 </thead>
                                 <tbody id="products-table-body" class="bg-white divide-y divide-gray-200">
                                     @foreach($products as $product)
+                                    @php
+                                        $primaryImage = $product->primary_image ?? null;
+                                        if (is_array($primaryImage)) {
+                                            $primaryImage = $primaryImage['url'] ?? $primaryImage['path'] ?? reset($primaryImage) ?? null;
+                                        }
+                                    @endphp
                                     <tr class="product-row hover:bg-purple-50 transition" 
                                         data-name="{{ strtolower($product->name) }}" 
                                         data-price="{{ $product->getEffectivePrice() }}"
@@ -255,7 +263,7 @@
                                             <input type="checkbox" class="product-checkbox w-4 h-4 text-purple-600 focus:ring-purple-500 rounded" 
                                                    value="{{ $product->id }}" 
                                                    data-name="{{ $product->name }}"
-                                                   data-image="{{ $product->primary_image ?? '' }}"
+                                                   data-image="{{ $primaryImage ?? '' }}"
                                                    data-price="{{ number_format($product->getEffectivePrice(), 2) }}"
                                                    {{ in_array($product->id, old('products', [])) ? 'checked' : '' }}
                                                    onchange="updateSelectedProducts()">
@@ -263,8 +271,8 @@
                                         <td class="px-4 py-3">
                                             <div class="flex items-center">
                                                 <div class="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center text-lg mr-3 overflow-hidden">
-                                                    @if(!empty($product->primary_image))
-                                                        <img src="{{ $product->primary_image }}" alt="{{ $product->altForMediaItem($product->getEffectiveMedia()[0] ?? '', null, 0) }}" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                    @if(!empty($primaryImage))
+                                                        <img src="{{ $primaryImage }}" alt="{{ $product->altForMediaItem($product->getEffectiveMedia()[0] ?? '', null, 0) }}" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                                         <span class="w-full h-full items-center justify-center text-lg hidden">📦</span>
                                                     @else
                                                         <span class="w-full h-full flex items-center justify-center text-lg">📦</span>

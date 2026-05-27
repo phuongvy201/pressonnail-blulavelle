@@ -109,21 +109,37 @@ class ReviewImportController extends Controller
 
         $errors = $import->getErrors();
         $successCount = $import->getSuccessCount();
+        $duplicateCount = $import->getDuplicateCount();
 
         if ($successCount > 0) {
             $msg = "Đã import thành công {$successCount} review.";
-            if (count($errors) > 0) {
-                $msg .= ' ' . count($errors) . ' dòng lỗi: ' . implode('; ', array_slice($errors, 0, 3));
+            if ($duplicateCount > 0) {
+                $msg .= " {$duplicateCount} review đã tồn tại (bỏ qua).";
             }
+            $otherErrors = count($errors) - $duplicateCount;
+            if ($otherErrors > 0) {
+                $nonDuplicateErrors = array_values(array_filter(
+                    $errors,
+                    static fn (string $e) => ! str_starts_with($e, 'Review đã tồn tại:')
+                ));
+                $msg .= ' '.$otherErrors.' dòng lỗi: '.implode('; ', array_slice($nonDuplicateErrors, 0, 3));
+            } elseif ($duplicateCount > 0) {
+                $msg .= ' '.implode('; ', array_slice($errors, 0, 3));
+            }
+
             return redirect()
                 ->route('admin.reviews.import')
                 ->with('success', $msg);
         }
 
         if (count($errors) > 0) {
+            $prefix = $duplicateCount > 0 && $duplicateCount === count($errors)
+                ? "Không có review mới. {$duplicateCount} review đã tồn tại: "
+                : 'Import thất bại: ';
+
             return redirect()
                 ->route('admin.reviews.import')
-                ->with('error', 'Import thất bại: ' . implode('; ', array_slice($errors, 0, 5)));
+                ->with('error', $prefix.implode('; ', array_slice($errors, 0, 5)));
         }
 
         return redirect()

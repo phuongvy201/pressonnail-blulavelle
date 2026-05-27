@@ -26,7 +26,6 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\QueryException;
-use Illuminate\Http\File;
 
 class ProductsImport implements
     ToModel,
@@ -263,6 +262,8 @@ class ProductsImport implements
                     'description' => $description,
                     'quantity' => $row['quantity'] ?? 0,
                     'status' => $row['status'] ?? 'active',
+                    // Mặc định bật affiliate cho sản phẩm import (trừ khi admin sửa tay sau đó).
+                    'affiliate_eligible' => true,
                 ];
 
                 // Ensure 'id' is not in the data (even if somehow included)
@@ -1011,6 +1012,44 @@ class ProductsImport implements
     }
 
     /**
+     * Upload file local lên S3 — truyền đường dẫn string (tránh getRealPath() rỗng trên Windows với File object).
+     */
+    protected function putReadableLocalFileToS3(string $localPath, string $fileName, string $directory = 'products'): ?string
+    {
+        $localPath = trim($localPath);
+        if ($localPath === '' || ! is_file($localPath) || ! is_readable($localPath)) {
+            Log::warning('ProductsImport: local file not readable for S3 upload', [
+                'path' => $localPath,
+                'file_name' => $fileName,
+            ]);
+
+            return null;
+        }
+
+        $fileName = trim($fileName);
+        if ($fileName === '') {
+            return null;
+        }
+
+        try {
+            $disk = Storage::disk('s3');
+            $filePath = $disk->putFileAs($directory, $localPath, $fileName);
+
+            if ($filePath && $filePath !== '') {
+                return 'https://s3.us-east-1.amazonaws.com/image.bluprinter/'.$filePath;
+            }
+        } catch (\Throwable $e) {
+            Log::error('ProductsImport: S3 putFileAs failed', [
+                'path' => $localPath,
+                'file_name' => $fileName,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return null;
+    }
+
+    /**
      * Upload nội dung file (ảnh) đã tải về lên S3 thư mục products — cùng format URL với ProductController.
      */
     protected function uploadProductImageContentToS3(
@@ -1069,13 +1108,8 @@ class ProductsImport implements
             if (file_put_contents($tempFile, $fileContent) === false) {
                 return null;
             }
-            $fileObject = new File($tempFile);
-            $filePath = $disk->putFileAs('products', $fileObject, $fileName);
-            if ($filePath && ! empty($filePath)) {
-                return 'https://s3.us-east-1.amazonaws.com/image.bluprinter/'.$filePath;
-            }
 
-            return null;
+            return $this->putReadableLocalFileToS3($tempFile, $fileName);
         } catch (\Throwable $e) {
             Log::error('ProductsImport: uploadProductImageContentToS3', ['error' => $e->getMessage()]);
 
@@ -1310,43 +1344,36 @@ class ProductsImport implements
                     return null;
                 }
 
-                // Create File object from temporary file (like ProductController uses UploadedFile)
-                $fileObject = new File($tempFile);
-
-                // Use putFileAs like ProductController does
                 try {
-                    // Check if file exists and is readable
-                    if (!file_exists($tempFile) || !is_readable($tempFile)) {
+                    if (! file_exists($tempFile) || ! is_readable($tempFile)) {
                         Log::error("Temporary file not accessible: {$tempFile}, URL: {$url}");
                         return null;
                     }
 
-                    $filePath = $disk->putFileAs('products', $fileObject, $fileName);
+                    $s3Url = $this->putReadableLocalFileToS3($tempFile, $fileName);
 
-                    if ($filePath && !empty($filePath)) {
-                        // Create the correct S3 URL format - same as ProductController
-                        $s3Url = 'https://s3.us-east-1.amazonaws.com/image.bluprinter/' . $filePath;
-                        Log::info("Successfully uploaded to S3", [
+                    if ($s3Url !== null) {
+                        Log::info('Successfully uploaded to S3', [
                             'file' => $fileName,
-                            'path' => $filePath,
                             'url' => $s3Url,
                             'size' => $fileSize,
-                            'source_url' => $url
+                            'source_url' => $url,
                         ]);
+
                         return $s3Url;
-                    } else {
-                        // putFileAs returned false or empty - check S3 connection
-                        Log::error("putFileAs returned false/empty for: {$fileName}", [
-                            'url' => $url,
-                            'temp_file' => $tempFile,
-                            'temp_file_exists' => file_exists($tempFile),
-                            'temp_file_size' => file_exists($tempFile) ? filesize($tempFile) : 0,
-                            's3_bucket' => config('filesystems.disks.s3.bucket'),
-                            's3_region' => config('filesystems.disks.s3.region'),
-                            'has_s3_key' => !empty(config('filesystems.disks.s3.key'))
-                        ]);
-                        return null;
                     }
+
+                    Log::error("putFileAs returned false/empty for: {$fileName}", [
+                        'url' => $url,
+                        'temp_file' => $tempFile,
+                        'temp_file_exists' => file_exists($tempFile),
+                        'temp_file_size' => file_exists($tempFile) ? filesize($tempFile) : 0,
+                        's3_bucket' => config('filesystems.disks.s3.bucket'),
+                        's3_region' => config('filesystems.disks.s3.region'),
+                        'has_s3_key' => ! empty(config('filesystems.disks.s3.key')),
+                    ]);
+
+                    return null;
                 } catch (\Aws\S3\Exception\S3Exception $e) {
                     Log::error("AWS S3 Exception during upload: {$url}", [
                         'file' => $fileName,
@@ -1356,7 +1383,7 @@ class ProductsImport implements
                         'trace' => $e->getTraceAsString()
                     ]);
                     return null;
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     Log::error("General exception during putFileAs: {$url}", [
                         'file' => $fileName,
                         'error' => $e->getMessage(),
@@ -1365,7 +1392,7 @@ class ProductsImport implements
                     ]);
                     return null;
                 }
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 Log::error("Exception during S3 upload: {$url}, Error: " . $e->getMessage(), [
                     'file' => $fileName,
                     'trace' => $e->getTraceAsString()
@@ -1377,7 +1404,7 @@ class ProductsImport implements
                     @unlink($tempFile);
                 }
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             // Catch any unexpected errors that weren't handled above
             Log::error("Unexpected error in downloadAndUploadToS3: {$url}, Error: " . $e->getMessage(), [
                 'error_class' => get_class($e),
@@ -1410,16 +1437,14 @@ class ProductsImport implements
         } else {
             $fileName = time().'_'.Str::random(10).'.'.$extension;
         }
-        $disk = Storage::disk('s3');
-        $fileObject = new File($tempFile);
-        $filePath = $disk->putFileAs('products', $fileObject, $fileName);
-        if (! $filePath) {
+        $videoS3Url = $this->putReadableLocalFileToS3($tempFile, $fileName);
+        if ($videoS3Url === null) {
             Log::error("Failed to upload video to S3 for: {$url}");
 
             return null;
         }
-        $videoS3Url = 'https://s3.us-east-1.amazonaws.com/image.bluprinter/'.$filePath;
 
+        $disk = Storage::disk('s3');
         $thumbnailService = app(VideoThumbnailService::class);
         $posterRelative = $thumbnailService->generatePoster($tempFile, 5);
         $posterS3Url = null;
