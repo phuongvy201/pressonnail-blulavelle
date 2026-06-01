@@ -40,22 +40,21 @@ class CreatorSampleRequestsController extends Controller
         $affiliate = auth()->user()->affiliate;
         $quota = $this->samples->quotaSummary($affiliate);
 
-        $products = $this->samples->sampleEligibleProductsForAffiliate($affiliate);
-
-        $productMeta = $products->mapWithKeys(fn (Product $p) => [
-            $p->id => [
-                'max_qty' => $p->maxSampleQuantityPerRequest(),
-                'has_variants' => $p->variants->isNotEmpty(),
-                'min_tier' => $p->sample_min_tier,
-            ],
-        ]);
+        $initialProduct = null;
+        if ($oldProductId = (int) old('product_id')) {
+            $product = Product::query()->find($oldProductId);
+            if ($product) {
+                $initialProduct = $this->samples->sampleProductDetailsForAffiliate($affiliate, $product);
+            }
+        }
 
         return view('creator.sample-requests.create', [
             'affiliate' => $affiliate,
             'setup' => AffiliateSetupStatus::for($affiliate),
             'quota' => $quota,
-            'products' => $products,
-            'productMeta' => $productMeta,
+            'hasSampleProducts' => $this->samples->affiliateHasSampleProductsAvailable($affiliate),
+            'filterCollections' => $this->samples->sampleFilterCollectionsForAffiliate($affiliate),
+            'initialProduct' => $initialProduct,
             'sizePresets' => AffiliateSampleRequest::SIZE_PRESETS,
             'affiliateTier' => $affiliate->tier ?: 'basic',
         ]);

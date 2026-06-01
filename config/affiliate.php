@@ -99,6 +99,11 @@ return [
     'sample_max_quantity_per_request' => (int) env('AFFILIATE_SAMPLE_MAX_QTY', 1),
 
     /**
+     * Days after successful delivery before commission balance is eligible for payout.
+     */
+    'payout_delay_days_after_delivery' => (int) env('AFFILIATE_PAYOUT_DELAY_DAYS_AFTER_DELIVERY', 14),
+
+    /**
      * Email nhận thông báo khi có đơn đăng ký affiliate / KOC từ creator portal.
      * Mặc định: MAIL_FROM_ADDRESS nếu AFFILIATE_ADMIN_NOTIFICATION_EMAIL không set.
      */

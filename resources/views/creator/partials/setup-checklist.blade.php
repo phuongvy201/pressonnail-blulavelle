@@ -9,6 +9,9 @@
                 <p class="mt-2 text-sm text-[#404753]">
                     You can use referral links and earn commissions right away. Payouts require completed payout information below.
                 </p>
+                <div class="mt-3">
+                    @include('creator.partials.payout-timing-note')
+                </div>
             </div>
             <a href="{{ route('creator.setup.index') }}"
                class="creator-btn-primary creator-font-label shrink-0 rounded-lg px-4 py-2 text-sm font-semibold tracking-wide">
@@ -38,7 +41,7 @@
         @if (! $setup->payoutComplete)
             <p class="mt-4 text-xs text-[#707884]">
                 <span class="material-symbols-outlined align-middle text-[16px]">info</span>
-                Commissions stay <strong>pending</strong> until payout details are on file and approved for disbursement.
+                Commissions stay <strong>pending</strong> until payout details are on file. Payment is sent after the delivery hold period in our policy.
             </p>
         @endif
     </div>

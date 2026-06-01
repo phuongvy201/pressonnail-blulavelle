@@ -156,4 +156,15 @@ class AffiliateSettings
 
         return max(1, (int) round($minutes / 1440));
     }
+
+    /** Days after successful delivery before we pay out commission (default 14). */
+    public static function payoutDelayDaysAfterDelivery(): int
+    {
+        $v = Settings::get('affiliate.payout_delay_days_after_delivery');
+        if ($v === null || $v === '') {
+            return max(0, (int) config('affiliate.payout_delay_days_after_delivery', 14));
+        }
+
+        return max(0, min(365, (int) $v));
+    }
 }

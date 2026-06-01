@@ -60,7 +60,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         if ($this->app->environment('local') && config('creator.domain') && ! SharedCookieDomain::resolve()) {
-            logger()->warning('CREATOR_DOMAIN is set but SESSION_DOMAIN is not shared — login on creator subdomain will not carry over to the main shop. Set SESSION_DOMAIN=.your-root-domain in .env');
+            logger()->info('CREATOR_DOMAIN is set and SESSION_DOMAIN is empty — main and creator will keep separate sessions unless SESSION_DOMAIN is explicitly configured.');
         }
 
         // Share currency information with all views

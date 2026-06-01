@@ -3,9 +3,10 @@
 namespace App\Support;
 
 /**
- * Parent cookie domain so login/session is shared between the storefront and creator subdomain.
+ * Resolve a cookie domain only when it is explicitly configured.
  *
- * Example: shop pressonnail.test + creator creator.pressonnail.test → .pressonnail.test
+ * We intentionally avoid inferring from app/creator hosts so separate Laravel apps
+ * do not accidentally share session cookies across subdomains.
  */
 class SharedCookieDomain
 {
@@ -16,7 +17,7 @@ class SharedCookieDomain
             return self::normalize($explicit);
         }
 
-        return self::inferFromHosts();
+        return null;
     }
 
     private static function normalize(string $domain): string
@@ -31,27 +32,4 @@ class SharedCookieDomain
         return $domain;
     }
 
-    private static function inferFromHosts(): ?string
-    {
-        $shopHost = self::hostFromUrl((string) config('app.url'));
-        $creatorHost = trim((string) config('creator.domain', ''));
-
-        if ($shopHost === '' || $creatorHost === '' || $shopHost === $creatorHost) {
-            return null;
-        }
-
-        // creator.pressonnail.test is a subdomain of pressonnail.test
-        if (str_ends_with($creatorHost, '.'.$shopHost)) {
-            return self::normalize($shopHost);
-        }
-
-        return null;
-    }
-
-    private static function hostFromUrl(string $url): string
-    {
-        $host = parse_url($url, PHP_URL_HOST);
-
-        return is_string($host) ? strtolower($host) : '';
-    }
 }

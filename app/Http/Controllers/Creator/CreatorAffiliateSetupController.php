@@ -18,12 +18,15 @@ class CreatorAffiliateSetupController extends Controller
         $affiliate = $this->affiliate();
         $this->maybeSyncProfileFromApplication($affiliate);
 
+        $payoutMethods = config('creator.payout_methods', []);
+
         return view('creator.setup.index', [
             'affiliate' => $affiliate->fresh(),
             'setup' => AffiliateSetupStatus::for($affiliate->fresh()),
             'platforms' => config('creator.platforms', []),
             'followerRanges' => config('creator.follower_ranges', []),
-            'payoutMethods' => config('creator.payout_methods', []),
+            'payoutMethods' => $payoutMethods,
+            'defaultPayoutMethod' => $this->resolveDefaultPayoutMethod($affiliate, $payoutMethods),
         ]);
     }
 
@@ -75,29 +78,55 @@ class CreatorAffiliateSetupController extends Controller
             'payout_method' => ['required', Rule::in($methods)],
             'payout_legal_name' => 'required|string|max:255',
             'payout_paypal_email' => 'nullable|email|max:255|required_if:payout_method,paypal',
-            'payout_venmo_handle' => 'nullable|string|max:128|required_if:payout_method,venmo',
             'payout_bank_name' => 'nullable|string|max:255|required_if:payout_method,bank_transfer',
             'payout_account_holder' => 'nullable|string|max:255|required_if:payout_method,bank_transfer',
-            'payout_account_last4' => 'nullable|string|size:4|regex:/^\d{4}$/|required_if:payout_method,bank_transfer',
-            'payout_routing_last4' => 'nullable|string|size:4|regex:/^\d{4}$/',
+            'payout_routing_number' => 'nullable|string|regex:/^\d{9}$/|required_if:payout_method,bank_transfer',
+            'payout_account_number' => 'nullable|string|regex:/^\d{4,17}$/|required_if:payout_method,bank_transfer',
         ]);
 
-        $affiliate->update([
+        $payload = [
             'payout_method' => $validated['payout_method'],
             'payout_legal_name' => $validated['payout_legal_name'],
             'payout_paypal_email' => $validated['payout_method'] === 'paypal' ? $validated['payout_paypal_email'] : null,
-            'payout_venmo_handle' => $validated['payout_method'] === 'venmo' ? $validated['payout_venmo_handle'] : null,
-            'payout_bank_name' => $validated['payout_method'] === 'bank_transfer' ? $validated['payout_bank_name'] : null,
-            'payout_account_holder' => $validated['payout_method'] === 'bank_transfer' ? $validated['payout_account_holder'] : null,
-            'payout_account_last4' => $validated['payout_method'] === 'bank_transfer' ? $validated['payout_account_last4'] : null,
-            'payout_routing_last4' => $validated['payout_method'] === 'bank_transfer' ? ($validated['payout_routing_last4'] ?? null) : null,
-        ]);
+            'payout_venmo_handle' => null,
+            'payout_bank_name' => null,
+            'payout_account_holder' => null,
+            'payout_routing_number' => null,
+            'payout_account_number' => null,
+            'payout_account_last4' => null,
+            'payout_routing_last4' => null,
+        ];
+
+        if ($validated['payout_method'] === 'bank_transfer') {
+            $accountNumber = $validated['payout_account_number'];
+            $routingNumber = $validated['payout_routing_number'];
+            $payload['payout_bank_name'] = $validated['payout_bank_name'];
+            $payload['payout_account_holder'] = $validated['payout_account_holder'];
+            $payload['payout_routing_number'] = $routingNumber;
+            $payload['payout_account_number'] = $accountNumber;
+            $payload['payout_account_last4'] = substr($accountNumber, -4);
+            $payload['payout_routing_last4'] = substr($routingNumber, -4);
+        }
+
+        $affiliate->update($payload);
 
         return redirect()
             ->to(route('creator.setup.index').'#payout')
             ->with('success', $affiliate->fresh()->hasPayoutSetup()
                 ? 'Payout information saved. You are eligible for payouts when commissions are processed.'
                 : 'Payout information saved.');
+    }
+
+    /**
+     * @param  array<string, string>  $payoutMethods
+     */
+    private function resolveDefaultPayoutMethod(Affiliate $affiliate, array $payoutMethods): string
+    {
+        $method = old('payout_method', $affiliate->payout_method ?? 'paypal');
+
+        return array_key_exists($method, $payoutMethods)
+            ? $method
+            : (array_key_first($payoutMethods) ?: 'paypal');
     }
 
     private function affiliate(): Affiliate

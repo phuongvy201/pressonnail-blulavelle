@@ -27,6 +27,8 @@ class Affiliate extends Model
         'payout_account_holder',
         'payout_account_last4',
         'payout_routing_last4',
+        'payout_routing_number',
+        'payout_account_number',
         'payout_setup_completed_at',
         'tier',
         'commission_rate_override',
@@ -39,6 +41,8 @@ class Affiliate extends Model
         'tier_locked' => 'boolean',
         'is_active' => 'boolean',
         'payout_setup_completed_at' => 'datetime',
+        'payout_routing_number' => 'encrypted',
+        'payout_account_number' => 'encrypted',
     ];
 
     public function user(): BelongsTo
@@ -104,11 +108,10 @@ class Affiliate extends Model
 
         return match ($this->payout_method) {
             'paypal' => filled($this->payout_paypal_email),
-            'venmo' => filled($this->payout_venmo_handle),
             'bank_transfer' => filled($this->payout_bank_name)
                 && filled($this->payout_account_holder)
-                && filled($this->payout_account_last4)
-                && strlen((string) $this->payout_account_last4) === 4,
+                && filled($this->payout_routing_number)
+                && filled($this->payout_account_number),
             default => false,
         };
     }
@@ -162,6 +165,7 @@ class Affiliate extends Model
                 'payout_method', 'payout_legal_name', 'payout_paypal_email',
                 'payout_venmo_handle', 'payout_bank_name', 'payout_account_holder',
                 'payout_account_last4', 'payout_routing_last4',
+                'payout_routing_number', 'payout_account_number',
             ])) {
                 $complete = $affiliate->hasPayoutSetup();
                 $affiliate->payout_setup_completed_at = $complete ? ($affiliate->payout_setup_completed_at ?? now()) : null;

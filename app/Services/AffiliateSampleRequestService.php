@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Affiliate;
 use App\Models\AffiliateSampleRequest;
+use App\Models\Collection;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -11,7 +12,7 @@ use App\Models\ProductVariant;
 use App\Models\User;
 use App\Support\AffiliateTier;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Validation\ValidationException;
 
 class AffiliateSampleRequestService
@@ -95,24 +96,179 @@ class AffiliateSampleRequestService
             ->where('slug', '!=', '');
     }
 
-    /**
-     * Products a creator may request, filtered by tier and stock.
-     *
-     * @return \Illuminate\Support\Collection<int, Product>
-     */
-    public function sampleEligibleProductsForAffiliate(Affiliate $affiliate)
+    public function affiliateHasSampleProductsAvailable(Affiliate $affiliate): bool
     {
         $tier = AffiliateTier::normalize($affiliate->tier ?: AffiliateTier::BASIC);
 
-        return $this->sampleEligibleProductsQuery()
-            ->with(['variants' => fn ($q) => $q->where('quantity', '>', 0)->orderBy('variant_name')])
-            ->orderBy('name')
-            ->get()
-            ->filter(function (Product $product) use ($affiliate, $tier) {
-                if (! $product->isSampleEligibleForTier($tier)) {
-                    return false;
-                }
+        $query = $this->sampleEligibleProductsQuery();
+        $this->applyCreatorSampleTierFilter($query, $tier);
 
+        return $query->exists();
+    }
+
+    /**
+     * Collections that contain at least one sample-eligible product for this affiliate tier.
+     *
+     * @return SupportCollection<int, Collection>
+     */
+    public function sampleFilterCollectionsForAffiliate(Affiliate $affiliate): SupportCollection
+    {
+        $tier = AffiliateTier::normalize($affiliate->tier ?: AffiliateTier::BASIC);
+
+        return Collection::query()
+            ->active()
+            ->whereHas('products', function (Builder $q) use ($tier) {
+                $q->sampleRequestEnabled()
+                    ->availableForDisplay()
+                    ->whereNotNull('products.slug')
+                    ->where('products.slug', '!=', '');
+                $this->applyCreatorSampleTierFilter($q, $tier);
+            })
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug']);
+    }
+
+    /**
+     * @return list<array{id: int, name: string, sku: string|null, thumbnail: string|null, min_tier: string|null, category: string|null, category_id: int|null}>
+     */
+    public function searchSampleProductsForAffiliate(
+        Affiliate $affiliate,
+        string $query,
+        ?int $collectionId = null,
+        int $limit = 20,
+    ): array {
+        $tier = AffiliateTier::normalize($affiliate->tier ?: AffiliateTier::BASIC);
+        $limit = max(1, min(30, $limit));
+        $query = trim($query);
+
+        $builder = $this->sampleEligibleProductsQuery()
+            ->select(['products.id', 'products.name', 'products.sku', 'products.media', 'products.sample_min_tier', 'products.template_id'])
+            ->with([
+                'template:id,media',
+                'collections' => fn ($q) => $q->select('collections.id', 'collections.name')->orderByPivot('sort_order'),
+            ]);
+        $this->applyCreatorSampleTierFilter($builder, $tier);
+
+        if ($collectionId) {
+            $builder->whereHas('collections', fn (Builder $q) => $q->where('collections.id', $collectionId));
+        }
+
+        if ($query !== '') {
+            $like = '%'.$query.'%';
+            $builder->where(function (Builder $q) use ($like) {
+                $q->where('products.name', 'like', $like)
+                    ->orWhere('products.sku', 'like', $like)
+                    ->orWhereHas('collections', fn (Builder $cq) => $cq->where('collections.name', 'like', $like));
+            });
+        }
+
+        $candidates = $builder->orderBy('products.name')->limit($limit * 3)->get();
+
+        $results = [];
+        foreach ($candidates as $product) {
+            if (! $product->hasStock()) {
+                continue;
+            }
+
+            $productQuota = $this->productQuotaSummary($affiliate, $product);
+            if ($productQuota['remaining'] !== null && $productQuota['remaining'] <= 0) {
+                continue;
+            }
+
+            $category = $this->primaryCollectionForProduct($product, $collectionId);
+
+            $results[] = [
+                'id' => $product->id,
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'thumbnail' => $this->productThumbnailUrl($product),
+                'min_tier' => $product->sample_min_tier ? AffiliateTier::label($product->sample_min_tier) : null,
+                'category' => $category['name'] ?? null,
+                'category_id' => $category['id'] ?? null,
+            ];
+
+            if (count($results) >= $limit) {
+                break;
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function sampleProductDetailsForAffiliate(Affiliate $affiliate, Product $product): ?array
+    {
+        $tier = AffiliateTier::normalize($affiliate->tier ?: AffiliateTier::BASIC);
+
+        if (! $product->isSampleRequestEnabled() || ! $product->isAvailableForDisplay()) {
+            return null;
+        }
+
+        if (! $product->isSampleEligibleForTier($tier)) {
+            return null;
+        }
+
+        if (! $product->hasStock()) {
+            return null;
+        }
+
+        $productQuota = $this->productQuotaSummary($affiliate, $product);
+        if ($productQuota['remaining'] !== null && $productQuota['remaining'] <= 0) {
+            return null;
+        }
+
+        $product->load([
+            'variants' => fn ($q) => $q->where('quantity', '>', 0)->orderBy('variant_name'),
+            'collections' => fn ($q) => $q->select('collections.id', 'collections.name')->orderByPivot('sort_order'),
+        ]);
+
+        $category = $this->primaryCollectionForProduct($product);
+
+        $variants = $product->variants->map(function (ProductVariant $variant) {
+            $attr = '';
+            if (is_array($variant->attributes) && $variant->attributes !== []) {
+                $attr = ' ('.collect($variant->attributes)->map(fn ($val, $key) => $key.': '.$val)->implode(', ').')';
+            }
+
+            return [
+                'id' => $variant->id,
+                'label' => $variant->variant_name.$attr,
+                'qty' => (int) $variant->quantity,
+            ];
+        })->values()->all();
+
+        return [
+            'id' => $product->id,
+            'name' => $product->name,
+            'sku' => $product->sku,
+            'thumbnail' => $this->productThumbnailUrl($product),
+            'max_qty' => $product->maxSampleQuantityPerRequest(),
+            'has_variants' => $product->variants->isNotEmpty(),
+            'min_tier' => $product->sample_min_tier ? AffiliateTier::label($product->sample_min_tier) : null,
+            'category' => $category['name'] ?? null,
+            'category_id' => $category['id'] ?? null,
+            'variants' => $variants,
+        ];
+    }
+
+    /**
+     * Products a creator may request, filtered by tier and stock.
+     *
+     * @return SupportCollection<int, Product>
+     */
+    public function sampleEligibleProductsForAffiliate(Affiliate $affiliate): SupportCollection
+    {
+        $tier = AffiliateTier::normalize($affiliate->tier ?: AffiliateTier::BASIC);
+
+        $query = $this->sampleEligibleProductsQuery()
+            ->with(['variants' => fn ($q) => $q->where('quantity', '>', 0)->orderBy('variant_name')]);
+        $this->applyCreatorSampleTierFilter($query, $tier);
+
+        return $query->orderBy('name')
+            ->get()
+            ->filter(function (Product $product) use ($affiliate) {
                 if (! $product->hasStock()) {
                     return false;
                 }
@@ -465,6 +621,66 @@ class AffiliateSampleRequestService
             ->orderByDesc('created_at')
             ->limit($limit)
             ->get();
+    }
+
+    private function applyCreatorSampleTierFilter(Builder $query, string $affiliateTier): void
+    {
+        $affiliateRank = AffiliateTier::rank($affiliateTier);
+
+        $query->whereRaw("(
+            CASE COALESCE(products.sample_min_tier, 'basic')
+                WHEN 'diamond' THEN 4
+                WHEN 'gold' THEN 3
+                WHEN 'silver' THEN 2
+                ELSE 1
+            END
+        ) <= ?", [$affiliateRank]);
+    }
+
+    /**
+     * @return array{id: int, name: string}|null
+     */
+    private function primaryCollectionForProduct(Product $product, ?int $preferredCollectionId = null): ?array
+    {
+        $collections = $product->relationLoaded('collections')
+            ? $product->collections
+            : $product->collections()->select('collections.id', 'collections.name')->orderByPivot('sort_order')->get();
+
+        if ($collections->isEmpty()) {
+            return null;
+        }
+
+        if ($preferredCollectionId) {
+            $match = $collections->firstWhere('id', $preferredCollectionId);
+            if ($match) {
+                return ['id' => (int) $match->id, 'name' => $match->name];
+            }
+        }
+
+        $first = $collections->first();
+
+        return ['id' => (int) $first->id, 'name' => $first->name];
+    }
+
+    private function productThumbnailUrl(Product $product): ?string
+    {
+        $media = $product->getEffectiveMedia();
+        if ($media === []) {
+            return null;
+        }
+
+        $first = $media[0];
+        if (is_string($first)) {
+            return $first !== '' ? $first : null;
+        }
+
+        if (is_array($first)) {
+            $url = $first['url'] ?? $first['path'] ?? null;
+
+            return is_string($url) && $url !== '' ? $url : null;
+        }
+
+        return null;
     }
 
     private function quotaPeriodStart(int $periodDays): \Illuminate\Support\Carbon

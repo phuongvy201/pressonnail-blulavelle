@@ -13,6 +13,7 @@ use App\Http\Controllers\Creator\CreatorHomeController;
 
 use App\Http\Controllers\Creator\CreatorProductLinksController;
 use App\Http\Controllers\Creator\CreatorPromoCodesController;
+use App\Http\Controllers\Creator\CreatorSampleProductController;
 use App\Http\Controllers\Creator\CreatorSampleRequestsController;
 
 use App\Http\Controllers\Creator\CreatorOnboardingAccountController;
@@ -123,6 +124,9 @@ Route::middleware(['auth', 'affiliate.creator'])->group(function () {
     Route::get('/dashboard/product-links', [CreatorProductLinksController::class, 'index'])->name('creator.product-links.index');
 
     Route::get('/dashboard/promo-codes', [CreatorPromoCodesController::class, 'index'])->name('creator.promo-codes.index');
+
+    Route::get('/dashboard/sample-products/search', [CreatorSampleProductController::class, 'search'])->name('creator.sample-products.search');
+    Route::get('/dashboard/sample-products/{product}', [CreatorSampleProductController::class, 'show'])->name('creator.sample-products.show');
 
     Route::get('/dashboard/sample-requests', [CreatorSampleRequestsController::class, 'index'])->name('creator.sample-requests.index');
     Route::get('/dashboard/sample-requests/create', [CreatorSampleRequestsController::class, 'create'])->name('creator.sample-requests.create');

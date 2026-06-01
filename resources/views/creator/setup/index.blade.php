@@ -3,9 +3,12 @@
 @section('title', 'Account setup')
 
 @section('content')
-    <div class="mx-auto max-w-3xl px-5 py-12 md:px-16" x-data="{ payoutMethod: @js(old('payout_method', $affiliate->payout_method ?? 'paypal')) }">
+    <div class="mx-auto max-w-3xl px-5 py-12 md:px-16" x-data="{ payoutMethod: @js($defaultPayoutMethod) }">
         <h1 class="creator-font-headline text-3xl font-bold text-[#0b1c30]">Account setup</h1>
         <p class="mt-2 text-[#404753]">Finish these steps so we can pay you commissions. Your referral links work anytime.</p>
+        <div class="mt-4 rounded-xl border border-[#bfc7d5]/80 bg-[#eff4ff]/50 px-4 py-3">
+            @include('creator.partials.payout-timing-note', ['class' => 'text-sm text-[#404753]'])
+        </div>
 
         @include('creator.partials.setup-checklist', ['setup' => $setup])
 
@@ -127,8 +130,11 @@
                 @endif
             </div>
             <p class="mt-2 text-sm text-[#404753]">
-                We only store what is needed to send commissions. Full bank details may be collected separately if required for tax reporting.
+                We store payout details securely (encrypted) so we can send commissions. PayPal or US bank transfer (ACH) only.
             </p>
+            <div class="mt-3">
+                @include('creator.partials.payout-timing-note')
+            </div>
             <form method="post" action="{{ route('creator.setup.payout') }}" class="mt-5 space-y-4">
                 @csrf
                 @method('PUT')
@@ -156,14 +162,6 @@
                            class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 focus:border-primary focus:ring-1 focus:ring-primary">
                     @error('payout_paypal_email')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
-                <div x-show="payoutMethod === 'venmo'" x-cloak>
-                    <label for="payout_venmo_handle" class="block text-sm font-medium text-slate-700">Venmo @username <span class="text-red-500">*</span></label>
-                    <input id="payout_venmo_handle" name="payout_venmo_handle" type="text"
-                           value="{{ old('payout_venmo_handle', $affiliate->payout_venmo_handle) }}"
-                           placeholder="@yourhandle"
-                           class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 focus:border-primary focus:ring-1 focus:ring-primary">
-                    @error('payout_venmo_handle')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                </div>
                 <div x-show="payoutMethod === 'bank_transfer'" x-cloak class="space-y-4">
                     <div>
                         <label for="payout_bank_name" class="block text-sm font-medium text-slate-700">Bank name <span class="text-red-500">*</span></label>
@@ -179,23 +177,29 @@
                                class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 focus:border-primary focus:ring-1 focus:ring-primary">
                         @error('payout_account_holder')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <div>
-                            <label for="payout_account_last4" class="block text-sm font-medium text-slate-700">Account last 4 <span class="text-red-500">*</span></label>
-                            <input id="payout_account_last4" name="payout_account_last4" type="text" maxlength="4" pattern="\d{4}"
-                                   value="{{ old('payout_account_last4', $affiliate->payout_account_last4) }}"
-                                   class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono focus:border-primary focus:ring-1 focus:ring-primary">
-                            @error('payout_account_last4')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                        </div>
-                        <div>
-                            <label for="payout_routing_last4" class="block text-sm font-medium text-slate-700">Routing last 4 (optional)</label>
-                            <input id="payout_routing_last4" name="payout_routing_last4" type="text" maxlength="4" pattern="\d{4}"
-                                   value="{{ old('payout_routing_last4', $affiliate->payout_routing_last4) }}"
-                                   class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono focus:border-primary focus:ring-1 focus:ring-primary">
-                            @error('payout_routing_last4')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                        </div>
+                    <div>
+                        <label for="payout_routing_number" class="block text-sm font-medium text-slate-700">Routing number (9 digits) <span class="text-red-500">*</span></label>
+                        <input id="payout_routing_number" name="payout_routing_number" type="text" inputmode="numeric" autocomplete="off"
+                               maxlength="9" pattern="\d{9}" placeholder="123456789"
+                               value="{{ old('payout_routing_number') }}"
+                               class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono focus:border-primary focus:ring-1 focus:ring-primary">
+                        @if ($affiliate->payout_method === 'bank_transfer' && filled($affiliate->payout_routing_last4))
+                            <p class="mt-1 text-xs text-slate-500">On file: routing ending {{ $affiliate->payout_routing_last4 }}. Enter full number to update.</p>
+                        @endif
+                        @error('payout_routing_number')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
-                    <p class="text-xs text-slate-500">For security we do not collect full account numbers in the portal. Our team may request full details before your first payout.</p>
+                    <div>
+                        <label for="payout_account_number" class="block text-sm font-medium text-slate-700">Account number <span class="text-red-500">*</span></label>
+                        <input id="payout_account_number" name="payout_account_number" type="text" inputmode="numeric" autocomplete="off"
+                               maxlength="17" pattern="\d{4,17}" placeholder="Checking or savings account"
+                               value="{{ old('payout_account_number') }}"
+                               class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono focus:border-primary focus:ring-1 focus:ring-primary">
+                        @if ($affiliate->payout_method === 'bank_transfer' && filled($affiliate->payout_account_last4))
+                            <p class="mt-1 text-xs text-slate-500">On file: account ending {{ $affiliate->payout_account_last4 }}. Enter full number to update.</p>
+                        @endif
+                        @error('payout_account_number')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <p class="text-xs text-slate-500">US ACH only. Numbers are stored encrypted and never shown again in the portal.</p>
                 </div>
                 <p class="text-xs text-[#707884]">
                     See our

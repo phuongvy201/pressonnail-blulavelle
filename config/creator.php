@@ -61,7 +61,6 @@ return [
     /** Payout methods available after approval. */
     'payout_methods' => [
         'paypal' => 'PayPal',
-        'venmo' => 'Venmo',
         'bank_transfer' => 'Bank transfer (US)',
     ],
 ];

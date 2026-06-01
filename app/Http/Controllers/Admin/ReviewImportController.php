@@ -120,11 +120,11 @@ class ReviewImportController extends Controller
             if ($otherErrors > 0) {
                 $nonDuplicateErrors = array_values(array_filter(
                     $errors,
-                    static fn (string $e) => ! str_starts_with($e, 'Review đã tồn tại:')
+                    static fn(string $e) => ! str_starts_with($e, 'Review đã tồn tại:')
                 ));
-                $msg .= ' '.$otherErrors.' dòng lỗi: '.implode('; ', array_slice($nonDuplicateErrors, 0, 3));
+                $msg .= ' ' . $otherErrors . ' dòng lỗi: ' . implode('; ', array_slice($nonDuplicateErrors, 0, 3));
             } elseif ($duplicateCount > 0) {
-                $msg .= ' '.implode('; ', array_slice($errors, 0, 3));
+                $msg .= ' ' . implode('; ', array_slice($errors, 0, 3));
             }
 
             return redirect()
@@ -139,7 +139,7 @@ class ReviewImportController extends Controller
 
             return redirect()
                 ->route('admin.reviews.import')
-                ->with('error', $prefix.implode('; ', array_slice($errors, 0, 5)));
+                ->with('error', $prefix . implode('; ', array_slice($errors, 0, 5)));
         }
 
         return redirect()

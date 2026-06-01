@@ -13,4 +13,7 @@
         </span>
     </label>
     @error('accepted_program_terms')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+    <div class="mt-3 border-t border-slate-200 pt-3">
+        @include('creator.partials.payout-timing-note')
+    </div>
 </div>

@@ -189,6 +189,18 @@
                     </div>
                 </a>
                 <div class="border-t border-slate-200/80 divide-y divide-slate-200/80">
+                    @if(auth()->user()->hasAnyRole(['admin', 'seller', 'ad-partner']))
+                    <a href="{{ route('dashboard') }}" class="flex items-center gap-3 py-2.5 px-3 text-slate-700 text-sm hover:bg-white/60 hover:text-primary transition-colors">
+                        <span class="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-slate-500 shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18"/></svg></span>
+                        Dashboard
+                    </a>
+                    @endif
+                    @if(auth()->user()->canAccessCreatorAffiliateFeatures())
+                    <a href="{{ \App\Support\CreatorPortal::dashboardUrl() }}" class="flex items-center gap-3 py-2.5 px-3 text-primary text-sm font-semibold hover:bg-primary/5 transition-colors">
+                        <span class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586A1 1 0 0113.293 3.293l4.414 4.414A1 1 0 0118 8.414V19a2 2 0 01-2 2z"/></svg></span>
+                        Creator dashboard
+                    </a>
+                    @endif
                     <a href="{{ route('customer.orders.index') }}" class="flex items-center gap-3 py-2.5 px-3 text-slate-700 text-sm hover:bg-white/60 hover:text-primary transition-colors">
                         <span class="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-slate-500 shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg></span>
                         My Orders

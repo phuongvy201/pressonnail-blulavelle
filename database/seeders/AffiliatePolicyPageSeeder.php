@@ -32,6 +32,7 @@ class AffiliatePolicyPageSeeder extends Seeder
         $sampleQuotas = config('affiliate.sample_quotas', []);
         $samplePeriodDays = (int) data_get($sampleQuotas, 'basic.period_days', 30);
         $payoutMethods = implode(', ', array_values(config('creator.payout_methods', [])));
+        $payoutDelayDays = AffiliateSettings::payoutDelayDaysAfterDelivery();
 
         $sampleQuotaLines = '';
         foreach (AffiliateTier::ALL as $tier) {
@@ -79,11 +80,12 @@ HTML
 <li>Do not bid on our brand trademarks in paid search without written approval.</li>
 <li>Content must align with our brand standards; we may request edits or remove non-compliant material.</li>
 <li>Complete payout setup with accurate details; you are responsible for taxes on commissions you earn.</li>
+<li>Commission payouts are issued approximately <strong>{$payoutDelayDays} days</strong> after successful delivery of each qualifying order (see Commission &amp; Payout Policy).</li>
 </ul>
 <h2 class="creator-font-headline mb-3 mt-8 text-2xl font-semibold text-[#0b1c30]">Samples</h2>
 <p class="mb-4 text-[#404753] leading-relaxed">Approved affiliates may request product samples subject to tier quotas, product availability, and admin approval. Sample orders are not commissionable. Misuse of samples (failure to post required content, resale, etc.) may result in suspension.</p>
 <h2 class="creator-font-headline mb-3 mt-8 text-2xl font-semibold text-[#0b1c30]">Our rights</h2>
-<p class="mb-4 text-[#404753] leading-relaxed">We may change commission tiers, program rules, or these terms with notice where required. We may suspend or terminate your account for violations, fraud, chargebacks, or prolonged inactivity. Unpaid balances may be withheld while we investigate suspected abuse.</p>
+<p class="mb-4 text-[#404753] leading-relaxed">We may change commission tiers, program rules, or these terms with notice where required. We may suspend or terminate your account for violations, fraud, chargebacks, or prolonged inactivity. Unpaid balances may be withheld while we investigate suspected abuse. Refunds and payment disputes on attributed orders may reduce or reverse commission per our <a href="/policies/affiliate-commission-payout-policy" class="font-semibold text-primary underline">Commission &amp; Payout Policy</a> (including deductions from future payouts if commission was already paid).</p>
 <h2 class="creator-font-headline mb-3 mt-8 text-2xl font-semibold text-[#0b1c30]">Relationship</h2>
 <p class="text-[#404753] leading-relaxed">Affiliates are independent contractors, not employees or partners of {$brand}. Nothing here grants trademark rights beyond approved marketing use.</p>
 HTML
@@ -105,7 +107,7 @@ HTML
 <h2 class="creator-font-headline mb-3 mt-8 text-2xl font-semibold text-[#0b1c30]">Information we collect</h2>
 <ul class="mb-4 list-disc space-y-2 pl-6 text-[#404753]">
 <li><strong>Application data:</strong> name, email, phone, platform, follower range, niche, social links, proposed ref code, and agreement to program terms.</li>
-<li><strong>Account &amp; payout data:</strong> profile details and payout method information (e.g. PayPal, Venmo, or US bank details—typically stored as masked identifiers).</li>
+<li><strong>Account &amp; payout data:</strong> profile details and payout method information (PayPal or US bank transfer—bank numbers stored encrypted).</li>
 <li><strong>Performance data:</strong> referral clicks, attributed orders, commission status (pending/paid), tier, sample requests, and dashboard analytics.</li>
 <li><strong>Technical data:</strong> IP address, browser, referrer, UTM parameters, and affiliate attribution cookies (see Attribution &amp; Cookie Policy).</li>
 </ul>
@@ -157,8 +159,16 @@ HTML
 <li>Only products marked <strong>affiliate-eligible</strong> in our catalog count toward commission (gift cards and excluded items do not).</li>
 <li>Commission base is derived from the order <strong>subtotal minus discounts</strong>, allocated to eligible line items—<strong>shipping, tax, and tips are not included</strong>.</li>
 <li>Amount = eligible base × your commission rate at the time the commission is created (rate is stored on each commission record).</li>
-<li><strong>Refunds and partial refunds</strong> reduce or void commission; amounts already paid out may be clawed back via balance adjustments.</li>
 </ul>
+<h2 class="creator-font-headline mb-3 mt-8 text-2xl font-semibold text-[#0b1c30]">Refunds, disputes, and chargebacks</h2>
+<p class="mb-4 text-[#404753] leading-relaxed">If a customer <strong>requests a refund</strong>, receives a <strong>full or partial refund</strong>, opens a <strong>payment dispute</strong> (chargeback), or we otherwise reverse all or part of an attributed order, commission on the affected product(s) or order is handled as follows:</p>
+<ul class="mb-4 list-disc space-y-2 pl-6 text-[#404753]">
+<li><strong>Not yet paid:</strong> commission on the refunded or disputed amount is <strong>not paid</strong>—it is reduced, voided, or held while the case is open. You will not receive commission on revenue we did not keep.</li>
+<li><strong>Already paid:</strong> if we already sent you commission on that order or line item, we will <strong>deduct the overpaid amount</strong> from your affiliate balance. That deduction applies to <strong>future payouts</strong> (including commission from later orders) until the balance is corrected. If your balance is insufficient, we may withhold further payouts until the amount is recovered or we agree otherwise in writing.</li>
+<li><strong>Partial refunds:</strong> commission is adjusted proportionally to the net eligible amount we retain after the refund.</li>
+<li><strong>Open disputes:</strong> while a dispute or chargeback is unresolved, related commission may stay pending or be reversed; a lost dispute is treated like a refund for commission purposes.</li>
+</ul>
+<p class="mb-4 text-[#404753] leading-relaxed">These adjustments apply regardless of payout timing (including the post-delivery hold period). Our records of order status, refunds, and disputes are authoritative for commission and balance adjustments.</p>
 <h2 class="creator-font-headline mb-3 mt-8 text-2xl font-semibold text-[#0b1c30]">Product samples</h2>
 <p class="mb-4 text-[#404753] leading-relaxed">Sample requests are subject to admin approval, stock, per-product rules, and tier quotas over a rolling <strong>{$samplePeriodDays}-day</strong> window (rejected requests do not count):</p>
 <ul class="mb-6 list-disc space-y-2 pl-6 text-[#404753]">
@@ -168,6 +178,7 @@ HTML
 <h2 class="creator-font-headline mb-3 mt-8 text-2xl font-semibold text-[#0b1c30]">Payouts</h2>
 <ul class="mb-4 list-disc space-y-2 pl-6 text-[#404753]">
 <li>Your dashboard shows <strong>pending</strong> commission (earned, not yet paid) and <strong>paid</strong> history after we mark payouts.</li>
+<li><strong>Payout timing:</strong> we pay commissions approximately <strong>{$payoutDelayDays} calendar days</strong> after the attributed order is marked <strong>successfully delivered</strong> (shipment delivered to the customer). Until that date passes, the amount remains pending even if payout details are on file.</li>
 <li>You must complete payout setup in Account setup. Supported methods: {$payoutMethods}.</li>
 <li>Payouts are processed <strong>manually by our team</strong> on a periodic basis—we will contact you or process balances as operational schedules allow. There is no automatic instant payout in the portal.</li>
 <li>We may delay payouts while investigating suspected abuse, chargebacks, incomplete payout details, or policy violations.</li>
