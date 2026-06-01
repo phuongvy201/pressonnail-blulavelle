@@ -55,6 +55,7 @@ class FacebookLoginController extends Controller
                 }
 
                 Auth::login($user, true); // Remember user
+                $request->session()->regenerate();
 
                 // Track TikTok event if enabled
                 $tikTok = app(TikTokEventsService::class);
@@ -102,6 +103,7 @@ class FacebookLoginController extends Controller
                 }
 
                 Auth::login($user, true);
+                $request->session()->regenerate();
 
                 // Track TikTok event
                 $tikTok = app(TikTokEventsService::class);

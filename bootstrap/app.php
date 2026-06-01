@@ -65,6 +65,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\TrackAffiliateReferral::class,
             \App\Http\Middleware\TrackAffiliateUtm::class,
+            \App\Http\Middleware\ExpireLegacySessionCookies::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

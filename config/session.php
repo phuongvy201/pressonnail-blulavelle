@@ -215,4 +215,28 @@ return [
 
     'partitioned' => env('SESSION_PARTITIONED_COOKIE', false),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Legacy Session Cookies
+    |--------------------------------------------------------------------------
+    |
+    | Older deployments may have left duplicate cookies on parent domains.
+    | ExpireLegacySessionCookies middleware clears these automatically.
+    |
+    */
+
+    'legacy_cookie_names' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('LEGACY_SESSION_COOKIES', 'blulavelle-session,pressonnail-session,laravel_session'))
+    ))),
+
+    'legacy_cookie_domains' => array_values(array_filter(array_map(
+        static function (string $domain): ?string {
+            $domain = trim($domain);
+
+            return $domain !== '' ? $domain : null;
+        },
+        explode(',', (string) env('LEGACY_SESSION_DOMAINS', ''))
+    ))),
+
 ];
