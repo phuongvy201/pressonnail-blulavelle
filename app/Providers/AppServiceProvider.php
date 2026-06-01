@@ -25,6 +25,26 @@ use Illuminate\Support\ServiceProvider;
 class AppServiceProvider extends ServiceProvider
 {
     /**
+     * Bot user-agent fragments that should not persist sessions.
+     *
+     * @var array<int, string>
+     */
+    private const SESSIONLESS_BOT_SIGNATURES = [
+        'AdsBot-Google',
+        'Googlebot',
+        'bingbot',
+        'Slurp',
+        'DuckDuckBot',
+        'Baiduspider',
+        'YandexBot',
+        'facebot',
+        'ia_archiver',
+        'crawler',
+        'spider',
+        'bot',
+    ];
+
+    /**
      * Register any application services.
      */
     public function register(): void
@@ -37,6 +57,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (! $this->app->runningInConsole()) {
+            $userAgent = (string) request()->userAgent();
+            if ($this->isSessionlessBotUserAgent($userAgent)) {
+                config(['session.driver' => 'array']);
+            }
+        }
+
         Order::observe(OrderObserver::class);
         Product::observe(ProductObserver::class);
 
@@ -141,5 +168,20 @@ class AppServiceProvider extends ServiceProvider
                 'creatorLayoutFooter' => content_block('creator.layout.footer', creator_layout_footer_block_defaults()),
             ]);
         });
+    }
+
+    private function isSessionlessBotUserAgent(string $userAgent): bool
+    {
+        if ($userAgent === '') {
+            return false;
+        }
+
+        foreach (self::SESSIONLESS_BOT_SIGNATURES as $signature) {
+            if (stripos($userAgent, $signature) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

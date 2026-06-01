@@ -3,10 +3,16 @@
 use App\Models\Product;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Storage;
 
 Schedule::command('affiliate:recalculate-tiers')->monthlyOn(1, '02:00');
+Schedule::call(function (): void {
+    DB::table('sessions')
+        ->where('last_activity', '<', now()->subHours(2)->timestamp)
+        ->delete();
+})->hourly();
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
