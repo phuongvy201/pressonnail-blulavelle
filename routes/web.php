@@ -514,6 +514,11 @@ Route::prefix('api/analytics')->middleware('web')->name('api.analytics.')->group
     Route::get('/behavior', [AnalyticsController::class, 'behaviorReport'])->name('behavior');
 });
 
+// Storefront product catalog (PWA / public JSON)
+Route::get('/api/product/{slug}', [App\Http\Controllers\Api\ProductController::class, 'showBySlug'])
+    ->middleware(['web'])
+    ->name('api.product.show');
+
 // Product API routes for AI integration (with CORS support)
 Route::prefix('api/products')->middleware(['web'])->group(function () {
     // Add OPTIONS route for CORS preflight

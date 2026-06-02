@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Bluprinter API Documentation</title>
+        <title>API Documentation</title>
         <link
             rel="stylesheet"
             type="text/css"
@@ -17,9 +17,26 @@
             .topbar {
                 display: none;
             }
+            .api-doc-intro {
+                font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+                padding: 1rem 1.25rem;
+                background: #f8fafc;
+                border-bottom: 1px solid #e2e8f0;
+                color: #334155;
+                font-size: 0.95rem;
+                line-height: 1.5;
+            }
+            .api-doc-intro a {
+                color: #0f766e;
+            }
         </style>
     </head>
     <body>
+        <div class="api-doc-intro">
+            Tài liệu API đang được cập nhật theo cấu trúc mới — thêm endpoint và schema trong
+            <code>resources/views/api/documentation.blade.php</code> (object <code>spec</code>).
+            <a href="{{ route('admin.api-token') }}">API Token Dashboard</a>
+        </div>
         <div id="swagger-ui"></div>
 
         <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
@@ -29,468 +46,21 @@
                 const spec = {
                     openapi: "3.0.0",
                     info: {
-                        title: "Bluprinter Product API",
-                        description:
-                            "API for AI to automatically create products in Bluprinter system",
-                        version: "1.0.0",
-                        contact: {
-                            name: "Bluprinter Support",
-                            url: "https://bluprinter.com",
-                        },
+                        title: "Press On Nail API",
+                        description: "Thêm mô tả API mới tại đây.",
+                        version: "2.0.0",
                     },
                     servers: [
                         {
-                            url: "http://localhost:8000",
-                            description: "Local Development Server",
-                        },
-                        {
-                            url: "https://your-production-domain.com",
-                            description: "Production Server",
+                            url: @json(url('/')),
+                            description: "Server hiện tại",
                         },
                     ],
-                    security: [
-                        {
-                            ApiToken: [],
-                        },
-                    ],
-                    paths: {
-                        "/api/products/create": {
-                            post: {
-                                tags: ["Products"],
-                                summary: "Create a new product",
-                                description:
-                                    "Create a new product with images and video. Automatically uploads media to AWS S3.",
-                                operationId: "createProduct",
-                                security: [
-                                    {
-                                        ApiToken: [],
-                                    },
-                                ],
-                                requestBody: {
-                                    required: true,
-                                    content: {
-                                        "multipart/form-data": {
-                                            schema: {
-                                                type: "object",
-                                                required: [
-                                                    "name",
-                                                    "template_id",
-                                                    "images",
-                                                ],
-                                                properties: {
-                                                    name: {
-                                                        type: "string",
-                                                        description:
-                                                            "Product name",
-                                                        example:
-                                                            "AI Generated T-Shirt Design",
-                                                    },
-                                                    description: {
-                                                        type: "string",
-                                                        description:
-                                                            "Product description (optional, will be copied from template if not provided)",
-                                                        example:
-                                                            "Beautiful AI-generated design featuring abstract art",
-                                                    },
-                                                    template_id: {
-                                                        type: "integer",
-                                                        description:
-                                                            "Product template ID (1 for T-Shirt, 2 for Hoodie, etc.)",
-                                                        example: 1,
-                                                    },
-                                                    images: {
-                                                        type: "array",
-                                                        items: {
-                                                            type: "string",
-                                                            format: "binary",
-                                                        },
-                                                        description:
-                                                            "Product images (maximum 8 images, max 5MB each)",
-                                                        minItems: 1,
-                                                        maxItems: 8,
-                                                    },
-                                                    video: {
-                                                        type: "string",
-                                                        format: "binary",
-                                                        description:
-                                                            "Product video (optional, max 50MB)",
-                                                    },
-                                                    price: {
-                                                        type: "number",
-                                                        format: "float",
-                                                        description:
-                                                            "Product price (optional, will use template's base_price if not provided)",
-                                                        example: 29.99,
-                                                    },
-                                                    shop_id: {
-                                                        type: "integer",
-                                                        description:
-                                                            "Shop ID (optional, will use template's shop_id if not provided)",
-                                                        example: 1,
-                                                    },
-                                                    quantity: {
-                                                        type: "integer",
-                                                        description:
-                                                            "Product quantity (optional, default: 999)",
-                                                        example: 999,
-                                                    },
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                                responses: {
-                                    201: {
-                                        description:
-                                            "Product created successfully",
-                                        content: {
-                                            "application/json": {
-                                                schema: {
-                                                    type: "object",
-                                                    properties: {
-                                                        success: {
-                                                            type: "boolean",
-                                                            example: true,
-                                                        },
-                                                        message: {
-                                                            type: "string",
-                                                            example:
-                                                                "Product created successfully",
-                                                        },
-                                                        product_url: {
-                                                            type: "string",
-                                                            description:
-                                                                "URL to view the created product",
-                                                            example:
-                                                                "http://localhost:8000/products/ai-generated-t-shirt-design",
-                                                        },
-                                                    },
-                                                },
-                                            },
-                                        },
-                                    },
-                                    400: {
-                                        description: "Validation error",
-                                        content: {
-                                            "application/json": {
-                                                schema: {
-                                                    $ref: "#/components/schemas/Error",
-                                                },
-                                                examples: {
-                                                    validation: {
-                                                        summary:
-                                                            "Validation Error",
-                                                        value: {
-                                                            success: false,
-                                                            message:
-                                                                "Validation failed",
-                                                            errors: {
-                                                                name: [
-                                                                    "The name field is required.",
-                                                                ],
-                                                                images: [
-                                                                    "At least one image is required.",
-                                                                ],
-                                                            },
-                                                        },
-                                                    },
-                                                },
-                                            },
-                                        },
-                                    },
-                                    401: {
-                                        description: "Authentication failed",
-                                        content: {
-                                            "application/json": {
-                                                schema: {
-                                                    $ref: "#/components/schemas/Error",
-                                                },
-                                                examples: {
-                                                    missing_token: {
-                                                        summary:
-                                                            "Missing Token",
-                                                        value: {
-                                                            success: false,
-                                                            message:
-                                                                "API token is required",
-                                                        },
-                                                    },
-                                                    invalid_token: {
-                                                        summary:
-                                                            "Invalid Token",
-                                                        value: {
-                                                            success: false,
-                                                            message:
-                                                                "Invalid API token",
-                                                        },
-                                                    },
-                                                },
-                                            },
-                                        },
-                                    },
-                                    404: {
-                                        description: "Template not found",
-                                        content: {
-                                            "application/json": {
-                                                schema: {
-                                                    $ref: "#/components/schemas/Error",
-                                                },
-                                                example: {
-                                                    success: false,
-                                                    message:
-                                                        "Template not found",
-                                                },
-                                            },
-                                        },
-                                    },
-                                    500: {
-                                        description: "Server error",
-                                        content: {
-                                            "application/json": {
-                                                schema: {
-                                                    $ref: "#/components/schemas/Error",
-                                                },
-                                                example: {
-                                                    success: false,
-                                                    message:
-                                                        "Failed to upload image to S3",
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                        "/api/products/{id}": {
-                            get: {
-                                tags: ["Products"],
-                                summary: "Get product details",
-                                description:
-                                    "Retrieve details of a specific product",
-                                operationId: "getProduct",
-                                parameters: [
-                                    {
-                                        name: "id",
-                                        in: "path",
-                                        required: true,
-                                        description: "Product ID",
-                                        schema: {
-                                            type: "integer",
-                                            example: 123,
-                                        },
-                                    },
-                                ],
-                                responses: {
-                                    200: {
-                                        description: "Product details",
-                                        content: {
-                                            "application/json": {
-                                                schema: {
-                                                    type: "object",
-                                                    properties: {
-                                                        success: {
-                                                            type: "boolean",
-                                                            example: true,
-                                                        },
-                                                        data: {
-                                                            $ref: "#/components/schemas/Product",
-                                                        },
-                                                    },
-                                                },
-                                            },
-                                        },
-                                    },
-                                    404: {
-                                        description: "Product not found",
-                                        content: {
-                                            "application/json": {
-                                                schema: {
-                                                    $ref: "#/components/schemas/Error",
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                        "/api/products": {
-                            get: {
-                                tags: ["Products"],
-                                summary: "List all products",
-                                description:
-                                    "Get a paginated list of all products",
-                                operationId: "listProducts",
-                                parameters: [
-                                    {
-                                        name: "page",
-                                        in: "query",
-                                        description: "Page number",
-                                        schema: {
-                                            type: "integer",
-                                            default: 1,
-                                            example: 1,
-                                        },
-                                    },
-                                    {
-                                        name: "per_page",
-                                        in: "query",
-                                        description: "Items per page",
-                                        schema: {
-                                            type: "integer",
-                                            default: 15,
-                                            example: 15,
-                                        },
-                                    },
-                                ],
-                                responses: {
-                                    200: {
-                                        description: "List of products",
-                                        content: {
-                                            "application/json": {
-                                                schema: {
-                                                    type: "object",
-                                                    properties: {
-                                                        success: {
-                                                            type: "boolean",
-                                                            example: true,
-                                                        },
-                                                        data: {
-                                                            type: "array",
-                                                            items: {
-                                                                $ref: "#/components/schemas/Product",
-                                                            },
-                                                        },
-                                                        pagination: {
-                                                            type: "object",
-                                                            properties: {
-                                                                current_page: {
-                                                                    type: "integer",
-                                                                    example: 1,
-                                                                },
-                                                                total: {
-                                                                    type: "integer",
-                                                                    example: 50,
-                                                                },
-                                                                per_page: {
-                                                                    type: "integer",
-                                                                    example: 15,
-                                                                },
-                                                            },
-                                                        },
-                                                    },
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
+                    paths: {},
                     components: {
-                        securitySchemes: {
-                            ApiToken: {
-                                type: "apiKey",
-                                in: "header",
-                                name: "X-API-Token",
-                                description:
-                                    "API Token for authentication. Format: `bluprinter_xxxxx...`\n\nĐể lấy token, đăng nhập với tài khoản admin và truy cập: {{ route('admin.api-token') }}",
-                            },
-                        },
-                        schemas: {
-                            Product: {
-                                type: "object",
-                                properties: {
-                                    id: {
-                                        type: "integer",
-                                        example: 123,
-                                    },
-                                    name: {
-                                        type: "string",
-                                        example: "AI Generated T-Shirt Design",
-                                    },
-                                    slug: {
-                                        type: "string",
-                                        example: "ai-generated-t-shirt-design",
-                                    },
-                                    description: {
-                                        type: "string",
-                                        example:
-                                            "Beautiful AI-generated design",
-                                    },
-                                    price: {
-                                        type: "number",
-                                        format: "float",
-                                        example: 29.99,
-                                    },
-                                    template_id: {
-                                        type: "integer",
-                                        example: 1,
-                                    },
-                                    shop_id: {
-                                        type: "integer",
-                                        example: 1,
-                                    },
-                                    status: {
-                                        type: "string",
-                                        enum: ["active", "inactive"],
-                                        example: "active",
-                                    },
-                                    media: {
-                                        type: "array",
-                                        items: {
-                                            type: "string",
-                                        },
-                                        example: [
-                                            "https://s3.amazonaws.com/bucket/products/image1.jpg",
-                                            "https://s3.amazonaws.com/bucket/products/video.mp4",
-                                        ],
-                                    },
-                                    created_by: {
-                                        type: "string",
-                                        example: "api",
-                                    },
-                                    created_at: {
-                                        type: "string",
-                                        format: "date-time",
-                                        example: "2025-10-16T10:30:00.000000Z",
-                                    },
-                                    updated_at: {
-                                        type: "string",
-                                        format: "date-time",
-                                        example: "2025-10-16T10:30:00.000000Z",
-                                    },
-                                },
-                            },
-                            Error: {
-                                type: "object",
-                                properties: {
-                                    success: {
-                                        type: "boolean",
-                                        example: false,
-                                    },
-                                    message: {
-                                        type: "string",
-                                        example: "Error message",
-                                    },
-                                    errors: {
-                                        type: "object",
-                                        additionalProperties: {
-                                            type: "array",
-                                            items: {
-                                                type: "string",
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
+                        schemas: {},
                     },
-                    tags: [
-                        {
-                            name: "Products",
-                            description: "Product management endpoints",
-                        },
-                    ],
+                    tags: [],
                 };
 
                 SwaggerUIBundle({

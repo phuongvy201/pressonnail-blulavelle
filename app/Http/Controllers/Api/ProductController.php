@@ -271,51 +271,324 @@ class ProductController extends Controller
     }
 
     /**
-     * Get product details
+     * Chi tiết sản phẩm theo ID (tương thích API cũ).
      */
-    public function show($id)
+    public function show(int $id)
     {
-        $product = Product::with(['shop', 'template.category'])
+        $product = Product::query()
+            ->availableForDisplay()
+            ->with($this->detailRelations())
             ->findOrFail($id);
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'id' => $product->id,
-                'name' => $product->name,
-                'slug' => $product->slug,
-                'description' => $product->description,
-                'price' => $product->price,
-                'status' => $product->status,
-                'url' => route('products.show', $product->slug),
-                'media' => $product->media,
-                'shop' => $product->shop,
-                'template' => $product->template,
-                'created_at' => $product->created_at,
-            ]
+            'data' => $this->transformDetail($product),
         ]);
     }
 
     /**
-     * List products created by API
+     * Chi tiết sản phẩm theo slug (PWA / mobile).
      */
-    public function index(Request $request)
+    public function showBySlug(string $slug)
     {
-        // Public listing of products (no token filter)
-        $products = Product::with(['shop', 'template.category'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+        $product = Product::query()
+            ->where(function ($q) use ($slug) {
+                $q->where('slug', $slug);
+                if (ctype_digit((string) $slug)) {
+                    $q->orWhere('id', (int) $slug);
+                }
+            })
+            ->availableForDisplay()
+            ->with($this->detailRelations())
+            ->firstOrFail();
 
         return response()->json([
             'success' => true,
-            'data' => $products->items(),
+            'data' => $this->transformDetail($product),
+        ]);
+    }
+
+    /**
+     * Danh sách sản phẩm hiển thị trên storefront.
+     */
+    public function index(Request $request)
+    {
+        $perPage = min(48, max(1, (int) $request->get('per_page', 18)));
+        $products = $this->buildCatalogQuery($request)
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return response()->json([
+            'success' => true,
+            'data' => $products->getCollection()
+                ->map(fn (Product $product) => $this->transformListItem($product))
+                ->values(),
             'pagination' => [
                 'current_page' => $products->currentPage(),
                 'last_page' => $products->lastPage(),
                 'per_page' => $products->perPage(),
                 'total' => $products->total(),
-            ]
+            ],
         ]);
+    }
+
+    private function buildCatalogQuery(Request $request)
+    {
+        $query = Product::with(['shop', 'template.category', 'variants'])
+            ->availableForDisplay();
+
+        if ($request->filled('collection_id')) {
+            $query->whereHas('collections', function ($q) use ($request) {
+                $q->where('collections.id', $request->collection_id);
+            });
+        } elseif ($request->filled('category')) {
+            $query->whereHas('template', function ($q) use ($request) {
+                $q->where('category_id', $request->category);
+            });
+        }
+
+        if ($request->filled('shop')) {
+            $query->where('shop_id', $request->shop);
+        }
+
+        if ($request->filled('min_price')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('price', '>=', $request->min_price)
+                    ->orWhereHas('template', function ($templateQuery) use ($request) {
+                        $templateQuery->where('base_price', '>=', $request->min_price)
+                            ->whereNull('products.price');
+                    });
+            });
+        }
+
+        if ($request->filled('max_price')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('price', '<=', $request->max_price)
+                    ->orWhereHas('template', function ($templateQuery) use ($request) {
+                        $templateQuery->where('base_price', '<=', $request->max_price)
+                            ->whereNull('products.price');
+                    });
+            });
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhereHas('shop', function ($shopQuery) use ($search) {
+                        $shopQuery->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $sortBy = $request->get('sort', 'newest');
+        switch ($sortBy) {
+            case 'price_low':
+                $query->orderBy('price', 'asc');
+                break;
+            case 'price_high':
+                $query->orderBy('price', 'desc');
+                break;
+            case 'name':
+                $query->orderBy('name', 'asc');
+                break;
+            case 'newest':
+            default:
+                $query->orderBy('created_at', 'desc');
+        }
+
+        return $query;
+    }
+
+    private function detailRelations(): array
+    {
+        return [
+            'shop',
+            'template.category',
+            'variants',
+            'collections',
+            'approvedReviews' => function ($query) {
+                $query->orderBy('created_at', 'desc')->limit(10);
+            },
+        ];
+    }
+
+    private function transformListItem(Product $product): array
+    {
+        return [
+            'id' => $product->id,
+            'name' => $product->name,
+            'slug' => $product->slug,
+            'price' => (float) $product->getEffectivePrice(),
+            'list_price' => (float) ($product->list_price ?? $product->template?->list_price ?? 0),
+            'primary_image' => $this->resolvePrimaryImageUrl($product),
+            'category_id' => $product->template?->category_id,
+            'category_name' => $product->template?->category?->name,
+            'average_rating' => round($product->getAverageRating(), 1),
+            'reviews_count' => $product->getTotalReviews(),
+            'in_stock' => $product->hasStock(),
+            'url' => route('products.show', ['slug' => $product->slug]),
+            'shop' => $product->shop ? [
+                'id' => $product->shop->id,
+                'name' => $product->shop->name,
+            ] : null,
+        ];
+    }
+
+    private function transformDetail(Product $product): array
+    {
+        return [
+            ...$this->transformListItem($product),
+            'description' => $product->getEffectiveDescription(),
+            'media' => $this->transformMediaList($product),
+            'quantity' => (int) $product->quantity,
+            'variants' => $product->variants->map(fn ($variant) => [
+                'id' => $variant->id,
+                'variant_name' => $variant->variant_name,
+                'attributes' => $variant->attributes ?? [],
+                'sku' => $variant->sku,
+                'price' => (float) $variant->getFinalPrice(),
+                'list_price' => (float) ($variant->list_price ?? 0),
+                'quantity' => (int) $variant->quantity,
+                'media' => $this->transformMediaList($product, is_array($variant->media) ? $variant->media : []),
+            ])->values(),
+            'collections' => $product->collections->map(fn ($collection) => [
+                'id' => $collection->id,
+                'name' => $collection->name,
+                'slug' => $collection->slug,
+            ])->values(),
+            'reviews' => $product->approvedReviews->map(fn ($review) => [
+                'id' => $review->id,
+                'customer_name' => $review->customer_name,
+                'rating' => (int) $review->rating,
+                'title' => $review->title,
+                'review_text' => $review->review_text,
+                'image_url' => $review->image_url,
+                'is_verified_purchase' => (bool) $review->is_verified_purchase,
+                'created_at' => $review->created_at?->toIso8601String(),
+            ])->values(),
+            'rating_breakdown' => $product->getRatingBreakdown(),
+            'created_at' => $product->created_at?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * URL ảnh đại diện (ưu tiên webp).
+     */
+    private function resolvePrimaryImageUrl(Product $product): ?string
+    {
+        foreach ($product->getEffectiveMedia() as $item) {
+            $type = $this->resolveMediaType($item);
+            if ($type === 'video') {
+                if (is_array($item)) {
+                    $poster = trim((string) ($item['poster'] ?? ''));
+                    if ($poster !== '') {
+                        return $poster;
+                    }
+                }
+                continue;
+            }
+            $url = $this->resolveMediaUrl($item, 'image');
+            if ($url !== null) {
+                return $url;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<int, mixed>|null  $media
+     * @return array<int, array{url: string, alt: string, type: string}>
+     */
+    private function transformMediaList(Product $product, ?array $media = null): array
+    {
+        $items = [];
+        foreach ($media ?? $product->getEffectiveMedia() as $index => $item) {
+            $type = $this->resolveMediaType($item);
+            $url = $this->resolveMediaUrl($item, $type);
+            if ($url === null) {
+                continue;
+            }
+            $items[] = [
+                'url' => $url,
+                'alt' => $this->resolveMediaAlt($product, $item, (int) $index),
+                'type' => $type,
+            ];
+        }
+
+        return $items;
+    }
+
+    private function resolveMediaType(mixed $mediaItem): string
+    {
+        if (is_array($mediaItem)) {
+            $type = strtolower(trim((string) ($mediaItem['type'] ?? '')));
+            if ($type === 'video') {
+                return 'video';
+            }
+        }
+
+        if (is_string($mediaItem) && $this->looksLikeVideoUrl($mediaItem)) {
+            return 'video';
+        }
+
+        return 'image';
+    }
+
+    private function resolveMediaUrl(mixed $mediaItem, ?string $type = null): ?string
+    {
+        $type ??= $this->resolveMediaType($mediaItem);
+
+        if (is_string($mediaItem)) {
+            $url = trim($mediaItem);
+
+            return $url !== '' ? $url : null;
+        }
+
+        if (! is_array($mediaItem)) {
+            return null;
+        }
+
+        if ($type === 'video') {
+            foreach (['url', 'path'] as $key) {
+                $url = trim((string) ($mediaItem[$key] ?? ''));
+                if ($url !== '') {
+                    return $url;
+                }
+            }
+
+            return null;
+        }
+
+        foreach (['webp', 'url', 'path'] as $key) {
+            $url = trim((string) ($mediaItem[$key] ?? ''));
+            if ($url !== '') {
+                return $url;
+            }
+        }
+
+        return null;
+    }
+
+    private function looksLikeVideoUrl(string $url): bool
+    {
+        $path = (string) parse_url($url, PHP_URL_PATH);
+
+        return (bool) preg_match('/\.(mp4|webm|mov|avi|ogg|ogv|m4v)$/i', $path);
+    }
+
+    private function resolveMediaAlt(Product $product, mixed $mediaItem, int $index): string
+    {
+        if (is_array($mediaItem)) {
+            $alt = trim((string) ($mediaItem['keywords'] ?? $mediaItem['alt'] ?? ''));
+            if ($alt !== '') {
+                return Str::limit($alt, 500, '');
+            }
+        }
+
+        return $product->altForMediaItem($mediaItem, (string) ($product->name ?? ''), $index);
     }
 
     /**

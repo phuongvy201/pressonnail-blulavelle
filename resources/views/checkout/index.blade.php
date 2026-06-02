@@ -5,8 +5,13 @@
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+@php
+    $paypalCheckoutEnabled = (bool) config('services.paypal.checkout_enabled', false);
+@endphp
+@if($paypalCheckoutEnabled)
 <!-- PayPal SDK - Currency from domain config -->
 <script src="https://www.paypal.com/sdk/js?client-id={{ config('services.paypal.client_id') }}&currency={{ $currency ?? 'USD' }}&intent=capture&components=buttons"></script>
+@endif
 
 <!-- Stripe JS SDK -->
 <script src="https://js.stripe.com/v3/"></script>
@@ -1124,7 +1129,8 @@ function buildCheckoutCustomizationInputs(customizations) {
                                     </div>
                                 </div>
 
-                                <!-- PayPal -->
+                                @if($paypalCheckoutEnabled)
+                                <!-- PayPal (tắt mặc định — bật: PAYPAL_CHECKOUT_ENABLED=true) -->
                                 <div class="relative">
                                     <label for="payment_paypal" class="flex items-center p-6 border-2 border-primary/20 rounded-2xl cursor-pointer hover:border-primary hover:shadow-xl transition-all duration-300 payment-option bg-white">
                                         <input type="radio" id="payment_paypal" name="payment_method" value="paypal" class="w-6 h-6 text-primary border-primary/30 focus:ring-primary mr-5">
@@ -1164,6 +1170,7 @@ function buildCheckoutCustomizationInputs(customizations) {
                                         </div>
                                     </div>
                                 </div>
+                                @endif
                                 
                             </div>
                             @error('payment_method')
@@ -1764,6 +1771,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const submitBtn = form.querySelector('button[type="submit"]');
     const paymentOptions = document.querySelectorAll('.payment-option');
+    const PAYPAL_CHECKOUT_ENABLED = @json($paypalCheckoutEnabled);
     
     // PayPal integration
     let paypalButtonsInitialized = false;
@@ -2419,7 +2427,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        if (selectedRadio && selectedRadio.value === 'paypal') {
+        if (PAYPAL_CHECKOUT_ENABLED && selectedRadio && selectedRadio.value === 'paypal') {
             console.log('🔧 PayPal selected - initializing buttons');
             if (stripeContainer) {
                 stripeContainer.classList.add('hidden');
@@ -2697,7 +2705,9 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     
     // Start checking for PayPal SDK
-    initializePayPalSDK();
+    if (PAYPAL_CHECKOUT_ENABLED) {
+        initializePayPalSDK();
+    }
     
     const getCheckoutGrandTotal = () => {
         const subtotal = parseFloat(CHECKOUT_CONVERTED_SUBTOTAL || '{{ $subtotal }}');
@@ -2772,14 +2782,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const total = grandTotal;
             
             if (total < 0.5) {
-                showToast('error', 'Minimum Order Amount', 
-                    'Stripe requires a minimum order of $0.50. Your order total is $' + total.toFixed(2) + 
-                    '. Please use PayPal for smaller orders.');
+                const minOrderMsg = PAYPAL_CHECKOUT_ENABLED
+                    ? 'Stripe requires a minimum order of $0.50. Your order total is $' + total.toFixed(2) + '. Please use PayPal for smaller orders.'
+                    : 'Stripe requires a minimum order of $0.50. Your order total is $' + total.toFixed(2) + '.';
+                showToast('error', 'Minimum Order Amount', minOrderMsg);
                 return;
             }
         }
         
-        if (selectedPaymentMethod === 'paypal') {
+        if (PAYPAL_CHECKOUT_ENABLED && selectedPaymentMethod === 'paypal') {
             // PayPal is handled by the SDK, just show info
             showToast('info', 'PayPal Checkout', 'Please use the PayPal button below to complete your payment');
             return;

@@ -39,6 +39,8 @@ return [
         'client_id' => env('PAYPAL_CLIENT_ID'),
         'client_secret' => env('PAYPAL_CLIENT_SECRET'),
         'mode' => env('PAYPAL_MODE', 'sandbox'), // sandbox or live
+        // Bật lại khi sẵn sàng: PAYPAL_CHECKOUT_ENABLED=true trong .env
+        'checkout_enabled' => env('PAYPAL_CHECKOUT_ENABLED', false),
     ],
 
     'stripe' => [
