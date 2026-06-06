@@ -8,6 +8,7 @@
     $currencySymbol = currency_symbol();
     $analyticsDebugOn = $analyticsDebugOn ?? (bool) request()->boolean('analytics_debug', false);
     $productShowPinterestEventId = 'pagevisit-product-' . ($product->sku ?? $product->id) . '-' . session()->getId();
+    $productShowOaiqEventId = 'contents_viewed-product-' . ($product->sku ?? $product->id) . '-' . session()->getId();
     $productRelativePath = route('products.show', $product->slug, false);
     $appBaseUrl = rtrim((string) config('app.url', ''), '/');
     $publicProductUrl = $appBaseUrl !== '' ? ($appBaseUrl . $productRelativePath) : route('products.show', $product->slug);
@@ -467,11 +468,6 @@
                     </div>
                     @endif
                     <h1 class="text-2xl md:text-3xl text-heading font-extrabold text-slate-900 tracking-tight leading-tight">{{ $product->name }}</h1>
-                    @if($product->shop)
-                    <p class="mt-2 text-sm text-slate-600">
-                        Sold by <a href="{{ route('shops.show', $product->shop->shop_slug) }}" class="font-semibold text-slate-800 hover:text-[#0297FE] transition-colors underline underline-offset-2">{{ $product->shop->shop_name ?? $product->shop->name ?? 'Shop' }}</a>
-                    </p>
-                    @endif
                     @if($product->collections->isNotEmpty())
                     <div class="mt-3 flex items-center gap-2">
                         <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-[#0297FE]/10 text-[#0297FE] border border-[#0297FE]/20 uppercase tracking-wide">
@@ -767,6 +763,46 @@
                             </svg>
                         </button>
                     </div>
+
+                    @if($product->shop)
+                    @php
+                        $productShop = $product->shop;
+                        $productShopUrl = route('shops.show', $productShop->shop_slug ?? $productShop->id);
+                        $productShopName = $productShop->shop_name ?? $productShop->name ?? 'Shop';
+                        $productShopCount = max(0, (int) ($productShop->total_products ?? 0));
+                    @endphp
+                    <a href="{{ $productShopUrl }}"
+                       class="mt-4 flex items-center gap-3 sm:gap-4 rounded-xl border border-slate-200 bg-slate-50/90 p-3.5 sm:p-4 hover:border-[#0297FE]/35 hover:bg-[#0297FE]/5 transition-colors group touch-manipulation"
+                       aria-label="View all products from {{ $productShopName }}">
+                        <div class="relative shrink-0">
+                            <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-white border border-slate-200 shadow-sm flex items-center justify-center">
+                                @if($productShop->shop_logo)
+                                    <img src="{{ $productShop->shop_logo }}" alt="{{ $productShopName }}" class="w-full h-full object-cover">
+                                @else
+                                    <span class="text-lg sm:text-xl font-bold text-[#0297FE]">{{ strtoupper(substr($productShopName, 0, 1)) }}</span>
+                                @endif
+                            </div>
+                            @if($productShop->verified)
+                                <span class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-[#0297FE] text-white flex items-center justify-center border-2 border-white" aria-hidden="true">
+                                    <span class="material-symbols-outlined text-[13px] leading-none">check</span>
+                                </span>
+                            @endif
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Sold by</p>
+                            <p class="text-sm sm:text-base font-extrabold text-slate-900 truncate group-hover:text-[#0297FE] transition-colors">{{ $productShopName }}</p>
+                            @if($productShopCount > 0)
+                                <p class="text-xs text-slate-500 mt-0.5">{{ number_format($productShopCount) }} {{ $productShopCount === 1 ? 'product' : 'products' }}</p>
+                            @else
+                                <p class="text-xs text-slate-500 mt-0.5">Browse more from this shop</p>
+                            @endif
+                        </div>
+                        <span class="shrink-0 inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-[#0297FE] group-hover:underline">
+                            View all
+                            <span class="material-symbols-outlined text-base leading-none">chevron_right</span>
+                        </span>
+                    </a>
+                    @endif
 
                     {{-- Shipping info --}}
                     <div class="flex items-center justify-between pt-4 border-t border-slate-200 gap-4 flex-wrap">
@@ -1349,6 +1385,27 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             console.log('✅ GTM: view_item tracked', { value: basePrice, items: item });
         }
+        if (typeof oaiq === 'function') {
+            try {
+                oaiq('measure', 'contents_viewed', {
+                    type: 'contents',
+                    contents: [
+                        {
+                            id: String(GTM_PRODUCT_ITEM.item_id),
+                            name: GTM_PRODUCT_ITEM.item_name,
+                            content_type: 'product',
+                        },
+                    ],
+                }, {
+                    event_id: @json($productShowOaiqEventId),
+                });
+                if (ANALYTICS_DEBUG) {
+                    console.log('✅ oaiq: contents_viewed tracked', GTM_PRODUCT_ITEM);
+                }
+            } catch (e) {
+                if (ANALYTICS_DEBUG) console.error('oaiq contents_viewed error:', e);
+            }
+        }
     }
     function pushAddToCartAnalytics(unitPrice, quantity, variantAttrs) {
         var price = Math.round(parseFloat(unitPrice) * 100) / 100;
@@ -1415,6 +1472,39 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } catch (e) {
                 if (ANALYTICS_DEBUG) console.error('pintrk addtocart error:', e);
+            }
+        }
+        if (typeof oaiq === 'function') {
+            try {
+                var oaiqCurrency = String(GTM_CURRENCY || 'USD').toUpperCase();
+                var lineAmountMinor = Math.round(value * 100);
+                var unitAmountMinor = Math.round(price * 100);
+                oaiq('measure', 'items_added', {
+                    type: 'contents',
+                    amount: lineAmountMinor,
+                    currency: oaiqCurrency,
+                    contents: [
+                        {
+                            id: String(GTM_PRODUCT_ITEM.item_id),
+                            name: GTM_PRODUCT_ITEM.item_name,
+                            content_type: 'product',
+                            quantity: qty,
+                            amount: unitAmountMinor,
+                            currency: oaiqCurrency,
+                        },
+                    ],
+                }, {
+                    event_id: 'items_added-' + String(GTM_PRODUCT_ITEM.item_id) + '-' + Date.now(),
+                });
+                if (ANALYTICS_DEBUG) {
+                    console.log('✅ oaiq: items_added tracked', {
+                        amount: lineAmountMinor,
+                        currency: oaiqCurrency,
+                        quantity: qty,
+                    });
+                }
+            } catch (e) {
+                if (ANALYTICS_DEBUG) console.error('oaiq items_added error:', e);
             }
         }
     }
@@ -2174,10 +2264,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             setTimeout(function() { window.promoPopupShow('add_to_cart'); }, 400);
                         }
                         // Sync header badge
-                        fetch('{{ route("api.cart.get") }}', { method: 'GET', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                        fetch('{{ route("api.cart.get") }}', { method: 'GET', headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
                             .then(function(res) { return res.json(); })
                             .then(function(cartData) {
-                                if (cartData.success && cartData.cart_items) {
+                                if (typeof window.applyStorefrontCartResponse === 'function') {
+                                    window.applyStorefrontCartResponse(cartData, { openDrawer: true });
+                                } else if (Array.isArray(cartData.cart_items)) {
                                     var backendCart = cartData.cart_items.map(function(item) {
                                         return {
                                             id: item.product_id,
@@ -2193,8 +2285,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                         localStorage.setItem('cart', JSON.stringify(backendCart));
                                         window.dispatchEvent(new CustomEvent('cartUpdated'));
                                     } catch (e) {}
+                                    window.dispatchEvent(new CustomEvent('cartDrawerOpen'));
                                 }
-                                window.dispatchEvent(new CustomEvent('cartDrawerOpen'));
                             })
                             .catch(function() { window.dispatchEvent(new CustomEvent('cartDrawerOpen')); });
                     } else {

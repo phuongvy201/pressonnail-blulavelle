@@ -64,6 +64,20 @@
 
         return $line;
     })->values()->toArray();
+
+    $oaiqOrderContents = $order->items->map(function ($item) {
+        $product = $item->product;
+
+        return [
+            'id' => (string) ($product->sku ?? $item->product_id),
+            'name' => (string) $item->product_name,
+            'content_type' => 'product',
+            'quantity' => max(1, (int) $item->quantity),
+        ];
+    })->filter(fn ($row) => $row['id'] !== '' && $row['name'] !== '')->values()->toArray();
+    $oaiqOrderAmountMinor = (int) round((float) $order->total_amount * 100);
+    $oaiqOrderCurrency = strtoupper((string) ($currency ?? 'USD'));
+    $oaiqOrderEventId = (string) $order->order_number;
 @endphp
 @if($shouldTrackPurchase)
 <script>
@@ -86,7 +100,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const gaItems = @json($gaItems);
         const productIds = @json($order->items->pluck('product_id')->map(fn ($id) => (string) $id)->values()->all());
 
-        const pushed = { dataLayer: false, facebook: false, gtag: false, tiktok: false, pinterest: false };
+        const pushed = { dataLayer: false, facebook: false, gtag: false, tiktok: false, pinterest: false, oaiq: false };
 
         window.dataLayer = window.dataLayer || [];
         if (typeof dataLayer !== 'undefined') {
@@ -234,6 +248,30 @@ document.addEventListener('DOMContentLoaded', function () {
                 window.ttq.track('PlaceAnOrder', { contents: tiktokOrderContents, value: purchaseValue, currency: currency, order_id: transactionId });
                 window.ttq.track('Purchase', { contents: tiktokOrderContents, value: purchaseValue, currency: currency, order_id: transactionId });
                 pushed.tiktok = true;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        if (typeof oaiq === 'function') {
+            try {
+                oaiq('measure', 'order_created', {
+                    type: 'contents',
+                    amount: {{ $oaiqOrderAmountMinor }},
+                    currency: @json($oaiqOrderCurrency),
+                    contents: @json($oaiqOrderContents),
+                }, {
+                    event_id: @json($oaiqOrderEventId),
+                });
+                pushed.oaiq = true;
+                if (__logPurchase) {
+                    console.info('[PressOnNail purchase]', 'oaiq: order_created tracked', {
+                        amount: {{ $oaiqOrderAmountMinor }},
+                        currency: @json($oaiqOrderCurrency),
+                        items: @json(count($oaiqOrderContents)),
+                        event_id: @json($oaiqOrderEventId),
+                    });
+                }
             } catch (e) {
                 console.error(e);
             }

@@ -451,6 +451,115 @@ class Product extends Model
     }
 
     /**
+     * Media chỉ trên product (không fallback template).
+     *
+     * @return array<int, mixed>
+     */
+    public function getOwnMediaList(): array
+    {
+        return $this->normalizeMediaStorageValue($this->media);
+    }
+
+    /**
+     * Media trên template (nếu có).
+     *
+     * @return array<int, mixed>
+     */
+    public function getTemplateMediaList(): array
+    {
+        $template = $this->template;
+
+        if (! $template) {
+            return [];
+        }
+
+        return $this->normalizeMediaStorageValue($template->media);
+    }
+
+    /**
+     * Gallery hiển thị: media product (hoặc effective nếu product trống) + media template, bỏ trùng URL.
+     *
+     * @return array<int, mixed>
+     */
+    public function getMergedDisplayMedia(): array
+    {
+        $merged = [];
+        $seen = [];
+
+        $own = $this->getOwnMediaList();
+        $firstBatch = $own !== [] ? $own : $this->getEffectiveMedia();
+        $this->appendUniqueMediaItems($firstBatch, $merged, $seen);
+        $this->appendUniqueMediaItems($this->getTemplateMediaList(), $merged, $seen);
+
+        return $merged;
+    }
+
+    /**
+     * @param  array<int, mixed>  $items
+     * @param  array<int, mixed>  $merged
+     * @param  array<string, true>  $seen
+     */
+    protected function appendUniqueMediaItems(array $items, array &$merged, array &$seen): void
+    {
+        foreach ($items as $item) {
+            $key = $this->mediaItemMatchKey($item);
+            if ($key === '' || isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $merged[] = $item;
+        }
+    }
+
+    public function mediaItemMatchKey(mixed $item): string
+    {
+        if (is_string($item)) {
+            return $this->normalizeMediaPathForMatch($item);
+        }
+
+        if (! is_array($item)) {
+            return '';
+        }
+
+        $type = strtolower(trim((string) ($item['type'] ?? '')));
+        if ($type === 'video') {
+            foreach (['url', 'path'] as $key) {
+                if (! empty($item[$key]) && is_string($item[$key])) {
+                    return $this->normalizeMediaPathForMatch($item[$key]);
+                }
+            }
+
+            return '';
+        }
+
+        foreach (['webp', 'url', 'path'] as $key) {
+            if (! empty($item[$key]) && is_string($item[$key])) {
+                return $this->normalizeMediaPathForMatch($item[$key]);
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    protected function normalizeMediaStorageValue(mixed $media): array
+    {
+        if ($media === null) {
+            return [];
+        }
+
+        if (is_string($media)) {
+            $decoded = json_decode($media, true);
+
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return is_array($media) ? $media : [];
+    }
+
+    /**
      * Chuỗi alt cho <img>: ưu tiên keywords trên phần tử media (JSON); nếu thiếu thì tính từ meta_keywords
      * + keyword cố định theo thứ tự ảnh (hoặc $mediaIndex). Cuối cùng mới dùng $fallback / tên SP.
      */

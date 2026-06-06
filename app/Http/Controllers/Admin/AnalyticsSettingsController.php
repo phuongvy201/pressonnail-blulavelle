@@ -20,6 +20,8 @@ class AnalyticsSettingsController extends Controller
             'google_ads_id' => config('services.google.ads_id'),
             'pinterest_tag_id' => config('services.pinterest.tag_id'),
             'pinterest_test_mode' => config('services.pinterest.test_mode') ? '1' : '0',
+            'openai_pixel_id' => config('services.openai.pixel_id'),
+            'openai_pixel_debug' => config('services.openai.pixel_debug') ? '1' : '0',
             // GA4 (Google Analytics 4)
             'google_analytics_property_id' => config('services.google.analytics.property_id'),
             'google_analytics_credentials_path' => config('services.google.analytics.credentials_path'),
@@ -41,6 +43,8 @@ class AnalyticsSettingsController extends Controller
             'google_ads_id' => Settings::get('analytics.google_ads_id', $defaults['google_ads_id']),
             'pinterest_tag_id' => Settings::get('analytics.pinterest_tag_id', $defaults['pinterest_tag_id']),
             'pinterest_test_mode' => Settings::get('analytics.pinterest_test_mode', $defaults['pinterest_test_mode']),
+            'openai_pixel_id' => Settings::get('analytics.openai_pixel_id', $defaults['openai_pixel_id']),
+            'openai_pixel_debug' => Settings::get('analytics.openai_pixel_debug', $defaults['openai_pixel_debug']),
             // GA4 (Google Analytics 4)
             'google_analytics_property_id' => Settings::get('analytics.google_analytics_property_id', $defaults['google_analytics_property_id']),
             'google_analytics_credentials_path' => Settings::get('analytics.google_analytics_credentials_path', $defaults['google_analytics_credentials_path']),
@@ -68,6 +72,8 @@ class AnalyticsSettingsController extends Controller
             'google_ads_id' => ['nullable', 'string', 'max:64'],
             'pinterest_tag_id' => ['nullable', 'string', 'max:32', 'regex:/^[0-9]+$/'],
             'pinterest_test_mode' => ['nullable', 'boolean'],
+            'openai_pixel_id' => ['nullable', 'string', 'max:64'],
+            'openai_pixel_debug' => ['nullable', 'boolean'],
             // GA4 (Google Analytics 4)
             'google_analytics_property_id' => ['nullable', 'string', 'max:64'],
             'google_analytics_credentials_path' => ['nullable', 'string', 'max:512'],
@@ -92,9 +98,10 @@ class AnalyticsSettingsController extends Controller
         }
 
         $validated['pinterest_test_mode'] = $request->boolean('pinterest_test_mode') ? '1' : '0';
+        $validated['openai_pixel_debug'] = $request->boolean('openai_pixel_debug') ? '1' : '0';
 
         foreach ($validated as $key => $value) {
-            if (in_array($key, ['show_product_social_proof', 'pinterest_test_mode'], true)) {
+            if (in_array($key, ['show_product_social_proof', 'pinterest_test_mode', 'openai_pixel_debug'], true)) {
                 continue;
             }
             $namespace = match (true) {
@@ -112,6 +119,7 @@ class AnalyticsSettingsController extends Controller
 
         Settings::set('gmc.show_product_social_proof', $request->boolean('show_product_social_proof') ? '1' : '0');
         Settings::set('analytics.pinterest_test_mode', $validated['pinterest_test_mode']);
+        Settings::set('analytics.openai_pixel_debug', $validated['openai_pixel_debug']);
 
         return redirect()
             ->route('admin.settings.analytics.edit')

@@ -5,6 +5,7 @@
     // Nội dung các block bên dưới lưu trong DB (bảng content_blocks). Khi chỉnh qua admin inline-edit sẽ ghi đè; default ở đây chỉ dùng khi chưa có bản ghi.
     $currentCurrency = currency();
     $currencySymbol = currency_symbol();
+    $homeOaiqEventId = 'page_viewed-home-' . session()->getId();
     $hero = content_block('home.hero', [
         'tagline' => 'Professional Grade at Home',
         'heading' => 'Manicure in',
@@ -38,13 +39,31 @@
 <script>
 const CURRENT_CURRENCY = @json($currentCurrency);
 const CURRENCY_SYMBOL = @json($currencySymbol);
-// Track Facebook Pixel ViewContent for home page
+// Track homepage view (Meta, ChatGPT Pixel)
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof fbq !== 'undefined') {
         fbq('track', 'ViewContent', {
             content_name: 'Home Page',
             content_type: 'home'
         });
+    }
+    if (typeof oaiq === 'function') {
+        try {
+            oaiq('measure', 'page_viewed', {
+                type: 'contents',
+                contents: [
+                    {
+                        id: 'home',
+                        name: 'Home Page',
+                        content_type: 'page',
+                    },
+                ],
+            }, {
+                event_id: @json($homeOaiqEventId),
+            });
+        } catch (e) {
+            console.error('oaiq page_viewed error:', e);
+        }
     }
 });
 </script>

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Bluprinter API Documentation</title>
+        <title>API Documentation</title>
         <link
             rel="stylesheet"
             type="text/css"
@@ -17,9 +17,32 @@
             .topbar {
                 display: none;
             }
+            .api-doc-intro {
+                font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+                padding: 1rem 1.25rem;
+                background: #f8fafc;
+                border-bottom: 1px solid #e2e8f0;
+                color: #334155;
+                font-size: 0.95rem;
+                line-height: 1.5;
+            }
+            .api-doc-intro a {
+                color: #0f766e;
+            }
+            .api-doc-intro code {
+                background: #e2e8f0;
+                padding: 0.1rem 0.35rem;
+                border-radius: 4px;
+                font-size: 0.88em;
+            }
         </style>
     </head>
     <body>
+        <div class="api-doc-intro">
+            Public storefront API — no API token. Query parameters use <strong>camelCase</strong> where noted.
+            Auth / cart / checkout: session cookies, <code>credentials: 'include'</code>, JSON with <code>Content-Type: application/json</code>, and <code>X-CSRF-TOKEN</code> on POST/PUT/DELETE.
+            <a href="/admin/api-token">API Token Dashboard</a>
+        </div>
         <div id="swagger-ui"></div>
 
         <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
@@ -29,210 +52,738 @@
                 const spec = {
                     openapi: "3.0.0",
                     info: {
-                        title: "Bluprinter Product API",
+                        title: "Press On Nail API",
                         description:
-                            "API for AI to automatically create products in Bluprinter system",
-                        version: "1.0.0",
-                        contact: {
-                            name: "Bluprinter Support",
-                            url: "https://bluprinter.com",
-                        },
+                            "Storefront JSON API. **Auth (session):** register/login → cookie + CSRF. **Account:** `GET /api/profile`, `GET /api/orders` (login required). **Checkout:** Cart → checkout → `POST /checkout/process`.",
+                        version: "2.11.0",
                     },
                     servers: [
                         {
-                            url: "https://bluprinter.com",
-                            description: "Production Server",
-                        },
-                        {
-                            url: "http://localhost:8000",
-                            description: "Local Development Server",
+                            url: window.location.origin,
+                            description: "Current server",
                         },
                     ],
-                    // Public API: no authentication required
                     paths: {
-                        "/api/products/create": {
+                        "/api/auth/register": {
                             post: {
-                                tags: ["Products"],
-                                summary: "Create a new product",
+                                tags: ["Auth"],
+                                summary: "Register",
                                 description:
-                                    "Create a new product with media using URLs.\n\n**How it works:**\n1. Provide image/video URLs in `media_urls` array (no limit)\n2. API downloads files from URLs\n3. API uploads files to AWS S3\n4. Product is created with S3 URLs\n\n**Supported formats:** Images (jpg, png, gif, webp), Videos (mp4, avi, mov, webm)",
-                                operationId: "createProduct",
+                                    "Create a new customer account and start a session (auto login). Same rules as web register. If reCAPTCHA is enabled on the site, send `recaptchaToken`. Use `credentials: 'include'` and `X-CSRF-TOKEN`.",
+                                operationId: "authRegister",
+                                security: [],
                                 requestBody: {
                                     required: true,
                                     content: {
                                         "application/json": {
                                             schema: {
-                                                type: "object",
-                                                required: [
-                                                    "name",
-                                                    "template_id",
-                                                    "media_urls",
-                                                ],
-                                                properties: {
-                                                    
-                                                    name: {
-                                                        type: "string",
-                                                        description:
-                                                            "Product name",
-                                                        example:
-                                                            "AI Generated T-Shirt Design",
-                                                    },
-                                                    description: {
-                                                        type: "string",
-                                                        description:
-                                                            "Product description (optional, will be copied from template if not provided)",
-                                                        example:
-                                                            "Beautiful AI-generated design featuring abstract art",
-                                                    },
-                                                    template_id: {
-                                                        type: "integer",
-                                                        description:
-                                                            "Product template ID (1 for T-Shirt, 2 for Hoodie, etc.)",
-                                                        example: 1,
-                                                    },
-                                                    media_urls: {
-                                                        type: "array",
-                                                        description: "Array of image/video URLs (no maximum)",
-                                                        items: {
-                                                            type: "string",
-                                                            format: "uri",
-                                                        },
-                                                        example: [
-                                                            "https://picsum.photos/800/600?random=1",
-                                                            "https://picsum.photos/800/600?random=2",
-                                                            "https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4",
-                                                        ],
-                                                    },
-                                                    price: {
-                                                        type: "number",
-                                                        format: "float",
-                                                        description:
-                                                            "Product price (optional, will use template's base_price if not provided)",
-                                                        example: 29.99,
-                                                    },
-                                                    shop_id: {
-                                                        type: "integer",
-                                                        description:
-                                                            "Shop ID (optional, will use template's shop_id if not provided)",
-                                                        example: 1,
-                                                    },
-                                                    quantity: {
-                                                        type: "integer",
-                                                        description:
-                                                            "Product quantity (optional, default: 999)",
-                                                        example: 999,
-                                                    },
-                                                },
+                                                $ref: "#/components/schemas/AuthRegisterRequest",
                                             },
                                         },
                                     },
                                 },
                                 responses: {
-                                   201: {
-                                       description:
-                                           "Product created successfully",
-                                       content: {
-                                           "application/json": {
-                                               schema: {
-                                                   type: "object",
-                                                   properties: {
-                                                       success: {
-                                                           type: "boolean",
-                                                           example: true,
-                                                       },
-                                                       message: {
-                                                           type: "string",
-                                                           example:
-                                                               "Product created successfully",
-                                                       },
-                                                       product_id: {
-                                                           type: "integer",
-                                                           description:
-                                                               "ID of the created product",
-                                                           example: 123,
-                                                       },
-                                                       product_url: {
-                                                           type: "string",
-                                                           description:
-                                                               "URL to view the created product",
-                                                           example:
-                                                               "https://bluprinter.com/products/ai-generated-t-shirt-design",
-                                                       },
-                                                   },
-                                               },
-                                           },
-                                       },
-                                   },
-                                    400: {
-                                        description: "Validation error",
+                                    200: {
+                                        description: "Registered and logged in",
                                         content: {
                                             "application/json": {
                                                 schema: {
-                                                    $ref: "#/components/schemas/Error",
+                                                    $ref: "#/components/schemas/AuthRegisterResponse",
                                                 },
-                                                examples: {
-                                                    validation: {
-                                                        summary:
-                                                            "Validation Error",
-                                                        value: {
-                                                            success: false,
-                                                            message:
-                                                                "Validation failed",
-                                                            errors: {
-                                                                name: [
-                                                                    "The name field is required.",
-                                                                ],
-                                                                images: [
-                                                                    "At least one image is required.",
-                                                                ],
-                                                            },
-                                                        },
-                                                    },
+                                            },
+                                        },
+                                    },
+                                    422: {
+                                        description: "Validation error (email taken, weak password, captcha, etc.)",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ValidationError",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    429: {
+                                        description: "Too many registration attempts",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ValidationError",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/auth/login": {
+                            post: {
+                                tags: ["Auth"],
+                                summary: "Login",
+                                description:
+                                    "Authenticate with email and password. Creates a **session cookie** (same as the web storefront). Send `X-CSRF-TOKEN` from the site `<meta name=\"csrf-token\">` before POST. Use `credentials: 'include'` in fetch.",
+                                operationId: "authLogin",
+                                security: [],
+                                requestBody: {
+                                    required: true,
+                                    content: {
+                                        "application/json": {
+                                            schema: {
+                                                $ref: "#/components/schemas/AuthLoginRequest",
+                                            },
+                                        },
+                                    },
+                                },
+                                responses: {
+                                    200: {
+                                        description: "Logged in",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/AuthLoginResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    422: {
+                                        description: "Validation error (invalid email/password or rate limit)",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ValidationError",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    429: {
+                                        description: "Too many login attempts",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ValidationError",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/auth/logout": {
+                            post: {
+                                tags: ["Auth"],
+                                summary: "Logout",
+                                description:
+                                    "Ends the session. Requires session cookie and `X-CSRF-TOKEN`.",
+                                operationId: "authLogout",
+                                security: [{ cookieAuth: [] }],
+                                responses: {
+                                    200: {
+                                        description: "Logged out",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/AuthLogoutResponse",
                                                 },
                                             },
                                         },
                                     },
                                     401: {
-                                        description: "Authentication failed",
+                                        description: "Not authenticated",
                                         content: {
                                             "application/json": {
                                                 schema: {
-                                                    $ref: "#/components/schemas/Error",
+                                                    $ref: "#/components/schemas/AuthErrorResponse",
                                                 },
-                                                examples: {
-                                                    missing_token: {
-                                                        summary:
-                                                            "Missing Token",
-                                                        value: {
-                                                            success: false,
-                                                            message:
-                                                                "API token is required",
-                                                        },
-                                                    },
-                                                    invalid_token: {
-                                                        summary:
-                                                            "Invalid Token",
-                                                        value: {
-                                                            success: false,
-                                                            message:
-                                                                "Invalid API token",
-                                                        },
-                                                    },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/auth/user": {
+                            get: {
+                                tags: ["Auth"],
+                                summary: "Current user",
+                                description:
+                                    "Returns the logged-in user or `authenticated: false` when guest. Optional session cookie.",
+                                operationId: "authUser",
+                                security: [],
+                                responses: {
+                                    200: {
+                                        description: "Session state",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/AuthUserResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/profile": {
+                            get: {
+                                tags: ["Profile"],
+                                summary: "Get profile",
+                                description:
+                                    "Customer profile and account stats. Requires login (`POST /api/auth/login`) and session cookie with `credentials: 'include'`.",
+                                operationId: "getProfile",
+                                security: [{ cookieAuth: [] }],
+                                responses: {
+                                    200: {
+                                        description: "Profile",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ProfileResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    401: {
+                                        description: "Not authenticated",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/AuthErrorResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/orders": {
+                            get: {
+                                tags: ["Orders"],
+                                summary: "List orders",
+                                description:
+                                    "Paginated order history for the logged-in customer. Optional filters `status`, `search`. Includes `stats` counts by status.",
+                                operationId: "listOrders",
+                                security: [{ cookieAuth: [] }],
+                                parameters: [
+                                    {
+                                        name: "page",
+                                        in: "query",
+                                        schema: { type: "integer", default: 1, minimum: 1 },
+                                    },
+                                    {
+                                        name: "perPage",
+                                        in: "query",
+                                        schema: {
+                                            type: "integer",
+                                            default: 10,
+                                            minimum: 1,
+                                            maximum: 50,
+                                        },
+                                    },
+                                    {
+                                        name: "status",
+                                        in: "query",
+                                        description: "Filter: pending, processing, completed, cancelled",
+                                        schema: {
+                                            type: "string",
+                                            enum: [
+                                                "pending",
+                                                "processing",
+                                                "completed",
+                                                "cancelled",
+                                            ],
+                                        },
+                                    },
+                                    {
+                                        name: "search",
+                                        in: "query",
+                                        description: "Search order number, name, or email",
+                                        schema: { type: "string" },
+                                    },
+                                ],
+                                responses: {
+                                    200: {
+                                        description: "Order list",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/OrderListResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    401: {
+                                        description: "Not authenticated",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/AuthErrorResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/orders/{orderNumber}": {
+                            get: {
+                                tags: ["Orders"],
+                                summary: "Get order detail",
+                                description:
+                                    "Full order by `orderNumber` (e.g. `ORD-20250101-0001`). Only orders owned by the logged-in user.",
+                                operationId: "getOrder",
+                                security: [{ cookieAuth: [] }],
+                                parameters: [
+                                    {
+                                        name: "orderNumber",
+                                        in: "path",
+                                        required: true,
+                                        schema: { type: "string", example: "ORD-20250101-0001" },
+                                    },
+                                ],
+                                responses: {
+                                    200: {
+                                        description: "Order detail",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/OrderDetailResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    401: {
+                                        description: "Not authenticated",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/AuthErrorResponse",
                                                 },
                                             },
                                         },
                                     },
                                     404: {
-                                        description: "Template not found",
+                                        description: "Order not found",
+                                    },
+                                },
+                            },
+                        },
+                        "/api/products": {
+                            get: {
+                                tags: ["Products"],
+                                summary: "List products",
+                                description:
+                                    "Paginated product list. Response uses `items` + `meta` (camelCase). Walk pages with `meta.hasNextPage` until false. Max 48 items per page (default **18**).",
+                                operationId: "listProducts",
+                                security: [],
+                                parameters: [
+                                    {
+                                        name: "page",
+                                        in: "query",
+                                        description: "Page number (starts at 1)",
+                                        schema: {
+                                            type: "integer",
+                                            default: 1,
+                                            minimum: 1,
+                                            example: 1,
+                                        },
+                                    },
+                                    {
+                                        name: "perPage",
+                                        in: "query",
+                                        description:
+                                            "Page size. Integer from 1 to 48 inclusive. Default: 18.",
+                                        schema: {
+                                            type: "integer",
+                                            default: 18,
+                                            minimum: 1,
+                                            maximum: 48,
+                                            example: 18,
+                                        },
+                                    },
+                                    {
+                                        name: "collectionId",
+                                        in: "query",
+                                        description: "Filter by collection ID",
+                                        schema: { type: "integer", minimum: 1 },
+                                    },
+                                    {
+                                        name: "shopId",
+                                        in: "query",
+                                        description: "Filter by shop ID",
+                                        schema: { type: "integer", minimum: 1 },
+                                    },
+                                    {
+                                        name: "minPrice",
+                                        in: "query",
+                                        description:
+                                            "Minimum price in **USD** (must be ≤ maxPrice when both are set)",
+                                        schema: {
+                                            type: "number",
+                                            format: "float",
+                                            minimum: 0,
+                                            example: 10,
+                                        },
+                                    },
+                                    {
+                                        name: "maxPrice",
+                                        in: "query",
+                                        description:
+                                            "Maximum price in **USD** (must be ≥ minPrice when both are set)",
+                                        schema: {
+                                            type: "number",
+                                            format: "float",
+                                            minimum: 0,
+                                            example: 50,
+                                        },
+                                    },
+                                    {
+                                        name: "search",
+                                        in: "query",
+                                        description:
+                                            "Search keyword (max 200 characters). Scope controlled by `searchScope`.",
+                                        schema: {
+                                            type: "string",
+                                            maxLength: 200,
+                                            example: "almond",
+                                        },
+                                    },
+                                    {
+                                        name: "searchScope",
+                                        in: "query",
+                                        description:
+                                            "Where to apply `search`: `all` (default), `name`, `description`, or `shop` only",
+                                        schema: {
+                                            type: "string",
+                                            enum: [
+                                                "all",
+                                                "name",
+                                                "description",
+                                                "shop",
+                                            ],
+                                            default: "all",
+                                        },
+                                    },
+                                    {
+                                        name: "sortBy",
+                                        in: "query",
+                                        description: "Sort order",
+                                        schema: {
+                                            type: "string",
+                                            enum: [
+                                                "newest",
+                                                "price_asc",
+                                                "price_desc",
+                                                "name",
+                                                "popular",
+                                            ],
+                                            default: "newest",
+                                        },
+                                    },
+                                    {
+                                        name: "inStock",
+                                        in: "query",
+                                        description:
+                                            "Stock filter. Omit or `true`: in-stock sellable products only. `false`: include active products that may be out of stock.",
+                                        schema: {
+                                            type: "boolean",
+                                            example: true,
+                                        },
+                                    },
+                                ],
+                                responses: {
+                                    200: {
+                                        description: "Success",
                                         content: {
                                             "application/json": {
                                                 schema: {
-                                                    $ref: "#/components/schemas/Error",
+                                                    $ref: "#/components/schemas/ProductListResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    422: {
+                                        description:
+                                            "Validation error (e.g. perPage > 48, minPrice > maxPrice)",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ValidationError",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/product/{slug}": {
+                            get: {
+                                tags: ["Products"],
+                                summary: "Product detail",
+                                description:
+                                    "Single product by URL slug or numeric ID. Only products that pass `availableForDisplay()`. `media` merges product uploads then template media (deduped by URL). Includes template **customizations** and product **special_shipping_handling** when enabled.",
+                                operationId: "getProductBySlug",
+                                security: [],
+                                parameters: [
+                                    {
+                                        name: "slug",
+                                        in: "path",
+                                        required: true,
+                                        description:
+                                            "Product slug (e.g. `almond-nude-set`) or numeric ID",
+                                        schema: {
+                                            type: "string",
+                                            example: "almond-nude-set",
+                                        },
+                                    },
+                                ],
+                                responses: {
+                                    200: {
+                                        description: "Product detail",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ProductDetailResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    404: {
+                                        description:
+                                            "Product not found or not available for display",
+                                    },
+                                },
+                            },
+                        },
+                        "/api/collections": {
+                            get: {
+                                tags: ["Collections"],
+                                summary: "List collections",
+                                description:
+                                    "Active, admin-approved collections. Default `perPage` is **12**.",
+                                operationId: "listCollections",
+                                security: [],
+                                parameters: [
+                                    {
+                                        name: "page",
+                                        in: "query",
+                                        schema: {
+                                            type: "integer",
+                                            default: 1,
+                                            minimum: 1,
+                                        },
+                                    },
+                                    {
+                                        name: "perPage",
+                                        in: "query",
+                                        description: "1–48, default 12",
+                                        schema: {
+                                            type: "integer",
+                                            default: 12,
+                                            minimum: 1,
+                                            maximum: 48,
+                                        },
+                                    },
+                                    {
+                                        name: "search",
+                                        in: "query",
+                                        description: "Search name or description",
+                                        schema: {
+                                            type: "string",
+                                            maxLength: 200,
+                                        },
+                                    },
+                                    {
+                                        name: "sortBy",
+                                        in: "query",
+                                        schema: {
+                                            type: "string",
+                                            enum: [
+                                                "featured",
+                                                "name",
+                                                "newest",
+                                                "oldest",
+                                                "products",
+                                            ],
+                                            default: "featured",
+                                        },
+                                    },
+                                    {
+                                        name: "shopId",
+                                        in: "query",
+                                        schema: { type: "integer", minimum: 1 },
+                                    },
+                                ],
+                                responses: {
+                                    200: {
+                                        description: "Collection list",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CollectionListResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    422: {
+                                        description: "Validation error",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ValidationError",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/shops": {
+                            get: {
+                                tags: ["Shops"],
+                                summary: "List shops",
+                                description:
+                                    "Active shops only. Default `perPage` is **24**, default `sortBy` is **name**.",
+                                operationId: "listShops",
+                                security: [],
+                                parameters: [
+                                    {
+                                        name: "page",
+                                        in: "query",
+                                        schema: {
+                                            type: "integer",
+                                            default: 1,
+                                            minimum: 1,
+                                        },
+                                    },
+                                    {
+                                        name: "perPage",
+                                        in: "query",
+                                        description: "1–48, default 24",
+                                        schema: {
+                                            type: "integer",
+                                            default: 24,
+                                            minimum: 1,
+                                            maximum: 48,
+                                        },
+                                    },
+                                    {
+                                        name: "search",
+                                        in: "query",
+                                        description: "Search shop name or description",
+                                        schema: {
+                                            type: "string",
+                                            maxLength: 200,
+                                        },
+                                    },
+                                    {
+                                        name: "sortBy",
+                                        in: "query",
+                                        schema: {
+                                            type: "string",
+                                            enum: [
+                                                "name",
+                                                "newest",
+                                                "rating",
+                                                "products",
+                                            ],
+                                            default: "name",
+                                        },
+                                    },
+                                ],
+                                responses: {
+                                    200: {
+                                        description: "Shop list",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ShopListResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    422: {
+                                        description: "Validation error",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ValidationError",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/cart": {
+                            get: {
+                                tags: ["Cart"],
+                                summary: "Get cart",
+                                operationId: "getCart",
+                                security: [],
+                                parameters: [
+                                    {
+                                        name: "country",
+                                        in: "query",
+                                        description:
+                                            "Shipping destination country code for estimate",
+                                        schema: {
+                                            type: "string",
+                                            example: "US",
+                                        },
+                                    },
+                                ],
+                                responses: {
+                                    200: {
+                                        description: "Cart with totals and summary",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CartGetResponse",
                                                 },
                                                 example: {
-                                                    success: false,
-                                                    message:
-                                                        "Template not found",
+                                                    cart_items: [
+                                                        {
+                                                            id: 42,
+                                                            product_id: 10,
+                                                            variant_id: 5,
+                                                            quantity: 1,
+                                                            price: 24.99,
+                                                            line_total: 24.99,
+                                                            selected_variant: {
+                                                                id: 5,
+                                                                attributes: { Size: "M" },
+                                                            },
+                                                            customizations: {},
+                                                            product: {
+                                                                id: 10,
+                                                                name: "Classic Set",
+                                                                slug: "classic-set",
+                                                                url: "/products/classic-set",
+                                                                primary_image: "https://example.com/img.webp",
+                                                                primary_image_alt: "Classic Set",
+                                                                is_gift_card: false,
+                                                                requires_special_handling: false,
+                                                                shop: null,
+                                                            },
+                                                        },
+                                                    ],
+                                                    total_items: 1,
+                                                    total_price: 24.99,
+                                                    summary: {
+                                                        subtotal: 24.99,
+                                                        shipping: 5.99,
+                                                        discount: 0,
+                                                        gift_card_discount: 0,
+                                                        total: 30.98,
+                                                    },
+                                                    shipping_details: {
+                                                        zone_id: 1,
+                                                        zone_name: "United States",
+                                                        country: "US",
+                                                        total_shipping: 5.99,
+                                                        breakdown: { currency: "USD" },
+                                                    },
+                                                    currency: "USD",
+                                                    currency_rate: 1,
                                                 },
                                             },
                                         },
@@ -242,12 +793,208 @@
                                         content: {
                                             "application/json": {
                                                 schema: {
-                                                    $ref: "#/components/schemas/Error",
+                                                    $ref: "#/components/schemas/CartApiErrorResponse",
                                                 },
-                                                example: {
-                                                    success: false,
-                                                    message:
-                                                        "Failed to upload image to S3",
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                            post: {
+                                tags: ["Cart"],
+                                summary: "Add to cart",
+                                operationId: "addToCart",
+                                security: [],
+                                requestBody: {
+                                    required: true,
+                                    content: {
+                                        "application/json": {
+                                            schema: {
+                                                $ref: "#/components/schemas/CartAddRequest",
+                                            },
+                                        },
+                                    },
+                                },
+                                responses: {
+                                    200: {
+                                        description: "Item added",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CartAddResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    422: {
+                                        description: "Validation error",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ValidationError",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    500: {
+                                        description: "Server error",
+                                    },
+                                },
+                            },
+                            delete: {
+                                tags: ["Cart"],
+                                summary: "Clear cart",
+                                operationId: "clearCart",
+                                security: [],
+                                responses: {
+                                    200: {
+                                        description: "Cart cleared",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CartMessageResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    500: {
+                                        description: "Server error",
+                                    },
+                                },
+                            },
+                        },
+                        "/api/cart/{item_id}": {
+                            put: {
+                                tags: ["Cart"],
+                                summary: "Update cart line",
+                                operationId: "updateCartItem",
+                                security: [],
+                                parameters: [
+                                    {
+                                        name: "item_id",
+                                        in: "path",
+                                        required: true,
+                                        description: "Cart row ID (`carts.id`)",
+                                        schema: {
+                                            type: "integer",
+                                            minimum: 1,
+                                            example: 42,
+                                        },
+                                    },
+                                ],
+                                requestBody: {
+                                    required: true,
+                                    content: {
+                                        "application/json": {
+                                            schema: {
+                                                $ref: "#/components/schemas/CartUpdateRequest",
+                                            },
+                                        },
+                                    },
+                                },
+                                responses: {
+                                    200: {
+                                        description: "Line updated",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CartUpdateResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    404: {
+                                        description:
+                                            "Cart line not found for this session/user",
+                                    },
+                                    422: {
+                                        description: "Validation error",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ValidationError",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    500: {
+                                        description: "Server error",
+                                    },
+                                },
+                            },
+                            delete: {
+                                tags: ["Cart"],
+                                summary: "Remove cart line",
+                                operationId: "removeCartItem",
+                                security: [],
+                                parameters: [
+                                    {
+                                        name: "item_id",
+                                        in: "path",
+                                        required: true,
+                                        schema: {
+                                            type: "integer",
+                                            minimum: 1,
+                                            example: 42,
+                                        },
+                                    },
+                                ],
+                                responses: {
+                                    200: {
+                                        description: "Line removed",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CartMessageResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    404: {
+                                        description:
+                                            "Cart line not found for this session/user",
+                                    },
+                                    500: {
+                                        description: "Server error",
+                                    },
+                                },
+                            },
+                        },
+                        "/api/checkout": {
+                            get: {
+                                tags: ["Checkout"],
+                                summary: "Get checkout snapshot",
+                                operationId: "getCheckoutSnapshot",
+                                security: [],
+                                parameters: [
+                                    {
+                                        name: "country",
+                                        in: "query",
+                                        description:
+                                            "Shipping destination country code for estimate",
+                                        schema: {
+                                            type: "string",
+                                            example: "US",
+                                        },
+                                    },
+                                ],
+                                responses: {
+                                    200: {
+                                        description: "Checkout snapshot",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CartGetResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    500: {
+                                        description: "Server error",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CartApiErrorResponse",
                                                 },
                                             },
                                         },
@@ -255,48 +1002,220 @@
                                 },
                             },
                         },
-                        "/api/upload/presigned-urls": {
+                        "/checkout/calculate-shipping": {
                             post: {
-                                tags: ["Upload"],
-                                summary: "Get presigned URLs for file upload",
-                                description:
-                                    "Generate presigned URLs for direct upload to S3. Use these URLs to upload files directly to S3, then use the returned URLs in product creation.",
-                                operationId: "getPresignedUrls",
+                                tags: ["Checkout"],
+                                summary: "Calculate shipping",
+                                operationId: "checkoutCalculateShipping",
+                                security: [],
+                                requestBody: {
+                                    required: true,
+                                    content: {
+                                        "application/json": {
+                                            schema: {
+                                                $ref: "#/components/schemas/CheckoutCalculateShippingRequest",
+                                            },
+                                        },
+                                    },
+                                },
+                                responses: {
+                                    200: {
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CheckoutCalculateShippingResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    400: {
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CheckoutActionErrorResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    422: {
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ValidationError",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/checkout/get-shipping-rates": {
+                            post: {
+                                tags: ["Checkout"],
+                                summary: "List shipping rate options",
+                                operationId: "checkoutGetShippingRates",
+                                security: [],
+                                requestBody: {
+                                    required: true,
+                                    content: {
+                                        "application/json": {
+                                            schema: {
+                                                $ref: "#/components/schemas/CheckoutCountryRequest",
+                                            },
+                                        },
+                                    },
+                                },
+                                responses: {
+                                    200: {
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CheckoutShippingRatesResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    400: {
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CheckoutActionErrorResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    422: {
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ValidationError",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/checkout/process": {
+                            post: {
+                                tags: ["Checkout"],
+                                summary: "Create order & pay",
+                                operationId: "checkoutProcess",
+                                security: [],
+                                requestBody: {
+                                    required: true,
+                                    content: {
+                                        "application/json": {
+                                            schema: {
+                                                $ref: "#/components/schemas/CheckoutProcessRequest",
+                                            },
+                                        },
+                                    },
+                                },
+                                responses: {
+                                    200: {
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CheckoutProcessResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    400: {
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CheckoutActionErrorResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    422: {
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ValidationError",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    500: {
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CheckoutActionErrorResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/payment/stripe/create-payment-intent": {
+                            post: {
+                                tags: ["Checkout"],
+                                summary: "Stripe PaymentIntent (before checkout/process)",
+                                operationId: "stripeCreatePaymentIntent",
+                                security: [],
+                                requestBody: {
+                                    required: true,
+                                    content: {
+                                        "application/json": {
+                                            schema: {
+                                                $ref: "#/components/schemas/StripeCreatePaymentIntentRequest",
+                                            },
+                                        },
+                                    },
+                                },
+                                responses: {
+                                    200: {
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/StripeCreatePaymentIntentResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    422: {
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ValidationError",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    500: {
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CheckoutActionErrorResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/cart/apply-promo": {
+                            post: {
+                                tags: ["Cart"],
+                                summary: "Apply promo code (session)",
+                                operationId: "applyCartPromo",
+                                security: [],
                                 requestBody: {
                                     required: true,
                                     content: {
                                         "application/json": {
                                             schema: {
                                                 type: "object",
-                                                required: ["files"],
+                                                required: ["code"],
                                                 properties: {
-                                                    
-                                                    files: {
-                                                        type: "array",
-                                                        items: {
-                                                            type: "object",
-                                                            required: ["filename", "content_type"],
-                                                            properties: {
-                                                                filename: {
-                                                                    type: "string",
-                                                                    description: "Original filename",
-                                                                    example: "product-image.jpg",
-                                                                },
-                                                                content_type: {
-                                                                    type: "string",
-                                                                    description: "MIME type of the file",
-                                                                    example: "image/jpeg",
-                                                                },
-                                                                file_size: {
-                                                                    type: "integer",
-                                                                    description: "File size in bytes (optional)",
-                                                                    example: 1024000,
-                                                                },
-                                                            },
-                                                        },
-                                                        description: "Array of files to upload",
-                                                        minItems: 1,
-                                                        maxItems: 10,
+                                                    code: {
+                                                        type: "string",
+                                                        example: "SAVE10",
                                                     },
                                                 },
                                             },
@@ -305,193 +1224,155 @@
                                 },
                                 responses: {
                                     200: {
-                                        description: "Presigned URLs generated successfully",
+                                        description: "Promo applied",
                                         content: {
                                             "application/json": {
                                                 schema: {
-                                                    type: "object",
-                                                    properties: {
-                                                        success: {
-                                                            type: "boolean",
-                                                            example: true,
-                                                        },
-                                                        data: {
-                                                            type: "object",
-                                                            properties: {
-                                                                upload_urls: {
-                                                                    type: "array",
-                                                                    items: {
-                                                                        type: "object",
-                                                                        properties: {
-                                                                            filename: {
-                                                                                type: "string",
-                                                                                example: "product-image.jpg",
-                                                                            },
-                                                                            upload_url: {
-                                                                                type: "string",
-                                                                                format: "uri",
-                                                                                example: "https://s3.amazonaws.com/bucket/products/1234567890_abc123.jpg?X-Amz-Algorithm=...",
-                                                                            },
-                                                                            final_url: {
-                                                                                type: "string",
-                                                                                format: "uri",
-                                                                                example: "https://s3.us-east-1.amazonaws.com/image.bluprinter/products/1234567890_abc123.jpg",
-                                                                            },
-                                                                            expires_in: {
-                                                                                type: "integer",
-                                                                                description: "URL expiration time in seconds",
-                                                                                example: 3600,
-                                                                            },
-                                                                        },
-                                                                    },
-                                                                },
-                                                            },
-                                                        },
+                                                    $ref: "#/components/schemas/CartPromoApplyResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    422: {
+                                        description: "Invalid promo or cart",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CartActionErrorResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/cart/remove-promo": {
+                            post: {
+                                tags: ["Cart"],
+                                summary: "Remove promo code (session)",
+                                operationId: "removeCartPromo",
+                                security: [],
+                                responses: {
+                                    200: {
+                                        description: "Promo removed",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CartMessageResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/cart/apply-gift-card": {
+                            post: {
+                                tags: ["Cart"],
+                                summary: "Apply gift card (session)",
+                                operationId: "applyCartGiftCard",
+                                security: [],
+                                requestBody: {
+                                    required: true,
+                                    content: {
+                                        "application/json": {
+                                            schema: {
+                                                type: "object",
+                                                required: ["code"],
+                                                properties: {
+                                                    code: {
+                                                        type: "string",
+                                                        example: "GC-XXXX",
                                                     },
                                                 },
                                             },
                                         },
                                     },
-                                    400: {
+                                },
+                                responses: {
+                                    200: {
+                                        description: "Gift card applied",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CartGiftCardApplyResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    422: {
+                                        description: "Invalid gift card or cart",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CartActionErrorResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/cart/remove-gift-card": {
+                            post: {
+                                tags: ["Cart"],
+                                summary: "Remove gift card (session)",
+                                operationId: "removeCartGiftCard",
+                                security: [],
+                                responses: {
+                                    200: {
+                                        description: "Gift card removed",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CartMessageResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/cart/discount-mode": {
+                            post: {
+                                tags: ["Cart"],
+                                summary: "Set discount mode (session)",
+                                operationId: "setCartDiscountMode",
+                                security: [],
+                                requestBody: {
+                                    required: true,
+                                    content: {
+                                        "application/json": {
+                                            schema: {
+                                                type: "object",
+                                                required: ["mode"],
+                                                properties: {
+                                                    mode: {
+                                                        type: "string",
+                                                        enum: ["volume", "promo"],
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                                responses: {
+                                    200: {
+                                        description: "Mode updated",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CartDiscountModeResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    422: {
                                         description: "Validation error",
                                         content: {
                                             "application/json": {
                                                 schema: {
-                                                    $ref: "#/components/schemas/Error",
-                                                },
-                                            },
-                                        },
-                                    },
-                                    401: {
-                                        description: "Authentication failed",
-                                        content: {
-                                            "application/json": {
-                                                schema: {
-                                                    $ref: "#/components/schemas/Error",
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                        "/api/products/{id}": {
-                            get: {
-                                tags: ["Products"],
-                                summary: "Get product details",
-                                description:
-                                    "Retrieve details of a specific product",
-                                operationId: "getProduct",
-                                parameters: [
-                                    {
-                                        name: "id",
-                                        in: "path",
-                                        required: true,
-                                        description: "Product ID",
-                                        schema: {
-                                            type: "integer",
-                                            example: 123,
-                                        },
-                                    },
-                                ],
-                                responses: {
-                                    200: {
-                                        description: "Product details",
-                                        content: {
-                                            "application/json": {
-                                                schema: {
-                                                    type: "object",
-                                                    properties: {
-                                                        success: {
-                                                            type: "boolean",
-                                                            example: true,
-                                                        },
-                                                        data: {
-                                                            $ref: "#/components/schemas/Product",
-                                                        },
-                                                    },
-                                                },
-                                            },
-                                        },
-                                    },
-                                    404: {
-                                        description: "Product not found",
-                                        content: {
-                                            "application/json": {
-                                                schema: {
-                                                    $ref: "#/components/schemas/Error",
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                        "/api/products": {
-                            get: {
-                                tags: ["Products"],
-                                summary: "List all products",
-                                description:
-                                    "Get a paginated list of all products",
-                                operationId: "listProducts",
-                                parameters: [
-                                    {
-                                        name: "page",
-                                        in: "query",
-                                        description: "Page number",
-                                        schema: {
-                                            type: "integer",
-                                            default: 1,
-                                            example: 1,
-                                        },
-                                    },
-                                    {
-                                        name: "per_page",
-                                        in: "query",
-                                        description: "Items per page",
-                                        schema: {
-                                            type: "integer",
-                                            default: 15,
-                                            example: 15,
-                                        },
-                                    },
-                                ],
-                                responses: {
-                                    200: {
-                                        description: "List of products",
-                                        content: {
-                                            "application/json": {
-                                                schema: {
-                                                    type: "object",
-                                                    properties: {
-                                                        success: {
-                                                            type: "boolean",
-                                                            example: true,
-                                                        },
-                                                        data: {
-                                                            type: "array",
-                                                            items: {
-                                                                $ref: "#/components/schemas/Product",
-                                                            },
-                                                        },
-                                                        pagination: {
-                                                            type: "object",
-                                                            properties: {
-                                                                current_page: {
-                                                                    type: "integer",
-                                                                    example: 1,
-                                                                },
-                                                                total: {
-                                                                    type: "integer",
-                                                                    example: 50,
-                                                                },
-                                                                per_page: {
-                                                                    type: "integer",
-                                                                    example: 15,
-                                                                },
-                                                            },
-                                                        },
-                                                    },
+                                                    $ref: "#/components/schemas/ValidationError",
                                                 },
                                             },
                                         },
@@ -502,88 +1383,1415 @@
                     },
                     components: {
                         schemas: {
-                            Product: {
+                            PaginationMeta: {
+                                type: "object",
+                                description: "Pagination metadata",
+                                properties: {
+                                    page: { type: "integer", example: 1 },
+                                    perPage: { type: "integer", example: 12 },
+                                    total: { type: "integer", example: 24 },
+                                    lastPage: { type: "integer", example: 2 },
+                                    hasNextPage: {
+                                        type: "boolean",
+                                        example: true,
+                                    },
+                                    hasPreviousPage: {
+                                        type: "boolean",
+                                        example: false,
+                                    },
+                                },
+                                required: [
+                                    "page",
+                                    "perPage",
+                                    "total",
+                                    "lastPage",
+                                    "hasNextPage",
+                                    "hasPreviousPage",
+                                ],
+                            },
+                            ListMeta: {
+                                type: "object",
+                                description:
+                                    "Pagination + currency for product lists",
+                                allOf: [
+                                    {
+                                        $ref: "#/components/schemas/PaginationMeta",
+                                    },
+                                    {
+                                        type: "object",
+                                        properties: {
+                                            currency: {
+                                                type: "string",
+                                                example: "USD",
+                                            },
+                                        },
+                                        required: ["currency"],
+                                    },
+                                ],
+                            },
+                            CollectionListItem: {
                                 type: "object",
                                 properties: {
-                                    id: {
-                                        type: "integer",
-                                        example: 123,
-                                    },
-                                    name: {
-                                        type: "string",
-                                        example: "AI Generated T-Shirt Design",
-                                    },
-                                    slug: {
-                                        type: "string",
-                                        example: "ai-generated-t-shirt-design",
-                                    },
-                                    description: {
-                                        type: "string",
-                                        example:
-                                            "Beautiful AI-generated design",
-                                    },
-                                    price: {
-                                        type: "number",
-                                        format: "float",
-                                        example: 29.99,
-                                    },
-                                    template_id: {
-                                        type: "integer",
-                                        example: 1,
-                                    },
-                                    shop_id: {
-                                        type: "integer",
-                                        example: 1,
-                                    },
-                                    status: {
-                                        type: "string",
-                                        enum: ["active", "inactive"],
-                                        example: "active",
-                                    },
-                                    media: {
-                                        type: "array",
-                                        items: {
-                                            type: "string",
-                                        },
-                                        example: [
-                                            "https://s3.amazonaws.com/bucket/products/image1.jpg",
-                                            "https://s3.amazonaws.com/bucket/products/video.mp4",
-                                        ],
-                                    },
-                                    created_by: {
-                                        type: "string",
-                                        example: "api",
-                                    },
-                                    created_at: {
-                                        type: "string",
-                                        format: "date-time",
-                                        example: "2025-10-16T10:30:00.000000Z",
-                                    },
-                                    updated_at: {
-                                        type: "string",
-                                        format: "date-time",
-                                        example: "2025-10-16T10:30:00.000000Z",
+                                    id: { type: "integer", example: 5 },
+                                    name: { type: "string" },
+                                    slug: { type: "string" },
+                                    description: { type: "string", nullable: true },
+                                    image: { type: "string", nullable: true },
+                                    featured: { type: "boolean" },
+                                    productsCount: { type: "integer", example: 42 },
+                                    url: { type: "string", format: "uri" },
+                                    shop: {
+                                        $ref: "#/components/schemas/ShopSummary",
                                     },
                                 },
                             },
-                            Error: {
+                            CollectionListResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    meta: {
+                                        $ref: "#/components/schemas/PaginationMeta",
+                                    },
+                                    items: {
+                                        type: "array",
+                                        items: {
+                                            $ref: "#/components/schemas/CollectionListItem",
+                                        },
+                                    },
+                                },
+                                required: ["success", "meta", "items"],
+                            },
+                            ShopListItem: {
+                                type: "object",
+                                properties: {
+                                    id: { type: "integer" },
+                                    name: { type: "string" },
+                                    slug: { type: "string" },
+                                    description: {
+                                        type: "string",
+                                        nullable: true,
+                                    },
+                                    logo: { type: "string", nullable: true },
+                                    banner: { type: "string", nullable: true },
+                                    city: { type: "string", nullable: true },
+                                    country: {
+                                        type: "string",
+                                        nullable: true,
+                                    },
+                                    verified: { type: "boolean" },
+                                    rating: {
+                                        type: "number",
+                                        format: "float",
+                                        nullable: true,
+                                    },
+                                    productsCount: { type: "integer" },
+                                    url: { type: "string", format: "uri" },
+                                },
+                            },
+                            ShopListResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    meta: {
+                                        $ref: "#/components/schemas/PaginationMeta",
+                                    },
+                                    items: {
+                                        type: "array",
+                                        items: {
+                                            $ref: "#/components/schemas/ShopListItem",
+                                        },
+                                    },
+                                },
+                                required: ["success", "meta", "items"],
+                            },
+                            ShopSummary: {
+                                type: "object",
+                                nullable: true,
+                                properties: {
+                                    id: { type: "integer", example: 1 },
+                                    name: {
+                                        type: "string",
+                                        example: "Press On Nail Shop",
+                                    },
+                                },
+                            },
+                            ProductListItem: {
+                                type: "object",
+                                properties: {
+                                    id: { type: "integer", example: 42 },
+                                    name: { type: "string" },
+                                    slug: { type: "string" },
+                                    price: {
+                                        type: "number",
+                                        format: "float",
+                                        description: "Effective price (USD)",
+                                        example: 24.99,
+                                    },
+                                    list_price: {
+                                        type: "number",
+                                        format: "float",
+                                        description: "Compare-at price (USD)",
+                                        example: 29.99,
+                                    },
+                                    primary_image: {
+                                        type: "string",
+                                        format: "uri",
+                                        nullable: true,
+                                    },
+                                    category_id: {
+                                        type: "integer",
+                                        nullable: true,
+                                    },
+                                    category_name: {
+                                        type: "string",
+                                        nullable: true,
+                                    },
+                                    average_rating: {
+                                        type: "number",
+                                        format: "float",
+                                        example: 4.5,
+                                    },
+                                    reviews_count: {
+                                        type: "integer",
+                                        example: 12,
+                                    },
+                                    in_stock: {
+                                        type: "boolean",
+                                        example: true,
+                                    },
+                                    url: {
+                                        type: "string",
+                                        format: "uri",
+                                    },
+                                    shop: {
+                                        $ref: "#/components/schemas/ShopSummary",
+                                    },
+                                },
+                            },
+                            ProductListResponse: {
                                 type: "object",
                                 properties: {
                                     success: {
                                         type: "boolean",
-                                        example: false,
+                                        example: true,
                                     },
+                                    meta: {
+                                        $ref: "#/components/schemas/ListMeta",
+                                    },
+                                    items: {
+                                        type: "array",
+                                        description: "Products on the current page",
+                                        items: {
+                                            $ref: "#/components/schemas/ProductListItem",
+                                        },
+                                    },
+                                },
+                                required: ["success", "meta", "items"],
+                            },
+                            ProductMediaItem: {
+                                type: "object",
+                                properties: {
+                                    url: {
+                                        type: "string",
+                                        format: "uri",
+                                    },
+                                    alt: { type: "string" },
+                                    type: {
+                                        type: "string",
+                                        enum: ["image", "video"],
+                                        example: "image",
+                                    },
+                                },
+                                required: ["url", "alt", "type"],
+                            },
+                            ProductVariant: {
+                                type: "object",
+                                properties: {
+                                    id: { type: "integer" },
+                                    variant_name: { type: "string" },
+                                    attributes: {
+                                        type: "object",
+                                        additionalProperties: true,
+                                        example: { size: "M" },
+                                    },
+                                    sku: {
+                                        type: "string",
+                                        nullable: true,
+                                    },
+                                    price: {
+                                        type: "number",
+                                        format: "float",
+                                        description: "Variant price (USD)",
+                                    },
+                                    list_price: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    quantity: { type: "integer" },
+                                    media: {
+                                        type: "array",
+                                        items: {
+                                            $ref: "#/components/schemas/ProductMediaItem",
+                                        },
+                                    },
+                                },
+                            },
+                            ProductCollectionRef: {
+                                type: "object",
+                                properties: {
+                                    id: { type: "integer" },
+                                    name: { type: "string" },
+                                    slug: { type: "string" },
+                                },
+                            },
+                            ProductReview: {
+                                type: "object",
+                                properties: {
+                                    id: { type: "integer" },
+                                    customer_name: { type: "string" },
+                                    rating: {
+                                        type: "integer",
+                                        minimum: 1,
+                                        maximum: 5,
+                                    },
+                                    title: {
+                                        type: "string",
+                                        nullable: true,
+                                    },
+                                    review_text: { type: "string" },
+                                    image_url: {
+                                        type: "string",
+                                        format: "uri",
+                                        nullable: true,
+                                    },
+                                    is_verified_purchase: {
+                                        type: "boolean",
+                                    },
+                                    created_at: {
+                                        type: "string",
+                                        format: "date-time",
+                                        nullable: true,
+                                    },
+                                },
+                            },
+                            ProductCustomizationField: {
+                                type: "object",
+                                properties: {
+                                    index: { type: "integer", example: 0 },
+                                    type: {
+                                        type: "string",
+                                        enum: [
+                                            "text",
+                                            "number",
+                                            "textarea",
+                                            "select",
+                                            "checkbox",
+                                            "file",
+                                        ],
+                                        example: "text",
+                                    },
+                                    label: { type: "string", example: "Custom name" },
+                                    placeholder: {
+                                        type: "string",
+                                        example: "Enter text…",
+                                    },
+                                    price: {
+                                        type: "number",
+                                        format: "float",
+                                        description: "Extra charge (USD) when filled",
+                                        example: 2.5,
+                                    },
+                                    required: { type: "boolean", example: false },
+                                    options: {
+                                        type: "array",
+                                        description: "For `select` only",
+                                        items: { type: "string" },
+                                        example: ["Gold", "Silver"],
+                                    },
+                                },
+                            },
+                            ProductCustomizations: {
+                                type: "object",
+                                description:
+                                    "From product template when customization is enabled",
+                                properties: {
+                                    enabled: { type: "boolean", example: true },
+                                    fields: {
+                                        type: "array",
+                                        items: {
+                                            $ref: "#/components/schemas/ProductCustomizationField",
+                                        },
+                                    },
+                                },
+                                required: ["enabled", "fields"],
+                            },
+                            SpecialShippingHandling: {
+                                type: "object",
+                                properties: {
+                                    enabled: {
+                                        type: "boolean",
+                                        description:
+                                            "Product `requires_special_handling` flag",
+                                        example: true,
+                                    },
+                                    messages: {
+                                        type: "array",
+                                        description:
+                                            "Storefront notice lines when enabled",
+                                        items: { type: "string" },
+                                        example: [
+                                            "Ships separately to ensure product quality",
+                                            "Handled with extra care due to product nature",
+                                        ],
+                                    },
+                                },
+                                required: ["enabled", "messages"],
+                            },
+                            RatingBreakdown: {
+                                type: "object",
+                                description:
+                                    "Approved review counts per star (keys 1–5)",
+                                additionalProperties: {
+                                    type: "integer",
+                                },
+                                example: {
+                                    "1": 0,
+                                    "2": 1,
+                                    "3": 2,
+                                    "4": 5,
+                                    "5": 12,
+                                },
+                            },
+                            ProductDetail: {
+                                allOf: [
+                                    {
+                                        $ref: "#/components/schemas/ProductListItem",
+                                    },
+                                    {
+                                        type: "object",
+                                        properties: {
+                                            description: {
+                                                type: "string",
+                                            },
+                                            media: {
+                                                type: "array",
+                                                description:
+                                                    "Product media first, then template media (unique URLs)",
+                                                items: {
+                                                    $ref: "#/components/schemas/ProductMediaItem",
+                                                },
+                                            },
+                                            customizations: {
+                                                $ref: "#/components/schemas/ProductCustomizations",
+                                            },
+                                            special_shipping_handling: {
+                                                $ref: "#/components/schemas/SpecialShippingHandling",
+                                            },
+                                            quantity: {
+                                                type: "integer",
+                                                description:
+                                                    "Product-level stock quantity",
+                                            },
+                                            variants: {
+                                                type: "array",
+                                                items: {
+                                                    $ref: "#/components/schemas/ProductVariant",
+                                                },
+                                            },
+                                            collections: {
+                                                type: "array",
+                                                items: {
+                                                    $ref: "#/components/schemas/ProductCollectionRef",
+                                                },
+                                            },
+                                            reviews: {
+                                                type: "array",
+                                                description:
+                                                    "Up to 10 most recent approved reviews",
+                                                items: {
+                                                    $ref: "#/components/schemas/ProductReview",
+                                                },
+                                            },
+                                            rating_breakdown: {
+                                                $ref: "#/components/schemas/RatingBreakdown",
+                                            },
+                                            created_at: {
+                                                type: "string",
+                                                format: "date-time",
+                                                nullable: true,
+                                            },
+                                        },
+                                        required: [
+                                            "description",
+                                            "media",
+                                            "customizations",
+                                            "special_shipping_handling",
+                                            "quantity",
+                                            "variants",
+                                            "collections",
+                                            "reviews",
+                                            "rating_breakdown",
+                                        ],
+                                    },
+                                ],
+                            },
+                            ProductDetailResponse: {
+                                type: "object",
+                                properties: {
+                                    success: {
+                                        type: "boolean",
+                                        example: true,
+                                    },
+                                    data: {
+                                        $ref: "#/components/schemas/ProductDetail",
+                                    },
+                                },
+                                required: ["success", "data"],
+                            },
+                            CartSelectedVariant: {
+                                type: "object",
+                                properties: {
+                                    id: {
+                                        type: "integer",
+                                        nullable: true,
+                                        description: "ProductVariant id",
+                                    },
+                                    attributes: {
+                                        type: "object",
+                                        additionalProperties: { type: "string" },
+                                        example: { Size: "M" },
+                                    },
+                                },
+                            },
+                            CartCustomizationEntry: {
+                                type: "object",
+                                properties: {
+                                    value: { type: "string", example: "Anna" },
+                                    price: {
+                                        type: "number",
+                                        format: "float",
+                                        description: "Extra unit charge (USD)",
+                                        example: 2.5,
+                                    },
+                                },
+                                required: ["value", "price"],
+                            },
+                            CartCustomizationsMap: {
+                                type: "object",
+                                additionalProperties: {
+                                    $ref: "#/components/schemas/CartCustomizationEntry",
+                                },
+                                example: {
+                                    "Custom name": {
+                                        value: "Anna",
+                                        price: 2.5,
+                                    },
+                                },
+                            },
+                            CartAddRequest: {
+                                type: "object",
+                                required: ["id", "quantity", "price"],
+                                properties: {
+                                    id: {
+                                        type: "integer",
+                                        description: "Product id",
+                                        example: 10,
+                                    },
+                                    quantity: {
+                                        type: "integer",
+                                        minimum: 1,
+                                        example: 1,
+                                    },
+                                    price: {
+                                        type: "number",
+                                        format: "float",
+                                        description:
+                                            "Unit price (variant + customization included)",
+                                        example: 24.99,
+                                    },
+                                    selectedVariant: {
+                                        $ref: "#/components/schemas/CartSelectedVariant",
+                                    },
+                                    customizations: {
+                                        $ref: "#/components/schemas/CartCustomizationsMap",
+                                    },
+                                },
+                            },
+                            CartUpdateRequest: {
+                                type: "object",
+                                required: ["quantity"],
+                                properties: {
+                                    quantity: {
+                                        type: "integer",
+                                        minimum: 1,
+                                        example: 2,
+                                    },
+                                    price: {
+                                        type: "number",
+                                        format: "float",
+                                        description: "New unit price if changed",
+                                    },
+                                    selected_variant: {
+                                        $ref: "#/components/schemas/CartSelectedVariant",
+                                    },
+                                    selectedVariant: {
+                                        $ref: "#/components/schemas/CartSelectedVariant",
+                                    },
+                                    customizations: {
+                                        $ref: "#/components/schemas/CartCustomizationsMap",
+                                    },
+                                },
+                            },
+                            CartProductSummary: {
+                                type: "object",
+                                properties: {
+                                    id: { type: "integer" },
+                                    name: { type: "string" },
+                                    slug: { type: "string" },
+                                    url: { type: "string", format: "uri" },
+                                    primary_image: {
+                                        type: "string",
+                                        format: "uri",
+                                        nullable: true,
+                                    },
+                                    primary_image_alt: { type: "string" },
+                                    is_gift_card: { type: "boolean" },
+                                    requires_special_handling: {
+                                        type: "boolean",
+                                    },
+                                    shop: {
+                                        allOf: [
+                                            { $ref: "#/components/schemas/ShopSummary" },
+                                        ],
+                                        nullable: true,
+                                    },
+                                },
+                            },
+                            CartLineItem: {
+                                type: "object",
+                                properties: {
+                                    id: { type: "integer", example: 42 },
+                                    product_id: { type: "integer" },
+                                    variant_id: {
+                                        type: "integer",
+                                        nullable: true,
+                                    },
+                                    quantity: { type: "integer", example: 1 },
+                                    price: {
+                                        type: "number",
+                                        format: "float",
+                                        description: "Unit price in storefront currency",
+                                    },
+                                    line_total: {
+                                        type: "number",
+                                        format: "float",
+                                        description: "price × quantity",
+                                    },
+                                    selected_variant: {
+                                        $ref: "#/components/schemas/CartSelectedVariant",
+                                    },
+                                    customizations: {
+                                        $ref: "#/components/schemas/CartCustomizationsMap",
+                                    },
+                                    product: {
+                                        $ref: "#/components/schemas/CartProductSummary",
+                                    },
+                                },
+                            },
+                            CartSummary: {
+                                type: "object",
+                                properties: {
+                                    discount_mode: {
+                                        type: "string",
+                                        enum: ["volume", "promo"],
+                                    },
+                                    subtotal: { type: "number", format: "float" },
+                                    bulk_discount: { type: "number", format: "float" },
+                                    bulk_discount_percent: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    subtotal_after_bulk_discount: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    shipping: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    discount: { type: "number", format: "float" },
+                                    gift_card_discount: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    total: { type: "number", format: "float" },
+                                    converted_subtotal: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    converted_bulk_discount: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    converted_bulk_discount_percent: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    converted_subtotal_after_bulk_discount: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    converted_shipping: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    converted_discount: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    converted_gift_card_discount: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    converted_total: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    applied_promo_code: {
+                                        type: "string",
+                                        nullable: true,
+                                    },
+                                    applied_gift_card_code: {
+                                        type: "string",
+                                        nullable: true,
+                                    },
+                                    applied_gift_card_balance: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                },
+                                required: [
+                                    "subtotal",
+                                    "shipping",
+                                    "discount",
+                                    "gift_card_discount",
+                                    "total",
+                                ],
+                            },
+                            CartShippingDetails: {
+                                type: "object",
+                                properties: {
+                                    zone_id: { type: "integer" },
+                                    zone_name: { type: "string" },
+                                    country: { type: "string", example: "US" },
+                                    total_shipping: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    breakdown: {
+                                        type: "object",
+                                        properties: {
+                                            currency: { type: "string", example: "USD" },
+                                        },
+                                    },
+                                    items: {
+                                        type: "array",
+                                        items: {
+                                            type: "object",
+                                            properties: {
+                                                product_id: { type: "integer" },
+                                                product_name: { type: "string" },
+                                                quantity: { type: "integer" },
+                                                shipping_cost: {
+                                                    type: "number",
+                                                    format: "float",
+                                                },
+                                                total_item_shipping: {
+                                                    type: "number",
+                                                    format: "float",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                            CartGetResponse: {
+                                type: "object",
+                                properties: {
+                                    cart_items: {
+                                        type: "array",
+                                        items: {
+                                            $ref: "#/components/schemas/CartLineItem",
+                                        },
+                                    },
+                                    total_items: { type: "integer", example: 3 },
+                                    total_price: { type: "number", format: "float" },
+                                    summary: {
+                                        $ref: "#/components/schemas/CartSummary",
+                                    },
+                                    shipping_details: {
+                                        allOf: [
+                                            { $ref: "#/components/schemas/CartShippingDetails" },
+                                        ],
+                                        nullable: true,
+                                    },
+                                    currency: { type: "string", example: "USD" },
+                                    currency_rate: {
+                                        type: "number",
+                                        format: "float",
+                                        example: 1,
+                                    },
+                                },
+                                required: [
+                                    "cart_items",
+                                    "total_items",
+                                    "total_price",
+                                    "summary",
+                                    "currency",
+                                    "currency_rate",
+                                ],
+                            },
+                            CartAddResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    message: { type: "string" },
+                                    cart_item: {
+                                        $ref: "#/components/schemas/CartLineItem",
+                                    },
+                                },
+                            },
+                            CartUpdateResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    message: { type: "string" },
+                                    cart_item: {
+                                        $ref: "#/components/schemas/CartLineItem",
+                                    },
+                                },
+                            },
+                            CartMessageResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    message: { type: "string" },
+                                },
+                                required: ["success", "message"],
+                            },
+                            CartApiErrorResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: false },
+                                    message: { type: "string", example: "Failed to get cart" },
+                                },
+                                required: ["success", "message"],
+                            },
+                            CartActionErrorResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: false },
+                                    message: { type: "string" },
+                                },
+                                required: ["success", "message"],
+                            },
+                            CartPromoApplyResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    message: { type: "string" },
+                                    applied_promo_code: { type: "string" },
+                                },
+                                required: ["success", "message", "applied_promo_code"],
+                            },
+                            CartGiftCardApplyResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    message: { type: "string" },
+                                    applied_gift_card_code: { type: "string" },
+                                    balance: { type: "number", format: "float" },
+                                    currency: { type: "string", example: "USD" },
+                                },
+                                required: [
+                                    "success",
+                                    "message",
+                                    "applied_gift_card_code",
+                                    "balance",
+                                    "currency",
+                                ],
+                            },
+                            CartDiscountModeResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    mode: {
+                                        type: "string",
+                                        enum: ["volume", "promo"],
+                                    },
+                                },
+                                required: ["success", "mode"],
+                            },
+                            CheckoutCountryRequest: {
+                                type: "object",
+                                required: ["country"],
+                                properties: {
+                                    country: {
+                                        type: "string",
+                                        minLength: 2,
+                                        maxLength: 2,
+                                        example: "US",
+                                    },
+                                },
+                            },
+                            CheckoutShippingLineItem: {
+                                type: "object",
+                                required: ["product_id", "quantity", "price"],
+                                properties: {
+                                    product_id: { type: "integer" },
+                                    quantity: { type: "integer", minimum: 1 },
+                                    price: {
+                                        type: "number",
+                                        format: "float",
+                                        description: "Unit price in USD",
+                                    },
+                                },
+                            },
+                            CheckoutCalculateShippingRequest: {
+                                allOf: [
+                                    { $ref: "#/components/schemas/CheckoutCountryRequest" },
+                                    {
+                                        type: "object",
+                                        properties: {
+                                            items: {
+                                                type: "array",
+                                                description:
+                                                    "Optional; omit to use session cart",
+                                                items: {
+                                                    $ref: "#/components/schemas/CheckoutShippingLineItem",
+                                                },
+                                            },
+                                        },
+                                    },
+                                ],
+                            },
+                            CheckoutCalculateShippingResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    shipping: { type: "object" },
+                                    currency: { type: "string", example: "USD" },
+                                    currency_rate: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    converted_shipping: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                },
+                                required: [
+                                    "success",
+                                    "shipping",
+                                    "currency",
+                                    "currency_rate",
+                                    "converted_shipping",
+                                ],
+                            },
+                            CheckoutShippingRateOption: {
+                                type: "object",
+                                properties: {
+                                    id: { type: "integer" },
+                                    name: { type: "string" },
+                                    description: { type: "string", nullable: true },
+                                    is_default: { type: "boolean" },
+                                    shipping_cost_usd: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    shipping_cost: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    first_item_cost_usd: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    first_item_cost: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    additional_item_cost_usd: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    additional_item_cost: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                },
+                            },
+                            CheckoutShippingRatesResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    zone_id: { type: "integer" },
+                                    zone_name: { type: "string" },
+                                    country: { type: "string", example: "US" },
+                                    currency: { type: "string" },
+                                    currency_rate: {
+                                        type: "number",
+                                        format: "float",
+                                    },
+                                    rates: {
+                                        type: "array",
+                                        items: {
+                                            $ref: "#/components/schemas/CheckoutShippingRateOption",
+                                        },
+                                    },
+                                    default_rate: {
+                                        allOf: [
+                                            {
+                                                $ref: "#/components/schemas/CheckoutShippingRateOption",
+                                            },
+                                        ],
+                                        nullable: true,
+                                    },
+                                },
+                                required: [
+                                    "success",
+                                    "zone_id",
+                                    "zone_name",
+                                    "country",
+                                    "currency",
+                                    "currency_rate",
+                                    "rates",
+                                ],
+                            },
+                            CheckoutProcessRequest: {
+                                type: "object",
+                                required: [
+                                    "customer_name",
+                                    "customer_email",
+                                    "shipping_address",
+                                    "city",
+                                    "postal_code",
+                                    "country",
+                                    "payment_method",
+                                ],
+                                properties: {
+                                    customer_name: { type: "string", maxLength: 255 },
+                                    customer_email: {
+                                        type: "string",
+                                        format: "email",
+                                    },
+                                    customer_phone: {
+                                        type: "string",
+                                        maxLength: 20,
+                                        nullable: true,
+                                    },
+                                    shipping_address: { type: "string" },
+                                    city: { type: "string", maxLength: 100 },
+                                    state: {
+                                        type: "string",
+                                        maxLength: 100,
+                                        nullable: true,
+                                    },
+                                    postal_code: { type: "string", maxLength: 20 },
+                                    country: { type: "string", maxLength: 100 },
+                                    payment_method: {
+                                        type: "string",
+                                        enum: [
+                                            "paypal",
+                                            "lianlian_pay",
+                                            "stripe",
+                                            "free",
+                                        ],
+                                    },
+                                    shipping_cost: {
+                                        type: "number",
+                                        format: "float",
+                                        description: "USD; from get-shipping-rates",
+                                    },
+                                    shipping_zone_id: { type: "integer", nullable: true },
+                                    currency: {
+                                        type: "string",
+                                        description: "Order currency override",
+                                    },
+                                    gift_card_code: {
+                                        type: "string",
+                                        maxLength: 64,
+                                        nullable: true,
+                                    },
+                                    retention_free_shipping: { type: "boolean" },
+                                    retention_popup_source: {
+                                        type: "string",
+                                        maxLength: 100,
+                                        nullable: true,
+                                    },
+                                    paypal_order_id: { type: "string" },
+                                    paypal_payer_id: { type: "string" },
+                                    payment_intent_id: { type: "string" },
+                                    card_token: { type: "string" },
+                                    card_type: { type: "string" },
+                                },
+                            },
+                            CheckoutProcessResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean" },
+                                    message: { type: "string" },
+                                    order_id: { type: "integer" },
+                                    order_number: { type: "string" },
+                                    total_amount: { type: "number", format: "float" },
+                                    payment_method: { type: "string" },
+                                    payment_completed: { type: "boolean" },
+                                    payment_pending: { type: "boolean" },
+                                    payment_status: { type: "string" },
+                                    requires_3ds: { type: "boolean" },
+                                    redirect_url: { type: "string", format: "uri" },
+                                    transaction_id: { type: "string" },
+                                    error: { type: "string" },
+                                    errors: {
+                                        type: "object",
+                                        additionalProperties: {
+                                            type: "array",
+                                            items: { type: "string" },
+                                        },
+                                    },
+                                },
+                            },
+                            CheckoutActionErrorResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: false },
+                                    message: { type: "string" },
+                                    error: { type: "string" },
+                                },
+                            },
+                            StripeCreatePaymentIntentRequest: {
+                                type: "object",
+                                required: ["amount"],
+                                properties: {
+                                    amount: {
+                                        type: "number",
+                                        format: "float",
+                                        minimum: 0.5,
+                                    },
+                                    currency: {
+                                        type: "string",
+                                        minLength: 3,
+                                        maxLength: 3,
+                                        example: "usd",
+                                    },
+                                },
+                            },
+                            StripeCreatePaymentIntentResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    clientSecret: { type: "string" },
+                                    paymentIntentId: { type: "string" },
+                                    message: { type: "string" },
+                                },
+                            },
+                            AuthRegisterRequest: {
+                                type: "object",
+                                required: [
+                                    "name",
+                                    "email",
+                                    "password",
+                                    "passwordConfirmation",
+                                ],
+                                properties: {
+                                    name: {
+                                        type: "string",
+                                        maxLength: 255,
+                                        example: "Jane Doe",
+                                    },
+                                    email: {
+                                        type: "string",
+                                        format: "email",
+                                        example: "customer@example.com",
+                                    },
+                                    password: {
+                                        type: "string",
+                                        format: "password",
+                                        description: "Must meet Laravel default password rules",
+                                    },
+                                    passwordConfirmation: {
+                                        type: "string",
+                                        format: "password",
+                                        description: "Must match `password`",
+                                    },
+                                    recaptchaToken: {
+                                        type: "string",
+                                        description:
+                                            "Required when reCAPTCHA is configured on the server (`services.recaptcha.secret_key`)",
+                                    },
+                                },
+                            },
+                            AuthRegisterResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    authenticated: { type: "boolean", example: true },
                                     message: {
                                         type: "string",
-                                        example: "Error message",
+                                        example:
+                                            "Registration successful! Please check your email to verify your account.",
+                                    },
+                                    user: { $ref: "#/components/schemas/AuthUser" },
+                                },
+                            },
+                            AuthLoginRequest: {
+                                type: "object",
+                                required: ["email", "password"],
+                                properties: {
+                                    email: {
+                                        type: "string",
+                                        format: "email",
+                                        example: "customer@example.com",
+                                    },
+                                    password: {
+                                        type: "string",
+                                        format: "password",
+                                        example: "your-password",
+                                    },
+                                    remember: {
+                                        type: "boolean",
+                                        default: false,
+                                        description: "Keep session longer when true",
+                                    },
+                                },
+                            },
+                            AuthUser: {
+                                type: "object",
+                                properties: {
+                                    id: { type: "integer", example: 1 },
+                                    name: { type: "string", example: "Jane Doe" },
+                                    email: {
+                                        type: "string",
+                                        format: "email",
+                                        example: "customer@example.com",
+                                    },
+                                    emailVerified: {
+                                        type: "boolean",
+                                        example: true,
+                                    },
+                                    roles: {
+                                        type: "array",
+                                        items: { type: "string" },
+                                        example: ["customer"],
+                                    },
+                                },
+                            },
+                            AuthLoginResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    authenticated: { type: "boolean", example: true },
+                                    user: { $ref: "#/components/schemas/AuthUser" },
+                                },
+                            },
+                            AuthLogoutResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    authenticated: { type: "boolean", example: false },
+                                    user: { type: "object", nullable: true, example: null },
+                                },
+                            },
+                            AuthUserResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    authenticated: { type: "boolean" },
+                                    user: {
+                                        oneOf: [
+                                            { $ref: "#/components/schemas/AuthUser" },
+                                            { type: "object", nullable: true },
+                                        ],
+                                    },
+                                },
+                            },
+                            AuthErrorResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: false },
+                                    message: {
+                                        type: "string",
+                                        example: "These credentials do not match our records.",
+                                    },
+                                },
+                            },
+                            ProfileUser: {
+                                type: "object",
+                                properties: {
+                                    id: { type: "integer" },
+                                    name: { type: "string" },
+                                    email: { type: "string", format: "email" },
+                                    phone: { type: "string", nullable: true },
+                                    avatar: { type: "string", format: "uri", nullable: true },
+                                    address: { type: "string", nullable: true },
+                                    city: { type: "string", nullable: true },
+                                    state: { type: "string", nullable: true },
+                                    postalCode: { type: "string", nullable: true },
+                                    country: { type: "string", nullable: true },
+                                    emailVerified: { type: "boolean" },
+                                    roles: {
+                                        type: "array",
+                                        items: { type: "string" },
+                                    },
+                                },
+                            },
+                            ProfileStats: {
+                                type: "object",
+                                properties: {
+                                    totalOrders: { type: "integer" },
+                                    totalSpent: { type: "number", format: "float" },
+                                    wishlistItems: { type: "integer" },
+                                },
+                            },
+                            ProfileResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    user: { $ref: "#/components/schemas/ProfileUser" },
+                                    stats: { $ref: "#/components/schemas/ProfileStats" },
+                                },
+                            },
+                            OrderStats: {
+                                type: "object",
+                                properties: {
+                                    total: { type: "integer" },
+                                    pending: { type: "integer" },
+                                    processing: { type: "integer" },
+                                    completed: { type: "integer" },
+                                    cancelled: { type: "integer" },
+                                },
+                            },
+                            OrderSummary: {
+                                type: "object",
+                                properties: {
+                                    id: { type: "integer" },
+                                    orderNumber: { type: "string" },
+                                    status: { type: "string" },
+                                    paymentStatus: { type: "string" },
+                                    paymentMethod: { type: "string", nullable: true },
+                                    totalAmount: { type: "number", format: "float" },
+                                    currency: { type: "string", example: "USD" },
+                                    itemsCount: { type: "integer" },
+                                    createdAt: { type: "string", format: "date-time", nullable: true },
+                                    paidAt: { type: "string", format: "date-time", nullable: true },
+                                    trackingNumber: { type: "string", nullable: true },
+                                },
+                            },
+                            OrderListResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    meta: { $ref: "#/components/schemas/ListMeta" },
+                                    items: {
+                                        type: "array",
+                                        items: { $ref: "#/components/schemas/OrderSummary" },
+                                    },
+                                    stats: { $ref: "#/components/schemas/OrderStats" },
+                                },
+                            },
+                            OrderItemDetail: {
+                                type: "object",
+                                properties: {
+                                    id: { type: "integer" },
+                                    productId: { type: "integer", nullable: true },
+                                    productName: { type: "string" },
+                                    quantity: { type: "integer" },
+                                    unitPrice: { type: "number", format: "float" },
+                                    totalPrice: { type: "number", format: "float" },
+                                    productOptions: { type: "object", additionalProperties: true },
+                                    product: {
+                                        type: "object",
+                                        nullable: true,
+                                        properties: {
+                                            id: { type: "integer" },
+                                            name: { type: "string" },
+                                            slug: { type: "string" },
+                                            url: { type: "string" },
+                                        },
+                                    },
+                                },
+                            },
+                            OrderDetail: {
+                                type: "object",
+                                properties: {
+                                    id: { type: "integer" },
+                                    orderNumber: { type: "string" },
+                                    status: { type: "string" },
+                                    paymentStatus: { type: "string" },
+                                    paymentMethod: { type: "string", nullable: true },
+                                    customerName: { type: "string" },
+                                    customerEmail: { type: "string" },
+                                    customerPhone: { type: "string", nullable: true },
+                                    shippingAddress: { type: "string", nullable: true },
+                                    city: { type: "string", nullable: true },
+                                    state: { type: "string", nullable: true },
+                                    postalCode: { type: "string", nullable: true },
+                                    country: { type: "string", nullable: true },
+                                    subtotal: { type: "number", format: "float" },
+                                    taxAmount: { type: "number", format: "float" },
+                                    discountAmount: { type: "number", format: "float" },
+                                    giftCardAmount: { type: "number", format: "float" },
+                                    shippingCost: { type: "number", format: "float" },
+                                    tipAmount: { type: "number", format: "float" },
+                                    totalAmount: { type: "number", format: "float" },
+                                    currency: { type: "string" },
+                                    promoCode: { type: "string", nullable: true },
+                                    giftCardCode: { type: "string", nullable: true },
+                                    trackingNumber: { type: "string", nullable: true },
+                                    notes: { type: "string", nullable: true },
+                                    createdAt: { type: "string", format: "date-time", nullable: true },
+                                    paidAt: { type: "string", format: "date-time", nullable: true },
+                                    items: {
+                                        type: "array",
+                                        items: { $ref: "#/components/schemas/OrderItemDetail" },
+                                    },
+                                    returnRequests: {
+                                        type: "array",
+                                        items: {
+                                            type: "object",
+                                            properties: {
+                                                id: { type: "integer" },
+                                                status: { type: "string" },
+                                                createdAt: { type: "string", format: "date-time", nullable: true },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                            OrderDetailResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    order: { $ref: "#/components/schemas/OrderDetail" },
+                                },
+                            },
+                            ValidationError: {
+                                type: "object",
+                                properties: {
+                                    message: {
+                                        type: "string",
+                                        example: "The perPage must not be greater than 48.",
                                     },
                                     errors: {
                                         type: "object",
                                         additionalProperties: {
                                             type: "array",
-                                            items: {
-                                                type: "string",
-                                            },
+                                            items: { type: "string" },
+                                        },
+                                        example: {
+                                            maxPrice: [
+                                                "maxPrice must be greater than or equal to minPrice.",
+                                            ],
                                         },
                                     },
                                 },
@@ -591,15 +2799,24 @@
                         },
                     },
                     tags: [
-                        {
-                            name: "Products",
-                            description: "Product management endpoints",
-                        },
-                        {
-                            name: "Upload",
-                            description: "File upload and presigned URL endpoints",
-                        },
+                        { name: "Auth" },
+                        { name: "Profile" },
+                        { name: "Orders" },
+                        { name: "Products" },
+                        { name: "Collections" },
+                        { name: "Shops" },
+                        { name: "Cart" },
+                        { name: "Checkout" },
                     ],
+                    securitySchemes: {
+                        cookieAuth: {
+                            type: "apiKey",
+                            in: "cookie",
+                            name: "laravel_session",
+                            description:
+                                "Laravel session cookie set after login. Use credentials: 'include' in fetch.",
+                        },
+                    },
                 };
 
                 SwaggerUIBundle({

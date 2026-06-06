@@ -6,11 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductTemplate;
 use App\Models\ApiToken;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
 {
@@ -309,96 +312,268 @@ class ProductController extends Controller
     }
 
     /**
-     * Danh sách sản phẩm hiển thị trên storefront.
+     * Danh sách sản phẩm hiển thị trên storefront (JSON, camelCase).
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
-        $perPage = min(48, max(1, (int) $request->get('per_page', 18)));
-        $products = $this->buildCatalogQuery($request)
-            ->paginate($perPage)
+        $filters = $this->resolveCatalogListFilters($request);
+        $page = (int) $filters['page'];
+        $perPage = (int) $filters['perPage'];
+
+        $products = $this->buildCatalogQuery($filters)
+            ->paginate($perPage, ['*'], 'page', $page)
             ->withQueryString();
+
+        $items = $products->getCollection()
+            ->map(fn (Product $product) => $this->transformListItem($product))
+            ->values();
+
+        $meta = [
+            'currency' => 'USD',
+            'page' => $products->currentPage(),
+            'perPage' => $products->perPage(),
+            'total' => $products->total(),
+            'lastPage' => $products->lastPage(),
+            'hasNextPage' => $products->hasMorePages(),
+            'hasPreviousPage' => $products->currentPage() > 1,
+        ];
 
         return response()->json([
             'success' => true,
-            'data' => $products->getCollection()
-                ->map(fn (Product $product) => $this->transformListItem($product))
-                ->values(),
-            'pagination' => [
-                'current_page' => $products->currentPage(),
-                'last_page' => $products->lastPage(),
-                'per_page' => $products->perPage(),
-                'total' => $products->total(),
-            ],
+            'meta' => $meta,
+            'items' => $items,
         ]);
     }
 
-    private function buildCatalogQuery(Request $request)
+    /**
+     * @return array{
+     *     page: int,
+     *     perPage: int,
+     *     collectionId: int|null,
+     *     shopId: int|null,
+     *     minPrice: float|null,
+     *     maxPrice: float|null,
+     *     search: string|null,
+     *     searchScope: string,
+     *     sortBy: string,
+     *     inStock: bool|null
+     * }
+     */
+    private function resolveCatalogListFilters(Request $request): array
     {
-        $query = Product::with(['shop', 'template.category', 'variants'])
-            ->availableForDisplay();
+        $input = [
+            'page' => $this->catalogQueryParam($request, 'page') ?? 1,
+            'perPage' => $this->catalogQueryParam($request, 'perPage', 'per_page') ?? 18,
+            'collectionId' => $this->catalogQueryParam($request, 'collectionId', 'collection_id'),
+            'shopId' => $this->catalogQueryParam($request, 'shopId', 'shop'),
+            'minPrice' => $this->catalogQueryParam($request, 'minPrice', 'min_price'),
+            'maxPrice' => $this->catalogQueryParam($request, 'maxPrice', 'max_price'),
+            'search' => $this->catalogQueryParam($request, 'search'),
+            'searchScope' => $this->catalogQueryParam($request, 'searchScope', 'search_scope'),
+            'sortBy' => $this->catalogQueryParam($request, 'sortBy', 'sort_by')
+                ?? $this->catalogQueryParam($request, 'sort'),
+            'inStock' => $this->catalogQueryParam($request, 'inStock', 'in_stock'),
+        ];
 
-        if ($request->filled('collection_id')) {
-            $query->whereHas('collections', function ($q) use ($request) {
-                $q->where('collections.id', $request->collection_id);
-            });
-        } elseif ($request->filled('category')) {
-            $query->whereHas('template', function ($q) use ($request) {
-                $q->where('category_id', $request->category);
+        if ($input['searchScope'] === null || $input['searchScope'] === '') {
+            $input['searchScope'] = 'all';
+        }
+
+        $validator = Validator::make($input, [
+            'page' => ['integer', 'min:1'],
+            'perPage' => ['integer', 'min:1', 'max:48'],
+            'collectionId' => ['nullable', 'integer', 'min:1'],
+            'shopId' => ['nullable', 'integer', 'min:1'],
+            'minPrice' => ['nullable', 'numeric', 'min:0'],
+            'maxPrice' => ['nullable', 'numeric', 'min:0'],
+            'search' => ['nullable', 'string', 'max:200'],
+            'searchScope' => ['nullable', 'string', Rule::in(['all', 'name', 'description', 'shop'])],
+            'sortBy' => ['nullable', 'string', Rule::in([
+                'newest', 'price_asc', 'price_desc', 'name', 'popular',
+                'price_low', 'price_high',
+            ])],
+            'inStock' => ['nullable'],
+        ], [
+            'perPage.max' => 'perPage must be between 1 and 48.',
+            'minPrice.numeric' => 'minPrice must be a non-negative number (USD).',
+            'maxPrice.numeric' => 'maxPrice must be a non-negative number (USD).',
+            'searchScope.in' => 'searchScope must be one of: all, name, description, shop.',
+            'sortBy.in' => 'sortBy must be one of: newest, price_asc, price_desc, name, popular.',
+        ]);
+
+        $validator->after(function ($validator) use ($input) {
+            if ($input['minPrice'] !== null && $input['maxPrice'] !== null
+                && (float) $input['minPrice'] > (float) $input['maxPrice']) {
+                $validator->errors()->add('maxPrice', 'maxPrice must be greater than or equal to minPrice.');
+            }
+        });
+
+        $validated = $validator->validate();
+
+        $validated['page'] = (int) ($validated['page'] ?? 1);
+        $validated['perPage'] = (int) ($validated['perPage'] ?? 18);
+        $validated['sortBy'] = $validated['sortBy'] ?? 'newest';
+        $validated['searchScope'] = $validated['searchScope'] ?? 'all';
+
+        if (array_key_exists('inStock', $validated) && $validated['inStock'] !== null && $validated['inStock'] !== '') {
+            $validated['inStock'] = filter_var($validated['inStock'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($validated['inStock'] === null) {
+                throw ValidationException::withMessages([
+                    'inStock' => ['inStock must be a boolean (true or false).'],
+                ]);
+            }
+        } else {
+            $validated['inStock'] = null;
+        }
+
+        foreach (['collectionId', 'shopId'] as $intKey) {
+            if (isset($validated[$intKey])) {
+                $validated[$intKey] = (int) $validated[$intKey];
+            }
+        }
+
+        foreach (['minPrice', 'maxPrice'] as $priceKey) {
+            if (isset($validated[$priceKey])) {
+                $validated[$priceKey] = (float) $validated[$priceKey];
+            }
+        }
+
+        return $validated;
+    }
+
+    private function catalogQueryParam(Request $request, string $camel, ?string $snake = null): mixed
+    {
+        if ($request->has($camel)) {
+            return $request->input($camel);
+        }
+
+        if ($snake !== null && $request->has($snake)) {
+            return $request->input($snake);
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    private function buildCatalogQuery(array $filters)
+    {
+        $requireInStock = $filters['inStock'] !== false;
+        $query = $this->baseStorefrontCatalogQuery($requireInStock);
+
+        if (! empty($filters['collectionId'])) {
+            $query->whereHas('collections', function ($q) use ($filters) {
+                $q->where('collections.id', $filters['collectionId']);
             });
         }
 
-        if ($request->filled('shop')) {
-            $query->where('shop_id', $request->shop);
+        if (! empty($filters['shopId'])) {
+            $query->where('shop_id', $filters['shopId']);
         }
 
-        if ($request->filled('min_price')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('price', '>=', $request->min_price)
-                    ->orWhereHas('template', function ($templateQuery) use ($request) {
-                        $templateQuery->where('base_price', '>=', $request->min_price)
+        if (isset($filters['minPrice'])) {
+            $minPrice = $filters['minPrice'];
+            $query->where(function ($q) use ($minPrice) {
+                $q->where('price', '>=', $minPrice)
+                    ->orWhereHas('template', function ($templateQuery) use ($minPrice) {
+                        $templateQuery->where('base_price', '>=', $minPrice)
                             ->whereNull('products.price');
                     });
             });
         }
 
-        if ($request->filled('max_price')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('price', '<=', $request->max_price)
-                    ->orWhereHas('template', function ($templateQuery) use ($request) {
-                        $templateQuery->where('base_price', '<=', $request->max_price)
+        if (isset($filters['maxPrice'])) {
+            $maxPrice = $filters['maxPrice'];
+            $query->where(function ($q) use ($maxPrice) {
+                $q->where('price', '<=', $maxPrice)
+                    ->orWhereHas('template', function ($templateQuery) use ($maxPrice) {
+                        $templateQuery->where('base_price', '<=', $maxPrice)
                             ->whereNull('products.price');
                     });
             });
         }
 
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%")
-                    ->orWhereHas('shop', function ($shopQuery) use ($search) {
+        if ($filters['inStock'] === true) {
+            $query->where(function ($q) {
+                $q->where('products.quantity', '>', 0)
+                    ->orWhereHas('variants', function ($variantQuery) {
+                        $variantQuery->where('quantity', '>', 0);
+                    });
+            });
+        }
+
+        if (! empty($filters['search'])) {
+            $search = $filters['search'];
+            $scope = $filters['searchScope'] ?? 'all';
+            $query->where(function ($q) use ($search, $scope) {
+                match ($scope) {
+                    'name' => $q->where('name', 'like', "%{$search}%"),
+                    'description' => $q->where('description', 'like', "%{$search}%"),
+                    'shop' => $q->whereHas('shop', function ($shopQuery) use ($search) {
                         $shopQuery->where('name', 'like', "%{$search}%");
-                    });
+                    }),
+                    default => $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhereHas('shop', function ($shopQuery) use ($search) {
+                            $shopQuery->where('name', 'like', "%{$search}%");
+                        }),
+                };
             });
         }
 
-        $sortBy = $request->get('sort', 'newest');
-        switch ($sortBy) {
-            case 'price_low':
-                $query->orderBy('price', 'asc');
-                break;
-            case 'price_high':
-                $query->orderBy('price', 'desc');
-                break;
-            case 'name':
-                $query->orderBy('name', 'asc');
-                break;
-            case 'newest':
-            default:
-                $query->orderBy('created_at', 'desc');
+        $sortBy = $this->normalizeCatalogSortBy((string) ($filters['sortBy'] ?? 'newest'));
+
+        if ($sortBy === 'popular') {
+            $query->withCount(['approvedReviews as catalog_reviews_count'])
+                ->orderByDesc('catalog_reviews_count')
+                ->orderByDesc('created_at');
+        } else {
+            match ($sortBy) {
+                'price_asc' => $query->orderBy('price', 'asc'),
+                'price_desc' => $query->orderBy('price', 'desc'),
+                'name' => $query->orderBy('name', 'asc'),
+                default => $query->orderBy('created_at', 'desc'),
+            };
         }
 
         return $query;
+    }
+
+    private function baseStorefrontCatalogQuery(bool $requireInStock = true)
+    {
+        $query = Product::with(['shop', 'template.category', 'variants']);
+
+        if ($requireInStock) {
+            return $query->availableForDisplay();
+        }
+
+        return $query->where('products.status', 'active')
+            ->where(function ($q) {
+                $q->whereNull('products.shop_id')
+                    ->orWhereHas('shop', function ($shopQ) {
+                        $shopQ->where('shop_status', 'active');
+                    });
+            })
+            ->where(function ($q) {
+                $q->whereNotNull('products.media')
+                    ->where('products.media', '!=', '[]')
+                    ->where('products.media', '!=', '')
+                    ->orWhereHas('template', function ($templateQuery) {
+                        $templateQuery->whereNotNull('media')
+                            ->where('media', '!=', '[]')
+                            ->where('media', '!=', '');
+                    });
+            });
+    }
+
+    private function normalizeCatalogSortBy(string $sortBy): string
+    {
+        return match ($sortBy) {
+            'price_low' => 'price_asc',
+            'price_high' => 'price_desc',
+            default => $sortBy,
+        };
     }
 
     private function detailRelations(): array
@@ -412,6 +587,11 @@ class ProductController extends Controller
                 $query->orderBy('created_at', 'desc')->limit(10);
             },
         ];
+    }
+
+    public function toListItem(Product $product): array
+    {
+        return $this->transformListItem($product);
     }
 
     private function transformListItem(Product $product): array
@@ -441,7 +621,9 @@ class ProductController extends Controller
         return [
             ...$this->transformListItem($product),
             'description' => $product->getEffectiveDescription(),
-            'media' => $this->transformMediaList($product),
+            'media' => $this->transformMediaList($product, $product->getMergedDisplayMedia()),
+            'customizations' => $this->transformCustomizations($product),
+            'special_shipping_handling' => $this->transformSpecialShippingHandling($product),
             'quantity' => (int) $product->quantity,
             'variants' => $product->variants->map(fn ($variant) => [
                 'id' => $variant->id,
@@ -478,7 +660,7 @@ class ProductController extends Controller
      */
     private function resolvePrimaryImageUrl(Product $product): ?string
     {
-        foreach ($product->getEffectiveMedia() as $item) {
+        foreach ($product->getMergedDisplayMedia() as $item) {
             $type = $this->resolveMediaType($item);
             if ($type === 'video') {
                 if (is_array($item)) {
@@ -505,7 +687,7 @@ class ProductController extends Controller
     private function transformMediaList(Product $product, ?array $media = null): array
     {
         $items = [];
-        foreach ($media ?? $product->getEffectiveMedia() as $index => $item) {
+        foreach ($media ?? $product->getMergedDisplayMedia() as $index => $item) {
             $type = $this->resolveMediaType($item);
             $url = $this->resolveMediaUrl($item, $type);
             if ($url === null) {
@@ -519,6 +701,70 @@ class ProductController extends Controller
         }
 
         return $items;
+    }
+
+    /**
+     * @return array{enabled: bool, fields: array<int, array<string, mixed>>}
+     */
+    private function transformCustomizations(Product $product): array
+    {
+        $template = $product->template;
+
+        if (! $template || ! $template->hasCustomization()) {
+            return [
+                'enabled' => false,
+                'fields' => [],
+            ];
+        }
+
+        $fields = [];
+        foreach ($template->getCustomizationTypes() as $index => $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $type = (string) ($row['type'] ?? 'text');
+            $optionsRaw = $row['options'] ?? '';
+            $options = is_string($optionsRaw)
+                ? preg_split('/\r\n|\r|\n/', trim($optionsRaw), -1, PREG_SPLIT_NO_EMPTY)
+                : (is_array($optionsRaw) ? $optionsRaw : []);
+
+            $label = trim((string) ($row['label'] ?? ''));
+
+            $fields[] = [
+                'index' => $index,
+                'type' => $type,
+                'label' => $label !== '' ? $label : 'Option '.($index + 1),
+                'placeholder' => (string) ($row['placeholder'] ?? ''),
+                'price' => (float) ($row['price'] ?? 0),
+                'required' => (bool) ($row['required'] ?? false),
+                'options' => array_values(array_filter(array_map(
+                    static fn ($opt) => trim((string) $opt),
+                    $options
+                ), static fn ($opt) => $opt !== '')),
+            ];
+        }
+
+        return [
+            'enabled' => true,
+            'fields' => $fields,
+        ];
+    }
+
+    /**
+     * @return array{enabled: bool, messages: array<int, string>}
+     */
+    private function transformSpecialShippingHandling(Product $product): array
+    {
+        $enabled = (bool) ($product->requires_special_handling ?? false);
+
+        return [
+            'enabled' => $enabled,
+            'messages' => $enabled ? [
+                'Ships separately to ensure product quality',
+                'Handled with extra care due to product nature',
+            ] : [],
+        ];
     }
 
     private function resolveMediaType(mixed $mediaItem): string

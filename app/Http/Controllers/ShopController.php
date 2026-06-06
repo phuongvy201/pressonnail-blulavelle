@@ -38,6 +38,8 @@ class ShopController extends Controller
         // Get hot products (most viewed/favorited)
         $hotProducts = $shop->products()
             ->where('status', 'active')
+            ->whereNotNull('slug')
+            ->where('slug', '!=', '')
             ->with(['template', 'variants'])
             ->orderBy('created_at', 'desc')
             ->limit(12)
@@ -46,6 +48,8 @@ class ShopController extends Controller
         // Get all products for the shop
         $allProducts = $shop->products()
             ->where('status', 'active')
+            ->whereNotNull('slug')
+            ->where('slug', '!=', '')
             ->with(['template', 'variants'])
             ->orderBy('created_at', 'desc')
             ->paginate(24);

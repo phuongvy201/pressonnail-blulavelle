@@ -15,6 +15,8 @@ use App\Services\TikTokEventsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
+use App\Models\ProductVariant;
 
 class CartController extends Controller
 {
@@ -64,15 +66,30 @@ class CartController extends Controller
                 'price' => 'required|numeric|min:0',
                 'selectedVariant' => 'nullable|array',
                 'customizations' => 'nullable|array',
-                'addons' => 'nullable|array|max:10',
-                'addons.*' => 'integer|exists:products,id|different:id',
             ]);
 
             $product = Product::findOrFail($request->id);
             $sessionId = session()->getId();
             $userId = Auth::id();
 
-            $selectedVariant = $this->normalizeSelectedVariant($request->selectedVariant ?? []);
+            $selectedVariant = $this->normalizeSelectedVariant(
+                $request->input('selectedVariant', $request->input('selected_variant', []))
+            );
+
+            if (! empty($selectedVariant['id'])) {
+                $variant = ProductVariant::query()
+                    ->where('id', $selectedVariant['id'])
+                    ->where('product_id', $product->id)
+                    ->first();
+
+                if (! $variant) {
+                    throw ValidationException::withMessages([
+                        'selectedVariant.id' => [
+                            'The selected variant does not belong to this product.',
+                        ],
+                    ]);
+                }
+            }
             $customizations = $this->normalizeCustomizations($request->customizations ?? []);
             $cartItem = $this->upsertCartItem(
                 productId: (int) $request->id,
@@ -83,34 +100,6 @@ class CartController extends Controller
                 userId: $userId,
                 sessionId: $sessionId
             );
-
-            $addedAddonItems = [];
-            $addonIds = collect($request->input('addons', []))
-                ->map(fn($id) => (int) $id)
-                ->filter(fn($id) => $id > 0)
-                ->unique()
-                ->values();
-
-            if ($addonIds->isNotEmpty()) {
-                $addonProducts = Product::query()
-                    ->availableForDisplay()
-                    ->with('template:id,base_price')
-                    ->whereIn('id', $addonIds->all())
-                    ->get(['id', 'price', 'template_id']);
-
-                foreach ($addonProducts as $addonProduct) {
-                    $addonUnitPrice = (float) ($addonProduct->price ?? optional($addonProduct->template)->base_price ?? 0);
-                    $addedAddonItems[] = $this->upsertCartItem(
-                        productId: (int) $addonProduct->id,
-                        quantity: 1,
-                        price: $addonUnitPrice,
-                        selectedVariant: [],
-                        customizations: [],
-                        userId: $userId,
-                        sessionId: $sessionId
-                    );
-                }
-            }
 
             Log::info('Item added to cart', [
                 'cart_id' => $cartItem->id,
@@ -135,31 +124,25 @@ class CartController extends Controller
                 }
             }
 
-            $cartItem->load(['product.shop', 'product.template', 'product.variants', 'variant']);
-            if ($cartItem->product) {
-                $cartItem->product->hydrateForCartDisplay();
-            }
+            $cartItem->load($this->cartItemRelations());
 
             return response()->json([
                 'success' => true,
                 'message' => 'Item added to cart successfully',
-                'cart_item' => $cartItem,
-                'addons_added' => collect($addedAddonItems)->map(fn($item) => [
-                    'id' => $item->id,
-                    'product_id' => $item->product_id,
-                    'quantity' => $item->quantity,
-                    'price' => $item->price,
-                ])->values(),
+                'cart_item' => $this->transformCartItem($cartItem),
             ]);
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Error adding item to cart', [
                 'error' => $e->getMessage(),
-                'request_data' => $request->all()
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to add item to cart'
+                'message' => 'Failed to add item to cart',
             ], 500);
         }
     }
@@ -170,7 +153,7 @@ class CartController extends Controller
             $sessionId = session()->getId();
             $userId = Auth::id();
 
-            $cartItems = Cart::with(['product.shop', 'product.template', 'variant'])
+            $cartItems = Cart::with($this->cartItemRelations())
                 ->where(function ($query) use ($sessionId, $userId) {
                     if ($userId) {
                         $query->where('user_id', $userId);
@@ -179,13 +162,6 @@ class CartController extends Controller
                     }
                 })
                 ->get();
-
-            // Transform cart items to include media + primary_image_alt (cho alt ảnh trong JS)
-            $cartItems->each(function ($item) {
-                if ($item->product) {
-                    $item->product->hydrateForCartDisplay();
-                }
-            });
 
             $totalItems = $cartItems->sum('quantity');
             $totalPrice = $cartItems->sum(function ($item) {
@@ -330,10 +306,12 @@ class CartController extends Controller
 
             return response()->json([
                 'success' => true,
-                'cart_items' => $cartItems,
+                'cart_items' => $cartItems
+                    ->map(fn (Cart $item) => $this->transformCartItem($item))
+                    ->values(),
                 'total_items' => $totalItems,
                 'total_price' => $totalPrice,
-                'summary' => [
+                'summary' => $this->buildCartSummary([
                     'discount_mode' => $discountMode,
                     'subtotal' => $subtotal,
                     'bulk_discount' => $bulkDiscount,
@@ -344,18 +322,17 @@ class CartController extends Controller
                     'gift_card_discount' => $giftCardDiscount,
                     'total' => $total,
                     'converted_subtotal' => $convertedSubtotal,
-                    'converted_bulk_discount' => $bulkDiscount,
-                    'converted_bulk_discount_percent' => $bulkDiscountPercent,
                     'converted_subtotal_after_bulk_discount' => $convertedSubtotalAfterBulk,
                     'converted_shipping' => $convertedShipping,
-                    'converted_discount' => $discount,
-                    'converted_gift_card_discount' => $giftCardDiscount,
                     'converted_total' => $convertedTotal,
                     'applied_promo_code' => $appliedPromoCode,
                     'applied_gift_card_code' => $appliedGiftCardCode,
                     'applied_gift_card_balance' => $appliedGiftCardBalance,
-                ],
-                'shipping_details' => $shippingDetails,
+                    'currency_rate' => $currencyRate,
+                ]),
+                'shipping_details' => $shippingDetails !== null
+                    ? $this->sanitizeShippingDetails($shippingDetails)
+                    : null,
                 'currency' => $currency,
                 'currency_rate' => $currencyRate,
             ]);
@@ -369,6 +346,15 @@ class CartController extends Controller
                 'message' => 'Failed to get cart'
             ], 500);
         }
+    }
+
+    /**
+     * Checkout snapshot API.
+     * Reuses cart totals/summary payload for checkout step.
+     */
+    public function checkout(Request $request)
+    {
+        return $this->get($request);
     }
 
     /**
@@ -511,14 +497,14 @@ class CartController extends Controller
         return response()->json(['success' => true, 'message' => 'Gift card removed.']);
     }
 
-    public function show($id)
+    public function show($item_id)
     {
         try {
             $sessionId = session()->getId();
             $userId = Auth::id();
 
-            $cartItem = Cart::with(['product.shop', 'product.template', 'product.variants', 'variant'])
-                ->where('id', $id)
+            $cartItem = Cart::with($this->cartItemRelations())
+                ->where('id', $item_id)
                 ->where(function ($query) use ($sessionId, $userId) {
                     if ($userId) {
                         $query->where('user_id', $userId);
@@ -528,18 +514,14 @@ class CartController extends Controller
                 })
                 ->firstOrFail();
 
-            if ($cartItem->product) {
-                $cartItem->product->hydrateForCartDisplay();
-            }
-
             return response()->json([
                 'success' => true,
-                'cart_item' => $cartItem,
+                'cart_item' => $this->transformCartItem($cartItem),
             ]);
         } catch (\Exception $e) {
             Log::error('Error getting cart item', [
                 'error' => $e->getMessage(),
-                'cart_item_id' => $id
+                'cart_item_id' => $item_id
             ]);
 
             return response()->json([
@@ -549,9 +531,15 @@ class CartController extends Controller
         }
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, $item_id)
     {
         try {
+            if ($request->has('selectedVariant') && ! $request->has('selected_variant')) {
+                $request->merge([
+                    'selected_variant' => $this->normalizeSelectedVariant($request->input('selectedVariant')),
+                ]);
+            }
+
             $request->validate([
                 'quantity' => 'required|integer|min:1',
                 'selected_variant' => 'nullable|array',
@@ -562,7 +550,7 @@ class CartController extends Controller
             $sessionId = session()->getId();
             $userId = Auth::id();
 
-            $cartItem = Cart::where('id', $id)
+            $cartItem = Cart::where('id', $item_id)
                 ->where(function ($query) use ($sessionId, $userId) {
                     if ($userId) {
                         $query->where('user_id', $userId);
@@ -594,20 +582,17 @@ class CartController extends Controller
 
             $cartItem->update($updateData);
 
-            $cartItem->load(['product.shop', 'product.template', 'product.variants', 'variant']);
-            if ($cartItem->product) {
-                $cartItem->product->hydrateForCartDisplay();
-            }
+            $cartItem->load($this->cartItemRelations());
 
             return response()->json([
                 'success' => true,
                 'message' => 'Cart item updated successfully',
-                'cart_item' => $cartItem,
+                'cart_item' => $this->transformCartItem($cartItem),
             ]);
         } catch (\Exception $e) {
             Log::error('Error updating cart item', [
                 'error' => $e->getMessage(),
-                'cart_item_id' => $id
+                'cart_item_id' => $item_id
             ]);
 
             return response()->json([
@@ -617,13 +602,13 @@ class CartController extends Controller
         }
     }
 
-    public function remove($id)
+    public function remove($item_id)
     {
         try {
             $sessionId = session()->getId();
             $userId = Auth::id();
 
-            $cartItem = Cart::where('id', $id)
+            $cartItem = Cart::where('id', $item_id)
                 ->where(function ($query) use ($sessionId, $userId) {
                     if ($userId) {
                         $query->where('user_id', $userId);
@@ -642,7 +627,7 @@ class CartController extends Controller
         } catch (\Exception $e) {
             Log::error('Error removing cart item', [
                 'error' => $e->getMessage(),
-                'cart_item_id' => $id
+                'cart_item_id' => $item_id
             ]);
 
             return response()->json([
@@ -871,6 +856,211 @@ class CartController extends Controller
             'selected_variant' => $selectedVariant ?: null,
             'customizations' => $customizations ?: null,
         ]);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function cartItemRelations(): array
+    {
+        return [
+            'product.shop:id,shop_name',
+            'product.template:id,media',
+            'variant:id,product_id,variant_name,attributes,sku',
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function transformCartItem(Cart $item): array
+    {
+        $product = $item->product;
+
+        return [
+            'id' => $item->id,
+            'product_id' => $item->product_id,
+            'variant_id' => $item->variant_id,
+            'quantity' => (int) $item->quantity,
+            'price' => (float) $item->price,
+            'line_total' => round((float) $item->getTotalPriceWithCustomizations(), 2),
+            'selected_variant' => $item->selected_variant,
+            'customizations' => $item->customizations ?? [],
+            'product' => $product ? $this->transformCartProduct($product) : null,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function transformCartProduct(Product $product): array
+    {
+        $product->hydrateForCartDisplay();
+
+        return [
+            'id' => $product->id,
+            'name' => $product->name,
+            'slug' => $product->slug,
+            'url' => route('products.show', ['slug' => $product->slug]),
+            'primary_image' => $this->resolveCartPrimaryImageUrl($product),
+            'primary_image_alt' => $product->primary_image_alt,
+            'is_gift_card' => (bool) ($product->is_gift_card ?? false),
+            'requires_special_handling' => (bool) ($product->requires_special_handling ?? false),
+            'shop' => $product->shop ? [
+                'id' => $product->shop->id,
+                'name' => $product->shop->name,
+            ] : null,
+        ];
+    }
+
+    private function resolveCartPrimaryImageUrl(Product $product): ?string
+    {
+        foreach ($product->getMergedDisplayMedia() as $mediaItem) {
+            if (is_array($mediaItem) && strtolower((string) ($mediaItem['type'] ?? '')) === 'video') {
+                $poster = trim((string) ($mediaItem['poster'] ?? ''));
+                if ($poster !== '') {
+                    return $poster;
+                }
+
+                continue;
+            }
+
+            $url = $this->resolveCartMediaUrl($mediaItem);
+            if ($url !== null) {
+                return $url;
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveCartMediaUrl(mixed $mediaItem): ?string
+    {
+        if (is_string($mediaItem)) {
+            $url = trim($mediaItem);
+
+            return $url !== '' ? $url : null;
+        }
+
+        if (! is_array($mediaItem)) {
+            return null;
+        }
+
+        if (strtolower((string) ($mediaItem['type'] ?? '')) === 'video') {
+            foreach (['url', 'path'] as $key) {
+                $url = trim((string) ($mediaItem[$key] ?? ''));
+                if ($url !== '') {
+                    return $url;
+                }
+            }
+
+            return null;
+        }
+
+        foreach (['webp', 'url', 'path'] as $key) {
+            $url = trim((string) ($mediaItem[$key] ?? ''));
+            if ($url !== '') {
+                return $url;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function buildCartSummary(array $data): array
+    {
+        $rate = (float) ($data['currency_rate'] ?? 1.0);
+        $useConvertedFields = abs($rate - 1.0) >= 0.0001;
+
+        $summary = [
+            'subtotal' => $data['subtotal'],
+            'shipping' => $useConvertedFields ? $data['shipping'] : $data['converted_shipping'],
+            'discount' => $data['discount'],
+            'gift_card_discount' => $data['gift_card_discount'],
+            'total' => $data['total'],
+        ];
+
+        $bulkPercent = (float) ($data['bulk_discount_percent'] ?? 0);
+        if ($bulkPercent > 0) {
+            $summary['discount_mode'] = $data['discount_mode'];
+            $summary['bulk_discount'] = $data['bulk_discount'];
+            $summary['bulk_discount_percent'] = $bulkPercent;
+            $summary['subtotal_after_bulk_discount'] = $data['subtotal_after_bulk_discount'];
+        } elseif (($data['discount_mode'] ?? '') === 'promo') {
+            $summary['discount_mode'] = 'promo';
+        }
+
+        if (! empty($data['applied_promo_code'])) {
+            $summary['applied_promo_code'] = $data['applied_promo_code'];
+        }
+
+        if (! empty($data['applied_gift_card_code'])) {
+            $summary['applied_gift_card_code'] = $data['applied_gift_card_code'];
+            $summary['applied_gift_card_balance'] = $data['applied_gift_card_balance'];
+        }
+
+        // Always expose converted_* keys for storefront JS (same values when currency is USD).
+        $summary['converted_subtotal'] = $data['converted_subtotal'];
+        if ($bulkPercent > 0) {
+            $summary['converted_bulk_discount'] = $data['bulk_discount'];
+            $summary['converted_bulk_discount_percent'] = $bulkPercent;
+            $summary['converted_subtotal_after_bulk_discount'] = $data['converted_subtotal_after_bulk_discount'];
+        } elseif (isset($data['converted_subtotal_after_bulk_discount'])) {
+            $summary['converted_subtotal_after_bulk_discount'] = $data['converted_subtotal_after_bulk_discount'];
+        }
+        $summary['converted_shipping'] = $data['converted_shipping'];
+        $summary['converted_discount'] = $data['discount'];
+        $summary['converted_gift_card_discount'] = $data['gift_card_discount'];
+        $summary['converted_total'] = $data['converted_total'];
+
+        return $summary;
+    }
+
+    /**
+     * @param  array<string, mixed>  $shippingResult
+     * @return array<string, mixed>
+     */
+    private function sanitizeShippingDetails(array $shippingResult): array
+    {
+        $out = [
+            'zone_id' => $shippingResult['zone_id'] ?? null,
+            'zone_name' => $shippingResult['zone_name'] ?? null,
+            'country' => $shippingResult['country'] ?? null,
+            'total_shipping' => $shippingResult['total_shipping'] ?? 0,
+        ];
+
+        $breakdown = $shippingResult['breakdown'] ?? null;
+        if (is_array($breakdown)) {
+            unset($breakdown['total_items'], $breakdown['total_value']);
+            if ($breakdown !== []) {
+                $out['breakdown'] = $breakdown;
+            }
+        }
+
+        $items = $shippingResult['items'] ?? [];
+        if (is_array($items) && count($items) > 1) {
+            $costs = array_map(
+                fn (array $item) => round((float) ($item['total_item_shipping'] ?? $item['shipping_cost'] ?? 0), 2),
+                $items
+            );
+            if (count(array_unique($costs)) > 1) {
+                $out['items'] = array_map(static function (array $item): array {
+                    return [
+                        'product_id' => $item['product_id'],
+                        'product_name' => $item['product_name'],
+                        'quantity' => $item['quantity'],
+                        'shipping_cost' => $item['shipping_cost'] ?? $item['total_item_shipping'] ?? 0,
+                        'total_item_shipping' => $item['total_item_shipping'] ?? $item['shipping_cost'] ?? 0,
+                    ];
+                }, $items);
+            }
+        }
+
+        return $out;
     }
 
     private function trackTikTokAddToCartEvent(Request $request, Product $product, int $quantity, float $unitPrice): void

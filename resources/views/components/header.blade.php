@@ -405,18 +405,16 @@
         // Function to update cart count in header
         function updateHeaderCartCount() {
             const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-            
-            // Update both mobile and desktop cart counts
-            const mobileCartCount = document.getElementById('mobile-cart-count');
-            const desktopCartCount = document.getElementById('desktop-cart-count');
-            
-            [mobileCartCount, desktopCartCount].forEach(element => {
-                if (element) {
+            const totalItems = cart.reduce((sum, item) => sum + (parseInt(item.quantity, 10) || 0), 0);
+
+            if (typeof window.updateStorefrontCartBadge === 'function') {
+                window.updateStorefrontCartBadge(totalItems);
+            } else {
+                document.querySelectorAll('.cart-count').forEach(function(element) {
                     element.textContent = totalItems;
                     element.style.display = totalItems > 0 ? 'flex' : 'none';
-                }
-            });
+                });
+            }
 
             // Update tooltip
             const cartTooltip = document.getElementById('cart-tooltip');
@@ -448,7 +446,7 @@
             })
             .then(response => response.json())
             .then(data => {
-                if (data.success && data.cart_items) {
+                if (Array.isArray(data.cart_items)) {
                     // Convert backend cart items to localStorage format
                     const backendCart = data.cart_items.map(item => ({
                         id: item.product_id,

@@ -9,6 +9,7 @@
 @endphp
 @php
     $productsIndexPinterestEventId = 'pagevisit-products-' . session()->getId();
+    $productsIndexOaiqEventId = 'page_viewed-products-' . session()->getId();
     $gtagItems = collect($products->items())->map(function ($product, $loopIndex) use ($products) {
         $primaryCategory = optional($product->category)->name ?? optional($product->template->category)->name ?? null;
         return [
@@ -47,6 +48,24 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch (e) {
             console.error('pintrk pagevisit error:', e);
+        }
+    }
+    if (typeof oaiq === 'function') {
+        try {
+            oaiq('measure', 'page_viewed', {
+                type: 'contents',
+                contents: [
+                    {
+                        id: 'all-products',
+                        name: 'All Products',
+                        content_type: 'page',
+                    },
+                ],
+            }, {
+                event_id: @json($productsIndexOaiqEventId),
+            });
+        } catch (e) {
+            console.error('oaiq page_viewed error:', e);
         }
     }
 });

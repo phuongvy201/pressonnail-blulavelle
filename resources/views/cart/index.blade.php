@@ -1192,6 +1192,9 @@ function buildVariantOptions(variants, selectedVariant) {
 }
 
 function getProductImage(product) {
+    if (product.primary_image && String(product.primary_image).trim()) {
+        return String(product.primary_image).trim();
+    }
     if (product.media && product.media.length > 0) {
         const media = product.media[0];
         if (typeof media === 'string') {

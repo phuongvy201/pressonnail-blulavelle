@@ -307,7 +307,21 @@
         return !empty($item['content_id']) && !empty($item['content_name']);
     }));
 
+    $oaiqCheckoutContents = [];
+    foreach ($gtagItems as $gtagItem) {
+        $oaiqCheckoutContents[] = [
+            'id' => (string) ($gtagItem['item_id'] ?? ''),
+            'name' => (string) ($gtagItem['item_name'] ?? ''),
+            'content_type' => 'product',
+            'quantity' => max(1, (int) ($gtagItem['quantity'] ?? 1)),
+        ];
+    }
+    $oaiqCheckoutContents = array_values(array_filter($oaiqCheckoutContents, fn ($item) => $item['id'] !== '' && $item['name'] !== ''));
+
     $checkoutTotal = round((float) ($total ?? 0), 2);
+    $checkoutOaiqEventId = 'checkout_started-' . session()->getId();
+    $oaiqCheckoutAmountMinor = (int) round($checkoutTotal * 100);
+    $oaiqCheckoutCurrency = strtoupper((string) ($currency ?? 'USD'));
 @endphp
 
 <script>
@@ -410,6 +424,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (window.ttq) {
             window.ttq.track('InitiateCheckout', window.tiktokCheckoutPayload);
+        }
+    }
+
+    if (typeof oaiq === 'function') {
+        try {
+            oaiq('measure', 'checkout_started', {
+                type: 'contents',
+                amount: {{ $oaiqCheckoutAmountMinor }},
+                currency: @json($oaiqCheckoutCurrency),
+                contents: @json($oaiqCheckoutContents),
+            }, {
+                event_id: @json($checkoutOaiqEventId),
+            });
+            if (window.__PRESSONNailCheckoutRawConsole && typeof window.__PRESSONNailCheckoutRawConsole.log === 'function') {
+                window.__PRESSONNailCheckoutRawConsole.log('✅ oaiq: checkout_started tracked', {
+                    amount: {{ $oaiqCheckoutAmountMinor }},
+                    currency: @json($oaiqCheckoutCurrency),
+                    items: @json(count($oaiqCheckoutContents)),
+                });
+            }
+        } catch (e) {
+            if (window.__PRESSONNailCheckoutRawConsole && typeof window.__PRESSONNailCheckoutRawConsole.error === 'function') {
+                window.__PRESSONNailCheckoutRawConsole.error('oaiq checkout_started error:', e);
+            }
         }
     }
 });
@@ -4413,7 +4451,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <script>
 const checkoutItemsData = @json($checkoutItems);
 const checkoutCsrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-const CHECKOUT_API_CART_REMOVE = @json(route('api.cart.remove', ['id' => '__CART_ITEM_ID__']));
+const CHECKOUT_API_CART_REMOVE = @json(route('api.cart.remove', ['item_id' => '__CART_ITEM_ID__']));
 
 function checkoutRemoveCartItem(cartItemId) {
     if (!cartItemId) return;

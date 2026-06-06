@@ -30,7 +30,10 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\BlogController;
+use App\Http\Controllers\Api\AuthController as ApiAuthController;
 use App\Http\Controllers\Api\CartController as ApiCartController;
+use App\Http\Controllers\Api\OrderController as ApiOrderController;
+use App\Http\Controllers\Api\ProfileController as ApiProfileController;
 use App\Http\Controllers\Api\ProductCrossSellController;
 use App\Http\Controllers\Api\CustomFileController;
 use App\Http\Controllers\Api\UploadController;
@@ -488,12 +491,51 @@ Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
 Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
 
-// Cart API routes (with web middleware for session support)
+// Auth API — session cookie (PWA / storefront)
+Route::middleware(['web'])->prefix('api/auth')->group(function () {
+    Route::post('/register', [ApiAuthController::class, 'register'])
+        ->middleware(['guest', 'throttle:register'])
+        ->name('api.auth.register');
+    Route::post('/login', [ApiAuthController::class, 'login'])
+        ->middleware('guest')
+        ->name('api.auth.login');
+    Route::post('/logout', [ApiAuthController::class, 'logout'])
+        ->middleware('auth')
+        ->name('api.auth.logout');
+    Route::get('/user', [ApiAuthController::class, 'user'])->name('api.auth.user');
+});
+
+// Customer account API (requires login + session cookie)
+Route::middleware(['web', 'auth'])->group(function () {
+    Route::get('/api/profile', [ApiProfileController::class, 'show'])->name('api.profile.show');
+    Route::get('/api/orders', [ApiOrderController::class, 'index'])->name('api.orders.index');
+    Route::get('/api/orders/{orderNumber}', [ApiOrderController::class, 'show'])->name('api.orders.show');
+});
+
+// Cart API — REST (PWA / session cookie)
+Route::middleware(['web'])->group(function () {
+    Route::get('/api/cart', [ApiCartController::class, 'get'])->name('api.cart.index');
+    Route::get('/api/checkout', [ApiCartController::class, 'checkout'])->name('api.checkout.index');
+    Route::post('/api/cart', [ApiCartController::class, 'add'])->name('api.cart.store');
+    Route::put('/api/cart/{item_id}', [ApiCartController::class, 'update'])
+        ->whereNumber('item_id')
+        ->name('api.cart.update-item');
+    Route::delete('/api/cart/{item_id}', [ApiCartController::class, 'remove'])
+        ->whereNumber('item_id')
+        ->name('api.cart.destroy-item');
+    Route::delete('/api/cart', [ApiCartController::class, 'clear'])->name('api.cart.destroy');
+});
+
+// Cart API routes — legacy paths (same controllers)
 Route::prefix('api/cart')->middleware('web')->group(function () {
     Route::post('/add', [ApiCartController::class, 'add'])->name('api.cart.add');
     Route::get('/get', [ApiCartController::class, 'get'])->name('api.cart.get');
-    Route::put('/update/{id}', [ApiCartController::class, 'update'])->name('api.cart.update');
-    Route::delete('/remove/{id}', [ApiCartController::class, 'remove'])->name('api.cart.remove');
+    Route::put('/update/{item_id}', [ApiCartController::class, 'update'])
+        ->whereNumber('item_id')
+        ->name('api.cart.update');
+    Route::delete('/remove/{item_id}', [ApiCartController::class, 'remove'])
+        ->whereNumber('item_id')
+        ->name('api.cart.remove');
     Route::delete('/clear', [ApiCartController::class, 'clear'])->name('api.cart.clear');
     Route::post('/sync', [ApiCartController::class, 'sync'])->name('api.cart.sync');
     Route::post('/discount-mode', [ApiCartController::class, 'setDiscountMode'])->name('api.cart.discount-mode');
@@ -514,10 +556,15 @@ Route::prefix('api/analytics')->middleware('web')->name('api.analytics.')->group
     Route::get('/behavior', [AnalyticsController::class, 'behaviorReport'])->name('behavior');
 });
 
-// Storefront product catalog (PWA / public JSON)
-Route::get('/api/product/{slug}', [App\Http\Controllers\Api\ProductController::class, 'showBySlug'])
-    ->middleware(['web'])
-    ->name('api.product.show');
+// Storefront catalog (PWA / public JSON)
+Route::middleware(['web'])->group(function () {
+    Route::get('/api/product/{slug}', [App\Http\Controllers\Api\ProductController::class, 'showBySlug'])
+        ->name('api.product.show');
+    Route::get('/api/collections', [App\Http\Controllers\Api\CollectionController::class, 'index'])
+        ->name('api.collections.index');
+    Route::get('/api/shops', [App\Http\Controllers\Api\ShopController::class, 'index'])
+        ->name('api.shops.index');
+});
 
 // Product API routes for AI integration (with CORS support)
 Route::prefix('api/products')->middleware(['web'])->group(function () {

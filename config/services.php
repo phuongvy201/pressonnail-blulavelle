@@ -97,6 +97,12 @@ return [
         'test_mode' => filter_var(env('PINTEREST_TAG_TEST_MODE', false), FILTER_VALIDATE_BOOLEAN),
     ],
 
+    'openai' => [
+        /** ChatGPT Ads conversion pixel (oaiq) */
+        'pixel_id' => env('OPENAI_PIXEL_ID'),
+        'pixel_debug' => filter_var(env('OPENAI_PIXEL_DEBUG', false), FILTER_VALIDATE_BOOLEAN),
+    ],
+
     'recaptcha' => [
         'site_key' => env('RECAPTCHA_SITE_KEY'),
         'secret_key' => env('RECAPTCHA_SECRET_KEY'),

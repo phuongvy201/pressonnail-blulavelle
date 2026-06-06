@@ -1,18 +1,20 @@
 @extends('layouts.admin')
 
+@php
+    $inputClass = 'w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50';
+    $hintClass = 'mt-2 text-xs text-gray-500';
+    $labelClass = 'block text-sm font-semibold text-gray-900 mb-1';
+@endphp
+
 @section('content')
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 pb-28">
+        {{-- Header --}}
         <div class="mb-8">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-3xl font-bold text-gray-900 mb-2">Cấu hình Tracking & Pixels</h1>
-                    <p class="text-gray-600">
-                        Thay đổi ID tích hợp (Meta Pixel, TikTok Pixel, Pinterest Tag, Google Tag Manager, Google Ads) trực tiếp trong admin.
-                        Để trống một trường sẽ quay về giá trị mặc định đang cấu hình trong hệ thống.
-                    </p>
-                </div>
-               
-            </div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Cấu hình Tracking & Pixels</h1>
+            <p class="text-gray-600 max-w-3xl">
+                Quản lý pixel quảng cáo, Google Analytics và một số tuỳ chọn giao diện storefront.
+                Để trống một trường sẽ dùng giá trị mặc định trong hệ thống (<code class="text-xs bg-gray-100 px-1.5 py-0.5 rounded">.env</code> / <code class="text-xs bg-gray-100 px-1.5 py-0.5 rounded">config</code>).
+            </p>
         </div>
 
         @if (session('success'))
@@ -21,372 +23,304 @@
             </div>
         @endif
 
-        <div class="bg-white shadow-md rounded-2xl overflow-hidden">
-            <form method="POST" action="{{ route('admin.settings.analytics.update') }}" class="p-6 space-y-8" enctype="multipart/form-data">
-                @csrf
-                @method('PUT')
+        {{-- Quick nav --}}
+        <nav class="mb-6 flex flex-wrap gap-2" aria-label="Mục cấu hình">
+            @foreach ([
+                'google' => 'Google',
+                'meta' => 'Meta',
+                'tiktok' => 'TikTok',
+                'chatgpt' => 'ChatGPT',
+                'pinterest' => 'Pinterest',
+                'theme' => 'Theme',
+                'mail' => 'Email',
+                'gmc' => 'GMC',
+            ] as $anchor => $label)
+                <a href="#section-{{ $anchor }}"
+                   class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-blue-300 hover:text-blue-700 transition">
+                    {{ $label }}
+                </a>
+            @endforeach
+        </nav>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form method="POST" action="{{ route('admin.settings.analytics.update') }}" class="space-y-6" enctype="multipart/form-data">
+            @csrf
+            @method('PUT')
+
+            {{-- ── Google ── --}}
+            <section id="section-google" class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden scroll-mt-6">
+                <header class="flex items-start gap-4 border-b border-gray-100 bg-gradient-to-r from-sky-50 to-white px-6 py-5">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-600 text-sm font-bold text-white">G</div>
+                    <div class="min-w-0">
+                        <h2 class="text-lg font-bold text-gray-900">Google — Tag Manager, Ads & GA4</h2>
+                        <p class="mt-0.5 text-sm text-gray-600">GTM load sớm trên storefront; GA4 dùng cho dashboard Analytics trong admin.</p>
+                    </div>
+                </header>
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label for="meta_pixel_id" class="block text-sm font-semibold text-gray-900 mb-1">
-                            Meta Pixel ID
-                        </label>
-                        <input
-                            type="text"
-                            name="meta_pixel_id"
-                            id="meta_pixel_id"
-                            value="{{ old('meta_pixel_id', $settings['meta_pixel_id']) }}"
-                            placeholder="{{ $defaults['meta_pixel_id'] }}"
-                            class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
-                        >
-                        @error('meta_pixel_id')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                        <p class="mt-2 text-xs text-gray-500">
-                            Ví dụ: <code>{{ $defaults['meta_pixel_id'] }}</code>
-                        </p>
+                        <label for="google_tag_manager_id" class="{{ $labelClass }}">Google Tag Manager ID</label>
+                        <input type="text" name="google_tag_manager_id" id="google_tag_manager_id"
+                               value="{{ old('google_tag_manager_id', $settings['google_tag_manager_id']) }}"
+                               placeholder="{{ $defaults['google_tag_manager_id'] }}"
+                               class="{{ $inputClass }}">
+                        @error('google_tag_manager_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        <p class="{{ $hintClass }}">Ví dụ: <code>{{ $defaults['google_tag_manager_id'] }}</code></p>
                     </div>
-
                     <div>
-                        <label for="tiktok_pixel_id" class="block text-sm font-semibold text-gray-900 mb-1">
-                            TikTok Pixel ID
-                        </label>
-                        <input
-                            type="text"
-                            name="tiktok_pixel_id"
-                            id="tiktok_pixel_id"
-                            value="{{ old('tiktok_pixel_id', $settings['tiktok_pixel_id']) }}"
-                            placeholder="{{ $defaults['tiktok_pixel_id'] }}"
-                            class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
-                        >
-                        @error('tiktok_pixel_id')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                        <p class="mt-2 text-xs text-gray-500">
-                            Ví dụ: <code>{{ $defaults['tiktok_pixel_id'] }}</code>
-                        </p>
+                        <label for="google_ads_id" class="{{ $labelClass }}">Google Ads / gtag ID</label>
+                        <input type="text" name="google_ads_id" id="google_ads_id"
+                               value="{{ old('google_ads_id', $settings['google_ads_id']) }}"
+                               placeholder="{{ $defaults['google_ads_id'] }}"
+                               class="{{ $inputClass }}">
+                        @error('google_ads_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        <p class="{{ $hintClass }}">Ví dụ: <code>{{ $defaults['google_ads_id'] }}</code></p>
                     </div>
-
                     <div>
-                        <label for="tiktok_test_event_code" class="block text-sm font-semibold text-gray-900 mb-1">
-                            TikTok Test Event Code
-                        </label>
-                        <input
-                            type="text"
-                            name="tiktok_test_event_code"
-                            id="tiktok_test_event_code"
-                            value="{{ old('tiktok_test_event_code', $settings['tiktok_test_event_code']) }}"
-                            placeholder="{{ $defaults['tiktok_test_event_code'] }}"
-                            class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
-                        >
-                        @error('tiktok_test_event_code')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                        <p class="mt-2 text-xs text-gray-500">
-                            Để trống nếu đang chạy sự kiện live.
-                        </p>
+                        <label for="google_analytics_property_id" class="{{ $labelClass }}">GA4 Property ID</label>
+                        <input type="text" name="google_analytics_property_id" id="google_analytics_property_id"
+                               value="{{ old('google_analytics_property_id', $settings['google_analytics_property_id']) }}"
+                               placeholder="{{ $defaults['google_analytics_property_id'] }}"
+                               class="{{ $inputClass }}">
+                        @error('google_analytics_property_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        <p class="{{ $hintClass }}">Ví dụ: <code>G-XXXXXXXXXX</code></p>
                     </div>
-
-                    <div>
-                        <label for="pinterest_tag_id" class="block text-sm font-semibold text-gray-900 mb-1">
-                            Pinterest Tag ID
-                        </label>
-                        <input
-                            type="text"
-                            name="pinterest_tag_id"
-                            id="pinterest_tag_id"
-                            inputmode="numeric"
-                            pattern="[0-9]*"
-                            value="{{ old('pinterest_tag_id', $settings['pinterest_tag_id']) }}"
-                            placeholder="{{ $defaults['pinterest_tag_id'] }}"
-                            class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
-                        >
-                        @error('pinterest_tag_id')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                        <p class="mt-2 text-xs text-gray-500">
-                            Lấy trong <strong>Pinterest Ads → Conversions → Pinterest Tag</strong> (chỉ số).
-                        </p>
-                    </div>
-
-                    <div class="md:col-span-2">
-                        <label class="inline-flex items-center gap-2 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                name="pinterest_test_mode"
-                                value="1"
-                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                @checked(old('pinterest_test_mode', $settings['pinterest_test_mode']) === '1')
-                            >
-                            <span class="text-sm font-medium text-gray-900">Pinterest — chế độ debug (log sự kiện ra Console)</span>
-                        </label>
-                        <p class="mt-2 text-xs text-gray-500">
-                            Bật khi kiểm tra bằng Pinterest Tag Helper hoặc Events Manager.
-                        </p>
-                    </div>
-
-                    <div class="md:col-span-2 rounded-xl border border-red-100 bg-red-50/60 px-4 py-3">
-                        <p class="text-sm font-semibold text-gray-900 mb-1">Sự kiện Pinterest conversion (tự động trên shop)</p>
-                        <ul class="text-xs text-gray-600 list-disc list-inside space-y-0.5">
-                            <li><code>pagevisit</code> — catalog / trang sản phẩm</li>
-                            <li><code>addtocart</code> — thêm vào giỏ (trang SP)</li>
-                            <li><code>checkout</code> — trang cảm ơn sau đặt hàng thành công (không gửi ở form checkout)</li>
-                        </ul>
-                        <p class="mt-2 text-xs text-gray-500">
-                            Xác minh trong Pinterest Ads → Conversions → Events.
-                        </p>
-                    </div>
-
-                    <div>
-                        <label for="google_tag_manager_id" class="block text-sm font-semibold text-gray-900 mb-1">
-                            Google Tag Manager ID
-                        </label>
-                        <input
-                            type="text"
-                            name="google_tag_manager_id"
-                            id="google_tag_manager_id"
-                            value="{{ old('google_tag_manager_id', $settings['google_tag_manager_id']) }}"
-                            placeholder="{{ $defaults['google_tag_manager_id'] }}"
-                            class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
-                        >
-                        @error('google_tag_manager_id')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                        <p class="mt-2 text-xs text-gray-500">
-                            Ví dụ: <code>{{ $defaults['google_tag_manager_id'] }}</code>
-                        </p>
-                    </div>
-
-                    <div>
-                        <label for="google_ads_id" class="block text-sm font-semibold text-gray-900 mb-1">
-                            Google Ads / gtag ID
-                        </label>
-                        <input
-                            type="text"
-                            name="google_ads_id"
-                            id="google_ads_id"
-                            value="{{ old('google_ads_id', $settings['google_ads_id']) }}"
-                            placeholder="{{ $defaults['google_ads_id'] }}"
-                            class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
-                        >
-                        @error('google_ads_id')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                        <p class="mt-2 text-xs text-gray-500">
-                            Ví dụ: <code>{{ $defaults['google_ads_id'] }}</code>
-                        </p>
-                    </div>
-
-                    {{-- GA4 --}}
-                    <div>
-                        <label for="google_analytics_property_id" class="block text-sm font-semibold text-gray-900 mb-1">
-                            GA4 Property ID
-                        </label>
-                        <input
-                            type="text"
-                            name="google_analytics_property_id"
-                            id="google_analytics_property_id"
-                            value="{{ old('google_analytics_property_id', $settings['google_analytics_property_id']) }}"
-                            placeholder="{{ $defaults['google_analytics_property_id'] }}"
-                            class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
-                        >
-                        @error('google_analytics_property_id')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                        <p class="mt-2 text-xs text-gray-500">
-                            Ví dụ: <code>G-XXXXXXXXXX</code> (lưu để trang Analytics đọc cấu hình GA4).
-                        </p>
-                    </div>
-
-                    <div>
-                        <label for="google_analytics_credentials" class="block text-sm font-semibold text-gray-900 mb-1">
-                            GA4 Credentials JSON (Google Cloud)
-                        </label>
-                        <input
-                            type="file"
-                            name="google_analytics_credentials"
-                            id="google_analytics_credentials"
-                            accept=".json,application/json"
-                            class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
-                        >
-                        @error('google_analytics_credentials')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                        <p class="mt-2 text-xs text-gray-500">
-                            Hoặc dùng field path bên dưới (nếu file đã nằm sẵn trong `storage/app`).
-                        </p>
-
-                        <div class="mt-3">
-                            <label for="google_analytics_credentials_path" class="block text-sm font-semibold text-gray-900 mb-1">
-                                Credentials path (storage/app)
-                            </label>
-                            <input
-                                type="text"
-                                name="google_analytics_credentials_path"
-                                id="google_analytics_credentials_path"
-                                value="{{ old('google_analytics_credentials_path', $settings['google_analytics_credentials_path']) }}"
-                                placeholder="{{ $defaults['google_analytics_credentials_path'] }}"
-                                class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
-                            >
-                            @error('google_analytics_credentials_path')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                            <p class="mt-2 text-xs text-gray-500">
-                                Ví dụ: <code>analytics/google-analytics-credentials-1699999999.json</code>.
-                            </p>
+                    <div class="md:col-span-2 rounded-xl border border-sky-100 bg-sky-50/50 p-4 space-y-4">
+                        <p class="text-sm font-semibold text-gray-900">GA4 Credentials (Google Cloud)</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="google_analytics_credentials" class="{{ $labelClass }}">Upload file JSON</label>
+                                <input type="file" name="google_analytics_credentials" id="google_analytics_credentials"
+                                       accept=".json,application/json" class="{{ $inputClass }}">
+                                @error('google_analytics_credentials')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                            </div>
+                            <div>
+                                <label for="google_analytics_credentials_path" class="{{ $labelClass }}">Hoặc path trong <code>storage/app</code></label>
+                                <input type="text" name="google_analytics_credentials_path" id="google_analytics_credentials_path"
+                                       value="{{ old('google_analytics_credentials_path', $settings['google_analytics_credentials_path']) }}"
+                                       placeholder="{{ $defaults['google_analytics_credentials_path'] }}"
+                                       class="{{ $inputClass }}">
+                                @error('google_analytics_credentials_path')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                                <p class="{{ $hintClass }}">VD: <code>analytics/google-analytics-credentials-1699999999.json</code></p>
+                            </div>
                         </div>
                     </div>
                 </div>
+            </section>
 
-                <div class="pt-2 border-t border-gray-100">
-                    <h2 class="text-xl font-bold text-gray-900 mb-1">Theme colors</h2>
-                    <p class="text-sm text-gray-600 mb-2">
-                        Nhập màu dạng <code>#RRGGBB</code> hoặc <code>rgb(...)</code>. Để trống sẽ dùng màu mặc định trong giao diện.
-                    </p>
-                    <p class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-5">
-                        <strong>Lưu vĩnh viễn:</strong> Màu đang lưu trong database. Để không mất khi cập nhật/deploy bản mới, chạy lệnh <code class="bg-amber-100 px-1 rounded">php artisan settings:export-theme</code> rồi commit file <code class="bg-amber-100 px-1 rounded">config/theme.php</code> lên git.
-                    </p>
+            {{-- ── Ad pixels (2-col grid of platform cards) ── --}}
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {{-- Meta --}}
+                <section id="section-meta" class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden scroll-mt-6">
+                    <header class="flex items-center gap-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-white px-5 py-4">
+                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#1877F2] text-xs font-bold text-white">f</div>
+                        <h2 class="text-base font-bold text-gray-900">Meta Pixel</h2>
+                    </header>
+                    <div class="p-5">
+                        <label for="meta_pixel_id" class="{{ $labelClass }}">Pixel ID</label>
+                        <input type="text" name="meta_pixel_id" id="meta_pixel_id"
+                               value="{{ old('meta_pixel_id', $settings['meta_pixel_id']) }}"
+                               placeholder="{{ $defaults['meta_pixel_id'] }}"
+                               class="{{ $inputClass }}">
+                        @error('meta_pixel_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        <p class="{{ $hintClass }}">Ví dụ: <code>{{ $defaults['meta_pixel_id'] }}</code></p>
+                    </div>
+                </section>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {{-- TikTok --}}
+                <section id="section-tiktok" class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden scroll-mt-6">
+                    <header class="flex items-center gap-3 border-b border-gray-100 bg-gradient-to-r from-gray-900/5 to-white px-5 py-4">
+                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-900 text-xs font-bold text-white">TT</div>
+                        <h2 class="text-base font-bold text-gray-900">TikTok Pixel</h2>
+                    </header>
+                    <div class="p-5 space-y-4">
                         <div>
-                            <label for="header_bg" class="block text-sm font-semibold text-gray-900 mb-1">Header background</label>
-                            <input
-                                type="text"
-                                name="header_bg"
-                                id="header_bg"
-                                value="{{ old('header_bg', $settings['header_bg']) }}"
-                                placeholder="#f8fafc"
-                                class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
-                            >
-                            @error('header_bg')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                            <label for="tiktok_pixel_id" class="{{ $labelClass }}">Pixel ID</label>
+                            <input type="text" name="tiktok_pixel_id" id="tiktok_pixel_id"
+                                   value="{{ old('tiktok_pixel_id', $settings['tiktok_pixel_id']) }}"
+                                   placeholder="{{ $defaults['tiktok_pixel_id'] }}"
+                                   class="{{ $inputClass }}">
+                            @error('tiktok_pixel_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                         </div>
-
                         <div>
-                            <label for="header_border" class="block text-sm font-semibold text-gray-900 mb-1">Header border color</label>
-                            <input
-                                type="text"
-                                name="header_border"
-                                id="header_border"
-                                value="{{ old('header_border', $settings['header_border']) }}"
-                                placeholder="#e2e8f0"
-                                class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
-                            >
-                            @error('header_border')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                        </div>
-
-                        <div>
-                            <label for="testimonials_bg" class="block text-sm font-semibold text-gray-900 mb-1">Reviews/Testimonials background</label>
-                            <input
-                                type="text"
-                                name="testimonials_bg"
-                                id="testimonials_bg"
-                                value="{{ old('testimonials_bg', $settings['testimonials_bg']) }}"
-                                placeholder="#ffffff"
-                                class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
-                            >
-                            @error('testimonials_bg')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                        </div>
-
-                        <div>
-                            <label for="footer_faq_bg" class="block text-sm font-semibold text-gray-900 mb-1">Footer FAQ background</label>
-                            <input
-                                type="text"
-                                name="footer_faq_bg"
-                                id="footer_faq_bg"
-                                value="{{ old('footer_faq_bg', $settings['footer_faq_bg']) }}"
-                                placeholder="#ffffff"
-                                class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
-                            >
-                            @error('footer_faq_bg')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                        </div>
-
-                        <div>
-                            <label for="footer_bg" class="block text-sm font-semibold text-gray-900 mb-1">Footer background</label>
-                            <input
-                                type="text"
-                                name="footer_bg"
-                                id="footer_bg"
-                                value="{{ old('footer_bg', $settings['footer_bg']) }}"
-                                placeholder="#242B3D"
-                                class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
-                            >
-                            @error('footer_bg')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                            <label for="tiktok_test_event_code" class="{{ $labelClass }}">Test Event Code</label>
+                            <input type="text" name="tiktok_test_event_code" id="tiktok_test_event_code"
+                                   value="{{ old('tiktok_test_event_code', $settings['tiktok_test_event_code']) }}"
+                                   placeholder="{{ $defaults['tiktok_test_event_code'] }}"
+                                   class="{{ $inputClass }}">
+                            @error('tiktok_test_event_code')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                            <p class="{{ $hintClass }}">Để trống khi chạy sự kiện live.</p>
                         </div>
                     </div>
-                </div>
+                </section>
 
-                <div class="pt-2 border-t border-gray-100">
-                    <h2 class="text-xl font-bold text-gray-900 mb-1">Mail branding (email layout)</h2>
-                    <p class="text-sm text-gray-600 mb-2">
-                        Logo và tên thương hiệu hiển thị trong header email. Để trống sẽ dùng logo mặc định và <code>APP_NAME</code>.
-                    </p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {{-- ChatGPT --}}
+                <section id="section-chatgpt" class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden scroll-mt-6">
+                    <header class="flex items-center gap-3 border-b border-gray-100 bg-gradient-to-r from-emerald-50 to-white px-5 py-4">
+                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-xs font-bold text-white">AI</div>
+                        <h2 class="text-base font-bold text-gray-900">ChatGPT Ads Pixel</h2>
+                    </header>
+                    <div class="p-5 space-y-4">
                         <div>
-                            <label for="mail_logo_url" class="block text-sm font-semibold text-gray-900 mb-1">Logo URL (email)</label>
-                            <input
-                                type="text"
-                                name="mail_logo_url"
-                                id="mail_logo_url"
-                                value="{{ old('mail_logo_url', $settings['mail_logo_url']) }}"
-                                placeholder="VD: {{ asset('images/logo to.png') }}"
-                                class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
-                            >
-                            @error('mail_logo_url')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                            <p class="mt-2 text-xs text-gray-500">URL đầy đủ hoặc đường dẫn relative (vd: <code>/images/logo.png</code>).</p>
+                            <label for="openai_pixel_id" class="{{ $labelClass }}">Pixel ID <span class="font-normal text-gray-500">(bắt buộc để bật)</span></label>
+                            <input type="text" name="openai_pixel_id" id="openai_pixel_id"
+                                   value="{{ old('openai_pixel_id', $settings['openai_pixel_id']) }}"
+                                   placeholder="{{ $defaults['openai_pixel_id'] }}"
+                                   class="{{ $inputClass }}">
+                            @error('openai_pixel_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                            <p class="{{ $hintClass }}">Tạo trong tab <strong>Conversions</strong> của Ads Manager.</p>
                         </div>
+                        <label class="flex items-start gap-3 rounded-xl border border-gray-200 p-3 cursor-pointer hover:bg-gray-50 transition">
+                            <input type="checkbox" name="openai_pixel_debug" value="1"
+                                   class="mt-0.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                                   @checked(old('openai_pixel_debug', $settings['openai_pixel_debug']) === '1')>
+                            <span class="min-w-0">
+                                <span class="block text-sm font-medium text-gray-900">Chế độ debug</span>
+                                <span class="mt-0.5 block text-xs text-gray-500">Log SDK ra browser console khi test. Tắt trước production.</span>
+                            </span>
+                        </label>
+                    </div>
+                </section>
+
+                {{-- Pinterest --}}
+                <section id="section-pinterest" class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden scroll-mt-6">
+                    <header class="flex items-center gap-3 border-b border-gray-100 bg-gradient-to-r from-red-50 to-white px-5 py-4">
+                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#E60023] text-xs font-bold text-white">P</div>
+                        <h2 class="text-base font-bold text-gray-900">Pinterest Tag</h2>
+                    </header>
+                    <div class="p-5 space-y-4">
                         <div>
-                            <label for="mail_brand_name" class="block text-sm font-semibold text-gray-900 mb-1">Tên thương hiệu (alt text logo)</label>
-                            <input
-                                type="text"
-                                name="mail_brand_name"
-                                id="mail_brand_name"
-                                value="{{ old('mail_brand_name', $settings['mail_brand_name']) }}"
-                                placeholder="{{ $defaults['mail_brand_name'] ?: config('app.name') }}"
-                                class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
-                            >
-                            @error('mail_brand_name')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                            <label for="pinterest_tag_id" class="{{ $labelClass }}">Tag ID</label>
+                            <input type="text" name="pinterest_tag_id" id="pinterest_tag_id"
+                                   inputmode="numeric" pattern="[0-9]*"
+                                   value="{{ old('pinterest_tag_id', $settings['pinterest_tag_id']) }}"
+                                   placeholder="{{ $defaults['pinterest_tag_id'] }}"
+                                   class="{{ $inputClass }}">
+                            @error('pinterest_tag_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                            <p class="{{ $hintClass }}">Pinterest Ads → Conversions → Pinterest Tag (chỉ số).</p>
+                        </div>
+                        <label class="flex items-start gap-3 rounded-xl border border-gray-200 p-3 cursor-pointer hover:bg-gray-50 transition">
+                            <input type="checkbox" name="pinterest_test_mode" value="1"
+                                   class="mt-0.5 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                                   @checked(old('pinterest_test_mode', $settings['pinterest_test_mode']) === '1')>
+                            <span class="min-w-0">
+                                <span class="block text-sm font-medium text-gray-900">Chế độ debug</span>
+                                <span class="mt-0.5 block text-xs text-gray-500">Dùng khi kiểm tra bằng Tag Helper hoặc Events Manager.</span>
+                            </span>
+                        </label>
+                        <div class="rounded-lg border border-red-100 bg-red-50/60 px-3 py-2.5">
+                            <p class="text-xs font-semibold text-gray-800 mb-1">Sự kiện tự động trên shop</p>
+                            <ul class="text-xs text-gray-600 list-disc list-inside space-y-0.5">
+                                <li><code>pagevisit</code> — catalog / trang sản phẩm</li>
+                                <li><code>addtocart</code> — thêm vào giỏ</li>
+                                <li><code>checkout</code> — trang cảm ơn (không gửi ở form checkout)</li>
+                            </ul>
                         </div>
                     </div>
-                </div>
+                </section>
+            </div>
 
-                <div class="pt-2 border-t border-gray-100">
-                    <h2 class="text-xl font-bold text-gray-900 mb-1">GMC Safe Mode</h2>
-                    <p class="text-sm text-gray-600 mb-4">
-                        Bật/tắt hiển thị các chỉ số social proof trên trang sản phẩm để giảm rủi ro khi kiểm tra Google Merchant Center.
+            {{-- ── Theme ── --}}
+            <section id="section-theme" class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden scroll-mt-6">
+                <header class="flex items-start gap-4 border-b border-gray-100 bg-gradient-to-r from-violet-50 to-white px-6 py-5">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-sm font-bold text-white">T</div>
+                    <div class="min-w-0">
+                        <h2 class="text-lg font-bold text-gray-900">Theme colors</h2>
+                        <p class="mt-0.5 text-sm text-gray-600">Màu header, footer và các vùng nền trên storefront. Định dạng <code>#RRGGBB</code> hoặc <code>rgb(...)</code>.</p>
+                    </div>
+                </header>
+                <div class="p-6">
+                    <p class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6">
+                        <strong>Lưu vĩnh viễn:</strong> Chạy <code class="bg-amber-100 px-1 rounded text-xs">php artisan settings:export-theme</code> rồi commit <code class="bg-amber-100 px-1 rounded text-xs">config/theme.php</code> để không mất màu khi deploy.
                     </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        @foreach ([
+                            'header_bg' => ['Header background', '#f8fafc'],
+                            'header_border' => ['Header border', '#e2e8f0'],
+                            'testimonials_bg' => ['Reviews / Testimonials', '#ffffff'],
+                            'footer_faq_bg' => ['Footer FAQ', '#ffffff'],
+                            'footer_bg' => ['Footer background', '#242B3D'],
+                        ] as $field => [$fieldLabel, $placeholder])
+                            <div>
+                                <label for="{{ $field }}" class="{{ $labelClass }}">{{ $fieldLabel }}</label>
+                                <input type="text" name="{{ $field }}" id="{{ $field }}"
+                                       value="{{ old($field, $settings[$field]) }}"
+                                       placeholder="{{ $placeholder }}"
+                                       class="{{ $inputClass }}">
+                                @error($field)<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </section>
 
-                    <label for="show_product_social_proof" class="flex items-start gap-3 rounded-xl border border-gray-200 p-4 hover:bg-gray-50 transition">
-                        <input
-                            type="checkbox"
-                            name="show_product_social_proof"
-                            id="show_product_social_proof"
-                            value="1"
-                            @checked(old('show_product_social_proof', $settings['show_product_social_proof']))
-                            class="mt-0.5 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        >
+            {{-- ── Mail ── --}}
+            <section id="section-mail" class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden scroll-mt-6">
+                <header class="flex items-start gap-4 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-white px-6 py-5">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-sm font-bold text-white">@</div>
+                    <div class="min-w-0">
+                        <h2 class="text-lg font-bold text-gray-900">Mail branding</h2>
+                        <p class="mt-0.5 text-sm text-gray-600">Logo và tên thương hiệu trong header email. Để trống dùng logo mặc định và <code>APP_NAME</code>.</p>
+                    </div>
+                </header>
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="mail_logo_url" class="{{ $labelClass }}">Logo URL</label>
+                        <input type="text" name="mail_logo_url" id="mail_logo_url"
+                               value="{{ old('mail_logo_url', $settings['mail_logo_url']) }}"
+                               placeholder="VD: {{ asset('images/logo to.png') }}"
+                               class="{{ $inputClass }}">
+                        @error('mail_logo_url')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        <p class="{{ $hintClass }}">URL đầy đủ hoặc relative, VD: <code>/images/logo.png</code></p>
+                    </div>
+                    <div>
+                        <label for="mail_brand_name" class="{{ $labelClass }}">Tên thương hiệu (alt logo)</label>
+                        <input type="text" name="mail_brand_name" id="mail_brand_name"
+                               value="{{ old('mail_brand_name', $settings['mail_brand_name']) }}"
+                               placeholder="{{ $defaults['mail_brand_name'] ?: config('app.name') }}"
+                               class="{{ $inputClass }}">
+                        @error('mail_brand_name')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+            </section>
+
+            {{-- ── GMC ── --}}
+            <section id="section-gmc" class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden scroll-mt-6">
+                <header class="flex items-start gap-4 border-b border-gray-100 bg-gradient-to-r from-orange-50 to-white px-6 py-5">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-500 text-sm font-bold text-white">GMC</div>
+                    <div class="min-w-0">
+                        <h2 class="text-lg font-bold text-gray-900">GMC Safe Mode</h2>
+                        <p class="mt-0.5 text-sm text-gray-600">Ẩn social proof trên trang sản phẩm khi kiểm tra Google Merchant Center.</p>
+                    </div>
+                </header>
+                <div class="p-6">
+                    <label for="show_product_social_proof" class="flex items-start gap-3 rounded-xl border border-gray-200 p-4 cursor-pointer hover:bg-gray-50 transition">
+                        <input type="checkbox" name="show_product_social_proof" id="show_product_social_proof" value="1"
+                               @checked(old('show_product_social_proof', $settings['show_product_social_proof']))
+                               class="mt-0.5 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                         <span class="min-w-0">
                             <span class="block text-sm font-semibold text-gray-900">Hiển thị "viewing" và "in carts" ở trang sản phẩm</span>
-                            <span class="mt-1 block text-xs text-gray-500">
-                                Khi tắt, 2 chỉ số này sẽ ẩn hoàn toàn ở storefront. Dùng khi cần chế độ an toàn cho GMC.
-                            </span>
+                            <span class="mt-1 block text-xs text-gray-500">Tắt để ẩn hoàn toàn 2 chỉ số này trên storefront.</span>
                         </span>
                     </label>
-                    @error('show_product_social_proof')
-                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
+                    @error('show_product_social_proof')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
+            </section>
 
-                <div class="flex items-center justify-end gap-3">
-                    <a href="{{ route('admin.dashboard') }}" class="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 transition">
-                        Quay lại
-                    </a>
-                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition">
-                        Lưu thay đổi
-                    </button>
+            {{-- Sticky actions --}}
+            <div class="fixed bottom-0 inset-x-0 z-30 border-t border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+                <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-3">
+                    <p class="hidden sm:block text-sm text-gray-500">Thay đổi chưa lưu sẽ mất khi rời trang.</p>
+                    <div class="flex items-center gap-3 ml-auto">
+                        <a href="{{ route('admin.dashboard') }}"
+                           class="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 transition text-sm font-medium">
+                            Quay lại
+                        </a>
+                        <button type="submit"
+                                class="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition shadow-sm">
+                            Lưu thay đổi
+                        </button>
+                    </div>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
 @endsection
-
-

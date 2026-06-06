@@ -183,7 +183,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     $color = $attrs['color'] ?? $attrs['Color'] ?? null;
                     return $color && (preg_match('/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/', $color) || preg_match('/^rgb|^hsl/', $color)) ? $color : null;
                 })->filter()->unique()->take(4)->values();
+                $productUrl = filled($product->slug) ? route('products.show', ['slug' => $product->slug]) : null;
             @endphp
+            @if(!$productUrl)
+                @continue
+            @endif
             <div class="group flex flex-col bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-primary/5">
                 <!-- Product Image -->
                 <div class="relative aspect-[4/5] overflow-hidden bg-slate-100">
@@ -202,7 +206,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="p-4 flex flex-col gap-2">
                     <div class="flex justify-between items-start">
                         <h4 class="font-bold text-slate-900 line-clamp-1 group-hover:text-primary transition-colors">
-                            <a href="{{ route('products.show', $product->slug) }}">{{ Str::limit($product->name, 45) }}</a>
+                            <a href="{{ $productUrl }}">{{ Str::limit($product->name, 45) }}</a>
                         </h4>
                         <span class="font-bold text-primary shrink-0">{{ format_price_usd((float) $product->base_price) }}</span>
                     </div>
@@ -219,7 +223,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         @endforeach
                     </div>
                     @endif
-                    <a href="{{ route('products.show', $product->slug) }}" class="mt-2 w-full py-2 bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white rounded-lg text-sm font-bold transition-all text-center">
+                    <a href="{{ $productUrl }}" class="mt-2 w-full py-2 bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white rounded-lg text-sm font-bold transition-all text-center">
                         Add to Cart
                     </a>
                 </div>
