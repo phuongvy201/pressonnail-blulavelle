@@ -215,44 +215,45 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <!-- Why Choose Our Press-on Nails? -->
-<section class="px-4 sm:px-6 lg:px-20 py-12 sm:py-16 md:py-20 lg:py-24 bg-slate-50" data-content-block="home.why_choose" @if(!empty($whyChoose['bg_color'])) style="background-color: {{ $whyChoose['bg_color'] }};" @endif>
+<section class="px-4 sm:px-6 lg:px-20 py-8 sm:py-16 md:py-20 lg:py-24 bg-slate-50 overflow-x-hidden" data-content-block="home.why_choose" @if(!empty($whyChoose['bg_color'])) style="background-color: {{ $whyChoose['bg_color'] }};" @endif>
     @if(isset($canEdit) && $canEdit && isset($editMode) && $editMode)
     <div class="max-w-7xl mx-auto flex justify-end mb-2">
         <button type="button" class="inline-edit-trigger px-3 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-lg hover:opacity-90" data-block="home.why_choose">Chỉnh sửa</button>
     </div>
     @endif
-    <div class="max-w-7xl mx-auto text-center mb-10 sm:mb-12 lg:mb-16 px-1">
-        <h2 class="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 mb-3 sm:mb-4 leading-tight" data-content-field="title">{{ $whyChoose['title'] ?? 'Why Choose Our Press-on Nails?' }}</h2>
-        <div class="w-16 sm:w-20 h-1 bg-primary mx-auto rounded-full"></div>
+    <div class="max-w-7xl mx-auto text-center mb-5 sm:mb-12 lg:mb-16 px-1">
+        <h2 class="text-xl sm:text-3xl lg:text-4xl font-black text-slate-900 mb-2 sm:mb-4 leading-tight" data-content-field="title">{{ $whyChoose['title'] ?? 'Why Choose Our Press-on Nails?' }}</h2>
+        <div class="w-12 sm:w-20 h-1 bg-primary mx-auto rounded-full"></div>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 lg:gap-8 max-w-7xl mx-auto">
-        <div class="bg-white p-5 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-sm border border-primary/5 hover:border-primary/30 transition-all group flex flex-col">
-            <div class="w-12 h-12 sm:w-14 sm:h-14 bg-primary/10 rounded-lg sm:rounded-xl flex items-center justify-center text-primary-fg mb-4 sm:mb-6 group-hover:bg-primary group-hover:text-white transition-all flex-shrink-0">
-                <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
+
+    <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-6 lg:gap-8 max-w-7xl mx-auto">
+        <div class="bg-white p-3 md:p-6 lg:p-8 rounded-xl md:rounded-2xl shadow-none md:shadow-sm border border-primary/5 md:hover:border-primary/30 transition-all group flex flex-col items-center md:items-stretch text-center md:text-left gap-2 md:gap-0">
+            <div class="w-9 h-9 md:w-14 md:h-14 bg-primary/10 rounded-lg md:rounded-xl flex items-center justify-center text-primary-fg md:mb-6 group-hover:bg-primary group-hover:text-white transition-all shrink-0">
+                <svg class="w-4 h-4 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
             </div>
-            <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-slate-900" data-content-field="card1_title">{{ $whyChoose['card1_title'] ?? 'Salon Quality' }}</h3>
-            <p class="text-slate-600 text-sm sm:text-base leading-relaxed" data-content-field="card1_body">{{ $whyChoose['card1_body'] ?? '' }}</p>
+            <h3 class="text-xs md:text-xl font-bold md:mb-3 text-slate-900 leading-snug" data-content-field="card1_title">{{ $whyChoose['card1_title'] ?? 'Salon Quality' }}</h3>
+            <p class="text-[11px] md:text-base text-slate-600 leading-snug md:leading-relaxed line-clamp-3 md:line-clamp-none" data-content-field="card1_body">{{ $whyChoose['card1_body'] ?? '' }}</p>
         </div>
-        <div class="bg-white p-5 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-sm border border-primary/5 hover:border-primary/30 transition-all group flex flex-col">
-            <div class="w-12 h-12 sm:w-14 sm:h-14 bg-primary/10 rounded-lg sm:rounded-xl flex items-center justify-center text-primary-fg mb-4 sm:mb-6 group-hover:bg-primary group-hover:text-white transition-all flex-shrink-0">
-                <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+        <div class="bg-white p-3 md:p-6 lg:p-8 rounded-xl md:rounded-2xl shadow-none md:shadow-sm border border-primary/5 md:hover:border-primary/30 transition-all group flex flex-col items-center md:items-stretch text-center md:text-left gap-2 md:gap-0">
+            <div class="w-9 h-9 md:w-14 md:h-14 bg-primary/10 rounded-lg md:rounded-xl flex items-center justify-center text-primary-fg md:mb-6 group-hover:bg-primary group-hover:text-white transition-all shrink-0">
+                <svg class="w-4 h-4 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
             </div>
-            <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-slate-900" data-content-field="card2_title">{{ $whyChoose['card2_title'] ?? 'Reusable' }}</h3>
-            <p class="text-slate-600 text-sm sm:text-base leading-relaxed" data-content-field="card2_body">{{ $whyChoose['card2_body'] ?? '' }}</p>
+            <h3 class="text-xs md:text-xl font-bold md:mb-3 text-slate-900 leading-snug" data-content-field="card2_title">{{ $whyChoose['card2_title'] ?? 'Reusable' }}</h3>
+            <p class="text-[11px] md:text-base text-slate-600 leading-snug md:leading-relaxed line-clamp-3 md:line-clamp-none" data-content-field="card2_body">{{ $whyChoose['card2_body'] ?? '' }}</p>
         </div>
-        <div class="bg-white p-5 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-sm border border-primary/5 hover:border-primary/30 transition-all group flex flex-col">
-            <div class="w-12 h-12 sm:w-14 sm:h-14 bg-primary/10 rounded-lg sm:rounded-xl flex items-center justify-center text-primary-fg mb-4 sm:mb-6 group-hover:bg-primary group-hover:text-white transition-all flex-shrink-0">
-                <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+        <div class="bg-white p-3 md:p-6 lg:p-8 rounded-xl md:rounded-2xl shadow-none md:shadow-sm border border-primary/5 md:hover:border-primary/30 transition-all group flex flex-col items-center md:items-stretch text-center md:text-left gap-2 md:gap-0">
+            <div class="w-9 h-9 md:w-14 md:h-14 bg-primary/10 rounded-lg md:rounded-xl flex items-center justify-center text-primary-fg md:mb-6 group-hover:bg-primary group-hover:text-white transition-all shrink-0">
+                <svg class="w-4 h-4 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
             </div>
-            <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-slate-900" data-content-field="card3_title">{{ $whyChoose['card3_title'] ?? 'Easy Application' }}</h3>
-            <p class="text-slate-600 text-sm sm:text-base leading-relaxed" data-content-field="card3_body">{{ $whyChoose['card3_body'] ?? '' }}</p>
+            <h3 class="text-xs md:text-xl font-bold md:mb-3 text-slate-900 leading-snug" data-content-field="card3_title">{{ $whyChoose['card3_title'] ?? 'Easy Application' }}</h3>
+            <p class="text-[11px] md:text-base text-slate-600 leading-snug md:leading-relaxed line-clamp-3 md:line-clamp-none" data-content-field="card3_body">{{ $whyChoose['card3_body'] ?? '' }}</p>
         </div>
-        <div class="bg-white p-5 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-sm border border-primary/5 hover:border-primary/30 transition-all group flex flex-col">
-            <div class="w-12 h-12 sm:w-14 sm:h-14 bg-primary/10 rounded-lg sm:rounded-xl flex items-center justify-center text-primary-fg mb-4 sm:mb-6 group-hover:bg-primary group-hover:text-white transition-all flex-shrink-0">
-                <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z"></path></svg>
+        <div class="bg-white p-3 md:p-6 lg:p-8 rounded-xl md:rounded-2xl shadow-none md:shadow-sm border border-primary/5 md:hover:border-primary/30 transition-all group flex flex-col items-center md:items-stretch text-center md:text-left gap-2 md:gap-0">
+            <div class="w-9 h-9 md:w-14 md:h-14 bg-primary/10 rounded-lg md:rounded-xl flex items-center justify-center text-primary-fg md:mb-6 group-hover:bg-primary group-hover:text-white transition-all shrink-0">
+                <svg class="w-4 h-4 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z"></path></svg>
             </div>
-            <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-slate-900" data-content-field="card4_title">{{ $whyChoose['card4_title'] ?? 'Custom Designs' }}</h3>
-            <p class="text-slate-600 text-sm sm:text-base leading-relaxed" data-content-field="card4_body">{{ $whyChoose['card4_body'] ?? '' }}</p>
+            <h3 class="text-xs md:text-xl font-bold md:mb-3 text-slate-900 leading-snug" data-content-field="card4_title">{{ $whyChoose['card4_title'] ?? 'Custom Designs' }}</h3>
+            <p class="text-[11px] md:text-base text-slate-600 leading-snug md:leading-relaxed line-clamp-3 md:line-clamp-none" data-content-field="card4_body">{{ $whyChoose['card4_body'] ?? '' }}</p>
         </div>
     </div>
 </section>
@@ -283,73 +284,135 @@ document.addEventListener('DOMContentLoaded', function () {
 </section>
 
 <!-- Explore Our Collections -->
-<section class="px-4 sm:px-6 lg:px-20 py-16 sm:py-20 md:py-24 bg-white" data-content-block="home.collections" @if(!empty($collectionsBlock['bg_color'])) style="background-color: {{ $collectionsBlock['bg_color'] }};" @endif>
+<section class="py-16 sm:py-20 md:py-24 bg-white overflow-x-hidden" data-content-block="home.collections" @if(!empty($collectionsBlock['bg_color'])) style="background-color: {{ $collectionsBlock['bg_color'] }};" @endif>
     @if(isset($canEdit) && $canEdit && isset($editMode) && $editMode)
-    <div class="max-w-7xl mx-auto flex justify-end mb-2">
+    <div class="px-4 sm:px-6 lg:px-20 max-w-7xl mx-auto flex justify-end mb-2">
         <button type="button" class="inline-edit-trigger px-3 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-lg hover:opacity-90" data-block="home.collections">Chỉnh sửa</button>
     </div>
     @endif
-    <div class="max-w-7xl mx-auto">
-        <div class="text-center mb-16">
+    <div class="px-4 sm:px-6 lg:px-20 max-w-7xl mx-auto">
+        <div class="text-center mb-8 sm:mb-16">
             <h2 class="text-3xl lg:text-4xl font-black text-slate-900 mb-4" data-content-field="heading">{{ $collectionsBlock['heading'] ?? 'Explore Our Collections' }}</h2>
             <div class="w-20 h-1 bg-primary mx-auto rounded-full"></div>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10">
-            @foreach($featuredCollections as $collection)
-                <a href="{{ route('collections.show', $collection->slug) }}" class="group block">
-                    <div class="relative overflow-hidden rounded-2xl aspect-[3/4] mb-5 shadow-sm bg-slate-100">
-                        @if($collection->image)
-                            <img alt="{{ $collection->name }}" class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" src="{{ $collection->image }}" loading="lazy">
-                        @else
-                            <div class="w-full h-full bg-gradient-to-br from-primary/30 to-primary/5"></div>
-                        @endif
+    </div>
 
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+    <div class="w-full max-w-[100vw] sm:max-w-7xl sm:mx-auto sm:px-6 lg:px-20">
+        <div id="collections-scroll" class="collections-scroll flex w-full sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-0 sm:gap-8 lg:gap-10 overflow-x-auto sm:overflow-visible overscroll-x-contain snap-x snap-mandatory sm:snap-none scroll-smooth touch-pan-x sm:touch-auto">
+            @foreach($featuredCollections as $idx => $collection)
+                <a href="{{ route('collections.show', $collection->slug) }}" class="collection-slide group block flex-[0_0_100%] w-full min-w-0 max-w-full snap-start box-border px-5 sm:flex-[unset] sm:px-0 sm:min-w-0 sm:max-w-none sm:w-auto" data-slide="{{ $idx }}">
+                        <div class="relative overflow-hidden rounded-2xl aspect-[3/4] mb-4 sm:mb-5 shadow-md shadow-slate-200/80 sm:shadow-sm bg-slate-100 ring-1 ring-slate-900/5">
+                            @if($collection->image)
+                                <img alt="{{ $collection->name }}" class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" src="{{ $collection->image }}" loading="lazy">
+                            @else
+                                <div class="w-full h-full bg-gradient-to-br from-primary/30 to-primary/5"></div>
+                            @endif
 
-                        <div class="absolute inset-x-0 bottom-0 p-6 translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-500">
-                            <div class="w-full py-3.5 bg-white text-slate-900 font-extrabold rounded-xl shadow-2xl hover:bg-primary hover:text-white transition-colors text-center">
-                                Shop the Collection
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-500"></div>
+
+                            <div class="absolute inset-x-0 bottom-0 p-4 sm:p-6 sm:translate-y-4 sm:group-hover:translate-y-0 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-500">
+                                <div class="w-full py-3 sm:py-3.5 bg-white text-slate-900 font-extrabold rounded-xl shadow-lg sm:shadow-2xl group-hover:bg-primary group-hover:text-white transition-colors text-center text-sm sm:text-base">
+                                    Shop the Collection
+                                </div>
+                            </div>
+
+                            <div class="absolute top-3 left-3 sm:top-4 sm:left-4 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                                <span class="inline-flex items-center px-2.5 py-1 sm:px-3 rounded-full bg-white/95 backdrop-blur text-slate-900 text-[11px] sm:text-xs font-extrabold shadow-sm">
+                                    {{ $collection->active_products_count }} items
+                                </span>
+                                @if($collection->featured)
+                                    <span class="inline-flex items-center px-2.5 py-1 sm:px-3 rounded-full bg-primary text-white text-[11px] sm:text-xs font-extrabold shadow-sm">
+                                        Featured
+                                    </span>
+                                @endif
                             </div>
                         </div>
 
-                        <div class="absolute top-4 left-4 flex items-center gap-2">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full bg-white/90 backdrop-blur text-slate-900 text-xs font-extrabold">
-                                {{ $collection->active_products_count }} items
-                            </span>
-                            @if($collection->featured)
-                                <span class="inline-flex items-center px-3 py-1 rounded-full bg-primary text-white text-xs font-extrabold">
-                                    Featured
-                                </span>
+                        <div class="text-center sm:px-4 pb-1 sm:pb-0">
+                            <h3 class="font-serif text-xl sm:text-3xl text-slate-900 mb-1.5 sm:mb-2 group-hover:text-primary-fg transition-colors line-clamp-2">
+                                {{ $collection->name }}
+                            </h3>
+
+                            @if($collection->description)
+                                <p class="text-slate-600 text-sm italic mb-0 sm:mb-3 line-clamp-2 leading-relaxed">{{ $collection->description }}</p>
+                            @else
+                                <p class="text-slate-600 text-sm italic mb-0 sm:mb-3">Curated sets designed to match your mood.</p>
                             @endif
+
+                            <span class="hidden sm:inline-block lg:hidden text-xs font-bold uppercase tracking-[0.2em] text-primary-fg border-b border-primary-fg/40 pb-1 group-hover:border-primary transition-all">
+                                View Series
+                            </span>
                         </div>
-                    </div>
-
-                    <div class="text-center px-4">
-                        <h3 class="font-serif text-2xl sm:text-3xl text-slate-900 mb-2 group-hover:text-primary-fg transition-colors line-clamp-2">
-                            {{ $collection->name }}
-                        </h3>
-
-                        @if($collection->description)
-                            <p class="text-slate-700 text-sm italic mb-3 line-clamp-2">{{ $collection->description }}</p>
-                        @else
-                            <p class="text-slate-700 text-sm italic mb-3">Curated sets designed to match your mood.</p>
-                        @endif
-
-                        <span class="inline-block text-xs font-bold uppercase tracking-[0.2em] text-primary-fg border-b border-primary-fg/40 pb-1 group-hover:border-primary transition-all lg:hidden">
-                            View Series
-                        </span>
-                    </div>
-                </a>
+                    </a>
             @endforeach
         </div>
-        <div class="text-center mt-8">
-            <a href="{{ route('collections.index') }}" class="text-primary-fg font-bold inline-flex items-center gap-2 hover:underline underline-offset-4">
-                View All Collections
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
-            </a>
+
+        @if($featuredCollections->count() > 1)
+        <div id="collections-dots" class="sm:hidden flex justify-center items-center gap-2 mt-5" role="tablist" aria-label="Collections">
+            @foreach($featuredCollections as $idx => $collection)
+                <button type="button" role="tab" class="collections-dot h-2 rounded-full transition-all duration-300 {{ $idx === 0 ? 'w-7 bg-primary' : 'w-2 bg-slate-300' }}" data-slide="{{ $idx }}" aria-label="{{ $collection->name }}" aria-selected="{{ $idx === 0 ? 'true' : 'false' }}"></button>
+            @endforeach
         </div>
+        @endif
+    </div>
+
+    <div class="px-4 sm:px-6 lg:px-20 max-w-7xl mx-auto text-center mt-8">
+        <a href="{{ route('collections.index') }}" class="text-primary-fg font-bold inline-flex items-center gap-2 hover:underline underline-offset-4">
+            View All Collections
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+        </a>
     </div>
 </section>
+<style>
+.collections-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+.collections-scroll::-webkit-scrollbar { display: none; }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var track = document.getElementById('collections-scroll');
+    var dotsWrap = document.getElementById('collections-dots');
+    if (!track || !dotsWrap) return;
+
+    var slides = track.querySelectorAll('.collection-slide');
+    var dots = dotsWrap.querySelectorAll('.collections-dot');
+    if (slides.length < 2) return;
+
+    function setActive(index) {
+        dots.forEach(function (dot, i) {
+            var active = i === index;
+            dot.classList.toggle('w-7', active);
+            dot.classList.toggle('bg-primary', active);
+            dot.classList.toggle('w-2', !active);
+            dot.classList.toggle('bg-slate-300', !active);
+            dot.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+    }
+
+    function activeIndexFromScroll() {
+        if (!track.clientWidth) return 0;
+        var index = Math.round(track.scrollLeft / track.clientWidth);
+        return Math.max(0, Math.min(slides.length - 1, index));
+    }
+
+    var scrollTimer;
+    track.addEventListener('scroll', function () {
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(function () {
+            setActive(activeIndexFromScroll());
+        }, 80);
+    }, { passive: true });
+
+    dots.forEach(function (dot) {
+        dot.addEventListener('click', function () {
+            var index = parseInt(this.dataset.slide, 10);
+            var slide = slides[index];
+            if (!slide) return;
+            track.scrollTo({ left: slide.offsetLeft, behavior: 'smooth' });
+            setActive(index);
+        });
+    });
+});
+</script>
 
 @php
     $seeItBlock = content_block('home.see_it_in_action', [
@@ -442,62 +505,71 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
     @endif
     <div class="max-w-7xl mx-auto">
-        <h2 class="text-3xl lg:text-4xl font-black text-center mb-12 px-2" data-content-field="heading">{{ $indulge['heading'] ?? 'Indulge in salon-quality at home' }}</h2>
-        <div class="flex flex-col items-center w-full min-w-0 px-2 sm:px-0">
-            <div class="bg-white/10 p-4 sm:p-6 rounded-2xl backdrop-blur-sm w-full max-w-sm border border-white/20 min-w-0">
-                <div class="relative rounded-xl overflow-hidden mb-6 aspect-square bg-primary/20 flex items-center justify-center w-full min-w-0" id="indulge-carousel">
-                    <div class="relative w-full h-full overflow-hidden rounded-xl">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 xl:gap-20 items-center min-w-0">
+            {{-- Carousel — chiếm nửa màn hình trên desktop --}}
+            <div class="relative w-full min-w-0 order-1">
+                <div class="relative rounded-2xl overflow-hidden aspect-[4/5] sm:aspect-[3/4] lg:aspect-square bg-primary/20 shadow-2xl shadow-black/30 border border-white/10" id="indulge-carousel">
+                    <div class="relative w-full h-full overflow-hidden">
                         @foreach($indulgeImages as $idx => $imgUrl)
                             @php
                                 $src = str_starts_with($imgUrl, 'http') ? $imgUrl : asset($imgUrl);
                                 $slideAlt = $indulgeImageAlts[$idx] ?? ($indulge['title'] ?? 'Premium Press-on Nails');
+                                $indulgeOpt640 = storage_image_resize_url($src, 640);
+                                $indulgeOpt960 = storage_image_resize_url($src, 960);
+                                $indulgeOpt1280 = storage_image_resize_url($src, 1280);
                             @endphp
-                            @php
-                                $indulgeOpt520 = storage_image_resize_url($src, 520);
-                                $indulgeOpt780 = storage_image_resize_url($src, 780);
-                            @endphp
-                            <div class="indulge-slide absolute inset-0 flex items-center justify-center transition-opacity duration-300 {{ $idx === 0 ? 'opacity-100 z-10' : 'opacity-0 z-0' }}" data-slide="{{ $idx }}">
-                                @if($indulgeOpt520)
-                                    <img alt="{{ $slideAlt }}" class="max-h-[85%] max-w-[90%] w-auto h-auto object-contain"
-                                         src="{{ $indulgeOpt520 }}"
-                                         @if($indulgeOpt780) srcset="{{ $indulgeOpt520 }} 520w, {{ $indulgeOpt780 }} 780w" @endif
-                                         sizes="(max-width: 640px) 88vw, 400px"
-                                         width="520" height="292" loading="{{ $idx === 0 ? 'eager' : 'lazy' }}" decoding="async">
+                            <div class="indulge-slide absolute inset-0 transition-opacity duration-300 {{ $idx === 0 ? 'opacity-100 z-10' : 'opacity-0 z-0' }}" data-slide="{{ $idx }}">
+                                @if($indulgeOpt640)
+                                    <img alt="{{ $slideAlt }}" class="w-full h-full object-cover"
+                                         src="{{ $indulgeOpt640 }}"
+                                         @if($indulgeOpt960 && $indulgeOpt1280) srcset="{{ $indulgeOpt640 }} 640w, {{ $indulgeOpt960 }} 960w, {{ $indulgeOpt1280 }} 1280w" @elseif($indulgeOpt960) srcset="{{ $indulgeOpt640 }} 640w, {{ $indulgeOpt960 }} 960w" @endif
+                                         sizes="(max-width: 1023px) 100vw, 50vw"
+                                         width="960" height="960" loading="{{ $idx === 0 ? 'eager' : 'lazy' }}" decoding="async">
                                 @else
-                                    <img alt="{{ $slideAlt }}" class="max-h-[85%] max-w-[90%] w-auto h-auto object-contain" src="{{ $src }}" loading="{{ $idx === 0 ? 'eager' : 'lazy' }}" decoding="async" sizes="(max-width: 640px) 88vw, 400px">
+                                    <img alt="{{ $slideAlt }}" class="w-full h-full object-cover" src="{{ $src }}" loading="{{ $idx === 0 ? 'eager' : 'lazy' }}" decoding="async" sizes="(max-width: 1023px) 100vw, 50vw">
                                 @endif
                             </div>
                         @endforeach
                     </div>
                     @if(count($indulgeImages) > 1)
-                        <button type="button" class="indulge-prev absolute left-2 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-white transition-colors" aria-label="Previous">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        <button type="button" class="indulge-prev absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-sm flex items-center justify-center text-white transition-colors" aria-label="Previous">
+                            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         </button>
-                        <button type="button" class="indulge-next absolute right-2 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-white transition-colors" aria-label="Next">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        <button type="button" class="indulge-next absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-sm flex items-center justify-center text-white transition-colors" aria-label="Next">
+                            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                         </button>
-                        <div class="absolute bottom-2 left-0 right-0 z-20 flex justify-center items-center gap-2">
+                        <div class="absolute bottom-3 sm:bottom-4 left-0 right-0 z-20 flex justify-center items-center gap-1.5">
                             @foreach($indulgeImages as $idx => $imgUrl)
-                                <button type="button" class="indulge-dot inline-flex min-w-11 min-h-11 items-center justify-center rounded-full touch-manipulation" data-slide="{{ $idx }}" aria-label="Slide {{ $idx + 1 }}">
-                                    <span class="indulge-dot-inner pointer-events-none block h-2.5 w-2.5 shrink-0 rounded-full transition-colors {{ $idx === 0 ? 'bg-white' : 'bg-white/40' }}" aria-hidden="true"></span>
+                                <button type="button" class="indulge-dot inline-flex min-w-10 min-h-10 items-center justify-center rounded-full touch-manipulation" data-slide="{{ $idx }}" aria-label="Slide {{ $idx + 1 }}">
+                                    <span class="indulge-dot-inner pointer-events-none block h-2 w-2 sm:h-2.5 sm:w-2.5 shrink-0 rounded-full transition-colors {{ $idx === 0 ? 'bg-white' : 'bg-white/40' }}" aria-hidden="true"></span>
                                 </button>
                             @endforeach
                         </div>
                     @endif
-                    <div class="absolute top-4 left-4 bg-white text-slate-900 text-[10px] font-bold py-1 px-3 rounded-full flex flex-col items-center z-20">FREE SHIPPING</div>
+                    <div class="absolute top-4 left-4 bg-white text-slate-900 text-[10px] sm:text-xs font-bold py-1.5 px-3 sm:px-4 rounded-full z-20 tracking-wide">FREE SHIPPING</div>
                 </div>
-                <a href="{{ $indulge['button_url'] ?? route('products.index') }}" class="block w-full py-4 bg-primary hover:bg-primary/90 text-white font-black rounded-lg text-lg mb-6 text-center transition-colors" data-content-field="button_url"><span data-content-field="button_label">{{ $indulge['button_label'] ?? 'SHOP NOW' }}</span></a>
-                <div class="text-center">
-                    <div class="flex flex-wrap justify-center items-center gap-x-1 gap-y-1 mb-2">
-                        <span class="flex text-amber-400" aria-hidden="true">
-                        @for($i = 0; $i < 5; $i++)
-                            <svg class="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-                        @endfor
-                        </span>
-                        <span class="text-sm font-bold text-white" data-content-field="review_text">{{ $indulge['review_text'] ?? '50k+ Reviews' }}</span>
-                    </div>
-                    <h3 class="text-xl font-bold mb-1" data-content-field="title">{{ $indulge['title'] ?? 'Premium Press-on Nails' }}</h3>
-                    <p class="text-white/80 text-sm" data-content-field="subtitle">{{ $indulge['subtitle'] ?? 'Complete set • Reusable • Easy to apply' }}</p>
+            </div>
+
+            {{-- Nội dung CTA — bên phải trên desktop --}}
+            <div class="flex flex-col gap-6 sm:gap-8 text-center lg:text-left min-w-0 order-2 px-1 sm:px-0">
+                <h2 class="text-3xl sm:text-4xl lg:text-5xl font-black leading-tight" data-content-field="heading">{{ $indulge['heading'] ?? 'Indulge in salon-quality at home' }}</h2>
+
+                <div class="flex flex-wrap justify-center lg:justify-start items-center gap-x-2 gap-y-1">
+                    <span class="flex text-amber-400" aria-hidden="true">
+                    @for($i = 0; $i < 5; $i++)
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                    @endfor
+                    </span>
+                    <span class="text-sm sm:text-base font-bold text-white/90" data-content-field="review_text">{{ $indulge['review_text'] ?? '50k+ Reviews' }}</span>
+                </div>
+
+                <div>
+                    <h3 class="text-2xl sm:text-3xl font-bold mb-2" data-content-field="title">{{ $indulge['title'] ?? 'Premium Press-on Nails' }}</h3>
+                    <p class="text-white/75 text-base sm:text-lg leading-relaxed max-w-md mx-auto lg:mx-0" data-content-field="subtitle">{{ $indulge['subtitle'] ?? 'Complete set • Reusable • Easy to apply' }}</p>
+                </div>
+
+                <div class="pt-2">
+                    <a href="{{ $indulge['button_url'] ?? route('products.index') }}" class="inline-block w-full sm:w-auto px-10 sm:px-14 py-4 sm:py-5 bg-primary hover:bg-primary/90 text-white font-black rounded-xl text-lg sm:text-xl text-center transition-all hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98]" data-content-field="button_url"><span data-content-field="button_label">{{ $indulge['button_label'] ?? 'SHOP NOW' }}</span></a>
                 </div>
             </div>
         </div>

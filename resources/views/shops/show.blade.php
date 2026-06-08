@@ -24,9 +24,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <main class="shop-page bg-background-light flex flex-col flex-1 px-4 md:px-20 lg:px-40 py-8 max-w-[1440px] mx-auto w-full pb-20">
     <!-- Shop Cover Banner -->
-    <div class="relative w-full aspect-[21/9] min-h-[200px] max-h-[380px] overflow-hidden rounded-xl -mx-4 md:-mx-20 lg:-mx-40 mt-0">
+    <div class="shop-cover-banner relative w-full h-[200px] sm:h-[240px] md:h-[300px] lg:h-[360px] overflow-hidden rounded-xl bg-slate-100">
         @if($shop->shop_banner)
-            <img alt="Shop Cover Banner" class="absolute inset-0 w-full h-full object-cover object-center" src="{{ $shop->shop_banner }}">
+            <img
+                alt="{{ $shop->shop_name }} cover"
+                class="absolute inset-0 block h-full w-full min-h-full min-w-full object-cover object-center"
+                src="{{ $shop->shop_banner }}"
+                decoding="async"
+                fetchpriority="high"
+            >
         @else
             <div class="absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5"></div>
         @endif
@@ -287,6 +293,10 @@ document.addEventListener('DOMContentLoaded', function() {
 <style>
     .shop-page {
         font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .shop-cover-banner img {
+        object-fit: cover;
+        object-position: center;
     }
     :root {
         --primary: #0297FE;

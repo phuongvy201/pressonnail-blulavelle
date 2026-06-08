@@ -164,31 +164,31 @@ class SearchController extends Controller
 
     /**
      * API autocomplete: products (name, description, category, variant), collections, shops; thêm gợi ý cụm từ từ tên sản phẩm.
+     * ?popular=1 — gợi ý sản phẩm nổi bật khi chưa gõ (mobile search overlay).
      */
     public function suggestions(Request $request)
     {
         $query = trim((string) $request->get('q', ''));
 
         if (strlen($query) < 2) {
+            if ($request->boolean('popular')) {
+                $products = Product::availableForDisplay()
+                    ->inRandomOrder()
+                    ->limit(6)
+                    ->get();
+
+                return response()->json([
+                    'items' => $products->map(fn ($product) => $this->mapProductToSuggestionItem($product))->values()->all(),
+                    'phrases' => [],
+                    'popular' => true,
+                ]);
+            }
+
             return response()->json(['items' => [], 'phrases' => []]);
         }
 
         $products = $this->searchService->buildProductSearchQuery($query, [], false, 12, 5);
-        $productItems = collect($products)->map(function ($product) {
-            $media = $product->getEffectiveMedia();
-            $img = null;
-            if (!empty($media)) {
-                $first = $media[0];
-                $img = is_string($first) ? $first : ($first['url'] ?? $first['path'] ?? null);
-            }
-            return [
-                'type' => 'product',
-                'name' => $product->name,
-                'image' => $img,
-                'price' => $product->price ?? $product->base_price ?? 0,
-                'url' => route('products.show', $product->slug),
-            ];
-        });
+        $productItems = collect($products)->map(fn ($product) => $this->mapProductToSuggestionItem($product));
 
         $collections = Collection::active()
             ->approved()
@@ -220,5 +220,23 @@ class SearchController extends Controller
             'items' => $productItems->concat($collections)->concat($shops)->values()->all(),
             'phrases' => $phrases,
         ]);
+    }
+
+    private function mapProductToSuggestionItem(Product $product): array
+    {
+        $media = $product->getEffectiveMedia();
+        $img = null;
+        if (! empty($media)) {
+            $first = $media[0];
+            $img = is_string($first) ? $first : ($first['url'] ?? $first['path'] ?? null);
+        }
+
+        return [
+            'type' => 'product',
+            'name' => $product->name,
+            'image' => $img,
+            'price' => $product->price ?? $product->base_price ?? 0,
+            'url' => route('products.show', $product->slug),
+        ];
     }
 }

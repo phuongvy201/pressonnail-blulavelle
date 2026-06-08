@@ -131,20 +131,23 @@
     </div>
 </header>
 
-<!-- Mobile Search Overlay (popup đè lên màn hình, chỉ mobile) -->
+<!-- Mobile Search Overlay (full screen, chỉ mobile) -->
 <div id="mobile-search-backdrop" class="fixed inset-0 bg-black/30 z-40 hidden sm:hidden transition-opacity" aria-hidden="true"></div>
-<div id="mobile-search" class="fixed top-0 left-0 right-0 z-50 hidden sm:hidden bg-white shadow-lg border-b border-primary/10 transform transition-transform duration-300 ease-out">
-    <div class="px-4 py-4 flex items-center gap-3">
-        <form action="{{ route('search') }}" method="GET" class="flex-1 relative">
+<div id="mobile-search" class="fixed inset-0 z-50 hidden sm:hidden bg-white flex flex-col transform transition-transform duration-300 ease-out" role="dialog" aria-label="Search">
+    <div class="px-4 py-3 flex items-center gap-3 border-b border-primary/10 flex-shrink-0 safe-area-top">
+        <form action="{{ route('search') }}" method="GET" id="mobile-search-form" class="flex-1 relative min-w-0">
             <label class="relative flex items-center">
-                <svg class="absolute left-3 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <input type="text" name="q" id="mobile-search-input" placeholder="Search styles..." value="{{ request('q') }}"
+                <svg class="absolute left-3 w-5 h-5 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="text" name="q" id="mobile-search-input" placeholder="Search styles..." value="{{ request('q') }}" autocomplete="off"
                        class="w-full pl-10 pr-4 py-2.5 rounded-full border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-primary focus:border-primary text-sm text-slate-900">
             </label>
         </form>
         <button type="button" id="mobile-search-close" class="p-2 hover:bg-primary/10 rounded-full transition-colors flex-shrink-0" aria-label="Đóng">
             <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
+    </div>
+    <div id="mobile-search-suggestions" class="flex-1 overflow-y-auto overscroll-contain px-2 py-2">
+        <div id="mobile-suggestions-content" class="p-1"></div>
     </div>
 </div>
 
@@ -309,12 +312,21 @@
             function closeMobileSearch() {
                 if (mobileSearchBackdrop) mobileSearchBackdrop.classList.add('hidden');
                 if (mobileSearch) mobileSearch.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
             }
             function openMobileSearch() {
                 if (mobileMenuBackdrop) mobileMenuBackdrop.classList.add('hidden');
                 if (mobileMenu) mobileMenu.classList.add('translate-x-full');
                 if (mobileSearchBackdrop) mobileSearchBackdrop.classList.remove('hidden');
                 if (mobileSearch) mobileSearch.classList.remove('hidden');
+                document.body.classList.add('overflow-hidden');
+                const mobileInput = document.getElementById('mobile-search-input');
+                if (mobileInput) {
+                    setTimeout(function() { mobileInput.focus(); }, 100);
+                    if (typeof loadMobileSearchSuggestions === 'function') {
+                        loadMobileSearchSuggestions(mobileInput.value.trim());
+                    }
+                }
             }
 
             if (mobileMenuBtn && mobileMenu) {
@@ -472,131 +484,198 @@
             });
         }
 
-        // Search Suggestions/Autocomplete
+        // Search Suggestions/Autocomplete (desktop + mobile)
+        const searchSuggestionsUrl = @json(route('search.suggestions'));
+        const searchResultsUrl = @json(route('search'));
         const searchInput = document.getElementById('search-input');
         const suggestionsContainer = document.getElementById('search-suggestions');
         const suggestionsContent = document.getElementById('suggestions-content');
-        let searchTimeout;
+        const mobileSearchInputEl = document.getElementById('mobile-search-input');
+        const mobileSuggestionsContent = document.getElementById('mobile-suggestions-content');
 
-        if (searchInput && suggestionsContainer) {
-            searchInput.addEventListener('input', function(e) {
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderSuggestionItemHtml(item, compact) {
+            const pad = compact ? 'p-3' : 'p-3';
+            const imgSize = compact ? 'w-14 h-14' : 'w-12 h-12';
+            const name = escapeHtml(item.name || '');
+
+            if (item.type === 'product') {
+                return `
+                    <a href="${item.url}" class="flex items-center gap-3 ${pad} hover:bg-gray-50 active:bg-gray-100 rounded-xl transition-colors">
+                        <div class="${imgSize} bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                            ${item.image ? `<img src="${item.image}" alt="${name}" class="w-full h-full object-cover" loading="lazy">` : '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">No img</div>'}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-gray-900 truncate">${name}</p>
+                            <p class="text-xs text-[#005366] font-bold">$${parseFloat(item.price || 0).toFixed(2)}</p>
+                        </div>
+                        <span class="flex-shrink-0 inline-flex items-center px-2 py-1 rounded-md text-[10px] font-medium bg-blue-100 text-blue-800">Product</span>
+                    </a>
+                `;
+            }
+            if (item.type === 'collection') {
+                return `
+                    <a href="${item.url}" class="flex items-center gap-3 ${pad} hover:bg-gray-50 active:bg-gray-100 rounded-xl transition-colors">
+                        <div class="${imgSize} bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                            ${item.image ? `<img src="${item.image}" alt="${name}" class="w-full h-full object-cover" loading="lazy">` : '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">No img</div>'}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-gray-900 truncate">${name}</p>
+                            <p class="text-xs text-gray-500">${item.products_count || 0} products</p>
+                        </div>
+                        <span class="flex-shrink-0 inline-flex items-center px-2 py-1 rounded-md text-[10px] font-medium bg-purple-100 text-purple-800">Collection</span>
+                    </a>
+                `;
+            }
+            if (item.type === 'shop') {
+                return `
+                    <a href="${item.url}" class="flex items-center gap-3 ${pad} hover:bg-gray-50 active:bg-gray-100 rounded-xl transition-colors">
+                        <div class="${imgSize} bg-gray-100 rounded-full overflow-hidden flex-shrink-0">
+                            ${item.image ? `<img src="${item.image}" alt="${name}" class="w-full h-full object-cover" loading="lazy">` : `<div class="w-full h-full flex items-center justify-center bg-[#005366] text-white font-bold">${name.charAt(0)}</div>`}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-gray-900 truncate">${name}</p>
+                        </div>
+                        <span class="flex-shrink-0 inline-flex items-center px-2 py-1 rounded-md text-[10px] font-medium bg-green-100 text-green-800">Shop</span>
+                    </a>
+                `;
+            }
+            return '';
+        }
+
+        function renderSuggestionsHtml(data, query, compact) {
+            const items = Array.isArray(data) ? data : (data.items || []);
+            const phrases = data.phrases || [];
+            const isPopular = !!data.popular;
+
+            if (items.length === 0 && phrases.length === 0) {
+                return '';
+            }
+
+            let html = '';
+
+            if (isPopular) {
+                html += '<div class="px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-500">Popular products</div>';
+            } else if (phrases.length > 0) {
+                html += '<div class="px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-500">Suggested</div>';
+                phrases.forEach(function(phrase) {
+                    const safe = escapeHtml(phrase);
+                    html += `<a href="${searchResultsUrl}?q=${encodeURIComponent(phrase)}" class="flex items-center px-3 py-2.5 hover:bg-gray-50 active:bg-gray-100 rounded-xl transition-colors text-sm text-slate-700">${safe}</a>`;
+                });
+                html += '<div class="border-t border-gray-200 my-2 mx-2"></div>';
+            }
+
+            if (!isPopular && items.length > 0 && phrases.length === 0) {
+                html += '<div class="px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-500">Products</div>';
+            }
+
+            items.forEach(function(item) {
+                html += renderSuggestionItemHtml(item, compact);
+            });
+
+            if (query && query.length >= 2) {
+                html += `
+                    <div class="border-t border-gray-200 mt-2 pt-2 mx-1">
+                        <a href="${searchResultsUrl}?q=${encodeURIComponent(query)}" class="block text-center text-sm text-[#0297FE] hover:text-[#d6386a] font-semibold p-3 hover:bg-gray-50 active:bg-gray-100 rounded-xl transition-colors">
+                            View all results for "${escapeHtml(query)}"
+                        </a>
+                    </div>
+                `;
+            }
+
+            return html;
+        }
+
+        function fetchSearchSuggestions(query, popular) {
+            const params = new URLSearchParams();
+            if (popular) {
+                params.set('popular', '1');
+            } else {
+                params.set('q', query);
+            }
+            return fetch(searchSuggestionsUrl + '?' + params.toString()).then(function(r) { return r.json(); });
+        }
+
+        function bindSearchAutocomplete(inputEl, contentEl, containerEl, compact) {
+            if (!inputEl || !contentEl) return;
+            let searchTimeout;
+
+            inputEl.addEventListener('input', function(e) {
                 const query = e.target.value.trim();
-                
-                // Clear previous timeout
                 clearTimeout(searchTimeout);
-                
+
                 if (query.length < 2) {
-                    suggestionsContainer.classList.add('hidden');
+                    if (compact) {
+                        loadMobileSearchSuggestions('');
+                    } else if (containerEl) {
+                        containerEl.classList.add('hidden');
+                    }
                     return;
                 }
-                
-                // Debounce search
-                searchTimeout = setTimeout(() => {
-                    fetch(`{{ route('search.suggestions') }}?q=${encodeURIComponent(query)}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            const items = Array.isArray(data) ? data : (data.items || []);
-                            const phrases = data.phrases || [];
-                            if (items.length === 0 && phrases.length === 0) {
-                                suggestionsContainer.classList.add('hidden');
+
+                searchTimeout = setTimeout(function() {
+                    fetchSearchSuggestions(query, false)
+                        .then(function(data) {
+                            const html = renderSuggestionsHtml(data, query, compact);
+                            if (!html) {
+                                if (containerEl) containerEl.classList.add('hidden');
+                                contentEl.innerHTML = '';
                                 return;
                             }
-                            
-                            let html = '';
-                            if (phrases.length > 0) {
-                                html += '<div class="px-2 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-500">Suggested</div>';
-                                phrases.forEach(phrase => {
-                                    html += `<a href="{{ route('search') }}?q=${encodeURIComponent(phrase)}" class="flex items-center p-2.5 hover:bg-gray-50 rounded-xl transition-colors text-sm text-slate-700">${phrase}</a>`;
-                                });
-                                html += '<div class="border-t border-gray-200 my-2"></div>';
-                            }
-                            
-                            items.forEach(item => {
-                                if (item.type === 'product') {
-                                    html += `
-                                        <a href="${item.url}" class="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-xl transition-colors">
-                                            <div class="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                                                ${item.image ? `<img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover">` : '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">No img</div>'}
-                                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-sm font-semibold text-gray-900 truncate">${item.name}</p>
-                                                <p class="text-xs text-[#005366] font-bold">$${parseFloat(item.price).toFixed(2)}</p>
-                                            </div>
-                                            <div class="flex-shrink-0">
-                                                <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
-                                                    Product
-                                                </span>
-                                            </div>
-                                        </a>
-                                    `;
-                                } else if (item.type === 'collection') {
-                                    html += `
-                                        <a href="${item.url}" class="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-xl transition-colors">
-                                            <div class="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                                                ${item.image ? `<img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover">` : '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">No img</div>'}
-                                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-sm font-semibold text-gray-900 truncate">${item.name}</p>
-                                                <p class="text-xs text-gray-500">${item.products_count} products</p>
-                                            </div>
-                                            <div class="flex-shrink-0">
-                                                <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-800">
-                                                    Collection
-                                                </span>
-                                            </div>
-                                        </a>
-                                    `;
-                                } else if (item.type === 'shop') {
-                                    html += `
-                                        <a href="${item.url}" class="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-xl transition-colors">
-                                            <div class="w-12 h-12 bg-gray-100 rounded-full overflow-hidden flex-shrink-0">
-                                                ${item.image ? `<img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center bg-[#005366] text-white font-bold">${item.name.charAt(0)}</div>`}
-                                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-sm font-semibold text-gray-900 truncate">${item.name}</p>
-                                            </div>
-                                            <div class="flex-shrink-0">
-                                                <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
-                                                    Shop
-                                                </span>
-                                            </div>
-                                        </a>
-                                    `;
-                                }
-                            });
-                            
-                            // Add "View all results" link
-                            html += `
-                                <div class="border-t border-gray-200 mt-2 pt-2">
-                                    <a href="{{ route('search') }}?q=${encodeURIComponent(query)}" class="block text-center text-sm text-[#0297FE] hover:text-[#d6386a] font-semibold p-3 hover:bg-gray-50 rounded-xl transition-colors">
-                                        View all results for "${query}"
-                                    </a>
-                                </div>
-                            `;
-                            
-                            suggestionsContent.innerHTML = html;
-                            suggestionsContainer.classList.remove('hidden');
+                            contentEl.innerHTML = html;
+                            if (containerEl) containerEl.classList.remove('hidden');
                         })
-                        .catch(error => {
+                        .catch(function(error) {
                             console.error('Search suggestions error:', error);
-                            suggestionsContainer.classList.add('hidden');
+                            if (containerEl) containerEl.classList.add('hidden');
                         });
-                }, 300); // 300ms debounce
+                }, 300);
             });
 
-            // Hide suggestions when clicking outside
+            if (!compact && containerEl) {
+                inputEl.addEventListener('focus', function() {
+                    if (this.value.trim().length >= 2 && contentEl.innerHTML !== '') {
+                        containerEl.classList.remove('hidden');
+                    }
+                });
+            }
+        }
+
+        window.loadMobileSearchSuggestions = function(query) {
+            if (!mobileSuggestionsContent) return;
+
+            const popular = !query || query.length < 2;
+            mobileSuggestionsContent.innerHTML = popular
+                ? '<div class="px-3 py-6 text-center text-sm text-slate-400">Loading suggestions…</div>'
+                : '';
+
+            fetchSearchSuggestions(query, popular)
+                .then(function(data) {
+                    const html = renderSuggestionsHtml(data, query, true);
+                    mobileSuggestionsContent.innerHTML = html || '<div class="px-3 py-8 text-center text-sm text-slate-500">No products found. Try another keyword.</div>';
+                })
+                .catch(function() {
+                    mobileSuggestionsContent.innerHTML = '<div class="px-3 py-8 text-center text-sm text-slate-500">Could not load suggestions.</div>';
+                });
+        };
+
+        if (searchInput && suggestionsContent) {
+            bindSearchAutocomplete(searchInput, suggestionsContent, suggestionsContainer, false);
+
             document.addEventListener('click', function(e) {
-                if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                if (suggestionsContainer && !searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
                     suggestionsContainer.classList.add('hidden');
                 }
             });
+        }
 
-            // Show suggestions when focusing search input if it has value
-            searchInput.addEventListener('focus', function() {
-                if (this.value.trim().length >= 2 && suggestionsContent.innerHTML !== '') {
-                    suggestionsContainer.classList.remove('hidden');
-                }
-            });
+        if (mobileSearchInputEl && mobileSuggestionsContent) {
+            bindSearchAutocomplete(mobileSearchInputEl, mobileSuggestionsContent, null, true);
         }
 
         // Update wishlist count

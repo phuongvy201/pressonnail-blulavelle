@@ -31,8 +31,8 @@
         $reviewsSlides = $reviews->chunk($perSlide)->values();
     }
 @endphp
-<section {{ $attributes->merge(['class' => 'px-4 sm:px-6 lg:px-20 py-16 sm:py-20 md:py-24 bg-white']) }} @if($bgCustom) style="background-color: {{ $bgCustom }};" @endif>
-    <div class="max-w-7xl mx-auto text-center">
+<section {{ $attributes->merge(['class' => 'py-16 sm:py-20 md:py-24 bg-white overflow-x-hidden']) }} @if($bgCustom) style="background-color: {{ $bgCustom }};" @endif>
+    <div class="px-4 sm:px-6 lg:px-20 max-w-7xl mx-auto text-center">
         <div class="flex justify-center text-primary mb-2">
             @for($i = 0; $i < 5; $i++)
                 <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
@@ -40,65 +40,50 @@
             <span class="ml-2 font-bold text-slate-900">{{ $rating }}</span>
         </div>
         <h2 class="text-3xl lg:text-5xl font-black text-slate-900 mb-4">{{ $title }}</h2>
-        <div class="mb-10 sm:mb-14">
+        <div class="mb-8 sm:mb-14">
             <a href="{{ $allReviewsHref }}"
                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold text-[#0297FE] border-2 border-[#0297FE]/35 bg-white hover:bg-[#0297FE]/8 transition-colors shadow-sm">
                 View all reviews
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </a>
         </div>
-        @if(isset($cards))
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
-                {{ $cards }}
+    </div>
+
+    @if(isset($cards))
+    <div class="px-4 sm:px-6 lg:px-20 max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+            {{ $cards }}
+        </div>
+    </div>
+    @elseif($reviews->isNotEmpty())
+        {{-- Mobile: vuốt ngang, 1 review / màn hình (căn giữa như Collections) --}}
+        <div class="md:hidden w-full max-w-[100vw]">
+            <div id="testimonials-mobile-scroll" class="testimonials-mobile-scroll flex w-full overflow-x-auto overscroll-x-contain snap-x snap-mandatory scroll-smooth touch-pan-x gap-0 pb-1">
+                @foreach($reviews as $idx => $review)
+                    <div class="testimonial-mobile-slide flex-[0_0_100%] w-full min-w-0 max-w-full snap-start box-border px-5" data-slide="{{ $idx }}">
+                        <x-testimonial-card compact :review="$review" />
+                    </div>
+                @endforeach
             </div>
-        @elseif($reviews->isNotEmpty())
-            @php
-                $getInitials = function($name) {
-                    $name = trim((string) $name);
-                    if ($name === '') return '?';
-                    $parts = preg_split('/\s+/', $name, 3);
-                    if (count($parts) >= 2) {
-                        return strtoupper(mb_substr($parts[0], 0, 1) . mb_substr($parts[1], 0, 1));
-                    }
-                    return strtoupper(mb_substr($name, 0, 2));
-                };
-            @endphp
+            @if($reviews->count() > 1)
+            <div id="testimonials-mobile-dots" class="flex justify-center items-center gap-2 mt-5 px-4" role="tablist" aria-label="Reviews">
+                @foreach($reviews as $idx => $review)
+                    <button type="button" role="tab" class="testimonials-mobile-dot h-2 rounded-full transition-all duration-300 {{ $idx === 0 ? 'w-7 bg-primary' : 'w-2 bg-slate-300' }}" data-slide="{{ $idx }}" aria-label="Review {{ $idx + 1 }}" aria-selected="{{ $idx === 0 ? 'true' : 'false' }}"></button>
+                @endforeach
+            </div>
+            @endif
+        </div>
+
+        {{-- Desktop: carousel 3 review / trang --}}
+        <div class="hidden md:block px-4 sm:px-6 lg:px-20 max-w-7xl mx-auto">
             <div class="relative testimonials-carousel">
                 <div class="overflow-hidden">
                     <div class="testimonials-slides flex transition-transform duration-300 ease-out" style="width: {{ $reviewsSlides->count() * 100 }}%">
-                        @foreach($reviewsSlides as $slideIndex => $slideReviews)
+                        @foreach($reviewsSlides as $slideReviews)
                             <div class="testimonials-slide flex-shrink-0 px-2" style="width: {{ 100 / $reviewsSlides->count() }}%">
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+                                <div class="grid grid-cols-3 gap-12">
                                     @foreach($slideReviews as $review)
-                                        @php
-                                            $hasImage = !empty($review->image_url);
-                                            $imgUrl = $hasImage ? (str_starts_with($review->image_url, 'http') ? $review->image_url : asset($review->image_url)) : '';
-                                            $cardTitle = $review->title ?? \Illuminate\Support\Str::limit($review->review_text ?? '', 40);
-                                            $initials = $getInitials($review->customer_name ?? $review->display_name ?? '');
-                                        @endphp
-                                        <div class="flex flex-col items-center">
-                                            <div class="relative rounded-2xl overflow-hidden mb-6 aspect-square shadow-md max-w-xs w-full mx-auto">
-                                                @if($hasImage)
-                                                    <img alt="{{ $review->display_name }}" class="w-full h-full object-cover"
-                                                         src="{{ optimized_local_img($imgUrl, 560) }}"
-                                                         sizes="(max-width: 768px) 88vw, 320px"
-                                                         width="560" height="560" loading="lazy" decoding="async">
-                                                @else
-                                                    <div class="w-full h-full bg-slate-200 flex items-center justify-center text-slate-500 text-4xl font-bold">{{ $initials }}</div>
-                                                @endif
-                                            </div>
-                                            <h3 class="text-xl font-extrabold mb-4 text-slate-900">{{ $cardTitle }}</h3>
-                                            <p class="text-slate-600 text-sm italic mb-6">"{{ $review->review_text ?? '' }}"</p>
-                                            <div class="flex flex-col items-center">
-                                                <div class="w-10 h-10 rounded-full bg-slate-200 mb-2 overflow-hidden flex items-center justify-center flex-shrink-0" aria-hidden="true">
-                                                    <span class="text-slate-600 text-sm font-bold">{{ $initials }}</span>
-                                                </div>
-                                                <p class="font-bold text-slate-900">{{ $review->display_name }}</p>
-                                                @if($review->is_verified_purchase)
-                                                    <p class="text-[10px] text-slate-600 flex items-center gap-1"><span class="text-primary">✓</span> Verified Buyer</p>
-                                                @endif
-                                            </div>
-                                        </div>
+                                        <x-testimonial-card :review="$review" />
                                     @endforeach
                                 </div>
                             </div>
@@ -134,8 +119,97 @@
                     </script>
                 @endif
             </div>
-        @else
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+        </div>
+
+        @once
+        <style>
+        .testimonials-mobile-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+        .testimonials-mobile-scroll::-webkit-scrollbar { display: none; }
+        </style>
+            <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var track = document.getElementById('testimonials-mobile-scroll');
+                var dotsWrap = document.getElementById('testimonials-mobile-dots');
+                if (!track || !dotsWrap) return;
+
+                var slides = track.querySelectorAll('.testimonial-mobile-slide');
+                var dots = dotsWrap.querySelectorAll('.testimonials-mobile-dot');
+                if (slides.length < 2) return;
+
+                function setActive(index) {
+                    dots.forEach(function (dot, i) {
+                        var active = i === index;
+                        dot.classList.toggle('w-7', active);
+                        dot.classList.toggle('bg-primary', active);
+                        dot.classList.toggle('w-2', !active);
+                        dot.classList.toggle('bg-slate-300', !active);
+                        dot.setAttribute('aria-selected', active ? 'true' : 'false');
+                    });
+                }
+
+                function activeIndexFromScroll() {
+                    if (!track.clientWidth) return 0;
+                    var index = Math.round(track.scrollLeft / track.clientWidth);
+                    return Math.max(0, Math.min(slides.length - 1, index));
+                }
+
+                var scrollTimer;
+                track.addEventListener('scroll', function () {
+                    clearTimeout(scrollTimer);
+                    scrollTimer = setTimeout(function () {
+                        setActive(activeIndexFromScroll());
+                    }, 80);
+                }, { passive: true });
+
+                dots.forEach(function (dot) {
+                    dot.addEventListener('click', function () {
+                        var index = parseInt(this.dataset.slide, 10);
+                        var slide = slides[index];
+                        if (!slide) return;
+                        track.scrollTo({ left: slide.offsetLeft, behavior: 'smooth' });
+                        setActive(index);
+                    });
+                });
+            });
+            </script>
+        @endonce
+    @else
+        <div class="md:hidden w-full max-w-[100vw]">
+            <div class="testimonials-mobile-scroll flex w-full overflow-x-auto overscroll-x-contain snap-x snap-mandatory scroll-smooth touch-pan-x gap-0 pb-1">
+                <div class="testimonial-mobile-slide flex-[0_0_100%] w-full min-w-0 max-w-full snap-start box-border px-5">
+                    <div class="bg-slate-50 rounded-2xl border border-slate-100 shadow-sm p-5 text-left h-full">
+                        <div class="relative rounded-xl overflow-hidden mb-4 aspect-[4/3] shadow-sm">
+                            <img alt="Customer Sarah" class="w-full h-full object-cover" loading="lazy" decoding="async" src="{{ optimized_local_img(asset('storage/images/c768ab6feb861eabf2beb33c0fb2cebc.jpg'), 560) }}">
+                        </div>
+                        <h3 class="text-base font-extrabold mb-2 text-slate-900">I'm totally blown away.</h3>
+                        <p class="text-slate-600 text-sm italic mb-4 line-clamp-4">"Salon quality at home was the dream. These press-on nails have changed the way I do my nails forever. So many compliments!"</p>
+                        <p class="font-bold text-slate-900 text-sm">Sarah F. <span class="text-[10px] font-normal text-slate-600">· ✓ Verified Buyer</span></p>
+                    </div>
+                </div>
+                <div class="testimonial-mobile-slide flex-[0_0_100%] w-full min-w-0 max-w-full snap-start box-border px-5">
+                    <div class="bg-slate-50 rounded-2xl border border-slate-100 shadow-sm p-5 text-left h-full">
+                        <div class="relative rounded-xl overflow-hidden mb-4 aspect-[4/3] shadow-sm">
+                            <img alt="Customer Susan" class="w-full h-full object-cover" loading="lazy" decoding="async" src="{{ optimized_local_img(asset('storage/images/44ad1fa40f4f3b0b55214cf29e1dd8a2.jpg'), 560) }}">
+                        </div>
+                        <h3 class="text-base font-extrabold mb-2 text-slate-900">Smooth, chic, and easy.</h3>
+                        <p class="text-slate-600 text-sm italic mb-4 line-clamp-4">"I've only been using these for a week, but they look amazing. Application was so easy. My nails have never looked better!"</p>
+                        <p class="font-bold text-slate-900 text-sm">Susan T. <span class="text-[10px] font-normal text-slate-600">· ✓ Verified Buyer</span></p>
+                    </div>
+                </div>
+                <div class="testimonial-mobile-slide flex-[0_0_100%] w-full min-w-0 max-w-full snap-start box-border px-5">
+                    <div class="bg-slate-50 rounded-2xl border border-slate-100 shadow-sm p-5 text-left h-full">
+                        <div class="relative rounded-xl overflow-hidden mb-4 aspect-[4/3] shadow-sm">
+                            <img alt="Customer Mariah" class="w-full h-full object-cover" loading="lazy" decoding="async" src="{{ optimized_local_img(asset('storage/images/1769484507_zFot4Im9WW.png'), 560) }}">
+                        </div>
+                        <h3 class="text-base font-extrabold mb-2 text-slate-900">You have to try this!</h3>
+                        <p class="text-slate-600 text-sm italic mb-4 line-clamp-4">"Money well spent! I can't believe what I used to pay for salon manicures. These do the same thing, minus the wait and the cost."</p>
+                        <p class="font-bold text-slate-900 text-sm">Mariah B. <span class="text-[10px] font-normal text-slate-600">· ✓ Verified Buyer</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="hidden md:block px-4 sm:px-6 lg:px-20 max-w-7xl mx-auto">
+            <div class="grid grid-cols-3 gap-12">
                 <div class="flex flex-col items-center">
                     <div class="relative rounded-2xl overflow-hidden mb-6 aspect-square shadow-md max-w-xs w-full mx-auto">
                         <img alt="Customer Sarah" class="w-full h-full object-cover" loading="lazy" decoding="async" sizes="(max-width: 768px) 88vw, 320px" width="560" height="560"
@@ -176,6 +250,6 @@
                     </div>
                 </div>
             </div>
-        @endif
-    </div>
+        </div>
+    @endif
 </section>

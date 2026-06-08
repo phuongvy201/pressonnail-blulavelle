@@ -322,6 +322,8 @@
     $checkoutOaiqEventId = 'checkout_started-' . session()->getId();
     $oaiqCheckoutAmountMinor = (int) round($checkoutTotal * 100);
     $oaiqCheckoutCurrency = strtoupper((string) ($currency ?? 'USD'));
+    $checkoutFbProductIds = collect($products)->map(fn ($item) => (string) ($item['product']->id ?? ''))->filter()->values()->all();
+    $checkoutFbNumItems = (int) collect($products)->sum(fn ($item) => max(1, (int) ($item['quantity'] ?? 1)));
 @endphp
 
 <script>
@@ -347,6 +349,7 @@ const CHECKOUT_REMOVE_PROMO_URL = @json(route('api.cart.remove-promo'));
 const CHECKOUT_APPLY_GIFT_CARD_URL = @json(route('api.cart.apply-gift-card'));
 const CHECKOUT_REMOVE_GIFT_CARD_URL = @json(route('api.cart.remove-gift-card'));
 const CHECKOUT_PROMO_DRAFT_KEY = 'checkout_promo_code_draft';
+const CHECKOUT_BEGIN_TRACKING_KEY = 'pressonnail_begin_checkout_' + @json(session()->getId());
 const CHECKOUT_GIFT_CARD_DRAFT_KEY = 'checkout_gift_card_draft';
 const CHECKOUT_CURRENCY_SYMBOL = @json(\App\Services\CurrencyService::getCurrencySymbol($currency ?? 'USD'));
 const SHIPPING_RATES = @json($shippingRatesData);
@@ -383,7 +386,12 @@ if (typeof window !== 'undefined' && window.console && !window.__PRESSONNailChec
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Event tracking: push GTM dataLayer và gọi gtag trực tiếp (nếu có)
+    if (sessionStorage.getItem(CHECKOUT_BEGIN_TRACKING_KEY)) {
+        return;
+    }
+    sessionStorage.setItem(CHECKOUT_BEGIN_TRACKING_KEY, '1');
+
+    // Event tracking: push GTM dataLayer và gọi gtag trực tiếp (nếu có) — once per tab session
     const checkoutItems = window.PRESSONNail_CHECKOUT_GA4_ITEMS || [];
     const beginCheckoutValue = Number({{ $convertedTotal ?? $checkoutTotal }}) || 0;
     if (typeof dataLayer !== 'undefined') {
@@ -447,6 +455,22 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (e) {
             if (window.__PRESSONNailCheckoutRawConsole && typeof window.__PRESSONNailCheckoutRawConsole.error === 'function') {
                 window.__PRESSONNailCheckoutRawConsole.error('oaiq checkout_started error:', e);
+            }
+        }
+    }
+
+    if (typeof fbq !== 'undefined' && @json(count($checkoutFbProductIds)) > 0) {
+        try {
+            fbq('track', 'InitiateCheckout', {
+                content_ids: @json($checkoutFbProductIds),
+                content_type: 'product',
+                value: beginCheckoutValue,
+                currency: @json($currency ?? 'USD'),
+                num_items: {{ $checkoutFbNumItems }}
+            });
+        } catch (e) {
+            if (window.__PRESSONNailCheckoutRawConsole && typeof window.__PRESSONNailCheckoutRawConsole.error === 'function') {
+                window.__PRESSONNailCheckoutRawConsole.error('fbq InitiateCheckout error:', e);
             }
         }
     }
@@ -1641,40 +1665,6 @@ function buildCheckoutCustomizationInputs(customizations) {
 <script>
 // Clear any cached data
 console.log('🔄 Loading checkout script...', new Date().toISOString());
-
-// Track Facebook Pixel InitiateCheckout event
-document.addEventListener('DOMContentLoaded', function() {
-    // Get cart data from localStorage
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    
-    if (cart.length > 0 && typeof fbq !== 'undefined') {
-        // Calculate cart total and collect product IDs
-        let cartTotal = 0;
-        const productIds = [];
-        
-        cart.forEach(item => {
-            const price = parseFloat(item.price) || 0;
-            const quantity = parseInt(item.quantity) || 1;
-            cartTotal += price * quantity;
-            productIds.push(item.id);
-        });
-        
-        // Track InitiateCheckout event
-        fbq('track', 'InitiateCheckout', {
-            content_ids: productIds,
-            content_type: 'product',
-            value: cartTotal.toFixed(2),
-            currency: 'USD',
-            num_items: cart.length
-        });
-        
-        console.log('✅ Facebook Pixel: InitiateCheckout tracked', {
-            items: cart.length,
-            total: cartTotal.toFixed(2),
-            ids: productIds
-        });
-    }
-});
 
 // Global currency variables - must be declared before functions that use them
 // Use window object to ensure they are truly global and accessible from all script tags
