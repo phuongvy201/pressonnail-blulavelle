@@ -21,7 +21,7 @@
         </div>
         
         <div class="mt-3 pt-3 border-t border-gray-200">
-            <p class="text-xs text-gray-400 text-center">Cập nhật mỗi 10 giây</p>
+            <p class="text-xs text-gray-400 text-center">Cập nhật mỗi 30 giây khi bật widget</p>
         </div>
     </div>
     
@@ -47,8 +47,9 @@ function toggleRealtimeWidget() {
 }
 
 function startRealtimeUpdates() {
+    stopRealtimeUpdates();
     fetchRealtimeData();
-    realtimeUpdateInterval = setInterval(fetchRealtimeData, 10000); // Cập nhật mỗi 10s
+    realtimeUpdateInterval = setInterval(fetchRealtimeData, 30000);
 }
 
 function stopRealtimeUpdates() {
@@ -112,17 +113,7 @@ function updateRealtimeDisplay(data) {
     }
 }
 
-// Khởi tạo khi trang load xong
-document.addEventListener('DOMContentLoaded', function() {
-    // Hiển thị widget sau 3 giây (tùy chọn)
-    setTimeout(() => {
-        widgetVisible = true;
-        document.getElementById('realtime-analytics-widget').classList.remove('hidden');
-        startRealtimeUpdates();
-    }, 3000);
-});
-
-// Cleanup khi rời khỏi trang
+// Widget ẩn mặc định — chỉ poll khi admin bật thủ công (toggleRealtimeWidget).
 window.addEventListener('beforeunload', function() {
     stopRealtimeUpdates();
 });

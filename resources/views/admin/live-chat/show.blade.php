@@ -104,7 +104,7 @@ document.addEventListener('alpine:init', function() {
             init() {
                 var self = this;
                 this.customerName = (this.$el && this.$el.getAttribute('data-customer-name')) || 'Customer';
-                this.pollInterval = setInterval(function() { self.fetchMessages(); }, 3000);
+                this.pollInterval = setInterval(function() { self.fetchMessages(); }, 15000);
             },
             destroy() {
                 if (this.pollInterval) clearInterval(this.pollInterval);

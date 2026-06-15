@@ -1345,11 +1345,10 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
             }
         });
 
-        function initCartDrawerUi() {
-            document.getElementById('cart-drawer-close') && document.getElementById('cart-drawer-close').addEventListener('click', closeCartDrawer);
-            getBackdrop() && getBackdrop().addEventListener('click', closeCartDrawer);
-
-            fetch(CART_GET_URL, {
+        var cartBootstrapPromise = null;
+        window.bootstrapStorefrontCart = function(force) {
+            if (!force && cartBootstrapPromise) return cartBootstrapPromise;
+            cartBootstrapPromise = fetch(CART_GET_URL, {
                 method: 'GET',
                 credentials: 'same-origin',
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
@@ -1359,8 +1358,15 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                     if (isStorefrontCartPayload(data) && typeof window.applyStorefrontCartResponse === 'function') {
                         window.applyStorefrontCartResponse(data, { renderDrawer: false });
                     }
+                    return data;
                 })
-                .catch(function() {});
+                .catch(function() { cartBootstrapPromise = null; return null; });
+            return cartBootstrapPromise;
+        };
+
+        function initCartDrawerUi() {
+            document.getElementById('cart-drawer-close') && document.getElementById('cart-drawer-close').addEventListener('click', closeCartDrawer);
+            getBackdrop() && getBackdrop().addEventListener('click', closeCartDrawer);
 
             var promoApplyBtn = document.getElementById('cart-drawer-promo-apply');
             var promoInput = document.getElementById('cart-drawer-promo-input');
@@ -1596,6 +1602,8 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         var pollTimer = null;
         var lastSeenMessageId = 0;
         var unreadCount = 0;
+        var POLL_MSG_OPEN = 15000;
+        var POLL_MSG_CLOSED = 60000;
 
         var panel = document.getElementById('live-chat-panel');
         var unreadBadge = document.getElementById('live-chat-unread-badge');
@@ -1670,9 +1678,20 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                 .catch(function() {});
         }
 
-        function startPolling() {
+        function isChatPanelOpen() {
+            return panel && !panel.classList.contains('hidden');
+        }
+
+        function scheduleMsgPolling() {
             if (pollTimer) clearInterval(pollTimer);
-            pollTimer = setInterval(fetchMessages, 3000);
+            pollTimer = null;
+            if (!conversationId) return;
+            var ms = isChatPanelOpen() ? POLL_MSG_OPEN : POLL_MSG_CLOSED;
+            pollTimer = setInterval(fetchMessages, ms);
+        }
+
+        function startPolling() {
+            scheduleMsgPolling();
         }
 
         function stopPolling() {
@@ -1692,11 +1711,12 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                 updateUnreadBadge();
                 fetchMessages();
             }
-            if (conversationId) startPolling();
+            if (conversationId) scheduleMsgPolling();
         });
         document.getElementById('live-chat-close').addEventListener('click', function() {
             panel.classList.add('hidden');
             setChatPanelBodyScroll(false);
+            if (conversationId) scheduleMsgPolling();
         });
         window.addEventListener('resize', function() {
             if (!isMobileChat() && document.body.style.overflow === 'hidden') document.body.style.overflow = '';
@@ -1757,6 +1777,8 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         });
 
         function prefillAndResume() {
+            if (window.__liveChatResumeDone) return;
+            window.__liveChatResumeDone = true;
             var guestForm = document.getElementById('live-chat-guest-form');
             var isGuestUi = guestForm && !guestForm.classList.contains('hidden');
 

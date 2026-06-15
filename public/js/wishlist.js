@@ -5,18 +5,36 @@
 
 class WishlistManager {
     constructor() {
+        this._lastPassiveFetchAt = 0;
+        this._passiveMinInterval = 60000;
         this.init();
     }
 
     init() {
         this.bindEvents();
-        // Tách fetch /wishlist/count + /wishlist/check khỏi cùng tick với parse script (chuỗi mạng).
         const self = this;
         const run = () => {
-            self.updateWishlistCount();
-            self.updateWishlistButtons();
+            self.refresh({ force: true });
         };
-        setTimeout(run, 400);
+        setTimeout(run, 2000);
+    }
+
+    refresh(options) {
+        options = options || {};
+        var force = !!options.force;
+        if (!force && this.shouldSkipPassiveFetch(false)) return;
+        if (!force) this.markPassiveFetch();
+        this.updateWishlistCount(true);
+        this.updateWishlistButtons(true);
+    }
+
+    shouldSkipPassiveFetch(force) {
+        if (force) return false;
+        return Date.now() - this._lastPassiveFetchAt < this._passiveMinInterval;
+    }
+
+    markPassiveFetch() {
+        this._lastPassiveFetchAt = Date.now();
     }
 
     /**
@@ -120,10 +138,7 @@ class WishlistManager {
                     this.showMessage(data.message, "success");
 
                     // Update button state
-                    this.updateWishlistButtons();
-
-                    // Update count
-                    this.updateWishlistCount();
+                    this.refresh({ force: true });
 
                     // Add animation
                     button.style.transform = "scale(1.2)";
@@ -271,7 +286,8 @@ class WishlistManager {
     /**
      * Update wishlist count display
      */
-    updateWishlistCount() {
+    updateWishlistCount(force) {
+        if (this.shouldSkipPassiveFetch(force)) return;
         // Get count from server
         fetch("/wishlist/count")
             .then((response) => response.json())
@@ -295,7 +311,8 @@ class WishlistManager {
     /**
      * Update wishlist button states
      */
-    updateWishlistButtons() {
+    updateWishlistButtons(force) {
+        if (this.shouldSkipPassiveFetch(force)) return;
         // Get all product IDs on the page
         const buttons = document.querySelectorAll("[data-wishlist-toggle]");
         const productIds = Array.from(buttons).map((btn) =>
@@ -405,8 +422,7 @@ class WishlistManager {
             .then((data) => {
                 if (data.success) {
                     console.log("Wishlist synced with server");
-                    this.updateWishlistCount();
-                    this.updateWishlistButtons();
+                    this.refresh({ force: true });
                 }
             })
             .catch((error) => {

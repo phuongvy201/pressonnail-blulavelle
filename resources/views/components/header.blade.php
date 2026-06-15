@@ -410,7 +410,13 @@
 
             updateHeaderCartCount();
             window.addEventListener('load', function () {
-                setTimeout(syncHeaderWithBackend, 1400);
+                setTimeout(function() {
+                    if (typeof window.bootstrapStorefrontCart === 'function') {
+                        window.bootstrapStorefrontCart();
+                    } else {
+                        syncHeaderWithBackend();
+                    }
+                }, 1400);
             }, { once: true });
         });
 
@@ -678,36 +684,5 @@
             bindSearchAutocomplete(mobileSearchInputEl, mobileSuggestionsContent, null, true);
         }
 
-        // Update wishlist count
-        function updateWishlistCount() {
-            // Always fetch from server (no localStorage)
-            fetch('{{ route("wishlist.count") }}')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const count = data.count;
-                        
-                        // Update header badge + menu wishlist count
-                        const mobileWishlistCount = document.getElementById('mobile-wishlist-count');
-                        const desktopWishlistCount = document.getElementById('desktop-wishlist-count');
-                        const menuWishlistCount = document.getElementById('mobile-menu-wishlist-count');
-                        
-                        [mobileWishlistCount, desktopWishlistCount, menuWishlistCount].forEach(element => {
-                            if (element) {
-                                element.textContent = count;
-                                element.style.display = count > 0 ? 'flex' : 'none';
-                            }
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Failed to fetch wishlist count:', error);
-                });
-        }
-
-        // Số wishlist: do public/js/wishlist.js tải sau idle (tránh chuỗi request quan trọng / trùng fetch).
-        // Listen for custom wishlist update event
-        window.addEventListener('wishlistUpdated', function() {
-            updateWishlistCount();
-        });
+        // Số wishlist: do public/js/wishlist.js (class .wishlist-count gồm cả badge header).
     </script>

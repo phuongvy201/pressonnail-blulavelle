@@ -456,7 +456,10 @@
         var lastSeenMessageId = 0;
         var pollConvTimer = null;
         var pollMsgTimer = null;
+        var pollBadgeTimer = null;
         var prevTotalUnread = -1;
+        var POLL_CONV_OPEN = 30000;
+        var POLL_CONV_BADGE = 120000;
 
         function triggerChatRing() {
             var wrap = document.getElementById('admin-live-chat-toggle-wrap');
@@ -568,38 +571,50 @@
         }
         function startPollMessages() {
             if (pollMsgTimer) clearInterval(pollMsgTimer);
-            pollMsgTimer = setInterval(fetchMessages, 3000);
+            pollMsgTimer = setInterval(fetchMessages, 15000);
         }
         function stopPollMessages() {
             if (pollMsgTimer) { clearInterval(pollMsgTimer); pollMsgTimer = null; }
+        }
+        function stopPollConversations() {
+            if (pollConvTimer) { clearInterval(pollConvTimer); pollConvTimer = null; }
+        }
+        function stopBadgePoll() {
+            if (pollBadgeTimer) { clearInterval(pollBadgeTimer); pollBadgeTimer = null; }
         }
         function fetchConversationsAndMaybeRender(cb) {
             fetchConversations(function(convs) {
                 if (!panel.classList.contains('hidden') && typeof cb === 'function') cb(convs);
             });
         }
-        function startPollConversations() {
-            if (pollConvTimer) clearInterval(pollConvTimer);
-            pollConvTimer = setInterval(function() { fetchConversationsAndMaybeRender(renderList); }, 5000);
+        function startBadgePoll() {
+            stopBadgePoll();
+            pollBadgeTimer = setInterval(function() { fetchConversations(); }, POLL_CONV_BADGE);
         }
-        function stopPollMessages() {
-            if (pollMsgTimer) { clearInterval(pollMsgTimer); pollMsgTimer = null; }
+        function startPollConversations() {
+            stopBadgePoll();
+            stopPollConversations();
+            pollConvTimer = setInterval(function() { fetchConversationsAndMaybeRender(renderList); }, POLL_CONV_OPEN);
         }
         document.getElementById('admin-live-chat-toggle').addEventListener('click', function() {
             panel.classList.toggle('hidden');
             if (!panel.classList.contains('hidden')) {
                 fetchConversations(function(convs) { renderList(convs); });
                 if (currentConversationId) fetchMessages();
+                startPollConversations();
             } else {
                 stopPollMessages();
+                stopPollConversations();
+                startBadgePoll();
                 var t = parseInt(badgeEl.textContent, 10) || 0;
                 prevTotalUnread = t;
             }
-            startPollConversations();
         });
         document.getElementById('admin-live-chat-close').addEventListener('click', function() {
             panel.classList.add('hidden');
             stopPollMessages();
+            stopPollConversations();
+            startBadgePoll();
             var t = parseInt(badgeEl.textContent, 10) || 0;
             prevTotalUnread = t;
         });
@@ -633,7 +648,7 @@
             }).catch(function() {}).finally(function() { sendBtn.disabled = false; });
         });
         fetchConversations();
-        startPollConversations();
+        startBadgePoll();
     })();
     </script>
     @endif
