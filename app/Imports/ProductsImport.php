@@ -9,7 +9,9 @@ use App\Services\OpenAIService;
 use App\Services\ProductMediaWebpService;
 use App\Services\ProductMediaKeywordsService;
 use App\Services\VideoThumbnailService;
+use App\Services\ProductImportProgress;
 use App\Services\GoogleSheetsProductExportService;
+use App\Services\GoogleDriveClient;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -47,14 +49,58 @@ class ProductsImport implements
     protected $progressKey = null; // Cache key for progress tracking
     protected $totalRows = 0; // Total rows to process
     protected $processedRows = 0; // Rows processed so far
+    protected bool $useQueueProgress = false;
 
     /**
      * Constructor
      */
-    public function __construct($user = null, $progressKey = null)
+    public function __construct($user = null, $progressKey = null, bool $useQueueProgress = false)
     {
         $this->user = $user ?? auth()->user();
         $this->progressKey = $progressKey ?? 'import_progress_' . uniqid();
+        $this->useQueueProgress = $useQueueProgress;
+    }
+
+    public function processRow(array $row): void
+    {
+        $this->model($row);
+    }
+
+    public static function finalizeFromProgress(string $progressKey): void
+    {
+        $variantQueue = ProductImportProgress::getVariantQueue($progressKey);
+        $slugs = ProductImportProgress::getSlugs($progressKey);
+
+        $import = new self(null, $progressKey);
+        $import->importedProducts = $variantQueue;
+        $import->slugsForGoogleSheetExport = $slugs;
+        $import->createVariantsForImportedProducts();
+        $import->syncImportedProductsToGoogleSheets();
+    }
+
+    /**
+     * @param  array{slug: string, template_id: int, template_variants: list<array{variant_name: string}>}|null  $variantMeta
+     */
+    protected function finishRow(bool $success, ?string $error = null, ?array $variantMeta = null, ?string $slug = null): void
+    {
+        if ($this->useQueueProgress) {
+            ProductImportProgress::recordRow($this->progressKey, $success, $error, $variantMeta, $slug);
+
+            return;
+        }
+
+        if ($success) {
+            $this->successCount++;
+            if ($variantMeta !== null) {
+                $this->importedProducts[] = $variantMeta;
+            }
+            if ($slug !== null) {
+                $this->slugsForGoogleSheetExport[] = $slug;
+            }
+        }
+
+        $this->processedRows++;
+        $this->updateProgress();
     }
 
     /**
@@ -78,23 +124,23 @@ class ProductsImport implements
 
             // If both template_id and product_name are empty, skip this row (empty row)
             if (empty($templateId) && empty($productName)) {
-                $this->processedRows++;
-                $this->updateProgress();
+                $this->finishRow(false);
+
                 return null;
             }
 
             // Validate required fields - if one is empty but the other is not, it's an error
             if (empty($templateId)) {
                 $this->errors[] = "Row " . ($productName ?: 'Unknown') . ": template_id is required";
-                $this->processedRows++;
-                $this->updateProgress();
+                $this->finishRow(false, "Row " . ($productName ?: 'Unknown') . ": template_id is required");
+
                 return null;
             }
 
             if (empty($productName)) {
                 $this->errors[] = "Row with template_id {$templateId}: product_name is required";
-                $this->processedRows++;
-                $this->updateProgress();
+                $this->finishRow(false, "Row with template_id {$templateId}: product_name is required");
+
                 return null;
             }
 
@@ -102,16 +148,16 @@ class ProductsImport implements
             $template = ProductTemplate::with('variants')->find($templateId);
             if (!$template) {
                 $this->errors[] = "Row " . ($productName ?: 'Unknown') . ": Template ID {$templateId} not found";
-                $this->processedRows++;
-                $this->updateProgress();
+                $this->finishRow(false, "Row " . ($productName ?: 'Unknown') . ": Template ID {$templateId} not found");
+
                 return null;
             }
 
             // Check ownership: Only admin can use any template, seller can only use their own
             if (!$this->user->hasRole('admin') && $template->user_id !== $this->user->id) {
                 $this->errors[] = "Row " . ($productName ?: 'Unknown') . ": You don't have permission to use Template ID {$templateId}";
-                $this->processedRows++;
-                $this->updateProgress();
+                $this->finishRow(false, "Row " . ($productName ?: 'Unknown') . ": You don't have permission to use Template ID {$templateId}");
+
                 return null;
             }
 
@@ -138,6 +184,17 @@ class ProductsImport implements
 
             // Collect and upload media to S3 (up to 8 images + 1 video)
             $mediaUrls = [];
+
+            $driveFolder = trim((string) ($row['drive_folder'] ?? ''));
+            $driveVideoImported = false;
+            if ($driveFolder !== '') {
+                $driveMedia = $this->importMediaFromDriveFolder($driveFolder, $productName, $slug, $uploadTs);
+                $mediaUrls = array_merge($mediaUrls, $driveMedia['images']);
+                if ($driveMedia['video'] !== null) {
+                    $mediaUrls[] = $driveMedia['video'];
+                    $driveVideoImported = true;
+                }
+            }
 
             // Process images (image_1 to image_8) - one at a time with delay to avoid rate limiting
             for ($i = 1; $i <= 8; $i++) {
@@ -187,8 +244,8 @@ class ProductsImport implements
                 }
             }
 
-            // Process video - with retry mechanism
-            if (!empty($row['video_url'])) {
+            // Process video - with retry mechanism (skip if already imported from drive folder)
+            if (! empty($row['video_url']) && ! $driveVideoImported) {
                 $videoUrl = trim($row['video_url']);
                 if (! filter_var($videoUrl, FILTER_VALIDATE_URL) && ! $this->isGoogleDriveUrl($videoUrl)) {
                     $this->errors[] = "Row " . ($productName ?: 'Unknown') . ": Invalid URL for video: {$videoUrl}";
@@ -242,8 +299,8 @@ class ProductsImport implements
             if ($existingProduct) {
                 $this->errors[] = "Row {$productName}: Product with this name and template already exists (ID: {$existingProduct->id})";
                 Log::warning("Skipping duplicate product: {$productName}, Template ID: {$templateId}, Existing ID: {$existingProduct->id}");
-                $this->processedRows++;
-                $this->updateProgress();
+                $this->finishRow(false, "Row {$productName}: Product with this name and template already exists (ID: {$existingProduct->id})");
+
                 return null;
             }
 
@@ -257,10 +314,10 @@ class ProductsImport implements
                     'shop_id' => $this->user->hasShop() ? $this->user->shop->id : null, // Shop ID
                     'name' => $productName,
                     'slug' => $slug,
-                    'sku' => $this->generateUniqueProductSku(),
+                    'sku' => $this->resolveProductSku($row),
                     'price' => $finalPrice,
                     'description' => $description,
-                    'quantity' => $row['quantity'] ?? 0,
+                    'quantity' => (int) ($row['quantity'] ?? 0),
                     'status' => $row['status'] ?? 'active',
                     // Mặc định bật affiliate cho sản phẩm import (trừ khi admin sửa tay sau đó).
                     'affiliate_eligible' => true,
@@ -269,21 +326,26 @@ class ProductsImport implements
                 // Ensure 'id' is not in the data (even if somehow included)
                 unset($productData['id']);
 
-                // Generate meta keywords via AI (best-effort; never fail import)
-                try {
-                    /** @var OpenAIService $ai */
-                    $ai = app(OpenAIService::class);
-                    $keywords = $ai->extractKeywords($productName);
-                    if (!empty($keywords)) {
-                        $productData['meta_keywords'] = implode(', ', $keywords);
+                // meta_keywords: ưu tiên cột import (TAG), không thì AI — cột DB varchar(255)
+                $importKeywords = trim((string) ($row['meta_keywords'] ?? ''));
+                if ($importKeywords !== '') {
+                    $productData['meta_keywords'] = Str::limit($importKeywords, 255, '');
+                } else {
+                    try {
+                        /** @var OpenAIService $ai */
+                        $ai = app(OpenAIService::class);
+                        $keywords = $ai->extractKeywords($productName);
+                        if (!empty($keywords)) {
+                            $productData['meta_keywords'] = Str::limit(implode(', ', $keywords), 255, '');
+                        }
+                    } catch (\Throwable $e) {
+                        Log::warning('ProductsImport: AI keyword generation failed (continuing import).', [
+                            'product_name' => $productName,
+                            'template_id' => $templateId,
+                            'exception' => get_class($e),
+                            'message' => $e->getMessage(),
+                        ]);
                     }
-                } catch (\Throwable $e) {
-                    Log::warning('ProductsImport: AI keyword generation failed (continuing import).', [
-                        'product_name' => $productName,
-                        'template_id' => $templateId,
-                        'exception' => get_class($e),
-                        'message' => $e->getMessage(),
-                    ]);
                 }
 
                 $productData['media'] = $mediaUrls !== []
@@ -293,35 +355,31 @@ class ProductsImport implements
                     )
                     : null;
 
-                // Create product - variants will be created after import completes
+                // Lưu ngay tại đây — ToModel flush gọi saveOrFail sau model() dễ fail im lặng qua SkipsOnError
                 $product = new Product($productData);
+                $product->saveOrFail();
 
-                // Store template info for creating variants after import (batch insert doesn't trigger created event)
+                // Store template info for creating variants after import (phòng khi created event không chạy)
+                $variantMeta = null;
                 if ($template->variants && $template->variants->count() > 0) {
-                    // Only store essential data from variants, not the whole collection
-                    // This prevents serialization issues and ensures we only get attributes
-                    // Store only variant names - we'll query attributes from database when creating variants (same as ProductController)
-                    // This ensures we always get fresh, clean attributes from database
                     $variantsData = [];
                     foreach ($template->variants as $tv) {
                         $variantsData[] = [
                             'variant_name' => $tv->variant_name,
-                            // Don't store attributes here - query fresh from database when creating variants
                         ];
                     }
 
-                    $this->importedProducts[] = [
+                    $variantMeta = [
                         'slug' => $slug,
                         'template_id' => $templateId,
-                        'template_variants' => $variantsData, // Store only essential data
+                        'template_variants' => $variantsData,
                     ];
                 }
 
-                $this->successCount++;
-                $this->slugsForGoogleSheetExport[] = $slug;
-                $this->processedRows++;
-                $this->updateProgress();
-                return $product;
+                $this->finishRow(true, null, $variantMeta, $slug);
+
+                // Đã saveOrFail ở trên — tránh Maatwebsite ToModel gọi save lần nữa
+                return null;
             } catch (QueryException $e) {
                 // Handle duplicate entry or other database errors
                 if ($e->getCode() == 23000) { // Integrity constraint violation
@@ -333,8 +391,8 @@ class ProductsImport implements
                         $this->errors[] = "Row {$productName}: Database error - " . $errorMessage;
                         Log::error("Database error for product: {$productName}, Error: " . $errorMessage);
                     }
-                    $this->processedRows++;
-                    $this->updateProgress();
+                    $this->finishRow(false, end($this->errors) ?: 'Database error');
+
                     return null;
                 }
                 throw $e; // Re-throw if it's a different error
@@ -343,8 +401,8 @@ class ProductsImport implements
             $productName = isset($row['product_name']) ? trim((string)$row['product_name']) : 'Unknown';
             $this->errors[] = "Row " . ($productName ?: 'Unknown') . ": {$e->getMessage()}";
             Log::error("Import error: " . $e->getMessage());
-            $this->processedRows++;
-            $this->updateProgress();
+            $this->finishRow(false, "Row " . ($productName ?: 'Unknown') . ": {$e->getMessage()}");
+
             return null;
         }
     }
@@ -359,6 +417,8 @@ class ProductsImport implements
         return [
             'template_id' => 'nullable|exists:product_templates,id',
             'product_name' => 'nullable|string|max:255',
+            'sku' => 'nullable|string|max:100',
+            'meta_keywords' => 'nullable|string|max:2000',
             'price' => 'nullable|numeric',
             'description' => 'nullable|string',
             'quantity' => 'nullable|integer|min:0',
@@ -372,6 +432,7 @@ class ProductsImport implements
             'image_7' => 'nullable|string|max:2048',
             'image_8' => 'nullable|string|max:2048',
             'video_url' => 'nullable|string|max:2048',
+            'drive_folder' => 'nullable|string|max:2048',
         ];
     }
 
@@ -381,6 +442,10 @@ class ProductsImport implements
     public function onError(\Throwable $e)
     {
         $this->errors[] = $e->getMessage();
+        Log::error('ProductsImport: lỗi khi lưu dòng import', [
+            'message' => $e->getMessage(),
+            'exception' => get_class($e),
+        ]);
     }
 
     /**
@@ -442,6 +507,10 @@ class ProductsImport implements
      */
     protected function updateProgress(): void
     {
+        if ($this->useQueueProgress) {
+            return;
+        }
+
         // If total rows is 0, estimate based on processed rows
         $estimatedTotal = $this->totalRows;
         if ($estimatedTotal == 0 && $this->processedRows > 0) {
@@ -531,6 +600,10 @@ class ProductsImport implements
                 }
             },
             AfterImport::class => function (AfterImport $event) {
+                if ($this->useQueueProgress) {
+                    return;
+                }
+
                 // After all products are imported, create variants for them
                 // This is needed because batch insert doesn't trigger created event
                 // Only create variants once (defensive guard)
@@ -879,6 +952,161 @@ class ProductsImport implements
         return ProductMediaWebpService::imageUrlToMediaItemWithWebp(Storage::disk('s3'), $s3Url);
     }
 
+    /**
+     * Tải media từ folder Google Drive: giải nén zip (ảnh) + video qua Drive API.
+     *
+     * @return array{images: list<string|array>, video: array|null}
+     */
+    protected function importMediaFromDriveFolder(
+        string $driveFolder,
+        string $productName,
+        string $slug,
+        int $uploadTs
+    ): array {
+        /** @var GoogleDriveClient $driveClient */
+        $driveClient = app(GoogleDriveClient::class);
+
+        if (! $driveClient->isConfigured()) {
+            $this->errors[] = "Row {$productName}: Google Drive chưa cấu hình — không tải được LINK DRIVE.";
+
+            return ['images' => [], 'video' => null];
+        }
+
+        try {
+            $resolved = $driveClient->resolveFolderMedia($driveFolder, 8);
+        } catch (\Throwable $e) {
+            $this->errors[] = "Row {$productName}: không đọc được LINK DRIVE — ".$e->getMessage();
+
+            return ['images' => [], 'video' => null];
+        }
+
+        $images = [];
+        $imageIndex = 1;
+
+        if ($resolved['archive'] !== null) {
+            $archive = $resolved['archive'];
+            $extractDir = null;
+            try {
+                $extracted = $driveClient->extractImagesFromArchive($archive['id'], $archive['name'], 8);
+                foreach ($extracted as $image) {
+                    if ($imageIndex > 8) {
+                        break;
+                    }
+                    $extractDir = $image['extract_dir'] ?? $extractDir;
+                    $safeSlug = Str::slug($slug) ?: 'product';
+                    $fileName = $safeSlug.'-'.$uploadTs.'-'.str_pad((string) $imageIndex, 2, '0', STR_PAD_LEFT).'.'.($image['extension'] ?? 'jpg');
+                    $s3Url = $this->putReadableLocalFileToS3($image['local_path'], $fileName);
+                    if ($s3Url) {
+                        $images[] = $this->withWebpMediaItem($s3Url);
+                        $imageIndex++;
+                    }
+                    if (isset($image['local_path']) && is_file($image['local_path'])) {
+                        @unlink($image['local_path']);
+                    }
+                }
+                if ($extracted === []) {
+                    $this->errors[] = "Row {$productName}: file nén «{$archive['name']}» không chứa ảnh hợp lệ.";
+                }
+            } catch (\Throwable $e) {
+                $this->errors[] = "Row {$productName}: không giải nén được «{$archive['name']}» — ".$e->getMessage();
+            } finally {
+                if ($extractDir !== null) {
+                    $driveClient->cleanupExtractDirectory($extractDir);
+                }
+            }
+        }
+
+        foreach ($resolved['images'] as $file) {
+            if ($imageIndex > 8) {
+                break;
+            }
+            $tmp = null;
+            try {
+                $tmp = $driveClient->downloadFileToTemp($file['id'], 10 * 1024 * 1024);
+                $ext = strtolower((string) pathinfo($file['name'], PATHINFO_EXTENSION));
+                $safeSlug = Str::slug($slug) ?: 'product';
+                $fileName = $safeSlug.'-'.$uploadTs.'-'.str_pad((string) $imageIndex, 2, '0', STR_PAD_LEFT).'.'.($ext ?: 'jpg');
+                $s3Url = $this->putReadableLocalFileToS3($tmp, $fileName);
+                if ($s3Url) {
+                    $images[] = $this->withWebpMediaItem($s3Url);
+                    $imageIndex++;
+                }
+            } catch (\Throwable $e) {
+                Log::warning('ProductsImport: không tải ảnh rời từ Drive', [
+                    'product' => $productName,
+                    'file' => $file['name'],
+                    'error' => $e->getMessage(),
+                ]);
+            } finally {
+                if ($tmp !== null && is_file($tmp)) {
+                    @unlink($tmp);
+                }
+            }
+        }
+
+        $videoItem = null;
+        if ($resolved['video'] !== null) {
+            $videoItem = $this->uploadVideoFromDriveFile(
+                $resolved['video']['id'],
+                $resolved['video']['name'],
+                $productName,
+                $slug,
+                9,
+                $uploadTs
+            );
+        } elseif ($resolved['archive'] === null && $images === []) {
+            $this->errors[] = "Row {$productName}: folder Drive không có file zip ảnh, ảnh rời hoặc video.";
+        }
+
+        return ['images' => $images, 'video' => $videoItem];
+    }
+
+    protected function uploadVideoFromDriveFile(
+        string $fileId,
+        string $fileName,
+        string $productName,
+        string $slug,
+        int $index,
+        int $uploadTs
+    ): ?array {
+        /** @var GoogleDriveClient $driveClient */
+        $driveClient = app(GoogleDriveClient::class);
+        $tmp = null;
+        $tmpBase = null;
+
+        try {
+            $ext = strtolower((string) pathinfo($fileName, PATHINFO_EXTENSION));
+            if (! in_array($ext, ['mp4', 'mov', 'webm', 'mkv', 'mpeg', 'avi'], true)) {
+                $ext = 'mp4';
+            }
+            $tmpBase = tempnam(sys_get_temp_dir(), 'import_video_');
+            if ($tmpBase === false) {
+                throw new \RuntimeException('Không tạo được file tạm cho video.');
+            }
+            $tmp = $tmpBase.'.'.$ext;
+            $driveClient->downloadToFile($fileId, $tmp);
+
+            $done = $this->finalizeVideoUploadToS3($tmp, $ext, 'drive:'.$fileId, $slug, $index, $uploadTs);
+
+            return $done['media'] ?? null;
+        } catch (\Throwable $e) {
+            $this->errors[] = "Row {$productName}: không tải được video từ Drive — ".$e->getMessage();
+            Log::warning('ProductsImport: video Drive upload failed', [
+                'file_id' => $fileId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        } finally {
+            if ($tmp !== null && file_exists($tmp)) {
+                @unlink($tmp);
+            }
+            if ($tmpBase !== null && file_exists($tmpBase)) {
+                @unlink($tmpBase);
+            }
+        }
+    }
+
     protected function isGoogleDriveUrl(string $url): bool
     {
         return str_contains($url, 'drive.google.com');
@@ -917,6 +1145,28 @@ class ProductsImport implements
             Log::warning('ProductsImport: không parse được file ID từ Google Drive URL', ['url' => $shareUrl]);
 
             return null;
+        }
+
+        /** @var GoogleDriveClient $driveClient */
+        $driveClient = app(GoogleDriveClient::class);
+        if ($driveClient->isConfigured()) {
+            try {
+                $content = $driveClient->downloadFileContent($fileId, $maxBytes);
+                $extension = $forVideo ? 'mp4' : 'jpg';
+                $detected = $this->detectExtensionFromContent($content);
+                if ($forVideo && in_array($detected, ['mp4', 'mov'], true)) {
+                    $extension = $detected;
+                } elseif (! $forVideo && in_array($detected, ['jpg', 'png', 'gif', 'webp'], true)) {
+                    $extension = $detected;
+                }
+
+                return ['content' => $content, 'extension' => $extension];
+            } catch (\Throwable $e) {
+                Log::warning('ProductsImport: Drive API download failed, thử HTTP fallback', [
+                    'file_id' => $fileId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         $downloadUrl = 'https://drive.google.com/uc?export=download&id='.$fileId;
@@ -1757,5 +2007,22 @@ class ProductsImport implements
         } while (Product::where('sku', $sku)->exists());
 
         return $sku;
+    }
+
+    /**
+     * Dùng SKU từ sheet nếu có và chưa tồn tại; không thì sinh mới.
+     */
+    protected function resolveProductSku(array $row): string
+    {
+        $requested = strtoupper(trim((string) ($row['sku'] ?? '')));
+        if ($requested === '') {
+            return $this->generateUniqueProductSku();
+        }
+
+        if (Product::where('sku', $requested)->exists()) {
+            throw new \RuntimeException("SKU «{$requested}» đã tồn tại");
+        }
+
+        return $requested;
     }
 }

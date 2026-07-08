@@ -3,17 +3,21 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Imports\ProductsImport;
+use App\Jobs\RunProductImportJob;
 use App\Models\ProductTemplate;
+use App\Services\GoogleSheetsProductImportService;
+use App\Services\ProductImportCsvReader;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
-use Maatwebsite\Excel\Facades\Excel;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class ProductImportController extends Controller
 {
+    public function __construct(
+        private GoogleSheetsProductImportService $googleSheetsImport
+    ) {}
+
     /**
      * Show import form
      */
@@ -31,7 +35,9 @@ class ProductImportController extends Controller
                 ->get();
         }
 
-        return view('admin.products.import', compact('templates'));
+        $sheetsConfigured = $this->googleSheetsImport->isConfigured();
+
+        return view('admin.products.import', compact('templates', 'sheetsConfigured'));
     }
 
     /**
@@ -110,6 +116,94 @@ class ProductImportController extends Controller
     }
 
     /**
+     * Import products from Google Sheet
+     */
+    public function importFromGoogleSheet(Request $request)
+    {
+        $isAjax = $request->ajax() || $request->wantsJson();
+
+        try {
+            $validated = $request->validate([
+                'template_id' => 'required|integer|exists:product_templates,id',
+                'spreadsheet_url' => 'required|string|max:2048',
+                'sheet_name' => 'nullable|string|max:255',
+                'header_row' => 'nullable|integer|min:1|max:1000',
+                'row_from' => 'required|integer|min:1|max:10000',
+                'row_to' => 'required|integer|min:1|max:10000|gte:row_from',
+                'default_quantity' => 'nullable|integer|min:0|max:999999',
+                'default_status' => 'nullable|in:active,draft,inactive',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($isAjax) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Validation failed: '.implode(', ', array_map(
+                        fn ($msgs) => is_array($msgs) ? implode(', ', $msgs) : (string) $msgs,
+                        array_values($e->errors())
+                    )),
+                    'errors' => $e->errors(),
+                ], 422);
+            }
+            throw $e;
+        }
+
+        $importPath = null;
+
+        try {
+            $template = ProductTemplate::findOrFail((int) $validated['template_id']);
+            $user = auth()->user();
+            if (! $user->hasRole('admin') && $template->user_id !== $user->id) {
+                throw new \RuntimeException('Bạn không có quyền dùng template này.');
+            }
+
+            $result = $this->googleSheetsImport->buildImportCsv(
+                $validated['spreadsheet_url'],
+                (int) $validated['template_id'],
+                $validated['sheet_name'] ?? null,
+                (int) ($validated['header_row'] ?? 1),
+                (int) $validated['row_from'],
+                (int) $validated['row_to'],
+                [
+                    'default_quantity' => (int) ($validated['default_quantity'] ?? 0),
+                    'default_status' => $validated['default_status'] ?? 'active',
+                ]
+            );
+
+            $importPath = $result['path'];
+            $totalRows = $result['total_rows'];
+
+            Log::info('Google Sheet import prepared', [
+                'template_id' => $validated['template_id'],
+                'sheet_title' => $result['sheet_title'],
+                'total_rows' => $totalRows,
+                'row_from' => $validated['row_from'],
+                'row_to' => $validated['row_to'],
+            ]);
+
+            return $this->runImportFromPath($importPath, 'csv', $totalRows, $request);
+        } catch (\Throwable $e) {
+            if (is_string($importPath) && file_exists($importPath)) {
+                @unlink($importPath);
+            }
+
+            Log::error('Google Sheet import exception: '.$e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            if ($isAjax) {
+                return response()->json([
+                    'success' => false,
+                    'error' => $e->getMessage(),
+                ], 500);
+            }
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Import từ Google Sheet thất bại: '.$e->getMessage());
+        }
+    }
+
+    /**
      * Process import file
      */
     public function import(Request $request)
@@ -133,9 +227,6 @@ class ProductImportController extends Controller
         }
 
         try {
-            // Generate unique progress key
-            $progressKey = 'import_progress_' . uniqid();
-
             $file = $request->file('file');
             [$importPath, $deleteImportFile] = $this->resolveImportFilePath($file);
 
@@ -146,117 +237,11 @@ class ProductImportController extends Controller
             $extension = strtolower((string) $file->getClientOriginalExtension());
 
             try {
-                // Count total rows (excluding header) - memory efficient
-                $totalRows = $this->countRowsFromPath($importPath, $extension, $file);
+                $totalRows = $extension === 'csv'
+                    ? app(ProductImportCsvReader::class)->countDataRows($importPath)
+                    : $this->countRowsFromPath($importPath, $extension, $file);
 
-                // Ensure totalRows is at least 1
-                if ($totalRows < 1) {
-                    $totalRows = 1;
-                }
-
-                Log::info("Starting import", [
-                    'total_rows' => $totalRows,
-                    'progress_key' => $progressKey,
-                    'file_size' => $file->getSize(),
-                    'file_type' => $extension,
-                    'import_path' => $importPath,
-                ]);
-
-                // Create import instance with progress key
-                $import = new ProductsImport(auth()->user(), $progressKey);
-                $import->setTotalRows($totalRows);
-
-                // Maatwebsite Excel on Windows needs a real file path (not UploadedFile — getRealPath() is empty).
-                $importTarget = $importPath;
-
-            // If AJAX request, return progress key immediately
-            if ($request->ajax() || $request->wantsJson()) {
-                // Return progress key immediately so frontend can start polling
-                // Import will run synchronously but progress will be updated via cache
-                $response = response()->json([
-                    'success' => true,
-                    'progress_key' => $progressKey,
-                    'completed' => false, // Will be updated via polling
-                    'message' => 'Import started. Please wait...',
-                ]);
-
-                // If FastCGI is available, finish request and continue processing
-                if (function_exists('fastcgi_finish_request')) {
-                    $response->sendHeaders();
-                    $response->sendContent();
-                    fastcgi_finish_request();
-
-                    // Continue import in background
-                    try {
-                        Excel::import($import, $importTarget);
-                        $errors = $import->getErrors();
-                        $successCount = $import->getSuccessCount();
-                        $import->markCompleted();
-                    } catch (\Throwable $e) {
-                        $import->markFailed($e->getMessage());
-                        Log::error("Import failed: " . $e->getMessage());
-                    } finally {
-                        if ($deleteImportFile) {
-                            @unlink($importPath);
-                        }
-                    }
-                    return $response;
-                } else {
-                    // For non-FastCGI, run import synchronously but return response first
-                    // Start import in a way that allows progress updates
-                    try {
-                        Excel::import($import, $importTarget);
-                        $errors = $import->getErrors();
-                        $successCount = $import->getSuccessCount();
-                        $import->markCompleted();
-
-                        // Update response with final results
-                        return response()->json([
-                            'success' => true,
-                            'progress_key' => $progressKey,
-                            'completed' => true,
-                            'success_count' => $successCount,
-                            'error_count' => count($errors),
-                            'errors' => array_slice($errors, 0, 10),
-                            'message' => "Successfully imported {$successCount} products!" . (count($errors) > 0 ? " (" . count($errors) . " errors)" : ''),
-                        ]);
-                    } catch (\Throwable $e) {
-                        $import->markFailed($e->getMessage());
-
-                        return response()->json([
-                            'success' => false,
-                            'progress_key' => $progressKey,
-                            'error' => 'Import failed: ' . $e->getMessage(),
-                        ], 500);
-                    } finally {
-                        if ($deleteImportFile) {
-                            @unlink($importPath);
-                        }
-                    }
-                }
-            }
-
-            // Regular form submission (non-AJAX)
-            Excel::import($import, $importTarget);
-
-            $errors = $import->getErrors();
-            $successCount = $import->getSuccessCount();
-
-            // Mark as completed
-            $import->markCompleted();
-
-            if (count($errors) > 0) {
-                $errorMessage = "Imported {$successCount} products successfully. Errors: " . implode(', ', array_slice($errors, 0, 5));
-                if (count($errors) > 5) {
-                    $errorMessage .= " (and " . (count($errors) - 5) . " more errors)";
-                }
-
-                return redirect()->route('admin.products.index')
-                    ->with('error', $errorMessage);
-            }
-
-            return redirect()->route('admin.products.index')
-                ->with('success', "Successfully imported {$successCount} products!");
+                return $this->runImportFromPath($importPath, $extension, $totalRows, $request, true);
             } finally {
                 if ($deleteImportFile && isset($importPath) && is_string($importPath) && file_exists($importPath)) {
                     @unlink($importPath);
@@ -304,10 +289,72 @@ class ProductImportController extends Controller
             'status' => 'unknown',
         ]);
 
+        $errorMessages = Cache::get("{$progressKey}:error_messages", []);
+        if ($errorMessages !== []) {
+            $progress['error_messages'] = array_slice($errorMessages, 0, 10);
+        }
+
         // Add timestamp to help debug
         $progress['fetched_at'] = now()->toIso8601String();
 
         return response()->json($progress);
+    }
+
+    /**
+     * Đưa import vào queue — worker xử lý từng sản phẩm song song (queue imports).
+     */
+    protected function runImportFromPath(
+        string $importPath,
+        string $extension,
+        int $totalRows,
+        Request $request,
+        bool $deleteAfterUse = true
+    ) {
+        if ($totalRows < 1) {
+            if ($deleteAfterUse && file_exists($importPath)) {
+                @unlink($importPath);
+            }
+
+            $message = 'File import không có dòng dữ liệu hợp lệ.';
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'error' => $message], 422);
+            }
+
+            return redirect()->back()->with('error', $message);
+        }
+
+        $progressKey = 'import_progress_'.uniqid();
+
+        Log::info('Product import queued', [
+            'total_rows' => $totalRows,
+            'progress_key' => $progressKey,
+            'file_type' => $extension,
+            'import_path' => $importPath,
+            'queue' => config('product_import.queue'),
+        ]);
+
+        RunProductImportJob::dispatch(
+            $importPath,
+            $progressKey,
+            $totalRows,
+            (int) auth()->id(),
+            $deleteAfterUse,
+            $extension
+        );
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'progress_key' => $progressKey,
+                'completed' => false,
+                'message' => 'Import đã được đưa vào hàng đợi. Vui lòng chờ xử lý...',
+            ]);
+        }
+
+        return redirect()->route('admin.products.import')
+            ->with('success', 'Import đã được đưa vào hàng đợi. Theo dõi tiến độ trên trang import.')
+            ->with('import_progress_key', $progressKey);
     }
 
     /**

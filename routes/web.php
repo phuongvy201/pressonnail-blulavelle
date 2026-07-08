@@ -750,6 +750,7 @@ Route::middleware('auth')->group(function () {
         // Products Import
         Route::get('products/import', [ProductImportController::class, 'showImportForm'])->name('products.import');
         Route::post('products/import', [ProductImportController::class, 'import'])->name('products.import.process');
+        Route::post('products/import/google-sheet', [ProductImportController::class, 'importFromGoogleSheet'])->name('products.import.google-sheet');
         Route::get('products/import/template', [ProductImportController::class, 'downloadTemplate'])->name('products.import.template');
         Route::get('products/import/progress', [ProductImportController::class, 'getProgress'])->name('products.import.progress');
 

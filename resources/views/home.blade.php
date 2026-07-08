@@ -129,7 +129,35 @@ document.addEventListener('DOMContentLoaded', function() {
 </section>
 
 @php
+    // Tổng số lượng đã bán (chỉ tính đơn đã thanh toán và không bị hủy)
+    $soldQuantitySub = \Illuminate\Support\Facades\DB::table('order_items')
+        ->join('orders', 'orders.id', '=', 'order_items.order_id')
+        ->selectRaw('COALESCE(SUM(order_items.quantity), 0)')
+        ->whereColumn('order_items.product_id', 'products.id')
+        ->where('orders.payment_status', 'paid')
+        ->where('orders.status', '!=', 'cancelled');
+
     $bestsellers = \App\Models\Product::with(['shop', 'template'])
+        ->availableForDisplay()
+        ->select('products.*')
+        ->selectSub($soldQuantitySub, 'sold_quantity')
+        ->having('sold_quantity', '>', 0)
+        ->orderByDesc('sold_quantity')
+        ->orderBy('created_at', 'desc')
+        ->limit(8)
+        ->get();
+
+    // Nếu chưa đủ 8 sản phẩm đã bán, bổ sung bằng sản phẩm mới nhất để không trống section
+    if ($bestsellers->count() < 8) {
+        $fallbackProducts = \App\Models\Product::with(['shop', 'template'])
+            ->availableForDisplay()
+            ->whereNotIn('products.id', $bestsellers->pluck('id'))
+            ->orderBy('created_at', 'desc')
+            ->limit(8 - $bestsellers->count())
+            ->get();
+        $bestsellers = $bestsellers->concat($fallbackProducts);
+    }
+    $newArrivals = \App\Models\Product::with(['shop', 'template'])
         ->availableForDisplay()
         ->orderBy('created_at', 'desc')
         ->limit(8)
@@ -172,6 +200,12 @@ document.addEventListener('DOMContentLoaded', function() {
         'view_all_label' => 'View All Sets',
         'bg_color' => null,
     ]);
+    $newArrivalsBlock = content_block('home.new_arrivals', [
+        'heading' => 'New Arrivals',
+        'subheading' => 'Fresh styles just added to our collection',
+        'view_all_label' => 'View All New',
+        'bg_color' => null,
+    ]);
     $collectionsBlock = content_block('home.collections', [
         'heading' => 'Explore Our Collections',
         'bg_color' => null,
@@ -189,6 +223,12 @@ document.addEventListener('DOMContentLoaded', function() {
         ['key' => 'card4_body', 'label' => 'Thẻ 4 — mô tả', 'type' => 'textarea'],
     ];
     $bestsellersSchema = [
+        ['key' => 'heading', 'label' => 'Tiêu đề', 'type' => 'text'],
+        ['key' => 'subheading', 'label' => 'Mô tả', 'type' => 'text'],
+        ['key' => 'view_all_label', 'label' => 'Chữ nút View All', 'type' => 'text'],
+        ['key' => 'bg_color', 'label' => 'Màu nền section (HEX) – để trống dùng mặc định', 'type' => 'text'],
+    ];
+    $newArrivalsSchema = [
         ['key' => 'heading', 'label' => 'Tiêu đề', 'type' => 'text'],
         ['key' => 'subheading', 'label' => 'Mô tả', 'type' => 'text'],
         ['key' => 'view_all_label', 'label' => 'Chữ nút View All', 'type' => 'text'],
@@ -271,12 +311,37 @@ document.addEventListener('DOMContentLoaded', function () {
                 <h2 class="text-3xl lg:text-4xl font-black text-slate-900 mb-4" data-content-field="heading">{{ $bestsellersBlock['heading'] ?? 'Shop Our Bestsellers' }}</h2>
                 <p class="text-slate-600" data-content-field="subheading">{{ $bestsellersBlock['subheading'] ?? 'The most-loved styles by our community' }}</p>
             </div>
-            <a class="text-primary-fg font-bold flex items-center justify-center md:justify-start gap-2 hover:underline underline-offset-4 shrink-0" href="{{ route('products.index', ['filter' => 'bestsellers']) }}" data-content-field="view_all_label">{{ $bestsellersBlock['view_all_label'] ?? 'View All Sets' }}
+            <a class="text-primary-fg font-bold flex items-center justify-center md:justify-start gap-2 hover:underline underline-offset-4 shrink-0" href="{{ route('products.index', ['sort' => 'bestsellers']) }}" data-content-field="view_all_label">{{ $bestsellersBlock['view_all_label'] ?? 'View All Sets' }}
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
             </a>
         </div>
         <div class="grid grid-cols-2 gap-6 md:grid-cols-3 xl:grid-cols-4">
             @foreach($bestsellers as $product)
+                <x-product-card :product="$product" :show-quick-view="true" />
+            @endforeach
+        </div>
+    </div>
+</section>
+
+<!-- New Arrivals -->
+<section class="px-4 sm:px-6 lg:px-20 py-16 sm:py-20 md:py-24 bg-slate-50" data-content-block="home.new_arrivals" @if(!empty($newArrivalsBlock['bg_color'])) style="background-color: {{ $newArrivalsBlock['bg_color'] }};" @endif>
+    @if(isset($canEdit) && $canEdit && isset($editMode) && $editMode)
+    <div class="max-w-7xl mx-auto flex justify-end mb-2">
+        <button type="button" class="inline-edit-trigger px-3 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-lg hover:opacity-90" data-block="home.new_arrivals">Chỉnh sửa</button>
+    </div>
+    @endif
+    <div class="max-w-7xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-center md:items-end mb-12 gap-6 text-center md:text-left">
+            <div>
+                <h2 class="text-3xl lg:text-4xl font-black text-slate-900 mb-4" data-content-field="heading">{{ $newArrivalsBlock['heading'] ?? 'New Arrivals' }}</h2>
+                <p class="text-slate-600" data-content-field="subheading">{{ $newArrivalsBlock['subheading'] ?? 'Fresh styles just added to our collection' }}</p>
+            </div>
+            <a class="text-primary-fg font-bold flex items-center justify-center md:justify-start gap-2 hover:underline underline-offset-4 shrink-0" href="{{ route('products.index', ['sort' => 'newest']) }}" data-content-field="view_all_label">{{ $newArrivalsBlock['view_all_label'] ?? 'View All New' }}
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+            </a>
+        </div>
+        <div class="grid grid-cols-2 gap-6 md:grid-cols-3 xl:grid-cols-4">
+            @foreach($newArrivals as $product)
                 <x-product-card :product="$product" :show-quick-view="true" />
             @endforeach
         </div>
@@ -592,6 +657,7 @@ Object.assign(window.CONTENT_BLOCK_SCHEMAS, {
     'home.hero': @json($heroSchema),
     'home.why_choose': @json($whyChooseSchema),
     'home.bestsellers': @json($bestsellersSchema),
+    'home.new_arrivals': @json($newArrivalsSchema),
     'home.collections': @json($collectionsSchema),
     'home.see_it_in_action': @json($seeItSchema),
     'home.indulge': @json($indulgeSchema),

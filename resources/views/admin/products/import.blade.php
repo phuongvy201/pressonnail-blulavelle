@@ -8,7 +8,8 @@
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Import Products</h1>
-            <p class="mt-1 text-sm text-gray-600">Upload Excel or CSV file to create products in bulk</p>
+            <p class="mt-1 text-sm text-gray-600">Upload file hoặc import trực tiếp từ Google Sheet</p>
+            <p class="mt-1 text-xs text-gray-500">Import chạy qua hàng đợi — cần worker: <code class="font-mono">php artisan queue:work database --queue=imports,default</code></p>
         </div>
         <a href="{{ route('admin.products.index') }}" 
            class="inline-flex items-center px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors">
@@ -19,9 +20,45 @@
         </a>
     </div>
 
+    @if(session('error'))
+    <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ session('error') }}</div>
+    @endif
+
+    <div class="flex gap-2 border-b border-gray-200">
+        <button type="button" id="tab-file" class="import-tab px-4 py-2 text-sm font-semibold border-b-2 border-blue-600 text-blue-600">Upload file</button>
+        <button type="button" id="tab-google-sheet" class="import-tab px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-gray-600 hover:text-gray-900">Google Sheet</button>
+    </div>
+
+    <!-- Progress Bar (shared) -->
+    <div id="progress-container" class="hidden">
+        <div class="bg-gray-50 rounded-xl p-6 border border-gray-200">
+            <div class="flex items-center justify-between mb-3">
+                <h4 class="text-sm font-semibold text-gray-900">Import Progress</h4>
+                <span id="progress-status" class="text-xs font-medium text-gray-600">Processing...</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-4 mb-3 overflow-hidden">
+                <div id="progress-bar" class="bg-gradient-to-r from-green-500 to-green-600 h-4 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+                <div class="flex items-center space-x-4">
+                    <span class="text-gray-700"><span id="progress-text">0/0</span> items processed</span>
+                    <span class="text-green-600 font-semibold"><span id="success-count">0</span> successful</span>
+                    <span id="error-count-container" class="text-red-600 font-semibold hidden"><span id="error-count">0</span> errors</span>
+                </div>
+                <span id="progress-percentage" class="text-gray-600 font-semibold">0%</span>
+            </div>
+            <div id="error-messages" class="mt-4 hidden">
+                <div class="bg-red-50 border border-red-200 rounded-lg p-3 max-h-32 overflow-y-auto">
+                    <p class="text-xs font-semibold text-red-800 mb-2">Errors:</p>
+                    <ul id="error-list" class="text-xs text-red-700 space-y-1"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Upload Section -->
-        <div class="lg:col-span-2">
+        <div class="lg:col-span-2" id="panel-file">
             <div class="bg-white shadow-lg rounded-xl border border-gray-200 overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
                     <h3 class="text-lg font-medium text-gray-900 flex items-center">
@@ -92,48 +129,6 @@
                             <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                         
-                        <!-- Progress Bar (Hidden by default) -->
-                        <div id="progress-container" class="mt-6 hidden">
-                            <div class="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                                <div class="flex items-center justify-between mb-3">
-                                    <h4 class="text-sm font-semibold text-gray-900">Import Progress</h4>
-                                    <span id="progress-status" class="text-xs font-medium text-gray-600">Processing...</span>
-                                </div>
-                                
-                                <!-- Progress Bar -->
-                                <div class="w-full bg-gray-200 rounded-full h-4 mb-3 overflow-hidden">
-                                    <div id="progress-bar" 
-                                         class="bg-gradient-to-r from-green-500 to-green-600 h-4 rounded-full transition-all duration-300 ease-out"
-                                         style="width: 0%">
-                                    </div>
-                                </div>
-                                
-                                <!-- Progress Info -->
-                                <div class="flex items-center justify-between text-sm">
-                                    <div class="flex items-center space-x-4">
-                                        <span class="text-gray-700">
-                                            <span id="progress-text">0/0</span> items processed
-                                        </span>
-                                        <span class="text-green-600 font-semibold">
-                                            <span id="success-count">0</span> successful
-                                        </span>
-                                        <span id="error-count-container" class="text-red-600 font-semibold hidden">
-                                            <span id="error-count">0</span> errors
-                                        </span>
-                                    </div>
-                                    <span id="progress-percentage" class="text-gray-600 font-semibold">0%</span>
-                                </div>
-                                
-                                <!-- Error Messages (if any) -->
-                                <div id="error-messages" class="mt-4 hidden">
-                                    <div class="bg-red-50 border border-red-200 rounded-lg p-3 max-h-32 overflow-y-auto">
-                                        <p class="text-xs font-semibold text-red-800 mb-2">Errors:</p>
-                                        <ul id="error-list" class="text-xs text-red-700 space-y-1"></ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
                         <!-- Submit Button -->
                         <div class="mt-6 flex justify-end">
                             <button type="submit" 
@@ -146,6 +141,112 @@
                                 <span id="submit-text">Import Products</span>
                             </button>
                         </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Google Sheet Section -->
+        <div class="lg:col-span-2 hidden" id="panel-google-sheet">
+            <div class="bg-white shadow-lg rounded-xl border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-emerald-50 to-teal-50">
+                    <h3 class="text-lg font-medium text-gray-900 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
+                        </svg>
+                        Import từ Google Sheet
+                    </h3>
+                    <p class="text-sm text-gray-600 mt-1">Dán link spreadsheet, chọn tab và phạm vi dòng cần import</p>
+                </div>
+
+                @unless($sheetsConfigured ?? false)
+                <div class="mx-6 mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    <p class="font-semibold">Chưa cấu hình Google Sheets trên server</p>
+                    <p class="mt-1">Thêm <code class="font-mono text-xs">GOOGLE_SHEETS_CREDENTIALS_PATH</code> vào <code class="font-mono text-xs">.env</code>, sau đó share <strong>Google Sheet</strong> và các <strong>folder Drive</strong> (LINK DRIVE) cho email service account (trong file JSON) với quyền <strong>Viewer</strong>.</p>
+                </div>
+                @endunless
+
+                <form method="POST" action="{{ route('admin.products.import.google-sheet') }}" id="google-sheet-form" class="p-6 space-y-5">
+                    @csrf
+                    <div>
+                        <label for="gsheet_template_id" class="block text-sm font-semibold text-gray-700 mb-1">Template sản phẩm <span class="text-red-500">*</span></label>
+                        <select id="gsheet_template_id" name="template_id" required
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
+                            <option value="">— Chọn template —</option>
+                            @foreach($templates as $template)
+                            <option value="{{ $template->id }}" {{ old('template_id') == $template->id ? 'selected' : '' }}>
+                                #{{ $template->id }} — {{ $template->name }} ({{ $template->category->name ?? 'N/A' }})
+                            </option>
+                            @endforeach
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Giá gốc, mô tả mặc định, variant và media fallback lấy từ template này.</p>
+                        @error('template_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label for="spreadsheet_url" class="block text-sm font-semibold text-gray-700 mb-1">Link Google Sheet</label>
+                        <input type="url" id="spreadsheet_url" name="spreadsheet_url" value="{{ old('spreadsheet_url') }}" required
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                               placeholder="https://docs.google.com/spreadsheets/d/.../edit">
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="sheet_name" class="block text-sm font-semibold text-gray-700 mb-1">Tên tab (sheet)</label>
+                            <input type="text" id="sheet_name" name="sheet_name" value="{{ old('sheet_name') }}"
+                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500"
+                                   placeholder="Sheet1 hoặc Trang tính1">
+                            <p class="text-xs text-gray-500 mt-1">Để trống nếu URL có <code>#gid=...</code> hoặc dùng tab đầu tiên</p>
+                        </div>
+                        <div>
+                            <label for="header_row" class="block text-sm font-semibold text-gray-700 mb-1">Dòng header</label>
+                            <input type="number" id="header_row" name="header_row" value="{{ old('header_row', 1) }}" min="1"
+                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="row_from" class="block text-sm font-semibold text-gray-700 mb-1">Từ dòng</label>
+                            <input type="number" id="row_from" name="row_from" value="{{ old('row_from', 2) }}" min="1" required
+                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <div>
+                            <label for="row_to" class="block text-sm font-semibold text-gray-700 mb-1">Đến dòng</label>
+                            <input type="number" id="row_to" name="row_to" value="{{ old('row_to', 50) }}" min="1" required
+                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="default_quantity" class="block text-sm font-semibold text-gray-700 mb-1">Tồn kho mặc định</label>
+                            <input type="number" id="default_quantity" name="default_quantity" value="{{ old('default_quantity', 100) }}" min="0"
+                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <div>
+                            <label for="default_status" class="block text-sm font-semibold text-gray-700 mb-1">Trạng thái</label>
+                            <select id="default_status" name="default_status" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
+                                <option value="active" {{ old('default_status', 'active') === 'active' ? 'selected' : '' }}>Active</option>
+                                <option value="draft" {{ old('default_status') === 'draft' ? 'selected' : '' }}>Draft</option>
+                                <option value="inactive" {{ old('default_status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-900 space-y-2">
+                        <p class="font-semibold">Header Google Sheet được hỗ trợ:</p>
+                        <p class="font-mono leading-relaxed">STT · SKU · PRODUCT · TITLE · CUSTOM · LINK DRIVE · LINK THAM KHẢO · ETSY LINK · TAG · DESCRIPTION · CALALOG</p>
+                        <ul class="list-disc pl-4 space-y-1 text-emerald-800">
+                            <li><strong>TITLE</strong> → tên sản phẩm (hoặc PRODUCT nếu TITLE trống)</li>
+                            <li><strong>SKU</strong> → mã SKU; <strong>CUSTOM</strong> → giá cộng thêm vào template</li>
+                            <li><strong>LINK DRIVE</strong> → folder chứa file .zip (ảnh) + video; share cho service account</li>
+                            <li><strong>TAG</strong> → meta keywords; <strong>DESCRIPTION</strong> → mô tả</li>
+                            <li><strong>ETSY LINK</strong> / <strong>LINK THAM KHẢO</strong> → ghi vào mô tả</li>
+                        </ul>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button type="submit" id="gsheet-submit-btn"
+                                @unless($sheetsConfigured ?? false) disabled @endunless
+                                class="px-8 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span id="gsheet-submit-text">Import từ Google Sheet</span>
+                        </button>
                     </div>
                 </form>
             </div>
@@ -403,6 +504,27 @@
 let progressInterval = null;
 let currentProgressKey = null;
 
+// Tab switching
+document.getElementById('tab-file').addEventListener('click', function() {
+    document.getElementById('panel-file').classList.remove('hidden');
+    document.getElementById('panel-google-sheet').classList.add('hidden');
+    this.classList.add('border-blue-600', 'text-blue-600');
+    this.classList.remove('border-transparent', 'text-gray-600');
+    document.getElementById('tab-google-sheet').classList.remove('border-emerald-600', 'text-emerald-600');
+    document.getElementById('tab-google-sheet').classList.add('border-transparent', 'text-gray-600');
+});
+document.getElementById('tab-google-sheet').addEventListener('click', function() {
+    document.getElementById('panel-google-sheet').classList.remove('hidden');
+    document.getElementById('panel-file').classList.add('hidden');
+    this.classList.add('border-emerald-600', 'text-emerald-600');
+    this.classList.remove('border-transparent', 'text-gray-600');
+    document.getElementById('tab-file').classList.remove('border-blue-600', 'text-blue-600');
+    document.getElementById('tab-file').classList.add('border-transparent', 'text-gray-600');
+});
+@if(old('spreadsheet_url') || old('template_id'))
+document.getElementById('tab-google-sheet').click();
+@endif
+
 function handleDragOver(event) {
     event.preventDefault();
     event.currentTarget.classList.add('border-blue-500', 'bg-blue-100');
@@ -458,87 +580,79 @@ function formatFileSize(bytes) {
 }
 
 // Form submission with AJAX
-document.getElementById('import-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(this);
-    const submitBtn = document.getElementById('submit-btn');
-    const submitText = document.getElementById('submit-text');
-    
-    // Disable submit button
-    submitBtn.disabled = true;
-    submitText.textContent = 'Importing...';
-    
-    // Show progress container
-    showProgress();
-    
-    // Submit form via AJAX
-    fetch(this.action, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}'
-        }
-    })
-    .then(async response => {
-        // Check if response is JSON
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            // Response is not JSON, likely an HTML error page
-            const text = await response.text();
-            console.error('Non-JSON response received:', text.substring(0, 500));
-            throw new Error('Server returned HTML instead of JSON. This usually means there was a server error. Check the console for details.');
-        }
-        
-        // Check if response is ok
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'Unknown error occurred' }));
-            throw new Error(errorData.error || `Server error: ${response.status} ${response.statusText}`);
-        }
-        
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            currentProgressKey = data.progress_key;
-            
-            if (data.completed) {
-                // Import completed immediately
-                updateProgressDisplay({
-                    processed: data.success_count,
-                    total: data.success_count,
-                    success: data.success_count,
-                    errors: data.error_count,
-                    percentage: 100,
-                    status: 'completed'
-                });
-                
-                if (data.error_count > 0 && data.errors) {
-                    showErrors(data.errors);
-                }
-                
-                setTimeout(() => {
-                    window.location.href = '{{ route("admin.products.index") }}?imported=' + data.success_count;
-                }, 2000);
-            } else {
-                // Start polling for progress
-                startProgressTracking(data.progress_key);
+function bindImportForm(formId, submitBtnId, submitTextId, defaultLabel) {
+    var form = document.getElementById(formId);
+    if (!form) return;
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        var submitBtn = document.getElementById(submitBtnId);
+        var submitText = document.getElementById(submitTextId);
+        var formData = new FormData(this);
+
+        submitBtn.disabled = true;
+        submitText.textContent = 'Importing...';
+        showProgress();
+
+        fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}'
             }
-        } else {
-            showError(data.error || 'Import failed');
+        })
+        .then(async response => {
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                console.error('Non-JSON response received:', text.substring(0, 500));
+                throw new Error('Server returned HTML instead of JSON. Check console for details.');
+            }
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error occurred' }));
+                throw new Error(errorData.error || 'Server error: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                currentProgressKey = data.progress_key;
+                if (data.completed) {
+                    updateProgressDisplay({
+                        processed: data.success_count,
+                        total: data.success_count,
+                        success: data.success_count,
+                        errors: data.error_count,
+                        percentage: 100,
+                        status: 'completed'
+                    });
+                    if (data.error_count > 0 && data.errors) showErrors(data.errors);
+                    setTimeout(() => {
+                        window.location.href = '{{ route("admin.products.index") }}?imported=' + data.success_count;
+                    }, 2000);
+                } else {
+                    startProgressTracking(data.progress_key);
+                }
+            } else {
+                showError(data.error || 'Import failed');
+                submitBtn.disabled = false;
+                submitText.textContent = defaultLabel;
+            }
+        })
+        .catch(error => {
+            console.error('Import error:', error);
+            showError('Import failed: ' + error.message);
             submitBtn.disabled = false;
-            submitText.textContent = 'Import Products';
-        }
-    })
-    .catch(error => {
-        console.error('Import error:', error);
-        showError('Import failed: ' + error.message);
-        submitBtn.disabled = false;
-        submitText.textContent = 'Import Products';
+            submitText.textContent = defaultLabel;
+        });
     });
-});
+}
+
+bindImportForm('import-form', 'submit-btn', 'submit-text', 'Import Products');
+bindImportForm('google-sheet-form', 'gsheet-submit-btn', 'gsheet-submit-text', 'Import từ Google Sheet');
 
 function showProgress() {
     document.getElementById('progress-container').classList.remove('hidden');

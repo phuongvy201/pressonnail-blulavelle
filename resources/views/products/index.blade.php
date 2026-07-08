@@ -140,10 +140,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         @endforeach
                     </div>
                 </div>
-                <input type="hidden" name="sort" id="sort-input" value="{{ request('sort', 'newest') }}">
+                <input type="hidden" name="sort" id="sort-input" value="{{ request('sort', request('filter') === 'bestsellers' ? 'bestsellers' : 'newest') }}">
                 <div class="mt-7 lg:mt-6 grid grid-cols-1 gap-2 lg:block">
                     <button type="submit" class="w-full px-4 py-3 bg-primary text-white rounded-xl font-extrabold hover:opacity-90 transition-opacity">Apply Filters</button>
-                @if(request()->hasAny(['collection_id', 'category', 'shop', 'sort']))
+                @if(request()->hasAny(['collection_id', 'category', 'shop', 'sort', 'filter']))
                     <a href="{{ route('products.index') }}" class="block text-center text-sm font-bold text-slate-600 hover:text-primary transition-colors py-2">Clear All</a>
                 @endif
                 </div>
@@ -164,7 +164,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     </button>
                     <span class="text-sm text-slate-700 font-medium">Sort by:</span>
                     <select id="sort-select" class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-primary cursor-pointer">
-                        <option value="newest" {{ request('sort') == 'newest' ? 'selected' : '' }}>Most Relevant</option>
+                        <option value="newest" {{ request('sort', request('filter') === 'bestsellers' ? 'bestsellers' : 'newest') === 'newest' ? 'selected' : '' }}>Most Relevant</option>
+                        <option value="bestsellers" {{ request('sort', request('filter') === 'bestsellers' ? 'bestsellers' : 'newest') === 'bestsellers' ? 'selected' : '' }}>Best Sellers</option>
                         <option value="price_low" {{ request('sort') == 'price_low' ? 'selected' : '' }}>Price: Low to High</option>
                         <option value="price_high" {{ request('sort') == 'price_high' ? 'selected' : '' }}>Price: High to Low</option>
                         <option value="name" {{ request('sort') == 'name' ? 'selected' : '' }}>Name: A to Z</option>

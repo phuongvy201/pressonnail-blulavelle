@@ -548,7 +548,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         </section>
 
         <!-- Footer (dark slate layout) -->
-        <footer class="bg-[#242B3D] text-slate-300 px-4 sm:px-6 lg:px-20 py-10 sm:py-14 lg:py-16" style="background-color: {{ $footerBgCustom ?? '#242B3D' }};">
+        <footer class="font-display bg-[#242B3D] text-slate-300 px-4 sm:px-6 lg:px-20 py-10 sm:py-14 lg:py-16" style="background-color: {{ $footerBgCustom ?? '#242B3D' }};">
             <div class="max-w-7xl mx-auto">
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
                     {{-- Col 1: Logo, About, Operating entities, Follow us, Buttons, Badges --}}
@@ -562,15 +562,13 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                                  class="h-20 sm:h-24 lg:h-28 w-auto object-contain">
                         </div>
                         <p class="text-sm text-slate-300 leading-relaxed max-w-md">
-                            Blulavelle.com is a global online marketplace where people come together to make, sell, buy, and collect unique items. There's no Blulavelle warehouse â€“ just independent sellers selling the things they love. We make the whole process easy, helping you connect directly with makers to find something extraordinary.
+                            Blulavelle.com is a global online marketplace where people come together to make, sell, buy, and collect unique items. There's no Blulavelle warehouse &ndash; just independent sellers selling the things they love. We make the whole process easy, helping you connect directly with makers to find something extraordinary.
                         </p>
                         <div>
                             <p class="text-sm font-bold text-white mb-2">The website is jointly operated by:</p>
                             <ul class="text-xs text-slate-300 space-y-1.5 leading-relaxed">
-                                <li><strong class="text-slate-300">HM FULFILL COMPANY LIMITED</strong> â€” 63/9D, Ap Chanh 1, Tan Xuan, Hoc Mon, Ho Chi Minh City 700000, Vietnam</li>
-                                <li><strong class="text-slate-300">BLUE STAR TRADING LIMITED</strong> â€” RM C, G/F, WORLD TRUST TOWER, 50 STANLEY STREET, CENTRAL HONG KONG</li>
-                                <li><strong class="text-slate-300">Bluprinter LTD (UK)</strong> â€” Company Number 16342015, 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom</li>
-                                <li><strong class="text-slate-300">Bluprinter LLC (US)</strong> â€” 5900 BALCONES DR STE 100, AUSTIN, TX 78731, USA</li>
+                                <li><strong class="text-slate-300">Bluprinter LTD (UK)</strong> &mdash; Company Number 16342015, 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom</li>
+                                <li><strong class="text-slate-300">Bluprinter LLC (US)</strong> &mdash; 5900 BALCONES DR STE 100, AUSTIN, TX 78731, USA</li>
                             </ul>
                         </div>
                         <div>
@@ -690,7 +688,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                         <form id="newsletter-form" class="flex gap-2 mb-3" action="{{ route('newsletter.subscribe') }}" method="POST">
                             @csrf
                             <input type="email" id="newsletter-email" name="email" placeholder="Your email address" required
-                                class="flex-1 min-w-0 px-4 py-3 rounded-xl bg-slate-700/50 border border-slate-600 text-white placeholder-slate-500 focus:ring-2 focus:ring-primary focus:border-primary text-sm">
+                                class="font-display flex-1 min-w-0 px-4 py-3 rounded-xl bg-slate-700/50 border border-slate-600 text-white placeholder-slate-500 focus:ring-2 focus:ring-primary focus:border-primary text-sm">
                             <button type="submit" id="newsletter-submit" class="shrink-0 w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center hover:opacity-90 transition-opacity" aria-label="Subscribe">
                                 <span class="material-symbols-outlined">mail</span>
                             </button>
@@ -704,12 +702,18 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
 
                 {{-- Bottom bar: Language, Copyright, Payment icons --}}
                 <div class="max-w-7xl mx-auto mt-10 sm:mt-12 pt-6 sm:pt-8 border-t border-slate-600/80 flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <div class="flex items-center gap-2 text-sm text-slate-300">
-                        <span class="inline-block w-6 h-4 rounded-sm bg-primary0 flex items-center justify-center text-white text-[10px] font-bold">VN</span>
-                        <span>Vietnam</span>
-                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    <div class="flex items-center gap-3 text-sm text-slate-300">
+                        <span class="inline-flex items-center gap-1.5">
+                            <span class="inline-block w-6 h-4 rounded-sm bg-primary flex items-center justify-center text-white text-[10px] font-bold">US</span>
+                            <span>United States</span>
+                        </span>
+                        <span class="text-slate-500">|</span>
+                        <span class="inline-flex items-center gap-1.5">
+                            <span class="inline-block w-6 h-4 rounded-sm bg-primary flex items-center justify-center text-white text-[10px] font-bold">UK</span>
+                            <span>United Kingdom</span>
+                        </span>
                     </div>
-                    <p class="text-sm text-slate-300">Â© {{ date('Y') }} Blulavelle. All Rights Reserved.</p>
+                    <p class="text-sm text-slate-300">&copy; {{ date('Y') }} Blulavelle. All Rights Reserved.</p>
                     <div class="flex gap-3 items-center grayscale opacity-90">
                         <span class="material-symbols-outlined text-2xl text-slate-300">credit_card</span>
                         <span class="material-symbols-outlined text-2xl text-slate-300">account_balance</span>
@@ -1624,7 +1628,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                 var bg = isMe ? 'text-white' : 'bg-slate-100 text-slate-900';
                 var style = isMe ? ' style="background:#7BC5ED;color:#fff"' : '';
                 var sender = isMe ? 'You' : 'Blulavelle';
-                var time = (function() { var d = new Date(m.created_at); return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }); })();
+                var time = (function() { var d = new Date(m.created_at); return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }); })();
                 return '<div class="flex ' + align + '"><div class="max-w-[85%] rounded-xl px-3 py-2 text-sm ' + bg + '"' + style + '><p class="text-xs font-semibold opacity-90 mb-1">' + sender + '</p><p class="whitespace-pre-wrap">' + (m.body || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p><p class="text-xs mt-1 opacity-80">' + time + '</p></div></div>';
             }).join('');
             messagesEl.scrollTop = messagesEl.scrollHeight;

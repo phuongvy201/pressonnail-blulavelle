@@ -15,6 +15,7 @@ use App\Services\CurrencyService;
 use App\Services\CrossSellService;
 use App\Support\ReferenceNailSizeChart;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
@@ -80,10 +81,26 @@ class ProductController extends Controller
         }
 
         // Sort functionality
-        $sortBy = $request->get('sort', 'created_at');
-        $sortDirection = $request->get('direction', 'desc');
+        $sortBy = $request->get('sort');
+        if (!$sortBy && $request->get('filter') === 'bestsellers') {
+            $sortBy = 'bestsellers';
+        }
+        $sortBy = $sortBy ?: 'newest';
 
         switch ($sortBy) {
+            case 'bestsellers':
+                $soldQuantitySub = DB::table('order_items')
+                    ->join('orders', 'orders.id', '=', 'order_items.order_id')
+                    ->selectRaw('COALESCE(SUM(order_items.quantity), 0)')
+                    ->whereColumn('order_items.product_id', 'products.id')
+                    ->where('orders.payment_status', 'paid')
+                    ->where('orders.status', '!=', 'cancelled');
+
+                $query->select('products.*')
+                    ->selectSub($soldQuantitySub, 'sold_quantity')
+                    ->orderByDesc('sold_quantity')
+                    ->orderByDesc('products.created_at');
+                break;
             case 'price_low':
                 $query->orderBy('price', 'asc');
                 break;
