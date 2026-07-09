@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Jobs\ImportProductRowJob;
 use App\Services\ProductImportCsvReader;
 use App\Services\ProductImportProgress;
+use App\Services\ProductImportSpreadsheetConverter;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;

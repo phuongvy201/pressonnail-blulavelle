@@ -12,11 +12,8 @@ class WishlistManager {
 
     init() {
         this.bindEvents();
-        const self = this;
-        const run = () => {
-            self.refresh({ force: true });
-        };
-        setTimeout(run, 2000);
+        // Fetch count/state immediately so header badge stays visible on navigation.
+        this.refresh({ force: true });
     }
 
     refresh(options) {

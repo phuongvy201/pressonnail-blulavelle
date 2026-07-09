@@ -1981,7 +1981,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         $__wishlistV = is_file($__wishlistPath) ? (string) filemtime($__wishlistPath) : '1';
         $__wishlistSrc = asset('js/wishlist.js') . '?v=' . $__wishlistV;
     @endphp
-    {{-- wishlist.js sau load + delay; init trong file trÃ¬ hoÃ£n fetch count/check thÃªm má»™t nhá»‹p. --}}
+    {{-- Load wishlist.js sớm để badge count không bị trễ hiển thị. --}}
     <script>
     (function () {
         var src = @json($__wishlistSrc);
@@ -1991,7 +1991,11 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
             s.async = true;
             document.body.appendChild(s);
         }
-        window.addEventListener('load', function () { setTimeout(loadWishlist, 2000); }, { once: true });
+        if (document.readyState === 'complete') {
+            loadWishlist();
+            return;
+        }
+        window.addEventListener('load', function () { setTimeout(loadWishlist, 120); }, { once: true });
     })();
     </script>
 
