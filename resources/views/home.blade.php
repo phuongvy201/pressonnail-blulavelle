@@ -352,7 +352,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     <div class="hero-glass-grid grid grid-cols-1 lg:grid-cols-[42%_58%]">
         {{-- Panel trái — nội dung, đứng yên --}}
-        <div class="hero-glass-left {{ $heroLeftThemeClass }} relative z-[3] flex flex-col justify-center gap-5 sm:gap-6 px-6 sm:px-10 lg:px-14 py-14 sm:py-16 lg:py-0" style="background-color: {{ $heroLeftBg }};">
+        <div class="hero-glass-left {{ $heroLeftThemeClass }} order-2 lg:order-1 relative z-[3] flex flex-col justify-center gap-5 sm:gap-6 px-6 sm:px-10 lg:px-14 py-14 sm:py-16 lg:py-0" style="background-color: {{ $heroLeftBg }};">
             <div class="flex items-center gap-2.5">
                 <span class="hero-eyebrow-line w-5 h-px shrink-0"></span>
                 <span id="hero-eyebrow" class="hero-eyebrow text-[11px] sm:text-xs font-bold uppercase tracking-[0.22em]" data-content-field="tagline">{{ $heroSlides[0]['tagline'] }}</span>
@@ -388,7 +388,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <span class="hidden" data-content-field="slide3_collection">{{ $hero['slide3_collection'] ?? '' }}</span>
 
         {{-- Panel phải — "kính màu vỡ" chứa mosaic 4 ảnh + slider --}}
-        <div class="hero-glass-right relative min-h-[320px] lg:min-h-0">
+        <div class="hero-glass-right order-1 lg:order-2 relative min-h-[380px] sm:min-h-[420px] lg:min-h-0">
             <div class="hero-glass-right-clip absolute inset-0 overflow-hidden">
                 @foreach($heroSlides as $idx => $slide)
                     @php $slideAltBase = trim(($slide['heading'] ?? '').' '.($slide['heading_highlight'] ?? '')) ?: 'Premium press-on nails'; @endphp
@@ -435,14 +435,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     <button type="button" class="hero-arrow" data-hero-dir="1" aria-label="Next slide">›</button>
                 </div>
                 @endif
-            </div>
 
-            {{-- Badge nổi — cắt ngang đường phân khung --}}
-            <div class="hero-badge z-20 flex items-center gap-3 sm:gap-4 bg-white rounded-r-xl sm:rounded-xl shadow-2xl shadow-black/25 px-4 sm:px-5 py-3 sm:py-4 border-l-4 border-[#0195FE]">
-                <div class="text-[#0195FE] text-sm tracking-widest shrink-0">★★★★★</div>
-                <div>
-                    <b id="hero-badge-num" class="hero-heading-font block text-lg sm:text-xl text-slate-900 leading-none" data-content-field="badge_number">{{ $heroSlides[0]['badge_number'] }}</b>
-                    <span id="hero-badge-label" class="text-[11px] sm:text-xs text-slate-500 font-bold tracking-wide" data-content-field="badge_label">{{ $heroSlides[0]['badge_label'] }}</span>
+                {{-- Badge nổi — trong vùng ảnh, tránh bị cắt trên mobile --}}
+                <div class="hero-badge z-20 flex items-center gap-3 sm:gap-4 bg-white rounded-xl shadow-2xl shadow-black/25 px-4 sm:px-5 py-3 sm:py-4 border-l-4 border-[#0195FE]">
+                    <div class="text-[#0195FE] text-sm tracking-widest shrink-0">★★★★★</div>
+                    <div>
+                        <b id="hero-badge-num" class="hero-heading-font block text-lg sm:text-xl text-slate-900 leading-none" data-content-field="badge_number">{{ $heroSlides[0]['badge_number'] }}</b>
+                        <span id="hero-badge-label" class="text-[11px] sm:text-xs text-slate-500 font-bold tracking-wide" data-content-field="badge_label">{{ $heroSlides[0]['badge_label'] }}</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -498,6 +498,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .hero-glass-grid { min-height: 560px; }
 @media (min-width: 1024px) { .hero-glass-grid { min-height: 660px; } }
+@media (max-width: 1023px) {
+    .hero-glass { overflow: visible; }
+    .hero-glass-grid { min-height: 0; }
+}
 .hero-glass-right-clip {
     clip-path: polygon(6% 0, 100% 0, 100% 100%, 0% 100%);
     background: linear-gradient(160deg, #DCE9F1 0%, #B9D3E2 55%, #8FB6CC 100%);
@@ -545,8 +549,10 @@ document.addEventListener('DOMContentLoaded', function() {
 @media (max-width: 1023px) { .hero-lead-line { display: none; } }
 .hero-rivet { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #0195FE; box-shadow: 0 0 0 3px rgba(1,149,254,0.25); z-index: 7; }
 @media (max-width: 1023px) { .hero-rivet { display: none; } }
-.hero-badge { position: absolute; left: -3%; bottom: 10%; }
-@media (max-width: 1023px) { .hero-badge { position: relative; left: 0; bottom: 0; margin: -1.5rem 0 0 1rem; width: fit-content; } }
+.hero-badge { position: absolute; left: 1rem; bottom: 1rem; z-index: 25; max-width: calc(100% - 2rem); }
+@media (min-width: 1024px) {
+    .hero-badge { left: -3%; bottom: 10%; max-width: none; }
+}
 .hero-slide-index { font-family: 'Fraunces', Georgia, serif; font-size: 13px; color: #475569; letter-spacing: 0.05em; z-index: 20; }
 .hero-slide-index b { color: #0195FE; font-weight: 600; }
 .hero-arrow { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.92); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 18px rgba(1,149,254,0.15); font-size: 16px; line-height: 1; color: #0195FE; transition: .2s; border: none; }
@@ -843,50 +849,6 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
-<!-- Why Choose Our Press-on Nails? -->
-<section class="px-4 sm:px-6 lg:px-20 py-8 sm:py-16 md:py-20 lg:py-24 bg-slate-50 overflow-x-hidden" data-content-block="home.why_choose" @if(!empty($whyChoose['bg_color'])) style="background-color: {{ $whyChoose['bg_color'] }};" @endif>
-    @if(isset($canEdit) && $canEdit && isset($editMode) && $editMode)
-    <div class="max-w-7xl mx-auto flex justify-end mb-2">
-        <button type="button" class="inline-edit-trigger px-3 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-lg hover:opacity-90" data-block="home.why_choose">Chỉnh sửa</button>
-    </div>
-    @endif
-    <div class="max-w-7xl mx-auto text-center mb-5 sm:mb-12 lg:mb-16 px-1">
-        <h2 class="text-xl sm:text-3xl lg:text-4xl font-black text-slate-900 mb-2 sm:mb-4 leading-tight" data-content-field="title">{{ $whyChoose['title'] ?? 'Why Choose Our Press-on Nails?' }}</h2>
-        <div class="w-12 sm:w-20 h-1 bg-primary mx-auto rounded-full"></div>
-    </div>
-
-    <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-6 lg:gap-8 max-w-7xl mx-auto">
-        <div class="bg-white p-3 md:p-6 lg:p-8 rounded-xl md:rounded-2xl shadow-none md:shadow-sm border border-primary/5 md:hover:border-primary/30 transition-all group flex flex-col items-center md:items-stretch text-center md:text-left gap-2 md:gap-0">
-            <div class="w-9 h-9 md:w-14 md:h-14 bg-primary/10 rounded-lg md:rounded-xl flex items-center justify-center text-primary-fg md:mb-6 group-hover:bg-primary group-hover:text-white transition-all shrink-0">
-                <svg class="w-4 h-4 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
-            </div>
-            <h3 class="text-xs md:text-xl font-bold md:mb-3 text-slate-900 leading-snug" data-content-field="card1_title">{{ $whyChoose['card1_title'] ?? 'Salon Quality' }}</h3>
-            <p class="text-[11px] md:text-base text-slate-600 leading-snug md:leading-relaxed line-clamp-3 md:line-clamp-none" data-content-field="card1_body">{{ $whyChoose['card1_body'] ?? '' }}</p>
-        </div>
-        <div class="bg-white p-3 md:p-6 lg:p-8 rounded-xl md:rounded-2xl shadow-none md:shadow-sm border border-primary/5 md:hover:border-primary/30 transition-all group flex flex-col items-center md:items-stretch text-center md:text-left gap-2 md:gap-0">
-            <div class="w-9 h-9 md:w-14 md:h-14 bg-primary/10 rounded-lg md:rounded-xl flex items-center justify-center text-primary-fg md:mb-6 group-hover:bg-primary group-hover:text-white transition-all shrink-0">
-                <svg class="w-4 h-4 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-            </div>
-            <h3 class="text-xs md:text-xl font-bold md:mb-3 text-slate-900 leading-snug" data-content-field="card2_title">{{ $whyChoose['card2_title'] ?? 'Reusable' }}</h3>
-            <p class="text-[11px] md:text-base text-slate-600 leading-snug md:leading-relaxed line-clamp-3 md:line-clamp-none" data-content-field="card2_body">{{ $whyChoose['card2_body'] ?? '' }}</p>
-        </div>
-        <div class="bg-white p-3 md:p-6 lg:p-8 rounded-xl md:rounded-2xl shadow-none md:shadow-sm border border-primary/5 md:hover:border-primary/30 transition-all group flex flex-col items-center md:items-stretch text-center md:text-left gap-2 md:gap-0">
-            <div class="w-9 h-9 md:w-14 md:h-14 bg-primary/10 rounded-lg md:rounded-xl flex items-center justify-center text-primary-fg md:mb-6 group-hover:bg-primary group-hover:text-white transition-all shrink-0">
-                <svg class="w-4 h-4 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
-            </div>
-            <h3 class="text-xs md:text-xl font-bold md:mb-3 text-slate-900 leading-snug" data-content-field="card3_title">{{ $whyChoose['card3_title'] ?? 'Easy Application' }}</h3>
-            <p class="text-[11px] md:text-base text-slate-600 leading-snug md:leading-relaxed line-clamp-3 md:line-clamp-none" data-content-field="card3_body">{{ $whyChoose['card3_body'] ?? '' }}</p>
-        </div>
-        <div class="bg-white p-3 md:p-6 lg:p-8 rounded-xl md:rounded-2xl shadow-none md:shadow-sm border border-primary/5 md:hover:border-primary/30 transition-all group flex flex-col items-center md:items-stretch text-center md:text-left gap-2 md:gap-0">
-            <div class="w-9 h-9 md:w-14 md:h-14 bg-primary/10 rounded-lg md:rounded-xl flex items-center justify-center text-primary-fg md:mb-6 group-hover:bg-primary group-hover:text-white transition-all shrink-0">
-                <svg class="w-4 h-4 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z"></path></svg>
-            </div>
-            <h3 class="text-xs md:text-xl font-bold md:mb-3 text-slate-900 leading-snug" data-content-field="card4_title">{{ $whyChoose['card4_title'] ?? 'Custom Designs' }}</h3>
-            <p class="text-[11px] md:text-base text-slate-600 leading-snug md:leading-relaxed line-clamp-3 md:line-clamp-none" data-content-field="card4_body">{{ $whyChoose['card4_body'] ?? '' }}</p>
-        </div>
-    </div>
-</section>
-
 @once
 <style>
 .rv-heading-highlight {
@@ -928,6 +890,50 @@ document.addEventListener('DOMContentLoaded', function () {
             @foreach($bestsellers as $product)
                 <x-product-card :product="$product" :show-quick-view="true" item-list-name="Home Bestsellers" />
             @endforeach
+        </div>
+    </div>
+</section>
+
+<!-- Why Choose Our Press-on Nails? -->
+<section class="px-4 sm:px-6 lg:px-20 py-8 sm:py-16 md:py-20 lg:py-24 bg-slate-50 overflow-x-hidden" data-content-block="home.why_choose" @if(!empty($whyChoose['bg_color'])) style="background-color: {{ $whyChoose['bg_color'] }};" @endif>
+    @if(isset($canEdit) && $canEdit && isset($editMode) && $editMode)
+    <div class="max-w-7xl mx-auto flex justify-end mb-2">
+        <button type="button" class="inline-edit-trigger px-3 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-lg hover:opacity-90" data-block="home.why_choose">Chỉnh sửa</button>
+    </div>
+    @endif
+    <div class="max-w-7xl mx-auto text-center mb-5 sm:mb-12 lg:mb-16 px-1">
+        <h2 class="text-xl sm:text-3xl lg:text-4xl font-black text-slate-900 mb-2 sm:mb-4 leading-tight" data-content-field="title">{{ $whyChoose['title'] ?? 'Why Choose Our Press-on Nails?' }}</h2>
+        <div class="w-12 sm:w-20 h-1 bg-primary mx-auto rounded-full"></div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-6 lg:gap-8 max-w-7xl mx-auto">
+        <div class="bg-white p-3 md:p-6 lg:p-8 rounded-xl md:rounded-2xl shadow-none md:shadow-sm border border-primary/5 md:hover:border-primary/30 transition-all group flex flex-col items-center md:items-stretch text-center md:text-left gap-2 md:gap-0">
+            <div class="w-9 h-9 md:w-14 md:h-14 bg-primary/10 rounded-lg md:rounded-xl flex items-center justify-center text-primary-fg md:mb-6 group-hover:bg-primary group-hover:text-white transition-all shrink-0">
+                <svg class="w-4 h-4 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
+            </div>
+            <h3 class="text-xs md:text-xl font-bold md:mb-3 text-slate-900 leading-snug" data-content-field="card1_title">{{ $whyChoose['card1_title'] ?? 'Salon Quality' }}</h3>
+            <p class="text-[11px] md:text-base text-slate-600 leading-snug md:leading-relaxed line-clamp-3 md:line-clamp-none" data-content-field="card1_body">{{ $whyChoose['card1_body'] ?? '' }}</p>
+        </div>
+        <div class="bg-white p-3 md:p-6 lg:p-8 rounded-xl md:rounded-2xl shadow-none md:shadow-sm border border-primary/5 md:hover:border-primary/30 transition-all group flex flex-col items-center md:items-stretch text-center md:text-left gap-2 md:gap-0">
+            <div class="w-9 h-9 md:w-14 md:h-14 bg-primary/10 rounded-lg md:rounded-xl flex items-center justify-center text-primary-fg md:mb-6 group-hover:bg-primary group-hover:text-white transition-all shrink-0">
+                <svg class="w-4 h-4 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            </div>
+            <h3 class="text-xs md:text-xl font-bold md:mb-3 text-slate-900 leading-snug" data-content-field="card2_title">{{ $whyChoose['card2_title'] ?? 'Reusable' }}</h3>
+            <p class="text-[11px] md:text-base text-slate-600 leading-snug md:leading-relaxed line-clamp-3 md:line-clamp-none" data-content-field="card2_body">{{ $whyChoose['card2_body'] ?? '' }}</p>
+        </div>
+        <div class="bg-white p-3 md:p-6 lg:p-8 rounded-xl md:rounded-2xl shadow-none md:shadow-sm border border-primary/5 md:hover:border-primary/30 transition-all group flex flex-col items-center md:items-stretch text-center md:text-left gap-2 md:gap-0">
+            <div class="w-9 h-9 md:w-14 md:h-14 bg-primary/10 rounded-lg md:rounded-xl flex items-center justify-center text-primary-fg md:mb-6 group-hover:bg-primary group-hover:text-white transition-all shrink-0">
+                <svg class="w-4 h-4 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+            </div>
+            <h3 class="text-xs md:text-xl font-bold md:mb-3 text-slate-900 leading-snug" data-content-field="card3_title">{{ $whyChoose['card3_title'] ?? 'Easy Application' }}</h3>
+            <p class="text-[11px] md:text-base text-slate-600 leading-snug md:leading-relaxed line-clamp-3 md:line-clamp-none" data-content-field="card3_body">{{ $whyChoose['card3_body'] ?? '' }}</p>
+        </div>
+        <div class="bg-white p-3 md:p-6 lg:p-8 rounded-xl md:rounded-2xl shadow-none md:shadow-sm border border-primary/5 md:hover:border-primary/30 transition-all group flex flex-col items-center md:items-stretch text-center md:text-left gap-2 md:gap-0">
+            <div class="w-9 h-9 md:w-14 md:h-14 bg-primary/10 rounded-lg md:rounded-xl flex items-center justify-center text-primary-fg md:mb-6 group-hover:bg-primary group-hover:text-white transition-all shrink-0">
+                <svg class="w-4 h-4 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z"></path></svg>
+            </div>
+            <h3 class="text-xs md:text-xl font-bold md:mb-3 text-slate-900 leading-snug" data-content-field="card4_title">{{ $whyChoose['card4_title'] ?? 'Custom Designs' }}</h3>
+            <p class="text-[11px] md:text-base text-slate-600 leading-snug md:leading-relaxed line-clamp-3 md:line-clamp-none" data-content-field="card4_body">{{ $whyChoose['card4_body'] ?? '' }}</p>
         </div>
     </div>
 </section>

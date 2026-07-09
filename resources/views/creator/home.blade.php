@@ -56,7 +56,7 @@ Object.assign(window.CONTENT_BLOCK_DATA, {
         </div>
         @endif
         <div class="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
-            <div class="z-10">
+            <div class="order-2 z-10 lg:order-1">
                 <span class="creator-font-label mb-6 inline-block rounded-full bg-primary px-4 py-1 text-xs font-semibold uppercase tracking-wider text-primary-fg" data-content-field="badge">{{ $creatorHero['badge'] ?? '' }}</span>
                 <h1 class="creator-font-headline mb-6 text-3xl font-bold leading-tight tracking-tight text-[#0b1c30] md:text-5xl md:leading-[56px]">
                     Join the <span data-content-field="heading_brand">{{ $creatorHero['heading_brand'] ?? config('app.name') }}</span><br />
@@ -77,7 +77,7 @@ Object.assign(window.CONTENT_BLOCK_DATA, {
                     @endauth
                 </p>
             </div>
-            <div class="relative min-h-[450px]">
+            <div class="relative order-1 min-h-[450px] lg:order-2">
                 <div class="absolute inset-0 rotate-2 overflow-hidden rounded-xl shadow-2xl">
                     <img alt="Beauty Creator" class="h-full w-full object-cover" src="{{ $creatorHeroImage }}" data-content-field="hero_image" loading="lazy" decoding="async" />
                 </div>
