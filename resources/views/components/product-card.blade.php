@@ -58,12 +58,12 @@
             </div>
         @endif
 
-        {{-- Overlay: Quick View button (nền tối nhẹ, nút màu hồng) --}}
+        {{-- Overlay: Quick View button slides up from bottom on hover --}}
         @if($showQuickView && $productUrl)
             <a href="{{ $productUrl }}"
                 data-ga-select-item-link
-                class="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                    <span class="inline-flex items-center gap-2 px-5 py-3 bg-primary-dark text-white font-semibold rounded-full shadow-xl transform translate-y-3 group-hover:translate-y-0 transition-transform duration-300 hover:bg-primary">
+                class="absolute inset-0 flex items-end justify-center pb-4 sm:pb-5 bg-gradient-to-t from-black/35 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <span class="inline-flex items-center gap-2 px-5 py-3 bg-primary-dark text-white font-semibold rounded-full shadow-xl translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out hover:bg-primary">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>

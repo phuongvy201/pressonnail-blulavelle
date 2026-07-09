@@ -34,13 +34,15 @@ document.addEventListener('DOMContentLoaded', function() {
             var values = {};
             var blockData = window.CONTENT_BLOCK_DATA && window.CONTENT_BLOCK_DATA[blockKey];
             currentSchema.forEach(function(f) {
-                if (f.type === 'tabs') {
+                if (f.type === 'tabs' || f.type === 'community_cards') {
                     currentTabInitialData = (blockData && blockData.tabs) ? blockData.tabs : [];
                     values[f.key] = [];
                     return;
                 }
                 if (f.type === 'images') {
-                    values[f.key] = (blockData && Array.isArray(blockData.images)) ? blockData.images.slice() : [];
+                    values[f.key] = (blockData && Array.isArray(blockData[f.key]))
+                        ? blockData[f.key].slice()
+                        : ((f.key === 'images' && blockData && Array.isArray(blockData.images)) ? blockData.images.slice() : []);
                     return;
                 }
                 if (f.key === 'bg_color') {
@@ -70,38 +72,90 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             fieldsContainer.innerHTML = '';
             currentSchema.forEach(function(f) {
-                if (f.type === 'tabs') {
-                    var tabKeys = f.tabKeys || ['bikini', 'leg', 'arm', 'back'];
-                    var tabs = Array.isArray(currentTabInitialData) && currentTabInitialData.length ? currentTabInitialData : tabKeys.map(function(k, i) { return { key: k, label: k.charAt(0).toUpperCase() + k.slice(1), image_url: null, video_url: null }; });
+                if (f.type === 'tabs' || f.type === 'community_cards') {
+                    var isCommunity = f.type === 'community_cards';
+                    var tabKeys = f.tabKeys || (isCommunity ? ['card1', 'card2', 'card3', 'card4', 'card5'] : ['nail', 'box', 'arm', 'back']);
+                    var tabs = Array.isArray(currentTabInitialData) && currentTabInitialData.length ? currentTabInitialData : tabKeys.map(function(k, i) {
+                        return { key: k, label: isCommunity ? 'user' : k.charAt(0).toUpperCase() + k.slice(1), avatar_url: null, image_url: null, video_url: null };
+                    });
                     var sectionLabel = document.createElement('div');
                     sectionLabel.className = 'block text-sm font-medium text-slate-700 mt-4 first:mt-0 mb-2';
                     sectionLabel.textContent = f.label;
                     fieldsContainer.appendChild(sectionLabel);
                     tabKeys.forEach(function(tabKey, i) {
-                        var tab = tabs[i] || { key: tabKey, label: tabKey, image_url: null, video_url: null };
+                        var tab = tabs[i] || { key: tabKey, label: tabKey, avatar_url: null, image_url: null, video_url: null };
                         var card = document.createElement('div');
                         card.className = 'border border-slate-200 rounded-lg p-3 mb-3 bg-slate-50';
                         var rowLabel = document.createElement('label');
                         rowLabel.className = 'block text-xs font-medium text-slate-500 mb-2';
-                        rowLabel.textContent = 'Tab ' + (i + 1) + ' — ' + tabKey;
+                        rowLabel.textContent = (isCommunity ? 'Thẻ ' : 'Tab ') + (i + 1) + ' — ' + tabKey;
                         card.appendChild(rowLabel);
                         var labelInput = document.createElement('input');
                         labelInput.type = 'text';
                         labelInput.name = 'tabs_' + i + '_label';
-                        labelInput.placeholder = 'Chữ trên nút';
+                        labelInput.placeholder = isCommunity ? 'Username (vd: lynhtran)' : 'Chữ trên nút';
                         labelInput.value = (tab.label || '').trim();
                         labelInput.className = 'w-full px-3 py-2 border border-slate-300 rounded-lg bg-white mb-2';
                         card.appendChild(labelInput);
+                        var hiddenAvatar = null;
+                        var avatarImg = null;
+                        if (isCommunity) {
+                            hiddenAvatar = document.createElement('input');
+                            hiddenAvatar.type = 'hidden';
+                            hiddenAvatar.name = 'tabs_' + i + '_avatar';
+                            hiddenAvatar.value = tab.avatar_url || '';
+                            card.appendChild(hiddenAvatar);
+                            var avatarWrap = document.createElement('div');
+                            avatarWrap.className = 'mb-2 flex items-center gap-2 flex-wrap';
+                            avatarImg = document.createElement('img');
+                            avatarImg.className = 'w-10 h-10 rounded-full object-cover border border-slate-200';
+                            if (tab.avatar_url) { avatarImg.src = tab.avatar_url; avatarImg.style.display = 'block'; } else { avatarImg.style.display = 'none'; }
+                            var avatarFileInput = document.createElement('input');
+                            avatarFileInput.type = 'file';
+                            avatarFileInput.accept = 'image/jpeg,image/jpg,image/png,image/webp';
+                            avatarFileInput.className = 'hidden';
+                            var avatarBtn = document.createElement('button');
+                            avatarBtn.type = 'button';
+                            avatarBtn.className = 'px-2 py-1.5 bg-slate-200 hover:bg-slate-300 rounded text-sm font-medium text-slate-700';
+                            avatarBtn.textContent = 'Avatar (S3)';
+                            avatarWrap.appendChild(avatarImg);
+                            avatarWrap.appendChild(avatarFileInput);
+                            avatarWrap.appendChild(avatarBtn);
+                            card.appendChild(avatarWrap);
+                            avatarBtn.addEventListener('click', function() { avatarFileInput.click(); });
+                            avatarFileInput.addEventListener('change', function() {
+                                var file = this.files && this.files[0];
+                                if (!file) return;
+                                avatarBtn.disabled = true;
+                                avatarBtn.textContent = 'Đang tải...';
+                                var formData = new FormData();
+                                formData.append('image', file);
+                                formData.append('_token', window.INLINE_EDIT_CONFIG.csrfToken);
+                                fetch(window.INLINE_EDIT_CONFIG.uploadImageUrl, { method: 'POST', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: formData })
+                                    .then(function(r) { return r.json(); })
+                                    .then(function(data) {
+                                        if (!data.success || !data.url) throw new Error(data.message || 'Upload thất bại');
+                                        hiddenAvatar.value = data.url;
+                                        avatarImg.src = data.url;
+                                        avatarImg.style.display = 'block';
+                                    })
+                                    .catch(function(err) { alert('Upload thất bại: ' + (err.message || 'Vui lòng thử lại')); })
+                                    .finally(function() { avatarBtn.disabled = false; avatarBtn.textContent = 'Avatar (S3)'; avatarFileInput.value = ''; });
+                            });
+                        }
                         var hiddenImg = document.createElement('input');
                         hiddenImg.type = 'hidden';
                         hiddenImg.name = 'tabs_' + i + '_image';
                         hiddenImg.value = tab.image_url || '';
                         card.appendChild(hiddenImg);
-                        var hiddenVid = document.createElement('input');
-                        hiddenVid.type = 'hidden';
-                        hiddenVid.name = 'tabs_' + i + '_video';
-                        hiddenVid.value = tab.video_url || '';
-                        card.appendChild(hiddenVid);
+                        var hiddenVid = null;
+                        if (!isCommunity) {
+                            hiddenVid = document.createElement('input');
+                            hiddenVid.type = 'hidden';
+                            hiddenVid.name = 'tabs_' + i + '_video';
+                            hiddenVid.value = tab.video_url || '';
+                            card.appendChild(hiddenVid);
+                        }
                         var preview = document.createElement('div');
                         preview.className = 'mb-2';
                         var img = document.createElement('img');
@@ -111,23 +165,24 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (tab.image_url) { img.src = tab.image_url; img.style.display = 'block'; } else { img.style.display = 'none'; }
                         var fileInput = document.createElement('input');
                         fileInput.type = 'file';
-                        fileInput.accept = 'image/jpeg,image/jpg,image/png,image/webp';
+                        fileInput.accept = isCommunity ? 'image/gif' : 'image/jpeg,image/jpg,image/png,image/webp';
                         fileInput.className = 'hidden';
                         var btn = document.createElement('button');
                         btn.type = 'button';
                         btn.className = 'px-2 py-1.5 bg-slate-200 hover:bg-slate-300 rounded text-sm font-medium text-slate-700 mr-2';
-                        btn.textContent = 'Chọn ảnh (S3)';
+                        btn.textContent = isCommunity ? 'GIF (S3)' : 'Chọn ảnh (S3)';
                         preview.appendChild(img);
                         card.appendChild(preview);
-                        card.appendChild(hiddenImg);
                         card.appendChild(fileInput);
                         card.appendChild(btn);
                         btn.addEventListener('click', function() { fileInput.click(); });
                         fileInput.addEventListener('change', function() {
                             var file = this.files && this.files[0];
                             if (!file) return;
-                            var allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-                            if (allowed.indexOf(file.type) === -1) { alert('Chỉ chấp nhận ảnh: JPG, PNG, WebP'); return; }
+                            var allowed = isCommunity
+                                ? ['image/gif']
+                                : ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+                            if (allowed.indexOf(file.type) === -1) { alert(isCommunity ? 'Chỉ chấp nhận file GIF' : 'Chỉ chấp nhận ảnh: JPG, PNG, WebP'); return; }
                             if (file.size > 10 * 1024 * 1024) { alert('Ảnh tối đa 10MB'); return; }
                             btn.disabled = true;
                             btn.textContent = 'Đang tải...';
@@ -143,8 +198,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                     img.style.display = 'block';
                                 })
                                 .catch(function(err) { alert('Upload thất bại: ' + (err.message || 'Vui lòng thử lại')); })
-                                .finally(function() { btn.disabled = false; btn.textContent = 'Chọn ảnh (S3)'; fileInput.value = ''; });
+                                .finally(function() { btn.disabled = false; btn.textContent = isCommunity ? 'GIF (S3)' : 'Chọn ảnh (S3)'; fileInput.value = ''; });
                         });
+                        if (!isCommunity) {
                         var videoWrap = document.createElement('div');
                         videoWrap.className = 'mt-2 flex items-center gap-2 flex-wrap';
                         var videoLabel = document.createElement('span');
@@ -191,6 +247,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 .catch(function(err) { alert('Upload video thất bại: ' + (err.message || 'Vui lòng thử lại')); })
                                 .finally(function() { videoBtn.disabled = false; videoBtn.textContent = 'Chọn video (S3)'; videoFileInput.value = ''; });
                         });
+                        }
                         fieldsContainer.appendChild(card);
                     });
                     return;
@@ -214,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             row.className = 'flex items-center gap-2 p-2 border border-slate-200 rounded-lg bg-slate-50';
                             var hidden = document.createElement('input');
                             hidden.type = 'hidden';
-                            hidden.name = 'images_' + idx;
+                            hidden.name = f.key + '_' + idx;
                             hidden.value = url;
                             var img = document.createElement('img');
                             img.className = 'w-14 h-14 object-cover rounded border border-slate-200 flex-shrink-0';
@@ -398,16 +455,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!currentBlock || !window.INLINE_EDIT_CONFIG) return;
                 var content = {};
                 var tabKeys = null;
+                var isCommunityCards = false;
                 currentSchema.forEach(function(f) {
-                    if (f.type === 'tabs') {
-                        tabKeys = f.tabKeys || ['bikini', 'leg', 'arm', 'back'];
+                    if (f.type === 'tabs' || f.type === 'community_cards') {
+                        isCommunityCards = f.type === 'community_cards';
+                        tabKeys = f.tabKeys || (isCommunityCards ? ['card1', 'card2', 'card3', 'card4', 'card5'] : ['nail', 'box', 'arm', 'back']);
                         return;
                     }
                     if (f.type === 'images') {
-                        var inputs = form.querySelectorAll('input[name^="images_"]');
+                        var inputs = form.querySelectorAll('input[name^="' + f.key + '_"]');
                         var sorted = Array.from(inputs).sort(function(a, b) {
-                            var na = parseInt(a.name.replace('images_', ''), 10);
-                            var nb = parseInt(b.name.replace('images_', ''), 10);
+                            var na = parseInt(a.name.replace(f.key + '_', ''), 10);
+                            var nb = parseInt(b.name.replace(f.key + '_', ''), 10);
                             return na - nb;
                         });
                         content[f.key] = sorted.map(function(inp) { return inp.value.trim(); }).filter(Boolean);
@@ -421,15 +480,20 @@ document.addEventListener('DOMContentLoaded', function() {
                         var labelInput = form.querySelector('[name="tabs_' + i + '_label"]');
                         var imageInput = form.querySelector('[name="tabs_' + i + '_image"]');
                         var videoInput = form.querySelector('[name="tabs_' + i + '_video"]');
+                        var avatarInput = form.querySelector('[name="tabs_' + i + '_avatar"]');
                         var prev = currentTabInitialData && currentTabInitialData[i] ? currentTabInitialData[i] : {};
                         var imgUrl = (imageInput && imageInput.value) ? imageInput.value.trim() : (prev.image_url || null);
-                        var vidUrl = (videoInput && videoInput.value) ? videoInput.value.trim() : (prev.video_url || null);
-                        return {
+                        var tabData = {
                             key: k,
                             label: (labelInput && labelInput.value) ? labelInput.value.trim() : (prev.label || k),
                             image_url: imgUrl || null,
-                            video_url: vidUrl || null
                         };
+                        if (isCommunityCards) {
+                            tabData.avatar_url = (avatarInput && avatarInput.value) ? avatarInput.value.trim() : (prev.avatar_url || null);
+                        } else {
+                            tabData.video_url = (videoInput && videoInput.value) ? videoInput.value.trim() : (prev.video_url || null);
+                        }
+                        return tabData;
                     });
                 }
                 fetch(window.INLINE_EDIT_CONFIG.apiBase, {
@@ -444,7 +508,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
-                    if (currentBlock === 'home.see_it_in_action' || currentBlock === 'home.indulge') {
+                    if (currentBlock === 'home.hero' || currentBlock === 'home.see_it_in_action' || currentBlock === 'home.indulge' || currentBlock === 'home.customer_favorites') {
                         closeModal();
                         location.reload();
                         return;
