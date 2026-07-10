@@ -183,11 +183,13 @@ document.addEventListener('DOMContentLoaded', function() {
                                 ? ['image/gif']
                                 : ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
                             if (allowed.indexOf(file.type) === -1) { alert(isCommunity ? 'Chỉ chấp nhận file GIF' : 'Chỉ chấp nhận ảnh: JPG, PNG, WebP'); return; }
-                            if (file.size > 10 * 1024 * 1024) { alert('Ảnh tối đa 10MB'); return; }
+                            var maxBytes = isCommunity ? (20 * 1024 * 1024) : (10 * 1024 * 1024);
+                            if (file.size > maxBytes) { alert(isCommunity ? 'GIF tối đa 20MB' : 'Ảnh tối đa 10MB'); return; }
                             btn.disabled = true;
                             btn.textContent = 'Đang tải...';
                             var formData = new FormData();
                             formData.append('image', file);
+                            if (isCommunity) formData.append('community_gif', '1');
                             formData.append('_token', window.INLINE_EDIT_CONFIG.csrfToken);
                             fetch(window.INLINE_EDIT_CONFIG.uploadImageUrl, { method: 'POST', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: formData })
                                 .then(function(r) { return r.json(); })

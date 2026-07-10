@@ -136,14 +136,26 @@ class ContentBlockController extends Controller
     public function uploadImage(Request $request): JsonResponse
     {
         try {
-            $request->validate([
-                'image' => 'required|image|mimes:jpeg,jpg,png,gif,webp|max:10240', // 10MB
-            ], [
-                'image.required' => 'Vui lòng chọn ảnh.',
-                'image.image' => 'File phải là ảnh.',
-                'image.mimes' => 'Chỉ chấp nhận ảnh: JPEG, PNG, GIF, WebP.',
-                'image.max' => 'Ảnh tối đa 10MB.',
-            ]);
+            $isCommunityGif = $request->boolean('community_gif');
+
+            if ($isCommunityGif) {
+                $request->validate([
+                    'image' => 'required|file|mimes:gif|max:20480', // 20MB — BluLavelle Community
+                ], [
+                    'image.required' => 'Vui lòng chọn GIF.',
+                    'image.mimes' => 'Chỉ chấp nhận file GIF.',
+                    'image.max' => 'GIF tối đa 20MB.',
+                ]);
+            } else {
+                $request->validate([
+                    'image' => 'required|image|mimes:jpeg,jpg,png,gif,webp|max:10240', // 10MB
+                ], [
+                    'image.required' => 'Vui lòng chọn ảnh.',
+                    'image.image' => 'File phải là ảnh.',
+                    'image.mimes' => 'Chỉ chấp nhận ảnh: JPEG, PNG, GIF, WebP.',
+                    'image.max' => 'Ảnh tối đa 10MB.',
+                ]);
+            }
 
             $file = $request->file('image');
             $extension = strtolower($file->getClientOriginalExtension() ?: 'jpg');
