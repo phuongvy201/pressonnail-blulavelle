@@ -335,11 +335,18 @@
     <meta name="twitter:title" content="{{ $metaTitle }}">
     <meta name="twitter:description" content="{{ $metaDescription }}">
     <meta name="twitter:image" content="{{ $ogImage }}">
+    <meta name="theme-color" content="#0195FE">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="{{ config('app.name', 'Blulavelle') }}">
 
     <title>{{ config('app.name', 'Blulavelle') }} - {{ $title ?? 'Home' }}</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
+    <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/logo/BABYBLUE.png') }}">
 
     @php
         // Chá»¯: swap. Icon: má»™t trá»¥c cá»‘ Ä‘á»‹nh khá»›p .material-symbols-outlined (opsz 24, wght 400) â€” Ã­t @font-face hÆ¡n, Lighthouse font-display á»•n Ä‘á»‹nh hÆ¡n so vá»›i range Ä‘áº§y Ä‘á»§.
@@ -2013,6 +2020,16 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
     @endpush
 
     @include('partials.inline-edit-assets')
+    <script>
+    (function () {
+        if (!('serviceWorker' in navigator)) return;
+        window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function (error) {
+                console.warn('PWA service worker registration failed:', error);
+            });
+        }, { once: true });
+    })();
+    </script>
 </body>
 </html>
 

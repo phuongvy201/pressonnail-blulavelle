@@ -1,0 +1,26 @@
+{
+  "name": "BluLavelle Nail Art Studio",
+  "short_name": "BluLavelle",
+  "description": "Premium reusable press-on nails with salon-quality designs.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0195FE",
+  "lang": "en-US",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/images/logo/BABYBLUE.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/logo/BABYBLUE.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
