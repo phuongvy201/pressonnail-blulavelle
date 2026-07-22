@@ -564,6 +564,11 @@ Route::middleware(['web'])->group(function () {
         ->name('api.collections.index');
     Route::get('/api/shops', [App\Http\Controllers\Api\ShopController::class, 'index'])
         ->name('api.shops.index');
+    Route::get('/api/templates', [App\Http\Controllers\Api\ProductTemplateController::class, 'index'])
+        ->name('api.templates.index');
+    Route::get('/api/templates/{id}', [App\Http\Controllers\Api\ProductTemplateController::class, 'show'])
+        ->whereNumber('id')
+        ->name('api.templates.show');
 });
 
 // Product API routes for AI integration (with CORS support)

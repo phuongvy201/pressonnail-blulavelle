@@ -55,7 +55,7 @@
                         title: "Press On Nail API",
                         description:
                             "Storefront JSON API. **Auth (session):** register/login → cookie + CSRF. **Account:** `GET /api/profile`, `GET /api/orders` (login required). **Checkout:** Cart → checkout → `POST /checkout/process`.",
-                        version: "2.11.0",
+                        version: "2.13.1",
                     },
                     servers: [
                         {
@@ -709,6 +709,110 @@
                                                 },
                                             },
                                         },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/templates": {
+                            get: {
+                                tags: ["Templates"],
+                                summary: "List product templates",
+                                description:
+                                    "All product templates in one response (no pagination). Use `id` from each item as `template_id` in `POST /api/products/create`. Public endpoint — no API token.",
+                                operationId: "listProductTemplates",
+                                security: [],
+                                parameters: [
+                                    {
+                                        name: "search",
+                                        in: "query",
+                                        description: "Search template name or description",
+                                        schema: {
+                                            type: "string",
+                                            maxLength: 200,
+                                        },
+                                    },
+                                    {
+                                        name: "categoryId",
+                                        in: "query",
+                                        description: "Filter by category ID",
+                                        schema: {
+                                            type: "integer",
+                                            minimum: 1,
+                                        },
+                                    },
+                                    {
+                                        name: "sortBy",
+                                        in: "query",
+                                        schema: {
+                                            type: "string",
+                                            enum: [
+                                                "newest",
+                                                "oldest",
+                                                "name",
+                                                "products",
+                                            ],
+                                            default: "newest",
+                                        },
+                                    },
+                                ],
+                                responses: {
+                                    200: {
+                                        description: "Template list",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/TemplateListResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    422: {
+                                        description: "Validation error",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ValidationError",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/templates/{id}": {
+                            get: {
+                                tags: ["Templates"],
+                                summary: "Get product template",
+                                description:
+                                    "Full product template by numeric ID. Same structure as admin **Product Templates** (`ProductTemplateController`): category, pricing, media (image or video with optional poster), grouped attributes, variants, and customization fields. Use the returned `id` as `template_id` in `POST /api/products/create`. Public endpoint — no API token.",
+                                operationId: "getProductTemplate",
+                                security: [],
+                                parameters: [
+                                    {
+                                        name: "id",
+                                        in: "path",
+                                        required: true,
+                                        description: "Product template ID",
+                                        schema: {
+                                            type: "integer",
+                                            minimum: 1,
+                                            example: 12,
+                                        },
+                                    },
+                                ],
+                                responses: {
+                                    200: {
+                                        description: "Template detail",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/TemplateDetailResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    404: {
+                                        description: "Template not found",
                                     },
                                 },
                             },
@@ -1514,6 +1618,259 @@
                                         example: "Press On Nail Shop",
                                     },
                                 },
+                            },
+                            TemplateMediaItem: {
+                                type: "object",
+                                description:
+                                    "Template or variant media. Video entries may include a poster image URL.",
+                                properties: {
+                                    url: {
+                                        type: "string",
+                                        format: "uri",
+                                    },
+                                    alt: { type: "string" },
+                                    type: {
+                                        type: "string",
+                                        enum: ["image", "video"],
+                                        example: "image",
+                                    },
+                                    poster: {
+                                        type: "string",
+                                        format: "uri",
+                                        nullable: true,
+                                        description: "Video poster/thumbnail (videos only)",
+                                    },
+                                },
+                                required: ["url", "alt", "type"],
+                            },
+                            TemplateAttributeGroup: {
+                                type: "object",
+                                description:
+                                    "Attribute name with all allowed values (from `template_attributes` rows)",
+                                properties: {
+                                    name: {
+                                        type: "string",
+                                        example: "Size",
+                                    },
+                                    values: {
+                                        type: "array",
+                                        items: { type: "string" },
+                                        example: ["S", "M", "L"],
+                                    },
+                                },
+                                required: ["name", "values"],
+                            },
+                            TemplateVariant: {
+                                type: "object",
+                                properties: {
+                                    id: { type: "integer", example: 88 },
+                                    variant_name: {
+                                        type: "string",
+                                        example: "Size M / Almond",
+                                    },
+                                    attributes: {
+                                        type: "object",
+                                        additionalProperties: true,
+                                        example: { size: "M", shape: "Almond" },
+                                    },
+                                    price: {
+                                        type: "number",
+                                        format: "float",
+                                        nullable: true,
+                                        description:
+                                            "Variant override price (USD). Falls back to `base_price` when null.",
+                                    },
+                                    list_price: {
+                                        type: "number",
+                                        format: "float",
+                                        nullable: true,
+                                    },
+                                    quantity: {
+                                        type: "integer",
+                                        example: 0,
+                                        description:
+                                            "Default stock hint on template variant (not live product stock)",
+                                    },
+                                    media: {
+                                        type: "array",
+                                        items: {
+                                            $ref: "#/components/schemas/TemplateMediaItem",
+                                        },
+                                    },
+                                },
+                                required: ["id", "variant_name", "attributes", "quantity", "media"],
+                            },
+                            TemplateCategoryRef: {
+                                type: "object",
+                                nullable: true,
+                                properties: {
+                                    id: { type: "integer", example: 3 },
+                                    name: { type: "string", example: "Press-On Nails" },
+                                    slug: { type: "string", nullable: true },
+                                },
+                            },
+                            TemplateDetail: {
+                                type: "object",
+                                properties: {
+                                    id: { type: "integer", example: 12 },
+                                    name: { type: "string", example: "Almond Nude Set" },
+                                    category_id: { type: "integer", example: 3 },
+                                    category: {
+                                        $ref: "#/components/schemas/TemplateCategoryRef",
+                                    },
+                                    base_price: {
+                                        type: "number",
+                                        format: "float",
+                                        description: "Default product price (USD)",
+                                        example: 19.99,
+                                    },
+                                    list_price: {
+                                        type: "number",
+                                        format: "float",
+                                        nullable: true,
+                                        example: 24.99,
+                                    },
+                                    description: {
+                                        type: "string",
+                                        nullable: true,
+                                    },
+                                    media: {
+                                        type: "array",
+                                        items: {
+                                            $ref: "#/components/schemas/TemplateMediaItem",
+                                        },
+                                    },
+                                    allow_customization: { type: "boolean", example: false },
+                                    customizations: {
+                                        $ref: "#/components/schemas/ProductCustomizations",
+                                    },
+                                    attributes: {
+                                        type: "array",
+                                        items: {
+                                            $ref: "#/components/schemas/TemplateAttributeGroup",
+                                        },
+                                    },
+                                    variants: {
+                                        type: "array",
+                                        items: {
+                                            $ref: "#/components/schemas/TemplateVariant",
+                                        },
+                                    },
+                                    products_count: {
+                                        type: "integer",
+                                        example: 5,
+                                        description:
+                                            "Number of products already created from this template",
+                                    },
+                                    created_at: {
+                                        type: "string",
+                                        format: "date-time",
+                                        nullable: true,
+                                    },
+                                    updated_at: {
+                                        type: "string",
+                                        format: "date-time",
+                                        nullable: true,
+                                    },
+                                },
+                                required: [
+                                    "id",
+                                    "name",
+                                    "category_id",
+                                    "base_price",
+                                    "media",
+                                    "allow_customization",
+                                    "customizations",
+                                    "attributes",
+                                    "variants",
+                                    "products_count",
+                                ],
+                            },
+                            TemplateDetailResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    data: {
+                                        $ref: "#/components/schemas/TemplateDetail",
+                                    },
+                                },
+                                required: ["success", "data"],
+                            },
+                            TemplateListItem: {
+                                type: "object",
+                                properties: {
+                                    id: { type: "integer", example: 12 },
+                                    name: { type: "string", example: "Almond Nude Set" },
+                                    category_id: { type: "integer", example: 3 },
+                                    category: {
+                                        $ref: "#/components/schemas/TemplateCategoryRef",
+                                    },
+                                    base_price: {
+                                        type: "number",
+                                        format: "float",
+                                        example: 19.99,
+                                    },
+                                    list_price: {
+                                        type: "number",
+                                        format: "float",
+                                        nullable: true,
+                                        example: 24.99,
+                                    },
+                                    primary_image: {
+                                        type: "string",
+                                        format: "uri",
+                                        nullable: true,
+                                    },
+                                    allow_customization: {
+                                        type: "boolean",
+                                        example: false,
+                                    },
+                                    variants_count: {
+                                        type: "integer",
+                                        example: 12,
+                                    },
+                                    products_count: {
+                                        type: "integer",
+                                        example: 5,
+                                    },
+                                    created_at: {
+                                        type: "string",
+                                        format: "date-time",
+                                        nullable: true,
+                                    },
+                                    updated_at: {
+                                        type: "string",
+                                        format: "date-time",
+                                        nullable: true,
+                                    },
+                                },
+                                required: [
+                                    "id",
+                                    "name",
+                                    "category_id",
+                                    "base_price",
+                                    "allow_customization",
+                                    "variants_count",
+                                    "products_count",
+                                ],
+                            },
+                            TemplateListResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    total: {
+                                        type: "integer",
+                                        example: 12,
+                                        description: "Number of templates returned",
+                                    },
+                                    items: {
+                                        type: "array",
+                                        items: {
+                                            $ref: "#/components/schemas/TemplateListItem",
+                                        },
+                                    },
+                                },
+                                required: ["success", "total", "items"],
                             },
                             ProductListItem: {
                                 type: "object",
@@ -2805,6 +3162,7 @@
                         { name: "Products" },
                         { name: "Collections" },
                         { name: "Shops" },
+                        { name: "Templates" },
                         { name: "Cart" },
                         { name: "Checkout" },
                     ],
