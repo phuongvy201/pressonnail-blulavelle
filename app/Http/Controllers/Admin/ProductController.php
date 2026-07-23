@@ -623,8 +623,9 @@ class ProductController extends Controller
             $data['user_id'] = auth()->id(); // Set product owner
             $data['requires_special_handling'] = $request->boolean('requires_special_handling');
             $data['is_gift_card'] = $request->boolean('is_gift_card');
-            // Mặc định bật affiliate cho sản phẩm mới (trừ gift card).
-            $data['affiliate_eligible'] = ! $data['is_gift_card'];
+            // Checkbox from form; final value applied after create via canEnableAffiliate().
+            $wantAffiliate = $request->boolean('affiliate_eligible');
+            $data['affiliate_eligible'] = false;
 
             // Set shop_id based on user role
             if ($user->hasRole('admin')) {
@@ -748,8 +749,9 @@ class ProductController extends Controller
 
             $product = Product::create($data);
 
-            if ($wantAffiliate && $product->canEnableAffiliate()) {
-                $product->update(['affiliate_eligible' => true]);
+            $affiliateEligible = $wantAffiliate && $product->canEnableAffiliate();
+            if ((bool) $product->affiliate_eligible !== $affiliateEligible) {
+                $product->update(['affiliate_eligible' => $affiliateEligible]);
             }
 
             $product->refresh();
@@ -1031,9 +1033,12 @@ class ProductController extends Controller
             $data['requires_special_handling'] = $request->boolean('requires_special_handling');
             $data['is_gift_card'] = $request->boolean('is_gift_card');
             // Khi edit, giữ nguyên trạng thái affiliate_eligible nếu không gửi field;
-            // nếu có gửi thì bật mặc định (trừ gift card) nhưng ưu tiên checkbox.
+            // nếu có gửi thì ưu tiên checkbox (final value applied after update via canEnableAffiliate()).
+            $wantAffiliate = $request->has('affiliate_eligible')
+                ? $request->boolean('affiliate_eligible')
+                : (bool) $product->affiliate_eligible;
             if ($request->has('affiliate_eligible')) {
-                $data['affiliate_eligible'] = ! $data['is_gift_card'] && $request->boolean('affiliate_eligible', true);
+                $data['affiliate_eligible'] = ! $data['is_gift_card'] && $wantAffiliate;
             } else {
                 unset($data['affiliate_eligible']);
             }
