@@ -226,6 +226,9 @@ class ProductImportController extends Controller
             throw $e;
         }
 
+        $importPath = null;
+        $deleteImportFile = false;
+
         try {
             $file = $request->file('file');
             [$importPath, $deleteImportFile] = $this->resolveImportFilePath($file);
@@ -236,18 +239,18 @@ class ProductImportController extends Controller
 
             $extension = strtolower((string) $file->getClientOriginalExtension());
 
-            try {
-                $totalRows = $extension === 'csv'
-                    ? app(ProductImportCsvReader::class)->countDataRows($importPath)
-                    : $this->countRowsFromPath($importPath, $extension, $file);
+            $totalRows = $extension === 'csv'
+                ? app(ProductImportCsvReader::class)->countDataRows($importPath)
+                : $this->countRowsFromPath($importPath, $extension, $file);
 
-                return $this->runImportFromPath($importPath, $extension, $totalRows, $request, true);
-            } finally {
-                if ($deleteImportFile && isset($importPath) && is_string($importPath) && file_exists($importPath)) {
-                    @unlink($importPath);
-                }
-            }
+            // Giữ file tạm cho queue worker — RunProductImportJob tự cleanup sau khi xử lý.
+            // Không unlink ngay sau dispatch: với database queue worker chạy sau → mất file → FAIL.
+            return $this->runImportFromPath($importPath, $extension, $totalRows, $request, $deleteImportFile);
         } catch (\Throwable $e) {
+            if ($deleteImportFile && is_string($importPath) && file_exists($importPath)) {
+                @unlink($importPath);
+            }
+
             Log::error("Import exception: " . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
                 'file' => $e->getFile(),
