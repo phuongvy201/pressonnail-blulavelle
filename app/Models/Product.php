@@ -198,6 +198,37 @@ class Product extends Model
                     \Illuminate\Support\Facades\Log::warning("Failed to increment products count for shop ID {$product->shop_id}: " . $e->getMessage());
                 }
             }
+
+            try {
+                app(\App\Services\CrossSellService::class)->forgetCachesForProduct((int) $product->id);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Failed to clear cross-sell cache after product create', [
+                    'product_id' => $product->id,
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        });
+
+        static::updated(function ($product) {
+            try {
+                app(\App\Services\CrossSellService::class)->forgetCachesForProduct((int) $product->id);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Failed to clear cross-sell cache after product update', [
+                    'product_id' => $product->id,
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        });
+
+        static::deleted(function ($product) {
+            try {
+                app(\App\Services\CrossSellService::class)->forgetCachesForProduct((int) $product->id);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Failed to clear cross-sell cache after product delete', [
+                    'product_id' => $product->id,
+                    'message' => $e->getMessage(),
+                ]);
+            }
         });
     }
 

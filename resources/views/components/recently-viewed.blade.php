@@ -79,15 +79,19 @@
         var gap = 16;
 
         function layout() {
-            var perView = Math.min(rvPerView(), slides.length);
+            // Always size cards for the intended grid (2/3/4 cols), even if fewer items —
+            // otherwise 1 product stretches to full width and looks "zoomed".
+            var desiredPerView = rvPerView();
+            var perView = Math.min(desiredPerView, slides.length);
             var viewportWidth = viewport.clientWidth;
             if (viewportWidth <= 0) return;
 
             gap = window.innerWidth >= 640 ? 20 : 12;
-            var slideWidth = (viewportWidth - gap * (perView - 1)) / perView;
+            var slideWidth = (viewportWidth - gap * (desiredPerView - 1)) / desiredPerView;
 
             slides.forEach(function (slide) {
                 slide.style.width = slideWidth + 'px';
+                slide.style.maxWidth = slideWidth + 'px';
             });
             track.style.gap = gap + 'px';
 
@@ -103,7 +107,8 @@
         }
 
         function step(dir) {
-            var perView = Math.min(rvPerView(), slides.length);
+            var desiredPerView = rvPerView();
+            var perView = Math.min(desiredPerView, slides.length);
             var maxIndex = Math.max(0, slides.length - perView);
             index = Math.min(maxIndex, Math.max(0, index + dir));
             layout();
