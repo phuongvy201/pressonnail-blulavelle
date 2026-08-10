@@ -18,6 +18,8 @@ use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\Admin\AnalyticsSettingsController;
 use App\Http\Controllers\Admin\BulkDiscountSettingsController;
+use App\Http\Controllers\Admin\VirtualNailSettingsController;
+use App\Http\Controllers\Admin\VirtualNailTrialAdminController;
 use App\Http\Controllers\Admin\AffiliateProgramSettingsController;
 use App\Http\Controllers\Admin\ShopController as AdminShopController;
 use App\Http\Controllers\Admin\PageController as AdminPageController;
@@ -60,6 +62,7 @@ use App\Http\Controllers\Admin\SellerApplicationAdminController;
 use App\Http\Controllers\Admin\ReturnRequestController as AdminReturnRequestController;
 use App\Http\Controllers\TestController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\VirtualNailTrialController;
 
 // Public routes
 Route::get('/_media/resize', [PublicMediaResizeController::class, 'show'])->name('media.resize');
@@ -91,6 +94,44 @@ Route::get('/collections/{slug}', [CollectionController::class, 'show'])->name('
 // Search routes
 Route::get('/search', [SearchController::class, 'index'])->name('search');
 Route::get('/api/search/suggestions', [SearchController::class, 'suggestions'])->name('search.suggestions');
+
+// Virtual nail try-on (prefer chatgpt2api browser pool → fallback OpenAI API)
+Route::get('/virtual-nail-try', [VirtualNailTrialController::class, 'index'])
+    ->name('virtual-nail.index');
+
+Route::prefix('api/virtual-nail')->middleware(['web'])->name('api.virtual-nail.')->group(function () {
+    Route::middleware('throttle:virtual-nail-browse')->group(function () {
+        Route::get('/status', [VirtualNailTrialController::class, 'status'])->name('status');
+        Route::get('/products', [VirtualNailTrialController::class, 'products'])->name('products');
+        Route::get('/products/{productId}/options', [VirtualNailTrialController::class, 'productOptions'])
+            ->whereNumber('productId')
+            ->name('products.options');
+    });
+
+    Route::post('/try', [VirtualNailTrialController::class, 'tryOn'])
+        ->middleware('throttle:virtual-nail')
+        ->name('try');
+
+    Route::get('/history', [VirtualNailTrialController::class, 'history'])
+        ->middleware('throttle:virtual-nail-browse')
+        ->name('history');
+
+    Route::get('/pending', [VirtualNailTrialController::class, 'pending'])
+        ->middleware('throttle:virtual-nail-browse')
+        ->name('pending');
+
+    Route::get('/trials/{uuid}/status', [VirtualNailTrialController::class, 'trialStatus'])
+        ->middleware('throttle:virtual-nail-browse')
+        ->name('trials.status');
+
+    Route::get('/trials/{uuid}/result', [VirtualNailTrialController::class, 'trialResult'])
+        ->middleware('throttle:virtual-nail-browse')
+        ->name('trials.result');
+
+    Route::get('/trials/{uuid}/hand', [VirtualNailTrialController::class, 'trialHand'])
+        ->middleware('throttle:virtual-nail-browse')
+        ->name('trials.hand');
+});
 
 // Category routes
 Route::get('/category/{slug}', [CategoryController::class, 'show'])->name('category.show');
@@ -680,6 +721,15 @@ Route::middleware('auth')->group(function () {
         // Analytics settings
         Route::get('settings/analytics', [AnalyticsSettingsController::class, 'edit'])->name('settings.analytics.edit');
         Route::put('settings/analytics', [AnalyticsSettingsController::class, 'update'])->name('settings.analytics.update');
+
+        // Virtual Nail Try-On settings
+        Route::get('virtual-nail-trials', [VirtualNailTrialAdminController::class, 'index'])->name('virtual-nail-trials.index');
+        Route::get('virtual-nail-trials/{trial}/hand', [VirtualNailTrialAdminController::class, 'handImage'])->name('virtual-nail-trials.hand');
+        Route::get('virtual-nail-trials/{trial}/result', [VirtualNailTrialAdminController::class, 'resultImage'])->name('virtual-nail-trials.result');
+        Route::get('virtual-nail-trials/{trial}', [VirtualNailTrialAdminController::class, 'show'])->name('virtual-nail-trials.show');
+        Route::get('settings/virtual-nail', [VirtualNailSettingsController::class, 'edit'])->name('settings.virtual-nail.edit');
+        Route::put('settings/virtual-nail', [VirtualNailSettingsController::class, 'update'])->name('settings.virtual-nail.update');
+        Route::post('settings/virtual-nail/reset-prompt', [VirtualNailSettingsController::class, 'resetPrompt'])->name('settings.virtual-nail.reset-prompt');
 
         // Pricing settings: quantity/bulk discounts
         Route::get('settings/bulk-discounts', [BulkDiscountSettingsController::class, 'edit'])->name('settings.bulk-discounts.edit');

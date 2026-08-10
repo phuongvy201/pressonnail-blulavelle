@@ -32,6 +32,9 @@
             <a href="{{ route('products.index') }}" class="text-slate-700 text-base font-semibold hover:text-primary transition-colors {{ request()->routeIs('products.*') ? 'text-primary' : '' }}">All Nails</a>
             <a href="{{ route('collections.index') }}" class="text-slate-700 text-base font-semibold hover:text-primary transition-colors {{ request()->routeIs('collections.*') ? 'text-primary' : '' }}">Collections</a>
             <a href="{{ route('sizing-kit.index') }}" class="text-slate-700 text-base font-semibold hover:text-primary transition-colors {{ request()->routeIs('sizing-kit.*') ? 'text-primary' : '' }}">Sizing Kit</a>
+            @if(\App\Support\VirtualNailSettings::enabled())
+            <a href="{{ route('virtual-nail.index') }}" class="text-slate-700 text-base font-semibold hover:text-primary transition-colors {{ request()->routeIs('virtual-nail.*') ? 'text-primary' : '' }}">Virtual Try-On</a>
+            @endif
             <div class="relative group">
                 <button type="button" class="text-slate-700 text-base font-semibold hover:text-primary transition-colors">Help Center</button>
                 <div class="absolute left-0 mt-2 w-56 sm:w-60 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 py-2.5">
@@ -250,6 +253,12 @@
                     <span class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg></span>
                     Sizing Kit
                 </a>
+                @if(\App\Support\VirtualNailSettings::enabled())
+                <a href="{{ route('virtual-nail.index') }}" class="flex items-center gap-3 py-3 px-3 text-slate-700 text-sm font-medium hover:bg-primary/5 hover:text-primary border-b border-slate-100 transition-colors">
+                    <span class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11.5V8a5 5 0 0110 0v3.5M6 12h12l-1 8H7l-1-8z"/></svg></span>
+                    Virtual Try-On
+                </a>
+                @endif
                 <a href="{{ route('collections.index') }}" class="flex items-center gap-3 py-3 px-3 text-slate-700 text-sm font-medium hover:bg-primary/5 hover:text-primary border-b border-slate-100 transition-colors">
                     <span class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg></span>
                     Collections

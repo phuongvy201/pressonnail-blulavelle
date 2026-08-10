@@ -10,7 +10,7 @@ class OpenAIService
 {
     public function extractKeywords($title)
     {
-        $apiKey = (string) env('OPENAI_API_KEY', '');
+        $apiKey = (string) env('OPENAI_API_KEY', env('DEVQUOTA_API_KEY', ''));
         if ($apiKey === '') {
             Log::warning('OPENAI_API_KEY is missing; cannot extract keywords.');
             return [];
@@ -24,8 +24,8 @@ class OpenAIService
 
 Title: {$title}";
 
-        $model = (string) env('OPENAI_MODEL', 'gpt-5.4-nano');
-        $baseUrl = rtrim((string) env('OPENAI_BASE_URL', 'https://api.openai.com/v1'), '/');
+        $model = (string) env('OPENAI_MODEL', 'gpt-5.6-luna');
+        $baseUrl = rtrim((string) env('OPENAI_BASE_URL', env('DEVQUOTA_BASE_URL', 'https://sv.devquote.shop/v1')), '/');
         $endpoint = $baseUrl . '/responses';
         $timeout = (int) env('OPENAI_TIMEOUT', 60);
 

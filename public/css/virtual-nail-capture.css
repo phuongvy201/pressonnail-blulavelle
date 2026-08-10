@@ -1,0 +1,47 @@
+/* Virtual nail capture — static overlay (Approach 1) */
+
+.vnt-viewfinder {
+    isolation: isolate;
+}
+
+.vnt-viewfinder__video,
+.vnt-viewfinder__demo {
+    z-index: 1;
+}
+
+.vnt-viewfinder__guide {
+    z-index: 2;
+}
+
+.vnt-capture-guide__vignette {
+    background: radial-gradient(ellipse 68% 72% at 50% 46%, transparent 38%, rgba(0, 0, 0, 0.58) 100%);
+}
+
+.vnt-capture-guide__frame {
+    border: 1.5px solid rgba(255, 255, 255, 0.32);
+    border-radius: 1.25rem;
+    min-width: min(92vw, 22rem);
+}
+
+.vnt-capture-guide__hand-img {
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
+    opacity: 0.92;
+    transform: scale(1.06);
+    transform-origin: center center;
+}
+
+#vnt-camera-modal:not(.hidden) {
+    display: flex;
+    flex-direction: column;
+}
+
+#vnt-camera-error {
+    background: rgba(15, 23, 42, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(8px);
+}
+
+#vnt-camera-demo-badge {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}

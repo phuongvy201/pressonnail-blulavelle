@@ -764,6 +764,14 @@
                         </button>
                     </div>
 
+                    @if(\App\Support\VirtualNailSettings::enabled())
+                    <a href="{{ route('virtual-nail.index', ['product' => $product->slug]) }}"
+                       class="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-primary/30 bg-primary/5 px-4 py-3 text-sm font-bold text-primary hover:bg-primary/10 transition-colors">
+                        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11.5V8a5 5 0 0110 0v3.5M6 12h12l-1 8H7l-1-8z"/></svg>
+                        Try On Virtually
+                    </a>
+                    @endif
+
                     @if($product->shop)
                     @php
                         $productShop = $product->shop;

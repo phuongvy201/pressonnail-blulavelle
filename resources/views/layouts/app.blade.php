@@ -842,8 +842,11 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
     {{-- Toast thÃ´ng bÃ¡o (dÃ¹ng cho newsletter, v.v.) --}}
     <div id="toast-container" class="fixed top-4 right-4 z-[70] flex flex-col gap-3 pointer-events-none max-w-sm w-full sm:max-w-md" aria-live="polite"></div>
 
-    {{-- Live Chat widget (khÃ¡ch hÃ ng) - responsive --}}
-    <div id="live-chat-widget" class="fixed z-[55] bottom-4 right-4 sm:bottom-6 sm:right-6 md:bottom-6 md:right-6" style="padding-bottom: max(0.25rem, env(safe-area-inset-bottom)); padding-right: max(0.25rem, env(safe-area-inset-right));">
+    {{-- Floating actions: Virtual Try-On + Live Chat --}}
+    <div id="site-floating-actions" class="fixed z-[55] bottom-4 right-4 sm:bottom-6 sm:right-6 flex flex-col items-end gap-3" style="padding-bottom: max(0.25rem, env(safe-area-inset-bottom)); padding-right: max(0.25rem, env(safe-area-inset-right));">
+        @include('components.virtual-nail-fab')
+
+        <div id="live-chat-widget" class="relative inline-block">
         <div id="live-chat-toggle-wrap" class="relative inline-block">
             <button type="button" id="live-chat-toggle" class="live-chat-ring-target w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg flex items-center justify-center text-white hover:opacity-90 transition-opacity flex-shrink-0" style="background: #0297FE;" aria-label="Chat">
                 <span class="material-symbols-outlined text-2xl sm:text-3xl">chat</span>
@@ -877,6 +880,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                     </form>
                 </div>
             </div>
+        </div>
         </div>
     </div>
 
@@ -1593,11 +1597,36 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
     #live-chat-toggle-wrap.live-chat-ring .live-chat-ring-target {
         animation: liveChatRing 0.5s ease-in-out 6 forwards;
     }
+    @keyframes virtualNailFabPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(233, 30, 140, 0.45); }
+        50% { box-shadow: 0 0 0 10px rgba(233, 30, 140, 0); }
+    }
+    @keyframes virtualNailFabRing {
+        0%, 100% { transform: translateX(0) rotate(0deg); }
+        10% { transform: translateX(-2px) rotate(-8deg); }
+        20% { transform: translateX(2px) rotate(8deg); }
+        30% { transform: translateX(-2px) rotate(-6deg); }
+        40% { transform: translateX(2px) rotate(6deg); }
+        50% { transform: translateX(-1px) rotate(-4deg); }
+        60% { transform: translateX(1px) rotate(4deg); }
+        70% { transform: translateX(-1px) rotate(-2deg); }
+        80% { transform: translateX(1px) rotate(2deg); }
+        90% { transform: translateX(0) rotate(0deg); }
+    }
+    #virtual-nail-fab-wrap.virtual-nail-fab-ring .virtual-nail-fab-target {
+        animation: virtualNailFabRing 0.5s ease-in-out 6 forwards;
+    }
+    #virtual-nail-fab-wrap.virtual-nail-fab-attention .virtual-nail-fab-target {
+        animation: virtualNailFabPulse 2s ease-in-out infinite;
+    }
     /* Live chat responsive: bottom sheet trên mobile, tránh safe area */
     @media (max-width: 639px) {
         #live-chat-panel.live-chat-panel {
             bottom: max(5rem, calc(env(safe-area-inset-bottom, 0px) + 3.5rem));
             max-height: min(85vh, calc(100vh - 6rem - env(safe-area-inset-bottom, 0px)));
+        }
+        #site-floating-actions:has(#virtual-nail-fab-wrap) #live-chat-panel.live-chat-panel {
+            bottom: max(9.5rem, calc(env(safe-area-inset-bottom, 0px) + 8rem));
         }
     }
     </style>
@@ -2030,6 +2059,95 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         }, { once: true });
     })();
     </script>
+
+    @if(\App\Support\VirtualNailSettings::enabled())
+    @php
+        $__vntNotifierJs = public_path('js/virtual-nail-notifier.js');
+        $__vntNotifierJsV = is_file($__vntNotifierJs) ? (string) filemtime($__vntNotifierJs) : '1';
+    @endphp
+    <style>
+    .vnt-progress-banner {
+        position: fixed;
+        left: 50%;
+        bottom: max(1rem, env(safe-area-inset-bottom));
+        transform: translateX(-50%);
+        z-index: 54;
+        max-width: min(92vw, 24rem);
+        transition: opacity .25s ease, transform .25s ease;
+    }
+    .vnt-progress-banner.is-hidden {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateX(-50%) translateY(12px);
+    }
+    .vnt-progress-banner__link {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        border-radius: 999px;
+        background: #fff;
+        border: 1px solid #b9ddff;
+        box-shadow: 0 8px 28px rgba(1, 149, 254, .18);
+        text-decoration: none;
+        color: inherit;
+    }
+    .vnt-progress-banner__link:hover {
+        background: #f0f9ff;
+        border-color: #0195fe;
+    }
+    .vnt-progress-banner__spinner {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        border: 2.5px solid #d9ecff;
+        border-top-color: #0195fe;
+        animation: vntProgressSpin .8s linear infinite;
+        flex-shrink: 0;
+    }
+    @keyframes vntProgressSpin {
+        to { transform: rotate(360deg); }
+    }
+    .vnt-progress-banner__text {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .vnt-progress-banner__title {
+        font-size: 13px;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1.3;
+    }
+    .vnt-progress-banner__sub {
+        font-size: 11px;
+        color: #64748b;
+        line-height: 1.35;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 16rem;
+    }
+    @media (min-width: 640px) {
+        .vnt-progress-banner {
+            bottom: max(1.25rem, env(safe-area-inset-bottom));
+        }
+        #site-floating-actions ~ .vnt-progress-banner,
+        body:has(#site-floating-actions) .vnt-progress-banner {
+            bottom: max(5.5rem, calc(env(safe-area-inset-bottom) + 4.5rem));
+        }
+    }
+    </style>
+    <script>
+    window.virtualNailNotifierConfig = {
+        pageUrl: @json(route('virtual-nail.index')),
+        statusUrlTemplate: @json(url('/api/virtual-nail/trials/__UUID__/status')),
+        pendingUrl: @json(route('api.virtual-nail.pending')),
+    };
+    </script>
+    <script src="{{ asset('js/virtual-nail-notifier.js') }}?v={{ $__vntNotifierJsV }}" defer></script>
+    @endif
 </body>
 </html>
 

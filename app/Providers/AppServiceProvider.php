@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use App\Support\AffiliateSetupStatus;
-use App\Support\SharedCookieDomain;
 use App\Services\CurrencyService;
 use App\Models\AffiliateApplication;
 use App\Models\AffiliateSampleRequest;
@@ -87,16 +86,24 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('login', function (Request $request) {
             $email = strtolower((string) $request->input('email'));
 
-            return Limit::perMinute(5)->by($email !== '' ? $email.'|'.$request->ip() : $request->ip());
+            return Limit::perMinute(5)->by($email !== '' ? $email . '|' . $request->ip() : $request->ip());
         });
 
         RateLimiter::for('creator-affiliate-register', function (Request $request) {
             return Limit::perMinute(5)->by($request->ip());
         });
 
-        if ($this->app->environment('local') && config('creator.domain') && ! SharedCookieDomain::resolve()) {
-            logger()->info('CREATOR_DOMAIN is set and SESSION_DOMAIN is empty — main and creator will keep separate sessions unless SESSION_DOMAIN is explicitly configured.');
-        }
+        RateLimiter::for('virtual-nail-browse', function (Request $request) {
+            $perMinute = max(30, (int) \App\Support\VirtualNailSettings::browseRateLimit());
+
+            return Limit::perMinute($perMinute)->by($request->ip());
+        });
+
+        RateLimiter::for('virtual-nail', function (Request $request) {
+            $perMinute = max(1, (int) \App\Support\VirtualNailSettings::tryRateLimit());
+
+            return Limit::perMinute($perMinute)->by($request->ip());
+        });
 
         // Share currency information with all views
         View::composer('*', function ($view) {
@@ -134,10 +141,10 @@ class AppServiceProvider extends ServiceProvider
             if ($user && ($user->hasRole('admin') || $user->hasRole('seller'))) {
                 $liveChatUnreadCount = ChatMessage::where('is_from_customer', true)
                     ->whereNull('read_at')
-                    ->whereHas('conversation', fn ($q) => $q->where('seller_id', $user->id))
+                    ->whereHas('conversation', fn($q) => $q->where('seller_id', $user->id))
                     ->count();
             }
-            
+
             if (! array_key_exists('canEdit', $view->getData())) {
                 $view->with('canEdit', $user && $user->hasRole('admin'));
             }

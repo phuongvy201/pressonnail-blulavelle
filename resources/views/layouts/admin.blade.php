@@ -80,6 +80,8 @@
         request()->routeIs('admin.dashboard')
         || request()->routeIs('admin.analytics.*')
         || request()->routeIs('admin.settings.analytics.*')
+        || request()->routeIs('admin.settings.virtual-nail.*')
+        || request()->routeIs('admin.virtual-nail-trials.*')
         || request()->routeIs('admin.site.home-preview')
     );
     $navOpenUsers = $__na && (
