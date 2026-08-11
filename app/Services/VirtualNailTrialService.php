@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Collection;
 use App\Models\Product;
 use App\Models\VirtualNailTrial;
 use App\Support\VirtualNailSettings;
@@ -633,35 +634,149 @@ class VirtualNailTrialService
     }
 
     /**
-     * @return array<int, array{id: int, name: string, slug: string, image: string|null, price: float}>
+     * @return array<int, array{id: int, name: string, slug: string, image: string|null, price: float, badge: ?string, category: ?string}>
      */
-    public function listProductsForPicker(?string $search = null, int $limit = 24): array
+    public function listProductsForPicker(array $options = []): array
     {
+        $search = isset($options['search']) ? trim((string) $options['search']) : null;
+        $limit = max(1, min((int) ($options['limit'] ?? config('virtual_nail.picker_limit', 48)), 48));
+        $sort = (string) ($options['sort'] ?? 'popular');
+        $collectionId = isset($options['collection_id']) ? (int) $options['collection_id'] : 0;
+
         $query = Product::query()
             ->availableForDisplay()
-            ->select(['id', 'name', 'slug', 'price', 'media'])
-            ->with(['template:id,media']);
+            ->select(['products.id', 'products.name', 'products.slug', 'products.price', 'products.media', 'products.created_at', 'products.template_id'])
+            ->with(['template:id,media,category_id', 'template.category:id,name'])
+            ->withCount('virtualNailTrials as trials_count');
 
-        if ($search !== null && trim($search) !== '') {
-            $term = trim($search);
-            $query->where('name', 'like', '%'.$term.'%');
+        if ($search !== null && $search !== '') {
+            $query->where('products.name', 'like', '%'.$search.'%');
         }
 
+        if ($collectionId > 0) {
+            $query->whereHas('collections', fn ($q) => $q
+                ->where('collections.id', $collectionId)
+                ->active()
+                ->approved());
+        }
+
+        match ($sort) {
+            'newest' => $query->latest('products.id'),
+            'price_asc' => $query->orderBy('products.price'),
+            'price_desc' => $query->orderByDesc('products.price'),
+            default => $query->orderByDesc('trials_count')->orderByDesc('products.id'),
+        };
+
         return $query
-            ->latest('id')
-            ->limit(max(1, min($limit, 48)))
+            ->limit($limit)
             ->get()
-            ->map(function (Product $product) {
-                return [
-                    'id' => (int) $product->id,
-                    'name' => (string) $product->name,
-                    'slug' => (string) $product->slug,
-                    'image' => $this->resolveProductImageUrl($product),
-                    'price' => (float) ($product->price ?? 0),
-                ];
-            })
+            ->map(fn (Product $product) => $this->serializePickerProduct($product))
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function pickerMeta(): array
+    {
+        $collections = Collection::query()
+            ->select(['id', 'name', 'slug'])
+            ->active()
+            ->approved()
+            ->whereHas('products', fn ($q) => $q->availableForDisplay())
+            ->orderByDesc('featured')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->limit(48)
+            ->get()
+            ->map(fn ($collection) => [
+                'id' => (int) $collection->id,
+                'name' => (string) $collection->name,
+                'slug' => (string) $collection->slug,
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'collections' => $collections,
+            'trending_searches' => config('virtual_nail.trending_searches', []),
+            'sorts' => [
+                ['value' => 'popular', 'label' => 'Most popular'],
+                ['value' => 'newest', 'label' => 'Newest'],
+                ['value' => 'price_asc', 'label' => 'Price: low to high'],
+                ['value' => 'price_desc', 'label' => 'Price: high to low'],
+            ],
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function productSearchSuggestions(?string $query, int $limit = 8): array
+    {
+        $limit = max(1, min($limit, 12));
+        $term = trim((string) $query);
+
+        if ($term === '') {
+            $trending = collect(config('virtual_nail.trending_searches', []))
+                ->filter()
+                ->take($limit)
+                ->values()
+                ->all();
+
+            if ($trending !== []) {
+                return $trending;
+            }
+        }
+
+        $names = Product::query()
+            ->availableForDisplay()
+            ->when($term !== '', fn ($q) => $q->where('name', 'like', '%'.$term.'%'))
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->pluck('name')
+            ->map(fn ($name) => (string) $name)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($names !== []) {
+            return $names;
+        }
+
+        return collect(config('virtual_nail.trending_searches', []))
+            ->filter(fn ($item) => $term === '' || stripos((string) $item, $term) !== false)
+            ->take($limit)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array{id: int, name: string, slug: string, image: string|null, price: float, badge: ?string, category: ?string}
+     */
+    private function serializePickerProduct(Product $product): array
+    {
+        $trialsCount = (int) ($product->trials_count ?? 0);
+        $badge = null;
+
+        if ($product->created_at && $product->created_at->greaterThan(now()->subDays(30))) {
+            $badge = 'new';
+        } elseif ($trialsCount >= 8) {
+            $badge = 'bestseller';
+        } elseif ($trialsCount >= 3) {
+            $badge = 'trending';
+        }
+
+        return [
+            'id' => (int) $product->id,
+            'name' => (string) $product->name,
+            'slug' => (string) $product->slug,
+            'image' => $this->resolveProductImageUrl($product),
+            'price' => (float) ($product->price ?? 0),
+            'badge' => $badge,
+            'category' => $product->template?->category?->name,
+        ];
     }
 
     /**

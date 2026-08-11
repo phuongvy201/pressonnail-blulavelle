@@ -43,7 +43,7 @@
         </div>
 
         <div class="vnt-page__grid">
-            <div>
+            <div class="vnt-page__hand">
                 {{-- Step 1 --}}
                 <div class="vnt-card">
                     <div class="vnt-card__head">
@@ -77,19 +77,47 @@
                         <button type="button" id="vnt-upload-btn" class="vnt-btn vnt-btn--secondary">Upload Image</button>
                     </div>
                 </div>
+            </div>
 
-                {{-- Step 2 --}}
+            <div class="vnt-page__rest">
                 <div id="vnt-design-section" class="vnt-card @if($selectedProduct) is-hidden @endif">
                     <div class="vnt-card__head">
                         <span class="vnt-card__step">02</span>
                         <span class="vnt-card__title">Choose a design</span>
                     </div>
-                    <div class="vnt-search">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8A7A76" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
-                        <input type="search" id="vnt-product-search" placeholder="Search nail designs...">
+
+                    <div class="vnt-picker-toolbar">
+                        <div class="vnt-search vnt-search--rich">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8A7A76" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
+                            <input type="search" id="vnt-product-search" placeholder="Search nail designs..." autocomplete="off" aria-autocomplete="list" aria-controls="vnt-search-suggestions" aria-expanded="false">
+                            <div id="vnt-search-suggestions" class="vnt-search-suggestions is-hidden" role="listbox"></div>
+                        </div>
+                        <div class="vnt-picker-toolbar__row">
+                            <div class="vnt-collection-filter">
+                                <label class="vnt-sort-label" for="vnt-collection-filter">Collection</label>
+                                <select id="vnt-collection-filter" class="vnt-sort-select" aria-label="Filter by collection">
+                                    <option value="">All collections</option>
+                                </select>
+                            </div>
+                            <div class="vnt-sort-filter">
+                                <label class="vnt-sort-label" for="vnt-product-sort">Sort</label>
+                                <select id="vnt-product-sort" class="vnt-sort-select" aria-label="Sort designs">
+                                    <option value="popular">Most popular</option>
+                                    <option value="newest">Newest</option>
+                                    <option value="price_asc">Price: low to high</option>
+                                    <option value="price_desc">Price: high to low</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
+
+                    <div id="vnt-wishlist-bar" class="vnt-wishlist-bar is-hidden">
+                        <span class="vnt-wishlist-bar__label">Saved designs</span>
+                        <div id="vnt-wishlist-chips" class="vnt-wishlist-chips"></div>
+                    </div>
+
                     <div id="vnt-product-list" class="vnt-design-grid"></div>
-                    <p id="vnt-product-empty" class="vnt-is-hidden" style="text-align:center;font-size:13px;color:#8A7A76;padding:24px 0;">No matching designs found.</p>
+                    <p id="vnt-product-empty" class="vnt-is-hidden" style="text-align:center;font-size:13px;color:#8A7A76;padding:24px 0;">No matching designs found. Try another collection or search.</p>
                 </div>
 
                 <div id="vnt-selected-product" class="vnt-card @if(!$selectedProduct) is-hidden @endif">
@@ -157,8 +185,8 @@
                 </div>
             </div>
 
-            {{-- Preview panel --}}
-            <div class="vnt-preview-panel">
+            {{-- Preview panel (desktop: sticky right; mobile: after steps) --}}
+            <aside class="vnt-preview-panel" aria-label="AI preview">
                 <div class="vnt-preview-head">
                     <span class="vnt-preview-title">AI Preview</span>
                     <span class="vnt-status-dot">
@@ -168,20 +196,27 @@
                 </div>
 
                 <div class="vnt-preview-stage" id="vnt-preview-stage">
-                    <div id="vnt-result-idle" style="display:flex;flex-direction:column;align-items:center;padding:24px;">
-                        <div class="vnt-lock-circle">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                    <div id="vnt-result-idle" class="vnt-result-idle">
+                        <div id="vnt-idle-default">
+                            <div class="vnt-lock-circle">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                            </div>
+                            <div class="vnt-placeholder-text">Upload a hand photo and choose a design to see your <b>AI preview</b> here.</div>
                         </div>
-                        <div class="vnt-placeholder-text">Upload a hand photo and choose a design to see your <b>AI preview</b> here.</div>
+                        <div id="vnt-idle-peek" class="vnt-idle-peek is-hidden">
+                            <img id="vnt-idle-peek-img" src="" alt="Selected design preview">
+                            <p id="vnt-idle-peek-name" class="vnt-idle-peek__name"></p>
+                            <p class="vnt-idle-peek__hint">Add your hand photo, then tap <b>Generate Preview</b>.</p>
+                        </div>
                     </div>
 
-                    <div id="vnt-result-processing" class="is-hidden" style="flex-direction:column;align-items:center;">
+                    <div id="vnt-result-processing" class="vnt-result-processing is-hidden">
                         <div class="vnt-spinner"></div>
                         <div class="vnt-spin-text">Building your preview...</div>
-                        <div class="vnt-spin-text" style="margin-top:4px;opacity:.75">This may take up to a minute</div>
+                        <div class="vnt-spin-text vnt-spin-text--sub">This may take up to a minute</div>
                     </div>
 
-                    <div id="vnt-result-done" class="is-hidden" style="position:absolute;inset:0;">
+                    <div id="vnt-result-done" class="vnt-result-done is-hidden">
                         <img id="vnt-result-image" class="vnt-zoomable" src="" alt="Virtual try-on result" title="Click to enlarge">
                         <img id="vnt-before-image" class="vnt-zoomable is-hidden" src="" alt="Original hand photo" title="Click to enlarge">
                         <button type="button" id="vnt-before-toggle" class="vnt-before-toggle" aria-pressed="false">Before</button>
@@ -192,12 +227,17 @@
                 <div id="vnt-preview-actions" class="vnt-preview-actions is-hidden">
                     <button type="button" id="vnt-try-another" class="vnt-btn vnt-btn--secondary">Try Again</button>
                     <button type="button" id="vnt-download-btn" class="vnt-btn vnt-btn--primary">Save Image</button>
-                    <a id="vnt-view-product" href="#" class="vnt-btn vnt-btn--secondary is-hidden" style="flex-basis:100%">View Product</a>
+                    <a id="vnt-view-product" href="#" class="vnt-btn vnt-btn--secondary vnt-btn--full is-hidden">View Product</a>
                 </div>
-            </div>
+            </aside>
         </div>
     </div>
     @endif
+</div>
+
+<div id="vnt-hover-preview" class="vnt-hover-preview is-hidden" aria-hidden="true">
+    <img id="vnt-hover-preview-img" src="" alt="">
+    <span id="vnt-hover-preview-name"></span>
 </div>
 
 @if($enabled)
@@ -268,6 +308,8 @@
 window.virtualNailPageConfig = {
     routes: {
         products: @json(route('api.virtual-nail.products')),
+        productSuggestions: @json(route('api.virtual-nail.products.suggestions')),
+        pickerMeta: @json(route('api.virtual-nail.picker-meta')),
         productOptions: @json(url('/api/virtual-nail/products')),
         try: @json(route('api.virtual-nail.try')),
         history: @json(route('api.virtual-nail.history')),

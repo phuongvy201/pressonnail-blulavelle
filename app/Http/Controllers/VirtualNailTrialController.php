@@ -52,7 +52,7 @@ class VirtualNailTrialController extends Controller
             'captureTips' => VirtualNailSettings::captureTips(),
             'noticeTitle' => VirtualNailSettings::noticeTitle(),
             'noticeText' => VirtualNailSettings::noticeText(),
-            'cameraDemo' => config('app.debug') && $request->boolean('camera_demo'),
+            'cameraDemo' => app()->environment('local') && $request->boolean('camera_demo'),
             'asyncEnabled' => (bool) config('virtual_nail.async', true),
         ]);
     }
@@ -90,17 +90,48 @@ class VirtualNailTrialController extends Controller
 
         $validated = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
+            'sort' => ['nullable', 'string', 'in:popular,newest,price_asc,price_desc'],
+            'collection_id' => ['nullable', 'integer', 'min:1'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:48'],
         ]);
 
-        $items = $this->service->listProductsForPicker(
-            $validated['search'] ?? null,
-            (int) ($validated['limit'] ?? 24)
-        );
+        $items = $this->service->listProductsForPicker($validated);
 
         return response()->json([
             'success' => true,
             'products' => $items,
+        ]);
+    }
+
+    public function pickerMeta(): JsonResponse
+    {
+        if (! $this->service->isConfigured()) {
+            return response()->json(['success' => false, 'message' => 'Not available.'], 503);
+        }
+
+        return response()->json([
+            'success' => true,
+            'meta' => $this->service->pickerMeta(),
+        ]);
+    }
+
+    public function productSuggestions(Request $request): JsonResponse
+    {
+        if (! $this->service->isConfigured()) {
+            return response()->json(['success' => false, 'suggestions' => []], 503);
+        }
+
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:12'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'suggestions' => $this->service->productSearchSuggestions(
+                $validated['q'] ?? null,
+                (int) ($validated['limit'] ?? 8)
+            ),
         ]);
     }
 

@@ -50,4 +50,16 @@ return [
 
     'default_length' => 'Medium',
 
+    'picker_limit' => (int) env('VIRTUAL_NAIL_PICKER_LIMIT', 48),
+
+    'trending_searches' => [
+        'French',
+        'Floral',
+        'Ombre',
+        'Glitter',
+        'Chiefs',
+        'Wedding',
+        'Sports',
+    ],
+
 ];

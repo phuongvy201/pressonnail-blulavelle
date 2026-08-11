@@ -437,6 +437,11 @@ class Product extends Model
         return $this->hasMany(CartItem::class);
     }
 
+    public function virtualNailTrials(): HasMany
+    {
+        return $this->hasMany(VirtualNailTrial::class);
+    }
+
     // Accessors
     public function getBasePriceAttribute(): float
     {

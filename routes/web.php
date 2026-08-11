@@ -103,6 +103,8 @@ Route::prefix('api/virtual-nail')->middleware(['web'])->name('api.virtual-nail.'
     Route::middleware('throttle:virtual-nail-browse')->group(function () {
         Route::get('/status', [VirtualNailTrialController::class, 'status'])->name('status');
         Route::get('/products', [VirtualNailTrialController::class, 'products'])->name('products');
+        Route::get('/products/suggestions', [VirtualNailTrialController::class, 'productSuggestions'])->name('products.suggestions');
+        Route::get('/picker-meta', [VirtualNailTrialController::class, 'pickerMeta'])->name('picker-meta');
         Route::get('/products/{productId}/options', [VirtualNailTrialController::class, 'productOptions'])
             ->whereNumber('productId')
             ->name('products.options');
