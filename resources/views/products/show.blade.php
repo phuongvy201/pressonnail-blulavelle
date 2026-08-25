@@ -1067,7 +1067,7 @@
                     </p>
                 @else
                     @if($canSubmitReview ?? false)
-                        <form action="{{ route('products.reviews.store', $product->slug) }}#customer-reviews" method="POST" class="space-y-4">
+                        <form action="{{ route('products.reviews.store', $product->slug) }}#customer-reviews" method="POST" enctype="multipart/form-data" class="space-y-4">
                             @csrf
                             <div>
                                 <label class="block text-sm font-semibold text-slate-700 mb-2">Rating</label>
@@ -1091,6 +1091,12 @@
                                 <textarea id="review-text" name="review_text" rows="4" required maxlength="2000"
                                           class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#0297FE]/30 focus:border-[#0297FE]"
                                           placeholder="Share your experience with this product...">{{ old('review_text') }}</textarea>
+                            </div>
+                            <div>
+                                <label for="review-image" class="block text-sm font-semibold text-slate-700 mb-1">Photo (optional)</label>
+                                <input id="review-image" type="file" name="review_image" accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                                       class="block w-full text-sm text-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                <p class="text-xs text-slate-500 mt-1">JPG, PNG, WEBP or GIF — max 5MB.</p>
                             </div>
                             <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-3 sm:py-2.5 rounded-lg bg-[#0297FE] text-white text-sm font-bold hover:opacity-90 transition touch-manipulation">
                                 Submit Review

@@ -14,9 +14,12 @@ use App\Services\TikTokEventsService;
 use App\Services\CurrencyService;
 use App\Services\CrossSellService;
 use App\Support\ReferenceNailSizeChart;
+use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -357,7 +360,37 @@ class ProductController extends Controller
             'title' => 'nullable|string|max:120',
             'review_text' => 'required|string|max:2000',
             'redirect_to' => 'nullable|string|max:500',
+            'review_image' => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:5120',
         ]);
+
+        $imagePath = null;
+        /** @var UploadedFile|null $uploadedImage */
+        $uploadedImage = $request->file('review_image');
+        if ($uploadedImage instanceof UploadedFile && $uploadedImage->isValid()) {
+            $sourcePath = $uploadedImage->getPathname();
+            if ($sourcePath === '' || !is_readable($sourcePath)) {
+                return back()
+                    ->withInput()
+                    ->with('error', 'Unable to read the uploaded image. Please try again.');
+            }
+
+            $extension = strtolower((string) $uploadedImage->getClientOriginalExtension());
+            if ($extension === '') {
+                $extension = strtolower((string) $uploadedImage->extension());
+            }
+
+            $filename = Str::uuid()->toString() . ($extension !== '' ? '.' . $extension : '');
+            $storedPath = 'reviews/' . $filename;
+
+            $stored = Storage::disk('public')->put($storedPath, fopen($sourcePath, 'r'));
+            if (!$stored) {
+                return back()
+                    ->withInput()
+                    ->with('error', 'Unable to save the uploaded image. Please try again.');
+            }
+
+            $imagePath = $storedPath;
+        }
 
         Review::create([
             'product_id' => $product->id,
@@ -367,6 +400,7 @@ class ProductController extends Controller
             'rating' => (int) $validated['rating'],
             'title' => $validated['title'] ?? null,
             'review_text' => $validated['review_text'],
+            'image_url' => $imagePath,
             'is_verified_purchase' => true,
             'is_approved' => true,
         ]);

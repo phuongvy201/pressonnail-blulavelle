@@ -320,10 +320,17 @@
                                 @if($existingReview->review_text)
                                     <p class="text-sm text-gray-700 mt-1">{{ $existingReview->review_text }}</p>
                                 @endif
+                                @if(!empty($existingReview->image_url_for_display))
+                                    <div class="mt-3">
+                                        <img src="{{ $existingReview->image_url_for_display }}"
+                                             alt="Review photo for {{ $item->product_name }}"
+                                             class="w-24 h-24 object-cover rounded-lg border border-gray-200">
+                                    </div>
+                                @endif
                                 <p class="text-xs text-gray-500 mt-2">Submitted {{ $existingReview->created_at?->format('M d, Y') }}</p>
                             </div>
                         @elseif($canReviewItem)
-                            <form action="{{ route('products.reviews.store', $item->product->slug) }}" method="POST" class="space-y-4">
+                            <form action="{{ route('products.reviews.store', $item->product->slug) }}" method="POST" enctype="multipart/form-data" class="space-y-4">
                                 @csrf
                                 <input type="hidden" name="redirect_to" value="{{ route('customer.orders.show', $order->order_number) }}#order-reviews">
                                 <div>
@@ -348,6 +355,14 @@
                                     <textarea name="review_text" rows="3" required maxlength="2000"
                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0195FE] focus:border-[#0195FE]"
                                               placeholder="Share your experience with this product...">{{ old('review_text') }}</textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-1">Photo (optional)</label>
+                                    <input type="file"
+                                           name="review_image"
+                                           accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                                           class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                    <p class="text-xs text-gray-500 mt-1">JPG, PNG, WEBP or GIF — max 5MB. Show off your nails or the product you received.</p>
                                 </div>
                                 <button type="submit"
                                         class="px-5 py-2.5 rounded-lg text-white font-semibold bg-[#0195FE] hover:bg-[#017fda] transition">
