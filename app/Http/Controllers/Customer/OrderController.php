@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -27,7 +28,11 @@ class OrderController extends Controller
 
         // Apply filters
         if ($status) {
-            $query->where('status', $status);
+            if ($status === 'completed') {
+                $query->whereIn('status', ['completed', 'delivered']);
+            } else {
+                $query->where('status', $status);
+            }
         }
 
         if ($search) {
@@ -41,16 +46,30 @@ class OrderController extends Controller
         // Paginate results
         $orders = $query->paginate(10);
 
+        $productIdsInPage = $orders->getCollection()
+            ->flatMap(fn ($order) => $order->items->pluck('product_id'))
+            ->filter()
+            ->unique()
+            ->values();
+
+        $userReviewedProductIds = $productIdsInPage->isEmpty()
+            ? collect()
+            : Review::query()
+                ->where('user_id', $user->id)
+                ->whereIn('product_id', $productIdsInPage)
+                ->pluck('product_id')
+                ->flip();
+
         // Get order statistics
         $stats = [
             'total' => Order::where('user_id', $user->id)->count(),
             'pending' => Order::where('user_id', $user->id)->where('status', 'pending')->count(),
             'processing' => Order::where('user_id', $user->id)->where('status', 'processing')->count(),
-            'completed' => Order::where('user_id', $user->id)->where('status', 'completed')->count(),
+            'completed' => Order::where('user_id', $user->id)->whereIn('status', ['completed', 'delivered'])->count(),
             'cancelled' => Order::where('user_id', $user->id)->where('status', 'cancelled')->count(),
         ];
 
-        return view('customer.orders.index', compact('orders', 'stats', 'status', 'search'));
+        return view('customer.orders.index', compact('orders', 'stats', 'status', 'search', 'userReviewedProductIds'));
     }
 
     /**
@@ -71,7 +90,24 @@ class OrderController extends Controller
             ])
             ->firstOrFail();
 
-        return view('customer.orders.show', compact('order'));
+        $canReviewOrder = in_array($order->status, ['completed', 'delivered'], true);
+        $reviewableProductIds = $order->items
+            ->filter(fn ($item) => $item->product_id && $item->product && !($item->product->is_gift_card ?? false))
+            ->pluck('product_id')
+            ->unique()
+            ->values();
+
+        $userReviewsByProductId = Review::query()
+            ->where('user_id', $user->id)
+            ->whereIn('product_id', $reviewableProductIds)
+            ->get()
+            ->keyBy('product_id');
+
+        return view('customer.orders.show', compact(
+            'order',
+            'canReviewOrder',
+            'userReviewsByProductId',
+        ));
     }
 
     /**

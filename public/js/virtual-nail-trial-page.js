@@ -27,6 +27,7 @@
     };
 
     var WISHLIST_KEY = 'vntWishlist';
+    var HAND_MAX_SIDE = cfg.handMaxSide || 1024;
 
     var els = {};
 
@@ -55,16 +56,16 @@
         els.hoverPreview = $('vnt-hover-preview');
         els.hoverPreviewImg = $('vnt-hover-preview-img');
         els.hoverPreviewName = $('vnt-hover-preview-name');
-        els.idleDefault = $('vnt-idle-default');
-        els.idlePeek = $('vnt-idle-peek');
-        els.idlePeekImg = $('vnt-idle-peek-img');
-        els.idlePeekName = $('vnt-idle-peek-name');
+        els.idleDefault = null;
+        els.idlePeek = null;
+        els.idlePeekImg = null;
+        els.idlePeekName = null;
         els.productEmpty = $('vnt-product-empty');
         els.shapeOptions = $('vnt-shape-options');
         els.lengthOptions = $('vnt-length-options');
         els.generateBtn = $('vnt-generate-btn');
         els.error = $('vnt-error');
-        els.resultIdle = $('vnt-result-idle');
+        els.resultWrap = $('vnt-result-wrap');
         els.resultProcessing = $('vnt-result-processing');
         els.resultDone = $('vnt-result-done');
         els.resultImage = $('vnt-result-image');
@@ -152,32 +153,15 @@
         } else if (els.viewProduct) {
             setHidden(els.viewProduct, true);
         }
-        updateIdlePeek();
         updateGenerateButton();
     }
 
-    function updateIdlePeek() {
-        if (!els.idleDefault || !els.idlePeek) return;
-        if (state.product && state.product.image && !state.resultImage && !state.processing) {
-            setHidden(els.idleDefault, true);
-            setHidden(els.idlePeek, false);
-            if (els.idlePeekImg) els.idlePeekImg.src = state.product.image;
-            if (els.idlePeekName) els.idlePeekName.textContent = state.product.name || '';
-        } else {
-            setHidden(els.idleDefault, false);
-            setHidden(els.idlePeek, true);
-        }
-    }
-
     function setResultView(mode) {
-        setHidden(els.resultIdle, mode !== 'idle');
+        setHidden(els.resultWrap, mode === 'idle');
         setHidden(els.resultProcessing, mode !== 'processing');
         setHidden(els.resultDone, mode !== 'done');
         setHidden(els.previewActions, mode !== 'done');
-
-        if (mode === 'idle') updateIdlePeek();
-
-        updateStatus(mode);
+        updateStatus(mode === 'processing' ? 'processing' : (mode === 'done' ? 'done' : 'idle'));
     }
 
     function shapeIconClass(name) {
@@ -268,17 +252,92 @@
             showError('Please choose a valid image file (JPG, PNG, or WEBP).');
             return;
         }
-        if (state.handPreviewUrl) URL.revokeObjectURL(state.handPreviewUrl);
-        state.handFile = file;
-        state.handPreviewUrl = URL.createObjectURL(file);
-        if (els.preview) {
-            els.preview.src = state.handPreviewUrl;
-            els.preview.classList.remove('is-hidden', 'hidden');
-        }
-        setHidden(els.previewPlaceholder, true);
-        setHidden(els.dzBadge, false);
-        showError('');
-        updateGenerateButton();
+
+        normalizeHandImage(file)
+            .then(function (prepared) {
+                if (state.handPreviewUrl) URL.revokeObjectURL(state.handPreviewUrl);
+                state.handFile = prepared.file;
+                state.handPreviewUrl = prepared.previewUrl;
+                if (els.preview) {
+                    els.preview.src = state.handPreviewUrl;
+                    els.preview.classList.remove('is-hidden', 'hidden');
+                }
+                setHidden(els.previewPlaceholder, true);
+                setHidden(els.dzBadge, false);
+                showError('');
+                updateGenerateButton();
+            })
+            .catch(function () {
+                showError('Could not prepare the hand photo. Please try another image.');
+            });
+    }
+
+    /**
+     * Pad to square + downscale for /images/edits (must be square PNG on server).
+     * @returns {Promise<{file: File, previewUrl: string}>}
+     */
+    function normalizeHandImage(file) {
+        return new Promise(function (resolve, reject) {
+            var objectUrl = URL.createObjectURL(file);
+            var img = new Image();
+
+            img.onload = function () {
+                URL.revokeObjectURL(objectUrl);
+
+                var srcW = img.naturalWidth || img.width;
+                var srcH = img.naturalHeight || img.height;
+                if (!srcW || !srcH) {
+                    reject(new Error('invalid dimensions'));
+                    return;
+                }
+
+                var padSide = Math.max(srcW, srcH);
+                var outputSide = Math.min(HAND_MAX_SIDE, padSide);
+                var canvas = document.createElement('canvas');
+                canvas.width = outputSide;
+                canvas.height = outputSide;
+
+                var ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    reject(new Error('no canvas'));
+                    return;
+                }
+
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, outputSide, outputSide);
+
+                var scale = outputSide / padSide;
+                var drawW = srcW * scale;
+                var drawH = srcH * scale;
+                var drawX = (outputSide - drawW) / 2;
+                var drawY = (outputSide - drawH) / 2;
+                ctx.drawImage(img, drawX, drawY, drawW, drawH);
+
+                canvas.toBlob(function (blob) {
+                    if (!blob) {
+                        reject(new Error('encode failed'));
+                        return;
+                    }
+
+                    var preparedFile = new File(
+                        [blob],
+                        'hand-square.jpg',
+                        { type: 'image/jpeg', lastModified: Date.now() }
+                    );
+                    resolve({
+                        file: preparedFile,
+                        previewUrl: URL.createObjectURL(blob),
+                    });
+                }, 'image/jpeg', 0.92);
+            };
+
+            img.onerror = function () {
+                URL.revokeObjectURL(objectUrl);
+                reject(new Error('load failed'));
+            };
+
+            img.src = objectUrl;
+        });
     }
 
     function cameraSupported() {
@@ -429,18 +488,32 @@
             return;
         }
 
-        canvas.width = width;
-        canvas.height = height;
+        var padSide = Math.max(width, height);
+        var outputSide = Math.min(HAND_MAX_SIDE, padSide);
+        canvas.width = outputSide;
+        canvas.height = outputSide;
 
         var ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        if (state.cameraFacing === 'user') {
-            ctx.translate(width, 0);
-            ctx.scale(-1, 1);
-        }
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, outputSide, outputSide);
 
-        ctx.drawImage(video, 0, 0, width, height);
+        var scale = outputSide / padSide;
+        var drawW = width * scale;
+        var drawH = height * scale;
+        var drawX = (outputSide - drawW) / 2;
+        var drawY = (outputSide - drawH) / 2;
+
+        if (state.cameraFacing === 'user') {
+            ctx.save();
+            ctx.translate(drawX + drawW, drawY);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, drawW, drawH);
+            ctx.restore();
+        } else {
+            ctx.drawImage(video, drawX, drawY, drawW, drawH);
+        }
 
         canvas.toBlob(function (blob) {
             if (!blob) {
@@ -448,7 +521,7 @@
                 return;
             }
 
-            var file = new File([blob], 'hand-photo.jpg', { type: 'image/jpeg', lastModified: Date.now() });
+            var file = new File([blob], 'hand-square.jpg', { type: 'image/jpeg', lastModified: Date.now() });
             closeCameraModal();
             setHandFile(file);
         }, 'image/jpeg', 0.92);
@@ -886,7 +959,7 @@
         }
         updateProductUi();
         setResultView('done');
-        if (els.resultDone) els.resultDone.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (els.resultWrap) els.resultWrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     function escapeHtml(text) {

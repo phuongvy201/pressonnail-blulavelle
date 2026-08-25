@@ -171,14 +171,14 @@
                                         <span class="px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1
                                             @if($order->status == 'pending') bg-yellow-100 text-yellow-700
                                             @elseif($order->status == 'processing') bg-blue-100 text-blue-700
-                                            @elseif($order->status == 'completed') bg-green-100 text-green-700
+                                            @elseif($order->status == 'completed' || $order->status == 'delivered') bg-green-100 text-green-700
                                             @elseif($order->status == 'cancelled') bg-red-100 text-red-700
                                             @else bg-slate-100 text-slate-700
                                             @endif">
                                             <span class="w-2 h-2 rounded-full
                                                 @if($order->status == 'pending') bg-yellow-500
                                                 @elseif($order->status == 'processing') bg-blue-500
-                                                @elseif($order->status == 'completed') bg-green-500
+                                                @elseif($order->status == 'completed' || $order->status == 'delivered') bg-green-500
                                                 @elseif($order->status == 'cancelled') bg-red-500
                                                 @else bg-slate-500
                                                 @endif"></span>
@@ -229,31 +229,44 @@
                                         @php
                                             $canReviewOrder = in_array($order->status, ['completed', 'delivered']);
                                             $reviewableItems = $order->items->filter(function ($it) {
-                                                return $it->product && !empty($it->product->slug);
-                                            })->take(3);
+                                                return $it->product_id
+                                                    && $it->product
+                                                    && !($it->product->is_gift_card ?? false);
+                                            })->unique('product_id');
+                                            $pendingReviewItems = $canReviewOrder
+                                                ? $reviewableItems->filter(fn ($it) => !isset($userReviewedProductIds[$it->product_id]))
+                                                : collect();
                                         @endphp
 
                                         <div class="pt-4 border-t border-black/5 space-y-3">
                                             <div class="rounded-lg border border-black/5 bg-[#f8f6f6] px-3 py-2.5">
                                                 @if($canReviewOrder)
-                                                    <p class="text-xs font-semibold text-slate-700">
-                                                        Order completed. You can review your purchased products here:
-                                                    </p>
-                                                    @if($reviewableItems->isNotEmpty())
+                                                    @if($pendingReviewItems->isNotEmpty())
+                                                        <p class="text-xs font-semibold text-slate-700">
+                                                            Your order has been delivered. Review your products:
+                                                        </p>
                                                         <div class="mt-2 flex flex-wrap gap-2">
-                                                            @foreach($reviewableItems as $reviewItem)
-                                                                <a href="{{ route('products.show', $reviewItem->product->slug) }}#customer-reviews"
-                                                                   class="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-bold border border-black/10 bg-white text-slate-700 hover:bg-black/5 transition-colors">
+                                                            @foreach($pendingReviewItems->take(3) as $reviewItem)
+                                                                <a href="{{ route('customer.orders.show', $order->order_number) }}#order-reviews"
+                                                                   class="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-bold border border-[#0195FE]/30 bg-white text-[#0195FE] hover:bg-[#0195FE]/5 transition-colors">
                                                                     Review {{ \Illuminate\Support\Str::limit($reviewItem->product_name, 24) }}
                                                                 </a>
                                                             @endforeach
+                                                            @if($pendingReviewItems->count() > 3)
+                                                                <a href="{{ route('customer.orders.show', $order->order_number) }}#order-reviews"
+                                                                   class="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-bold border border-black/10 bg-white text-slate-700 hover:bg-black/5 transition-colors">
+                                                                    +{{ $pendingReviewItems->count() - 3 }} more
+                                                                </a>
+                                                            @endif
                                                         </div>
                                                     @else
-                                                        <p class="mt-1 text-xs text-slate-500">No reviewable products found in this order.</p>
+                                                        <p class="text-xs font-semibold text-green-700">
+                                                            Thank you! You have reviewed all products in this order.
+                                                        </p>
                                                     @endif
                                                 @else
                                                     <p class="text-xs font-semibold text-slate-600">
-                                                        Review this order here after it is marked as completed.
+                                                        Review this order here after it is marked as delivered.
                                                     </p>
                                                 @endif
                                             </div>

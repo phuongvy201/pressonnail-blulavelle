@@ -269,19 +269,49 @@ class VirtualNailTrialService
      */
     private function tryOnViaImageEdits(array $context): array
     {
+        $configuredModel = (string) config('virtual_nail.image_api.model');
+        $model = $this->resolveNewApiEditModel($configuredModel);
+
+        $result = $this->dispatchImageEditRequest($context, $model);
+
+        if (! ($result['success'] ?? false)
+            && $this->isGptImageEditModel($model)
+            && ($result['retry_with_dalle2'] ?? false)) {
+            Log::error('Virtual nail image edits: gpt-image rejected by provider — retrying with dall-e-2', [
+                'product_id' => $context['productId'],
+                'configured_model' => $model,
+                'http_status' => $result['http_status'] ?? null,
+                'api_message' => $result['api_message'] ?? null,
+            ]);
+
+            return $this->dispatchImageEditRequest($context, 'dall-e-2');
+        }
+
+        unset($result['retry_with_dalle2'], $result['http_status'], $result['api_message']);
+
+        return $result;
+    }
+
+    /**
+     * @param  array{handContents: string, handFilename: string, handMime: string, productImageUrl: ?string, prompt: string, productId: int}  $context
+     * @return array{success: bool, image?: string, mime?: string, message?: string, provider?: string, retry_with_dalle2?: bool, http_status?: int, api_message?: string}
+     */
+    private function dispatchImageEditRequest(array $context, string $model): array
+    {
         $apiKey = (string) config('virtual_nail.image_api.api_key');
         $baseUrl = rtrim((string) config('virtual_nail.image_api.base_url'), '/');
-        $model = (string) config('virtual_nail.image_api.model');
         $timeout = (int) config('virtual_nail.image_api.timeout');
-        $responseFormat = (string) config('virtual_nail.image_api.response_format', 'b64_json');
         $configuredSize = (string) config('virtual_nail.image_api.size', '1024x1024');
         $endpoint = $baseUrl.'/images/edits';
         $productId = $context['productId'];
+        $editSize = $this->resolveNewApiEditSize($configuredSize, $model);
+        $useGptImageFlow = $this->isGptImageEditModel($model);
 
-        $prepared = $this->prepareImageEditAssets($context['handContents'], $configuredSize);
+        $prepared = $this->prepareImageEditAssets($context['handContents'], $editSize, $useGptImageFlow);
         if ($prepared === null) {
             Log::error('Virtual nail image edits: could not prepare hand PNG', [
                 'product_id' => $productId,
+                'model' => $model,
             ]);
 
             return [
@@ -291,44 +321,75 @@ class VirtualNailTrialService
             ];
         }
 
-        $size = $prepared['side'].'x'.$prepared['side'];
+        $size = $useGptImageFlow ? $editSize : ($prepared['side'].'x'.$prepared['side']);
         $prompt = $this->buildImageEditPrompt($context);
-        if (mb_strlen($prompt) > 1000) {
-            $prompt = mb_substr($prompt, 0, 1000);
+        $promptLimit = $this->resolveNewApiEditPromptLimit($model);
+        if (mb_strlen($prompt) > $promptLimit) {
+            $prompt = mb_substr($prompt, 0, $promptLimit);
         }
 
-        Log::info('Virtual nail image edits: request', [
+        Log::error('Virtual nail image edits: request', [
             'step' => 'IE-1',
             'product_id' => $productId,
             'endpoint' => $endpoint,
             'model' => $model,
             'size' => $size,
             'image_bytes' => strlen($prepared['image']),
-            'mask_bytes' => strlen($prepared['mask']),
+            'image_side' => $prepared['side'],
+            'source_dims' => $prepared['source_w'].'x'.$prepared['source_h'],
+            'mask_bytes' => $prepared['mask'] !== null ? strlen($prepared['mask']) : 0,
+            'flow' => $useGptImageFlow ? 'gpt-image' : 'dall-e-2',
             'prompt_len' => mb_strlen($prompt),
-            'prompt_preview' => Str::limit($prompt, 300),
-            'product_image_url' => $context['productImageUrl'],
         ]);
 
         $startedAt = microtime(true);
 
         try {
-            $response = Http::withToken($apiKey)
+            $request = Http::withToken($apiKey)
                 ->timeout($timeout)
-                ->acceptJson()
-                ->attach('image', $prepared['image'], 'hand.png', ['Content-Type' => 'image/png'])
-                ->attach('mask', $prepared['mask'], 'mask.png', ['Content-Type' => 'image/png'])
-                ->post($endpoint, [
-                    'prompt' => $prompt,
-                    'model' => $model,
-                    'n' => 1,
-                    'size' => $size,
-                    'response_format' => $responseFormat,
-                ]);
+                ->acceptJson();
+
+            if ($useGptImageFlow) {
+                $request = $request->attach('image[]', $prepared['image'], 'hand.png', ['Content-Type' => 'image/png']);
+                if (! empty($context['productImageUrl'])) {
+                    $referenceImage = $this->downloadReferenceImage($context['productImageUrl']);
+                    if ($referenceImage !== null) {
+                        $referenceSquare = $this->prepareSquarePng($referenceImage['contents'], $prepared['side']);
+                        if ($referenceSquare !== null) {
+                            $request = $request->attach(
+                                'image[]',
+                                $referenceSquare,
+                                'design.png',
+                                ['Content-Type' => 'image/png']
+                            );
+                        }
+                    }
+                }
+            } else {
+                $request = $request->attach('image', $prepared['image'], 'hand.png', ['Content-Type' => 'image/png']);
+                if ($prepared['mask'] !== null) {
+                    $request = $request->attach('mask', $prepared['mask'], 'mask.png', ['Content-Type' => 'image/png']);
+                }
+            }
+
+            $responseFormat = $this->resolveNewApiEditResponseFormat(
+                (string) config('virtual_nail.image_api.response_format', 'b64_json')
+            );
+
+            $postFields = [
+                'prompt' => $prompt,
+                'model' => $model,
+                'n' => 1,
+                'size' => $size,
+                'response_format' => $responseFormat,
+            ];
+
+            $response = $request->post($endpoint, $postFields);
         } catch (\Throwable $e) {
             Log::error('Virtual nail image edits: HTTP exception', [
                 'product_id' => $productId,
                 'endpoint' => $endpoint,
+                'model' => $model,
                 'elapsed_ms' => (int) round((microtime(true) - $startedAt) * 1000),
                 'exception' => get_class($e),
                 'message' => $e->getMessage(),
@@ -342,24 +403,61 @@ class VirtualNailTrialService
         }
 
         $body = $response->body();
-        Log::info('Virtual nail image edits: response', [
-            'step' => 'IE-2',
-            'product_id' => $productId,
-            'status' => $response->status(),
-            'ok' => $response->ok(),
-            'elapsed_ms' => (int) round((microtime(true) - $startedAt) * 1000),
-            'body_preview' => Str::limit($body, 2000),
-        ]);
+        $status = $response->status();
 
         if (! $response->ok()) {
-            return [
+            $apiMessage = (string) data_get(json_decode($body, true), 'error.message', '');
+
+            Log::error('Virtual nail image edits: provider rejected request', [
+                'step' => 'IE-2',
+                'product_id' => $productId,
+                'model' => $model,
+                'status' => $status,
+                'elapsed_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+                'api_message' => Str::limit($apiMessage, 500),
+                'body_preview' => Str::limit($body, 2000),
+            ]);
+
+            $failure = [
                 'success' => false,
-                'message' => 'AI image editing failed. Please try another photo or design.',
+                'message' => $this->imageEditFailureMessage($status, $body, $model),
                 'provider' => 'image_api',
+                'http_status' => $status,
+                'api_message' => $apiMessage,
             ];
+
+            if ($this->isGptImageEditsRejected($status, $body, $model)) {
+                $failure['retry_with_dalle2'] = true;
+            }
+
+            return $failure;
         }
 
+        Log::warning('Virtual nail image edits: success', [
+            'step' => 'IE-2',
+            'product_id' => $productId,
+            'model' => $model,
+            'status' => $status,
+            'elapsed_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+        ]);
+
         return $this->parseImageResponse($response->json(), $productId, 'image_api');
+    }
+
+    private function isGptImageEditsRejected(int $status, string $body, string $model): bool
+    {
+        if (! $this->isGptImageEditModel($model)) {
+            return false;
+        }
+
+        if ($status === 503) {
+            return true;
+        }
+
+        $apiCode = (string) data_get(json_decode($body, true), 'error.code', '');
+
+        return $apiCode === 'model_not_found'
+            || ($status === 500 && str_contains($body, 'bad_response_status_code'));
     }
 
     /**
@@ -379,11 +477,116 @@ class VirtualNailTrialService
     }
 
     /**
-     * Square PNG + transparent mask for /images/edits (New API spec).
+     * Use the configured model as-is. DevQuote channels vary per account (do not force dall-e-2).
      *
-     * @return array{image: string, mask: string, side: int}|null
+     * @see https://docs.newapi.pro/en/docs/api/ai-model/images/openai/post-v1-images-edits
      */
-    private function prepareImageEditAssets(string $contents, string $configuredSize): ?array
+    private function resolveNewApiEditModel(string $model): string
+    {
+        $model = strtolower(trim($model));
+
+        return $model !== '' ? $model : 'gpt-image-2';
+    }
+
+    private function isGptImageEditModel(string $model): bool
+    {
+        return str_starts_with(strtolower(trim($model)), 'gpt-image');
+    }
+
+    private function imageEditFailureMessage(int $status, string $body, string $model): string
+    {
+        $apiMessage = (string) data_get(json_decode($body, true), 'error.message', '');
+        $apiCode = (string) data_get(json_decode($body, true), 'error.code', '');
+
+        if ($status === 503 || $apiCode === 'model_not_found') {
+            return 'Image model "'.$model.'" is not available on the configured API provider. Ask the provider to enable /images/edits for this model, or switch to chatgpt2api.';
+        }
+
+        if ($status === 500 && str_contains($body, 'bad_response_status_code') && $this->isGptImageEditModel($model)) {
+            return 'Your API provider accepts "'.$model.'" for text-to-image but rejected /images/edits (hand-photo try-on). Retrying with dall-e-2, or enable chatgpt2api.';
+        }
+
+        return 'AI image editing failed. Please try another photo or design.';
+    }
+
+    private function resolveNewApiEditSize(string $configured, string $model): string
+    {
+        $normalized = strtolower(trim($configured));
+
+        if ($this->isGptImageEditModel($model)) {
+            $gptAllowed = ['1024x1024', '1536x1024', '1024x1536', 'auto'];
+
+            return in_array($normalized, $gptAllowed, true) ? $normalized : '1024x1024';
+        }
+
+        $allowed = ['256x256', '512x512', '1024x1024'];
+
+        return in_array($normalized, $allowed, true) ? $normalized : '1024x1024';
+    }
+
+    private function resolveNewApiEditPromptLimit(string $model): int
+    {
+        return $this->isGptImageEditModel($model) ? 32000 : 1000;
+    }
+
+    private function resolveNewApiEditResponseFormat(string $configured): string
+    {
+        $normalized = strtolower(trim($configured));
+
+        return in_array($normalized, ['url', 'b64_json'], true) ? $normalized : 'b64_json';
+    }
+
+    /**
+     * @return array{contents: string, filename: string, mime: string}|null
+     */
+    private function downloadReferenceImage(string $url): ?array
+    {
+        $url = trim($url);
+        if ($url === '') {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(30)->get($url);
+            if (! $response->ok()) {
+                return null;
+            }
+
+            $contents = $response->body();
+            if ($contents === '') {
+                return null;
+            }
+
+            $path = parse_url($url, PHP_URL_PATH);
+            $filename = is_string($path) ? basename($path) : 'design.jpg';
+            if ($filename === '' || $filename === '.') {
+                $filename = 'design.jpg';
+            }
+
+            $mime = (string) ($response->header('Content-Type') ?: 'image/jpeg');
+            $mime = strtok($mime, ';') ?: 'image/jpeg';
+
+            return [
+                'contents' => $contents,
+                'filename' => $filename,
+                'mime' => $mime,
+            ];
+        } catch (\Throwable $e) {
+            Log::warning('Virtual nail image edits: could not download reference image', [
+                'url' => $url,
+                'message' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Square PNG for /images/edits — pad (letterbox) to preserve the full hand, then downscale.
+     *
+     * @return array{image: string, mask: ?string, side: int, source_w: int, source_h: int}|null
+     */
+    private function prepareImageEditAssets(string $contents, string $configuredSize, bool $useGptImageFlow = false): ?array
     {
         if (! function_exists('imagecreatefromstring') || ! function_exists('imagepng')) {
             return null;
@@ -402,14 +605,20 @@ class VirtualNailTrialService
             return null;
         }
 
+        $padded = $this->padImageToSquare($source, $srcW, $srcH);
+        imagedestroy($source);
+        if ($padded === null) {
+            return null;
+        }
+
+        $padW = imagesx($padded);
+        $padH = imagesy($padded);
+
         $requested = (int) explode('x', strtolower($configuredSize))[0];
         $sidesToTry = array_values(array_unique(array_filter([1024, 512, 256, $requested])));
         rsort($sidesToTry, SORT_NUMERIC);
 
-        $cropSide = min($srcW, $srcH);
-        $srcX = (int) floor(($srcW - $cropSide) / 2);
-        $srcY = (int) floor(($srcH - $cropSide) / 2);
-        $maxBytes = 4 * 1024 * 1024;
+        $maxBytes = $useGptImageFlow ? (25 * 1024 * 1024) : (4 * 1024 * 1024);
 
         foreach ($sidesToTry as $side) {
             $square = imagecreatetruecolor($side, $side);
@@ -422,7 +631,7 @@ class VirtualNailTrialService
             $transparent = imagecolorallocatealpha($square, 0, 0, 0, 127);
             imagefilledrectangle($square, 0, 0, $side, $side, $transparent);
             imagealphablending($square, true);
-            imagecopyresampled($square, $source, 0, 0, $srcX, $srcY, $side, $side, $cropSide, $cropSide);
+            imagecopyresampled($square, $padded, 0, 0, 0, 0, $side, $side, $padW, $padH);
             imagealphablending($square, false);
             imagesavealpha($square, true);
 
@@ -442,37 +651,125 @@ class VirtualNailTrialService
                 continue;
             }
 
-            $mask = imagecreatetruecolor($side, $side);
-            if ($mask === false) {
-                continue;
+            $maskPng = null;
+            if (! $useGptImageFlow) {
+                $maskPng = $this->buildDalleEditMaskPng($side);
+                if ($maskPng === null) {
+                    continue;
+                }
             }
 
-            imagealphablending($mask, false);
-            imagesavealpha($mask, true);
-            $clear = imagecolorallocatealpha($mask, 0, 0, 0, 127);
-            imagefilledrectangle($mask, 0, 0, $side, $side, $clear);
-
-            ob_start();
-            imagepng($mask, null, 9);
-            $maskPng = (string) ob_get_clean();
-            imagedestroy($mask);
-
-            if ($maskPng === '') {
-                continue;
-            }
-
-            imagedestroy($source);
+            imagedestroy($padded);
 
             return [
                 'image' => $imagePng,
                 'mask' => $maskPng,
                 'side' => $side,
+                'source_w' => $srcW,
+                'source_h' => $srcH,
             ];
         }
 
-        imagedestroy($source);
+        imagedestroy($padded);
 
         return null;
+    }
+
+    /**
+     * @return \GdImage|null
+     */
+    private function padImageToSquare(\GdImage $source, int $srcW, int $srcH): ?\GdImage
+    {
+        $padSide = max($srcW, $srcH);
+        $padded = imagecreatetruecolor($padSide, $padSide);
+        if ($padded === false) {
+            return null;
+        }
+
+        imagealphablending($padded, false);
+        imagesavealpha($padded, true);
+        $white = imagecolorallocate($padded, 255, 255, 255);
+        imagefilledrectangle($padded, 0, 0, $padSide, $padSide, $white);
+        imagealphablending($padded, true);
+
+        $destX = (int) floor(($padSide - $srcW) / 2);
+        $destY = (int) floor(($padSide - $srcH) / 2);
+        imagecopy($padded, $source, $destX, $destY, 0, 0, $srcW, $srcH);
+
+        return $padded;
+    }
+
+    private function prepareSquarePng(string $contents, int $side): ?string
+    {
+        if (! function_exists('imagecreatefromstring') || ! function_exists('imagepng')) {
+            return null;
+        }
+
+        $source = @imagecreatefromstring($contents);
+        if ($source === false) {
+            return null;
+        }
+
+        $srcW = imagesx($source);
+        $srcH = imagesy($source);
+        if ($srcW < 1 || $srcH < 1) {
+            imagedestroy($source);
+
+            return null;
+        }
+
+        $padded = $this->padImageToSquare($source, $srcW, $srcH);
+        imagedestroy($source);
+        if ($padded === null) {
+            return null;
+        }
+
+        $padW = imagesx($padded);
+        $padH = imagesy($padded);
+        $square = imagecreatetruecolor($side, $side);
+        if ($square === false) {
+            imagedestroy($padded);
+
+            return null;
+        }
+
+        imagealphablending($square, false);
+        imagesavealpha($square, true);
+        $white = imagecolorallocate($square, 255, 255, 255);
+        imagefilledrectangle($square, 0, 0, $side, $side, $white);
+        imagealphablending($square, true);
+        imagecopyresampled($square, $padded, 0, 0, 0, 0, $side, $side, $padW, $padH);
+        imagedestroy($padded);
+
+        ob_start();
+        imagepng($square, null, 8);
+        $png = (string) ob_get_clean();
+        imagedestroy($square);
+
+        return $png !== '' ? $png : null;
+    }
+
+    /**
+     * DALL-E 2 mask: same dimensions as image; fully transparent = edit entire frame.
+     */
+    private function buildDalleEditMaskPng(int $side): ?string
+    {
+        $mask = imagecreatetruecolor($side, $side);
+        if ($mask === false) {
+            return null;
+        }
+
+        imagealphablending($mask, false);
+        imagesavealpha($mask, true);
+        $clear = imagecolorallocatealpha($mask, 0, 0, 0, 127);
+        imagefilledrectangle($mask, 0, 0, $side, $side, $clear);
+
+        ob_start();
+        imagepng($mask, null, 9);
+        $maskPng = (string) ob_get_clean();
+        imagedestroy($mask);
+
+        return $maskPng !== '' ? $maskPng : null;
     }
 
     /**

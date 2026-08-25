@@ -914,8 +914,14 @@
             </div>
         </div>
 
-        @if($reviewsCount > 0)
+        @php
+            $showCustomerReviewsSection = $reviewsCount > 0
+                || ($canSubmitReview ?? false)
+                || ($userExistingReview ?? false);
+        @endphp
+        @if($showCustomerReviewsSection)
         <div id="customer-reviews" class="mt-8 sm:mt-12 space-y-4 sm:space-y-6 min-w-0">
+            @if($reviewsCount > 0)
             @php
                 $displayReviews = $product->approvedReviews ?? collect();
                 $reviewPhotos = $displayReviews->filter(function ($r) {
@@ -1030,6 +1036,7 @@
                     </div>
                 @endif
             </div>
+            @endif
 
             <div class="rounded-2xl bg-white p-4 sm:p-6 shadow-sm border border-slate-100 min-w-0 overflow-hidden">
                 <h3 class="text-base sm:text-lg font-extrabold text-slate-900 mb-4">Write a Review</h3>

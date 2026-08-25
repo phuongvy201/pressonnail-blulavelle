@@ -52,7 +52,7 @@
                     <span class="px-4 py-2 text-sm font-semibold rounded-full
                         @if($order->status == 'pending') bg-yellow-100 text-yellow-800
                         @elseif($order->status == 'processing') bg-blue-100 text-blue-800
-                        @elseif($order->status == 'completed') bg-green-100 text-green-800
+                        @elseif($order->status == 'completed' || $order->status == 'delivered') bg-green-100 text-green-800
                         @elseif($order->status == 'cancelled') bg-red-100 text-red-800
                         @else bg-gray-100 text-gray-800
                         @endif">
@@ -227,6 +227,143 @@
                 @endif
             </div>
         </div>
+
+        @php
+            $reviewableOrderItems = $order->items
+                ->filter(function ($item) {
+                    return $item->product_id
+                        && $item->product
+                        && !($item->product->is_gift_card ?? false);
+                })
+                ->unique('product_id');
+            $pendingReviewCount = $canReviewOrder
+                ? $reviewableOrderItems->filter(fn ($item) => !isset($userReviewsByProductId[$item->product_id]))->count()
+                : 0;
+        @endphp
+
+        @if($reviewableOrderItems->isNotEmpty())
+        <div id="order-reviews" class="mt-6 bg-white rounded-xl shadow-sm p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">Product Reviews</h2>
+                    <p class="text-sm text-gray-600 mt-1">
+                        @if($canReviewOrder)
+                            Share your experience with the products you received.
+                        @else
+                            You can review products after your order is delivered.
+                        @endif
+                    </p>
+                </div>
+                @if($canReviewOrder && $pendingReviewCount > 0)
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                        {{ $pendingReviewCount }} pending {{ $pendingReviewCount === 1 ? 'review' : 'reviews' }}
+                    </span>
+                @endif
+            </div>
+
+            <div class="space-y-6">
+                @foreach($reviewableOrderItems as $item)
+                    @php
+                        $existingReview = $userReviewsByProductId[$item->product_id] ?? null;
+                        $canReviewItem = $canReviewOrder && !$existingReview;
+                        $productMedia = $item->product->getEffectiveMedia();
+                        $productImageUrl = null;
+                        if (!empty($productMedia)) {
+                            if (is_string($productMedia[0])) {
+                                $productImageUrl = $productMedia[0];
+                            } elseif (is_array($productMedia[0])) {
+                                $productImageUrl = $productMedia[0]['url'] ?? $productMedia[0]['path'] ?? reset($productMedia[0]) ?? null;
+                            }
+                        }
+                    @endphp
+                    <div class="border border-gray-200 rounded-xl p-5">
+                        <div class="flex items-start gap-4 mb-4">
+                            <div class="flex-shrink-0">
+                                @if($productImageUrl)
+                                    <img src="{{ $productImageUrl }}" alt="{{ $item->product_name }}" class="w-16 h-16 object-cover rounded-lg border border-gray-200">
+                                @else
+                                    <div class="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                                        </svg>
+                                    </div>
+                                @endif
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-semibold text-gray-900">{{ $item->product_name }}</h3>
+                                @if($item->product?->slug)
+                                    <a href="{{ route('products.show', $item->product->slug) }}" class="text-sm text-[#0195FE] hover:underline">
+                                        View product page
+                                    </a>
+                                @endif
+                            </div>
+                            @if($existingReview)
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                    Reviewed
+                                </span>
+                            @endif
+                        </div>
+
+                        @if($existingReview)
+                            <div class="rounded-lg bg-gray-50 border border-gray-100 p-4">
+                                <div class="flex items-center gap-1 text-amber-400 mb-2">
+                                    @for($i = 1; $i <= 5; $i++)
+                                        <svg class="w-4 h-4 {{ $i <= (int) $existingReview->rating ? 'fill-current' : 'text-gray-300' }}" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                        </svg>
+                                    @endfor
+                                    <span class="ml-1 text-xs font-semibold text-gray-600">{{ (int) $existingReview->rating }}/5</span>
+                                </div>
+                                @if($existingReview->title)
+                                    <p class="text-sm font-semibold text-gray-900">{{ $existingReview->title }}</p>
+                                @endif
+                                @if($existingReview->review_text)
+                                    <p class="text-sm text-gray-700 mt-1">{{ $existingReview->review_text }}</p>
+                                @endif
+                                <p class="text-xs text-gray-500 mt-2">Submitted {{ $existingReview->created_at?->format('M d, Y') }}</p>
+                            </div>
+                        @elseif($canReviewItem)
+                            <form action="{{ route('products.reviews.store', $item->product->slug) }}" method="POST" class="space-y-4">
+                                @csrf
+                                <input type="hidden" name="redirect_to" value="{{ route('customer.orders.show', $order->order_number) }}#order-reviews">
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Rating</label>
+                                    <div class="flex flex-wrap gap-2">
+                                        @for($i = 1; $i <= 5; $i++)
+                                            <label class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 hover:border-[#0195FE] cursor-pointer">
+                                                <input type="radio" name="rating" value="{{ $i }}" class="text-[#0195FE] focus:ring-[#0195FE]" {{ (int) old('rating', 5) === $i ? 'checked' : '' }}>
+                                                <span class="text-sm font-medium text-gray-700">{{ $i }}★</span>
+                                            </label>
+                                        @endfor
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-1">Title (optional)</label>
+                                    <input type="text" name="title" value="{{ old('title') }}" maxlength="120"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0195FE] focus:border-[#0195FE]"
+                                           placeholder="Example: Beautiful set and long-lasting">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-1">Your review</label>
+                                    <textarea name="review_text" rows="3" required maxlength="2000"
+                                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0195FE] focus:border-[#0195FE]"
+                                              placeholder="Share your experience with this product...">{{ old('review_text') }}</textarea>
+                                </div>
+                                <button type="submit"
+                                        class="px-5 py-2.5 rounded-lg text-white font-semibold bg-[#0195FE] hover:bg-[#017fda] transition">
+                                    Submit Review
+                                </button>
+                            </form>
+                        @else
+                            <p class="text-sm text-gray-600">
+                                Review will be available once this order is marked as delivered.
+                            </p>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
 
         @php
             $latestReturn = ($order->returnRequests ?? collect())->first();

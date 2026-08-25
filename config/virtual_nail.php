@@ -11,7 +11,8 @@ return [
     | Try-on cần /images/edits (ảnh tay + prompt), không dùng /images/generations.
     | 1. chatgpt2api (pool healthy) — giữ tay + móng sản phẩm ~90% chính xác
     | 2. Fallback: New API POST {OPENAI_BASE_URL}/images/edits
-    | Docs: https://docs.newapi.pro/en/docs/api/ai-model/images/openai/post-v1-images-edits
+    | Docs (dall-e-2 edits): https://docs.newapi.pro/en/docs/api/ai-model/images/openai/post-v1-images-edits
+    | Chỉ hỗ trợ model dall-e-2 trên endpoint này (PNG vuông <4MB, prompt ≤1000, size 256|512|1024).
     */
     'prefer_browser_pool' => filter_var(env('VIRTUAL_NAIL_PREFER_BROWSER_POOL', true), FILTER_VALIDATE_BOOLEAN),
 

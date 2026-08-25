@@ -173,43 +173,14 @@
                 </div>
 
                 <button type="button" id="vnt-generate-btn" class="vnt-btn vnt-btn--primary vnt-btn--block" disabled>Generate Preview</button>
+                <p class="vnt-generate-status">
+                    <span class="vnt-dot" id="vnt-status-dot"></span>
+                    <span id="vnt-status-text">Not ready</span>
+                </p>
                 <p id="vnt-background-notice" class="vnt-background-notice is-hidden">Your preview is generating in the background. Feel free to browse — we'll notify you when it's ready.</p>
                 <p id="vnt-error" class="vnt-error is-hidden"></p>
 
-                <div id="vnt-history-wrap" class="vnt-card is-hidden">
-                    <div class="vnt-card__head">
-                        <span class="vnt-card__step">★</span>
-                        <span class="vnt-card__title">Your try-on history</span>
-                    </div>
-                    <div id="vnt-history-list" class="vnt-history"></div>
-                </div>
-            </div>
-
-            {{-- Preview panel (desktop: sticky right; mobile: after steps) --}}
-            <aside class="vnt-preview-panel" aria-label="AI preview">
-                <div class="vnt-preview-head">
-                    <span class="vnt-preview-title">AI Preview</span>
-                    <span class="vnt-status-dot">
-                        <span class="vnt-dot" id="vnt-status-dot"></span>
-                        <span id="vnt-status-text">Not ready</span>
-                    </span>
-                </div>
-
-                <div class="vnt-preview-stage" id="vnt-preview-stage">
-                    <div id="vnt-result-idle" class="vnt-result-idle">
-                        <div id="vnt-idle-default">
-                            <div class="vnt-lock-circle">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-                            </div>
-                            <div class="vnt-placeholder-text">Upload a hand photo and choose a design to see your <b>AI preview</b> here.</div>
-                        </div>
-                        <div id="vnt-idle-peek" class="vnt-idle-peek is-hidden">
-                            <img id="vnt-idle-peek-img" src="" alt="Selected design preview">
-                            <p id="vnt-idle-peek-name" class="vnt-idle-peek__name"></p>
-                            <p class="vnt-idle-peek__hint">Add your hand photo, then tap <b>Generate Preview</b>.</p>
-                        </div>
-                    </div>
-
+                <div id="vnt-result-wrap" class="vnt-result-wrap is-hidden" aria-live="polite">
                     <div id="vnt-result-processing" class="vnt-result-processing is-hidden">
                         <div class="vnt-spinner"></div>
                         <div class="vnt-spin-text">Building your preview...</div>
@@ -222,14 +193,22 @@
                         <button type="button" id="vnt-before-toggle" class="vnt-before-toggle" aria-pressed="false">Before</button>
                         <span class="vnt-zoom-hint">Tap to enlarge</span>
                     </div>
+
+                    <div id="vnt-preview-actions" class="vnt-preview-actions is-hidden">
+                        <button type="button" id="vnt-try-another" class="vnt-btn vnt-btn--secondary">Try Again</button>
+                        <button type="button" id="vnt-download-btn" class="vnt-btn vnt-btn--primary">Save Image</button>
+                        <a id="vnt-view-product" href="#" class="vnt-btn vnt-btn--secondary vnt-btn--full is-hidden">View Product</a>
+                    </div>
                 </div>
 
-                <div id="vnt-preview-actions" class="vnt-preview-actions is-hidden">
-                    <button type="button" id="vnt-try-another" class="vnt-btn vnt-btn--secondary">Try Again</button>
-                    <button type="button" id="vnt-download-btn" class="vnt-btn vnt-btn--primary">Save Image</button>
-                    <a id="vnt-view-product" href="#" class="vnt-btn vnt-btn--secondary vnt-btn--full is-hidden">View Product</a>
+                <div id="vnt-history-wrap" class="vnt-card is-hidden">
+                    <div class="vnt-card__head">
+                        <span class="vnt-card__step">★</span>
+                        <span class="vnt-card__title">Your try-on history</span>
+                    </div>
+                    <div id="vnt-history-list" class="vnt-history"></div>
                 </div>
-            </aside>
+            </div>
         </div>
     </div>
     @endif
@@ -321,6 +300,7 @@ window.virtualNailPageConfig = {
     defaultLength: @json($defaultLength),
     cameraDemo: @json($cameraDemo ?? false),
     asyncEnabled: @json($asyncEnabled ?? true),
+    handMaxSide: 1024,
 };
 </script>
 <script src="{{ asset('js/virtual-nail-trial-page.js') }}?v={{ $__vntPageJsV }}" defer></script>

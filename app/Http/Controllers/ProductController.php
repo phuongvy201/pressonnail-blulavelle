@@ -356,6 +356,7 @@ class ProductController extends Controller
             'rating' => 'required|integer|min:1|max:5',
             'title' => 'nullable|string|max:120',
             'review_text' => 'required|string|max:2000',
+            'redirect_to' => 'nullable|string|max:500',
         ]);
 
         Review::create([
@@ -369,6 +370,15 @@ class ProductController extends Controller
             'is_verified_purchase' => true,
             'is_approved' => true,
         ]);
+
+        $redirectTo = $validated['redirect_to'] ?? null;
+        if (is_string($redirectTo) && $redirectTo !== '') {
+            $appHost = parse_url((string) config('app.url', ''), PHP_URL_HOST);
+            $targetHost = parse_url($redirectTo, PHP_URL_HOST);
+            if ($targetHost === null || $targetHost === $appHost) {
+                return redirect()->to($redirectTo)->with('success', 'Thank you! Your review has been submitted successfully.');
+            }
+        }
 
         return back()->with('success', 'Thank you! Your review has been submitted successfully.');
     }

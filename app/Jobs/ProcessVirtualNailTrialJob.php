@@ -58,7 +58,7 @@ class ProcessVirtualNailTrialJob implements ShouldQueue
 
         if (! ($result['success'] ?? false)) {
             $trial->markFailed((string) ($result['message'] ?? 'Generation failed.'));
-            Log::warning('Virtual nail async trial failed.', [
+            Log::error('Virtual nail async trial failed.', [
                 'trial_id' => $trial->id,
                 'uuid' => $trial->uuid,
                 'message' => $result['message'] ?? null,
