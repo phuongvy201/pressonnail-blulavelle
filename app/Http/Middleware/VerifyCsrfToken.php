@@ -15,5 +15,6 @@ class VerifyCsrfToken extends Middleware
         'api/*', // Exclude all API routes from CSRF protection
         'api/gmc/delete-product', // GMC delete product API (no CSRF needed)
         'payment/stripe/webhook',
+        'webhooks/stripe',
     ];
 }

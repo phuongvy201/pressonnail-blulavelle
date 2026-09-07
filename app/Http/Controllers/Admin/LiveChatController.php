@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
+use App\Services\LiveChatService;
 use App\Services\TelegramBotService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,8 +13,10 @@ use Illuminate\View\View;
 
 class LiveChatController extends Controller
 {
-    public function __construct(private readonly TelegramBotService $telegramBot)
-    {
+    public function __construct(
+        private readonly TelegramBotService $telegramBot,
+        private readonly LiveChatService $liveChat,
+    ) {
     }
 
     public function index(): View
@@ -54,6 +57,7 @@ class LiveChatController extends Controller
         ]);
 
         $this->telegramBot->notifySellerMessage($conversation, $message);
+        $this->liveChat->notifyCustomerOfShopReply($conversation, $message);
 
         return response()->json([
             'success' => true,

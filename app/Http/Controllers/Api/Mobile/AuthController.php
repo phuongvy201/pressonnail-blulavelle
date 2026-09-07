@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Mobile\Concerns\RespondsWithMobileJson;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Mobile\GuestCartMerger;
+use App\Services\RecaptchaVerifier;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,14 +21,29 @@ class AuthController extends Controller
 {
     use RespondsWithMobileJson;
 
-    public function register(Request $request, GuestCartMerger $guestCartMerger): JsonResponse
+    public function captcha(RecaptchaVerifier $recaptcha): JsonResponse
     {
+        return $this->mobileSuccess($recaptcha->config());
+    }
+
+    public function register(Request $request, GuestCartMerger $guestCartMerger, RecaptchaVerifier $recaptcha): JsonResponse
+    {
+        $request->merge([
+            'password_confirmation' => $request->input(
+                'passwordConfirmation',
+                $request->input('password_confirmation')
+            ),
+        ]);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'deviceName' => ['nullable', 'string', 'max:120'],
+            'recaptchaToken' => ['nullable', 'string'],
         ]);
+
+        $recaptcha->verify($request);
 
         $user = User::create([
             'name' => $validated['name'],

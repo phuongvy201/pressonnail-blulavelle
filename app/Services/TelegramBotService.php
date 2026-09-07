@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -69,6 +71,15 @@ class TelegramBotService
         try {
             $response = Http::asForm()
                 ->timeout(10)
+                ->retry(3, 400, function ($exception) {
+                    if ($exception instanceof ConnectionException) {
+                        return true;
+                    }
+
+                    return $exception instanceof RequestException
+                        && $exception->response
+                        && $exception->response->serverError();
+                }, throw: false)
                 ->post("https://api.telegram.org/bot{$botToken}/sendMessage", [
                     'chat_id' => $chatId,
                     'text' => $text,
@@ -77,7 +88,7 @@ class TelegramBotService
             if (!$response->ok()) {
                 Log::warning('TelegramBotService sendMessage failed.', [
                     'status' => $response->status(),
-                    'body' => $response->body(),
+                    'body' => $this->redactSecrets((string) $response->body()),
                 ]);
                 return false;
             }
@@ -85,7 +96,7 @@ class TelegramBotService
             return true;
         } catch (\Throwable $e) {
             Log::error('TelegramBotService sendMessage exception.', [
-                'error' => $e->getMessage(),
+                'error' => $this->redactSecrets($e->getMessage()),
             ]);
             return false;
         }
@@ -96,8 +107,8 @@ class TelegramBotService
         $allowedIds = config('services.telegram.allowed_user_ids', []);
         $allowedIds = is_array($allowedIds) ? array_filter(array_map('trim', $allowedIds)) : [];
 
-        $fromId = (string) data_get($update, 'message.from.id', '');
-        $chatId = (string) data_get($update, 'message.chat.id', '');
+        $fromId = (string) data_get($update, 'message.from.id', data_get($update, 'edited_message.from.id', ''));
+        $chatId = (string) data_get($update, 'message.chat.id', data_get($update, 'edited_message.chat.id', ''));
         $configuredChatId = (string) config('services.telegram.chat_id', '');
 
         if (!empty($allowedIds)) {
@@ -105,5 +116,10 @@ class TelegramBotService
         }
 
         return $configuredChatId !== '' && $chatId === $configuredChatId;
+    }
+
+    public function redactSecrets(string $text): string
+    {
+        return preg_replace('/bot\d+:[A-Za-z0-9_-]+/', 'bot{TOKEN}', $text) ?? $text;
     }
 }

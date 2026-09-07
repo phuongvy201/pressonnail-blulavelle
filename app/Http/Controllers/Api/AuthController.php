@@ -5,15 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
+use App\Services\RecaptchaVerifier;
 use App\Services\TikTokEventsService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rules;
-use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -36,7 +35,7 @@ class AuthController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        $this->validateRecaptcha($request);
+        app(RecaptchaVerifier::class)->verify($request);
 
         $user = User::create([
             'name' => $validated['name'],
@@ -123,6 +122,14 @@ class AuthController extends Controller
         ]);
     }
 
+    public function captcha(RecaptchaVerifier $recaptcha): JsonResponse
+    {
+        return response()->json(array_merge(
+            ['success' => true],
+            $recaptcha->config()
+        ));
+    }
+
     private function formatUser(User $user): array
     {
         return [
@@ -132,46 +139,5 @@ class AuthController extends Controller
             'emailVerified' => $user->email_verified_at !== null,
             'roles' => $user->getRoleNames()->values()->all(),
         ];
-    }
-
-    private function validateRecaptcha(Request $request): void
-    {
-        $secretKey = config('services.recaptcha.secret_key');
-
-        if (! $secretKey) {
-            return;
-        }
-
-        $token = $request->input('g-recaptcha-response');
-        if (! $token) {
-            throw ValidationException::withMessages([
-                'recaptchaToken' => [__('Please complete the security check.')],
-            ]);
-        }
-
-        try {
-            $response = Http::asForm()->post(
-                'https://www.google.com/recaptcha/api/siteverify',
-                [
-                    'secret' => $secretKey,
-                    'response' => $token,
-                    'remoteip' => $request->ip(),
-                ]
-            );
-
-            $data = $response->json();
-
-            if (! ($data['success'] ?? false)) {
-                throw ValidationException::withMessages([
-                    'recaptchaToken' => [__('Security verification failed, please try again.')],
-                ]);
-            }
-        } catch (ValidationException $exception) {
-            throw $exception;
-        } catch (\Throwable $exception) {
-            throw ValidationException::withMessages([
-                'recaptchaToken' => [__('Unable to verify security, please try again.')],
-            ]);
-        }
     }
 }

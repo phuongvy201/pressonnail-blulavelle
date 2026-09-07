@@ -18,6 +18,7 @@ use App\Services\GiftCardService;
 use App\Services\AffiliateAttributionService;
 use App\Mail\OrderConfirmation;
 use App\Services\PromoCodeSendService;
+use App\Services\CheckoutIdempotencyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -408,6 +409,19 @@ class CheckoutController extends Controller
 
     public function process(Request $request)
     {
+        $required = $request->is('api/mobile/*')
+            || $request->is('api/v1/*')
+            || $request->routeIs('api.mobile.v1.checkout.process');
+
+        return app(CheckoutIdempotencyService::class)->handle(
+            $request,
+            $required,
+            fn () => $this->executeCheckoutProcess($request)
+        );
+    }
+
+    public function executeCheckoutProcess(Request $request)
+    {
         Log::info('🔍 CHECKOUT PROCESS STARTED', [
             'method' => $request->method(),
             'url' => $request->url(),
@@ -504,6 +518,23 @@ class CheckoutController extends Controller
                 ->get();
 
             if ($cartItems->isEmpty()) {
+                $existingPaidOrder = $this->findOrderByPaymentReference($request);
+                if ($existingPaidOrder) {
+                    app(CheckoutIdempotencyService::class)->attachOrder($request, $existingPaidOrder);
+                    $paid = $existingPaidOrder->payment_status === 'paid';
+
+                    return response()->json([
+                        'success' => true,
+                        'message' => $paid ? 'Payment completed successfully' : 'Order created successfully',
+                        'order_id' => $existingPaidOrder->id,
+                        'order_number' => $existingPaidOrder->order_number,
+                        'total_amount' => (float) $existingPaidOrder->total_amount,
+                        'payment_method' => $existingPaidOrder->payment_method,
+                        'payment_completed' => $paid,
+                        'payment_pending' => ! $paid,
+                    ]);
+                }
+
                 Log::warning('🛒 Cart is empty during checkout', [
                     'user_id' => $userId,
                     'session_id' => $sessionId,
@@ -831,6 +862,31 @@ class CheckoutController extends Controller
                 ]
             );
 
+            $existingPaidOrder = $this->findOrderByPaymentReference($request);
+            if ($existingPaidOrder) {
+                Log::info('checkout.payment_reference_replay', [
+                    'order_id' => $existingPaidOrder->id,
+                    'order_number' => $existingPaidOrder->order_number,
+                    'payment_intent_id' => $request->input('payment_intent_id'),
+                    'paypal_order_id' => $request->input('paypal_order_id'),
+                ]);
+
+                app(CheckoutIdempotencyService::class)->attachOrder($request, $existingPaidOrder);
+
+                $paid = $existingPaidOrder->payment_status === 'paid';
+
+                return response()->json([
+                    'success' => true,
+                    'message' => $paid ? 'Payment completed successfully' : 'Order created successfully',
+                    'order_id' => $existingPaidOrder->id,
+                    'order_number' => $existingPaidOrder->order_number,
+                    'total_amount' => (float) $existingPaidOrder->total_amount,
+                    'payment_method' => $existingPaidOrder->payment_method,
+                    'payment_completed' => $paid,
+                    'payment_pending' => ! $paid,
+                ]);
+            }
+
             // Create order with converted amounts
             $order = Order::create([
                 'order_number' => Order::generateOrderNumber(),
@@ -862,6 +918,8 @@ class CheckoutController extends Controller
                 'payment_method' => $request->payment_method,
                 'notes' => $request->notes,
             ]);
+
+            app(CheckoutIdempotencyService::class)->attachOrder($request, $order);
 
             if ($orderPromoCode && $promoId) {
                 PromoCode::where('id', $promoId)->increment('used_count');
@@ -1684,6 +1742,32 @@ class CheckoutController extends Controller
                 ->withInput()
                 ->with('error', 'An error occurred while processing your order. Please try again.');
         }
+    }
+
+    private function findOrderByPaymentReference(Request $request): ?Order
+    {
+        if ($request->filled('payment_intent_id')) {
+            $order = Order::query()
+                ->where(function ($query) use ($request) {
+                    $query->where('payment_id', $request->payment_intent_id)
+                        ->orWhere('payment_transaction_id', $request->payment_intent_id);
+                })
+                ->latest('id')
+                ->first();
+
+            if ($order) {
+                return $order;
+            }
+        }
+
+        if ($request->filled('paypal_order_id')) {
+            return Order::query()
+                ->where('payment_id', $request->paypal_order_id)
+                ->latest('id')
+                ->first();
+        }
+
+        return null;
     }
 
     public function processLianLianPayment(Request $request)

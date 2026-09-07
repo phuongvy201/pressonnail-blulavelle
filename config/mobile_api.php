@@ -32,4 +32,16 @@ return [
     */
     'checkout_state_ttl_days' => (int) env('MOBILE_CHECKOUT_STATE_TTL_DAYS', 30),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Checkout idempotency (prevents duplicate orders on network retry)
+    |--------------------------------------------------------------------------
+    | Mobile POST /api/mobile/v1/checkout/process requires Idempotency-Key.
+    | Storefront POST /checkout/process honors the same header when present.
+    */
+    'checkout_idempotency' => [
+        'ttl_hours' => (int) env('CHECKOUT_IDEMPOTENCY_TTL_HOURS', 24),
+        'lock_seconds' => (int) env('CHECKOUT_IDEMPOTENCY_LOCK_SECONDS', 60),
+    ],
+
 ];

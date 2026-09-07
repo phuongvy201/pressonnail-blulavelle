@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Storage;
 
 Schedule::command('affiliate:recalculate-tiers')->monthlyOn(1, '02:00');
+// Full site backup daily at 02:00 (e-commerce RPO ~1 day). Uploads to S3 when BACKUP_S3_ENABLED=true.
+Schedule::command('site:backup')->dailyAt('02:00');
 Schedule::call(function (): void {
     DB::table('sessions')
         ->where('last_activity', '<', now()->subHours(2)->timestamp)

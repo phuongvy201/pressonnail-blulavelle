@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BluLavelle API v1</title>
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
+    <style>
+        body { margin: 0; }
+        .topbar { display: none; }
+        .api-doc-intro {
+            font-family: system-ui, sans-serif;
+            padding: 1rem 1.25rem;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            color: #334155;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .api-doc-intro code { background: #e2e8f0; padding: 0.1rem 0.35rem; border-radius: 4px; }
+        .api-doc-intro a { color: #0f766e; }
+    </style>
+</head>
+<body>
+    <div class="api-doc-intro">
+        <strong>BluLavelle API v1</strong> for the iOS app. Auth is <code>Authorization: Bearer</code> (Sanctum).
+        Do not scrape HTML for CSRF. Money in <code>data</code> is integer minor units (3299 = $32.99).
+        Times are ISO-8601 UTC. Every response includes <code>X-Request-ID</code>.
+        Mutations that create an order/charge require <code>Idempotency-Key</code>.
+        <a href="/api-docs.html">Storefront API docs</a>
+    </div>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function () {
+            const spec = {
+                openapi: "3.0.0",
+                info: {
+                    title: "BluLavelle API v1",
+                    version: "1.0.0",
+                    description:
+                        "Native iOS API. **Auth:** bearer access token, rotate with POST /api/v1/auth/refresh, revoke current or other sessions. **CSRF:** GET /api/v1/auth/csrf returns csrfRequired=false. **Checkout:** POST /api/v1/checkout/attempts with Idempotency-Key; recover via GET attemptId after timeout. Stripe webhooks at POST /webhooks/stripe (signature + event-id dedupe, paid status never regresses).",
+                },
+                servers: [{ url: window.location.origin }],
+                tags: [
+                    { name: "Health" },
+                    { name: "Auth" },
+                    { name: "Profile" },
+                    { name: "Account" },
+                    { name: "Addresses" },
+                    { name: "Checkout" },
+                ],
+                paths: {
+                    "/api/v1/health": {
+                        get: {
+                            tags: ["Health"],
+                            summary: "Health",
+                            security: [],
+                            responses: { 200: { description: "OK" } },
+                        },
+                    },
+                    "/api/v1/auth/csrf": {
+                        get: {
+                            tags: ["Auth"],
+                            summary: "Auth mode for native clients",
+                            description: "iOS must not scrape website meta CSRF. Returns bearer mode.",
+                            security: [],
+                            responses: {
+                                200: {
+                                    description: "Auth configuration",
+                                    content: {
+                                        "application/json": {
+                                            example: {
+                                                success: true,
+                                                data: {
+                                                    authMode: "bearer",
+                                                    csrfRequired: false,
+                                                    csrfToken: null,
+                                                    tokenType: "Bearer",
+                                                    tokenTtlSeconds: 2592000,
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    "/api/v1/auth/register": {
+                        post: {
+                            tags: ["Auth"],
+                            summary: "Register",
+                            security: [],
+                            requestBody: {
+                                content: {
+                                    "application/json": {
+                                        schema: {
+                                            type: "object",
+                                            required: ["name", "email", "password", "passwordConfirmation"],
+                                            properties: {
+                                                name: { type: "string" },
+                                                email: { type: "string" },
+                                                password: { type: "string" },
+                                                passwordConfirmation: { type: "string" },
+                                                deviceName: { type: "string", example: "iPhone 16" },
+                                                recaptchaToken: { type: "string" },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                            responses: { 201: { description: "Registered + bearer token" }, 422: { description: "VALIDATION_ERROR" } },
+                        },
+                    },
+                    "/api/v1/auth/login": {
+                        post: {
+                            tags: ["Auth"],
+                            summary: "Login",
+                            security: [],
+                            requestBody: {
+                                content: {
+                                    "application/json": {
+                                        schema: {
+                                            type: "object",
+                                            required: ["email", "password"],
+                                            properties: {
+                                                email: { type: "string" },
+                                                password: { type: "string" },
+                                                deviceName: { type: "string" },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                            responses: { 200: { description: "Token + user" }, 401: { description: "INVALID_CREDENTIALS" } },
+                        },
+                    },
+                    "/api/v1/auth/refresh": {
+                        post: {
+                            tags: ["Auth"],
+                            summary: "Rotate access token",
+                            description: "Issues a new bearer token and revokes the current one.",
+                            responses: { 200: { description: "New token" }, 401: { description: "UNAUTHENTICATED" } },
+                        },
+                    },
+                    "/api/v1/auth/revoke": {
+                        post: {
+                            tags: ["Auth"],
+                            summary: "Revoke current device session",
+                            responses: { 200: { description: "Revoked" } },
+                        },
+                    },
+                    "/api/v1/auth/sessions": {
+                        get: {
+                            tags: ["Auth"],
+                            summary: "List device sessions",
+                            responses: { 200: { description: "Sessions" } },
+                        },
+                    },
+                    "/api/v1/auth/sessions/{sessionId}": {
+                        delete: {
+                            tags: ["Auth"],
+                            summary: "Revoke another device",
+                            parameters: [{ name: "sessionId", in: "path", required: true, schema: { type: "string" } }],
+                            responses: { 200: { description: "Revoked" }, 404: { description: "NOT_FOUND" } },
+                        },
+                    },
+                    "/api/v1/auth/forgot-password": {
+                        post: {
+                            tags: ["Auth"],
+                            summary: "Forgot password (does not reveal if email exists)",
+                            security: [],
+                            requestBody: {
+                                content: {
+                                    "application/json": {
+                                        schema: { type: "object", required: ["email"], properties: { email: { type: "string" } } },
+                                    },
+                                },
+                            },
+                            responses: { 200: { description: "Always sent=true" } },
+                        },
+                    },
+                    "/api/v1/auth/reset-password": {
+                        post: {
+                            tags: ["Auth"],
+                            summary: "Reset password and revoke all sessions",
+                            security: [],
+                            responses: { 200: { description: "Reset" }, 422: { description: "RESET_FAILED" } },
+                        },
+                    },
+                    "/api/v1/auth/change-password": {
+                        post: {
+                            tags: ["Auth"],
+                            summary: "Change password (revokes other sessions)",
+                            responses: { 200: { description: "Changed" } },
+                        },
+                    },
+                    "/api/v1/profile": {
+                        get: { tags: ["Profile"], summary: "Get profile", responses: { 200: { description: "Profile" } } },
+                        patch: {
+                            tags: ["Profile"],
+                            summary: "Update name and phone only",
+                            requestBody: {
+                                content: {
+                                    "application/json": {
+                                        schema: {
+                                            type: "object",
+                                            properties: { name: { type: "string" }, phone: { type: "string", nullable: true } },
+                                        },
+                                    },
+                                },
+                            },
+                            responses: { 200: { description: "Updated" }, 422: { description: "Field errors" } },
+                        },
+                    },
+                    "/api/v1/account/export": {
+                        get: { tags: ["Account"], summary: "Export personal data", responses: { 200: { description: "Export JSON" } } },
+                    },
+                    "/api/v1/account": {
+                        delete: {
+                            tags: ["Account"],
+                            summary: "Delete/anonymize account",
+                            description:
+                                "Requires password + confirmation=true. Removes profile, addresses, wishlist, cart, sessions. Orders are kept for accounting/legal with account PII anonymized. Processing is synchronous (status=completed).",
+                            requestBody: {
+                                content: {
+                                    "application/json": {
+                                        schema: {
+                                            type: "object",
+                                            required: ["password", "confirmation"],
+                                            properties: { password: { type: "string" }, confirmation: { type: "boolean" } },
+                                        },
+                                    },
+                                },
+                            },
+                            responses: { 200: { description: "Deleted" } },
+                        },
+                    },
+                    "/api/v1/addresses": {
+                        get: { tags: ["Addresses"], summary: "List addresses", responses: { 200: { description: "List" } } },
+                        post: {
+                            tags: ["Addresses"],
+                            summary: "Create address",
+                            requestBody: {
+                                content: {
+                                    "application/json": {
+                                        schema: { $ref: "#/components/schemas/AddressWrite" },
+                                    },
+                                },
+                            },
+                            responses: { 201: { description: "Created" } },
+                        },
+                    },
+                    "/api/v1/addresses/{addressId}": {
+                        get: { tags: ["Addresses"], summary: "Get address", parameters: [{ name: "addressId", in: "path", required: true, schema: { type: "integer" } }], responses: { 200: { description: "Address" }, 404: { description: "NOT_FOUND" } } },
+                        patch: { tags: ["Addresses"], summary: "Update address", parameters: [{ name: "addressId", in: "path", required: true, schema: { type: "integer" } }], responses: { 200: { description: "Updated" } } },
+                        delete: { tags: ["Addresses"], summary: "Delete address (promotes another default if needed)", parameters: [{ name: "addressId", in: "path", required: true, schema: { type: "integer" } }], responses: { 200: { description: "Deleted" } } },
+                    },
+                    "/api/v1/addresses/{addressId}/default": {
+                        put: {
+                            tags: ["Addresses"],
+                            summary: "Set default shipping/billing atomically",
+                            parameters: [{ name: "addressId", in: "path", required: true, schema: { type: "integer" } }],
+                            requestBody: {
+                                content: {
+                                    "application/json": {
+                                        schema: { type: "object", properties: { shipping: { type: "boolean" }, billing: { type: "boolean" } } },
+                                    },
+                                },
+                            },
+                            responses: { 200: { description: "Updated" } },
+                        },
+                    },
+                    "/api/v1/checkout/attempts": {
+                        post: {
+                            tags: ["Checkout"],
+                            summary: "Create or resume checkout attempt",
+                            description:
+                                "Required header Idempotency-Key. Same key+body returns the stored attempt. Same key+different cart/address → 409 IDEMPOTENCY_KEY_REUSED. Server recomputes totals (do not trust client subtotal). After app timeout, GET the attemptId or POST again with the same key.",
+                            parameters: [
+                                { name: "Idempotency-Key", in: "header", required: true, schema: { type: "string" } },
+                                { name: "X-Request-ID", in: "header", required: false, schema: { type: "string" } },
+                                { name: "X-Guest-Cart-Token", in: "header", required: false, schema: { type: "string" } },
+                            ],
+                            requestBody: {
+                                content: {
+                                    "application/json": {
+                                        schema: { $ref: "#/components/schemas/CheckoutAttemptRequest" },
+                                    },
+                                },
+                            },
+                            responses: {
+                                200: { description: "Attempt (created|processing|requires_action|succeeded|failed)" },
+                                409: { description: "IDEMPOTENCY_KEY_REUSED or IDEMPOTENCY_CONFLICT" },
+                                422: { description: "IDEMPOTENCY_KEY_REQUIRED / validation" },
+                            },
+                        },
+                    },
+                    "/api/v1/checkout/attempts/{attemptId}": {
+                        get: {
+                            tags: ["Checkout"],
+                            summary: "Recover attempt after timeout/restart",
+                            parameters: [{ name: "attemptId", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+                            responses: { 200: { description: "Current status" }, 403: { description: "FORBIDDEN" } },
+                        },
+                    },
+                    "/api/v1/checkout/attempts/{attemptId}/confirm": {
+                        post: {
+                            tags: ["Checkout"],
+                            summary: "Confirm 3DS / Apple Pay (idempotent)",
+                            parameters: [{ name: "attemptId", in: "path", required: true, schema: { type: "string" } }],
+                            responses: { 200: { description: "Updated status" } },
+                        },
+                    },
+                    "/api/v1/checkout/attempts/{attemptId}/retry": {
+                        post: {
+                            tags: ["Checkout"],
+                            summary: "Safe retry if failed/expired — does not double-charge a succeeded attempt",
+                            parameters: [{ name: "attemptId", in: "path", required: true, schema: { type: "string" } }],
+                            responses: { 200: { description: "Attempt" }, 409: { description: "RETRY_NOT_ALLOWED" } },
+                        },
+                    },
+                    "/webhooks/stripe": {
+                        post: {
+                            tags: ["Checkout"],
+                            summary: "Stripe webhook",
+                            description: "Verifies Stripe-Signature. Deduplicates by event.id. Never moves a paid order back to failed.",
+                            security: [],
+                            responses: { 200: { description: "OK / duplicate" }, 400: { description: "Invalid signature" } },
+                        },
+                    },
+                },
+                components: {
+                    securitySchemes: {
+                        bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "Sanctum" },
+                    },
+                    schemas: {
+                        AddressWrite: {
+                            type: "object",
+                            required: ["recipientName", "line1", "city", "postalCode", "countryCode"],
+                            properties: {
+                                recipientName: { type: "string" },
+                                phone: { type: "string" },
+                                line1: { type: "string" },
+                                line2: { type: "string" },
+                                city: { type: "string" },
+                                stateProvince: { type: "string" },
+                                postalCode: { type: "string" },
+                                countryCode: { type: "string", minLength: 2, maxLength: 2, example: "US" },
+                                label: { type: "string", example: "Home" },
+                                isDefaultShipping: { type: "boolean" },
+                                isDefaultBilling: { type: "boolean" },
+                            },
+                        },
+                        CheckoutAttemptRequest: {
+                            type: "object",
+                            required: ["customer_name", "customer_email", "shipping_address", "city", "postal_code", "country", "payment_method"],
+                            properties: {
+                                customer_name: { type: "string" },
+                                customer_email: { type: "string" },
+                                customer_phone: { type: "string" },
+                                shipping_address: { type: "string" },
+                                city: { type: "string" },
+                                state: { type: "string" },
+                                postal_code: { type: "string" },
+                                country: { type: "string" },
+                                payment_method: { type: "string", enum: ["stripe", "paypal", "lianlian_pay", "free"] },
+                                payment_intent_id: { type: "string" },
+                                paypal_order_id: { type: "string" },
+                                shipping_cost: { type: "number", description: "Ignored as source of truth; server recomputes" },
+                            },
+                        },
+                    },
+                },
+                security: [{ bearerAuth: [] }],
+            };
+            SwaggerUIBundle({
+                spec: spec,
+                dom_id: "#swagger-ui",
+                deepLinking: true,
+                presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+                layout: "StandaloneLayout",
+            });
+        };
+    </script>
+</body>
+</html>

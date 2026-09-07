@@ -31,6 +31,7 @@
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
     <style>
+        [x-cloak] { display: none !important; }
         /* Custom Scrollbar for Sidebar */
         .sidebar-scroll::-webkit-scrollbar {
             width: 6px;
@@ -82,6 +83,7 @@
         || request()->routeIs('admin.settings.analytics.*')
         || request()->routeIs('admin.settings.virtual-nail.*')
         || request()->routeIs('admin.virtual-nail-trials.*')
+        || request()->routeIs('admin.backups.*')
         || request()->routeIs('admin.site.home-preview')
     );
     $navOpenUsers = $__na && (

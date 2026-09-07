@@ -66,6 +66,25 @@ return [
             'stream_reads' => true,
         ],
 
+        /*
+        | Private bucket/prefix for site backups (not public media).
+        | Defaults to the same credentials; override bucket via BACKUP_S3_BUCKET.
+        */
+        's3_backups' => [
+            'driver' => 's3',
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+            'bucket' => env('BACKUP_S3_BUCKET', env('AWS_BUCKET')),
+            'url' => env('AWS_URL'),
+            'endpoint' => env('AWS_ENDPOINT'),
+            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => true,
+            'stream_reads' => true,
+        ],
+
     ],
 
     /*

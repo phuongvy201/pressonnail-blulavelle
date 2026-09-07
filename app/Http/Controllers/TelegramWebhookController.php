@@ -4,13 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
+use App\Services\LiveChatService;
 use App\Services\TelegramBotService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class TelegramWebhookController extends Controller
 {
-    public function __invoke(Request $request, string $token, TelegramBotService $telegram): JsonResponse
+    public function __invoke(Request $request, string $token, TelegramBotService $telegram, LiveChatService $liveChat): JsonResponse
     {
         $expected = (string) config('services.telegram.webhook_token');
         if ($expected === '' || !hash_equals($expected, $token)) {
@@ -19,10 +21,14 @@ class TelegramWebhookController extends Controller
 
         $update = $request->all();
         if (!$telegram->isAuthorizedUpdate($update)) {
+            Log::info('Telegram webhook ignored unauthorized update.', [
+                'chat_id' => data_get($update, 'message.chat.id'),
+                'from_id' => data_get($update, 'message.from.id'),
+            ]);
             return response()->json(['ok' => true]);
         }
 
-        $text = trim((string) data_get($update, 'message.text', ''));
+        $text = trim((string) data_get($update, 'message.text', data_get($update, 'edited_message.text', '')));
         if ($text === '') {
             return response()->json(['ok' => true]);
         }
@@ -39,12 +45,13 @@ class TelegramWebhookController extends Controller
             return response()->json(['ok' => true]);
         }
 
-        ChatMessage::create([
+        $message = ChatMessage::create([
             'conversation_id' => $conversation->id,
             'is_from_customer' => false,
             'body' => $replyText,
         ]);
 
+        $liveChat->notifyCustomerOfShopReply($conversation, $message);
         $telegram->sendMessage("Sent to customer (CID #{$conversation->id}).");
 
         return response()->json(['ok' => true]);

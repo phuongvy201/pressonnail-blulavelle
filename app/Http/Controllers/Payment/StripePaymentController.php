@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Payment;
 
 use App\Mail\CrossSellRecommendationsMail;
 use App\Http\Controllers\Controller;
+use App\Models\CheckoutAttempt;
 use App\Models\Order;
+use App\Models\StripeWebhookEvent;
 use App\Services\ShippingCalculator;
 use App\Services\CrossSellService;
 use App\Services\TikTokEventsService;
 use App\Services\CurrencyService;
 use App\Mail\OrderConfirmation;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -387,6 +390,22 @@ class StripePaymentController extends Controller
                 $event = json_decode($payload);
             }
 
+            $eventId = $event->id ?? null;
+            if (is_string($eventId) && $eventId !== '') {
+                try {
+                    StripeWebhookEvent::create([
+                        'event_id' => $eventId,
+                        'type' => (string) ($event->type ?? 'unknown'),
+                        'processed_at' => now(),
+                    ]);
+                } catch (QueryException $exception) {
+                    if ($this->isUniqueViolation($exception)) {
+                        return response()->json(['success' => true, 'duplicate' => true]);
+                    }
+                    throw $exception;
+                }
+            }
+
             // Handle the event
             switch ($event->type) {
                 case 'payment_intent.succeeded':
@@ -443,11 +462,21 @@ class StripePaymentController extends Controller
         if ($order && $order->payment_status !== 'paid') {
             $order->update([
                 'payment_status' => 'paid',
-                'order_status' => 'processing',
+                'status' => 'processing',
+                'paid_at' => $order->paid_at ?? now(),
             ]);
 
             Log::info('Payment intent succeeded for order: ' . $order->order_number);
         }
+
+        CheckoutAttempt::query()
+            ->where('payment_intent_id', $paymentIntent->id)
+            ->whereNotIn('status', ['succeeded'])
+            ->update([
+                'status' => 'succeeded',
+                'order_id' => $order?->id,
+                'error_code' => null,
+            ]);
 
         if ($order) {
             $this->sendCrossSellEmail($order);
@@ -462,13 +491,28 @@ class StripePaymentController extends Controller
         $order = Order::where('payment_id', $paymentIntent->id)->first();
 
         if ($order) {
+            if ($order->payment_status === 'paid') {
+                Log::info('Ignoring payment_intent.payment_failed for already-paid order', [
+                    'order_number' => $order->order_number,
+                ]);
+
+                return;
+            }
+
             $order->update([
                 'payment_status' => 'failed',
-                'order_status' => 'cancelled',
             ]);
 
             Log::warning('Payment intent failed for order: ' . $order->order_number);
         }
+
+        CheckoutAttempt::query()
+            ->where('payment_intent_id', $paymentIntent->id)
+            ->whereNotIn('status', ['succeeded'])
+            ->update([
+                'status' => 'failed',
+                'error_code' => 'PAYMENT_FAILED',
+            ]);
     }
 
     /**
@@ -566,5 +610,14 @@ class StripePaymentController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    private function isUniqueViolation(QueryException $exception): bool
+    {
+        $code = (string) ($exception->errorInfo[1] ?? $exception->getCode());
+
+        return in_array($code, ['1062', '23000'], true)
+            || str_contains($exception->getMessage(), 'Duplicate entry')
+            || str_contains($exception->getMessage(), 'UNIQUE constraint');
     }
 }

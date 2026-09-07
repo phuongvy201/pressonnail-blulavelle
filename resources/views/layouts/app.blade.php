@@ -851,7 +851,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
             <button type="button" id="live-chat-toggle" class="live-chat-ring-target w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg flex items-center justify-center text-white hover:opacity-90 transition-opacity flex-shrink-0" style="background: #0297FE;" aria-label="Chat">
                 <span class="material-symbols-outlined text-2xl sm:text-3xl">chat</span>
             </button>
-            <span id="live-chat-unread-badge" class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-5 px-1 flex items-center justify-center rounded-full bg-primary text-white text-[10px] sm:text-xs font-bold hidden" aria-hidden="true">0</span>
+            <span id="live-chat-unread-badge" class="absolute -top-1 -right-1 min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-5 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] sm:text-xs font-bold shadow z-10 hidden" aria-hidden="true">0</span>
         </div>
         {{-- Panel: mobile = bottom sheet full width, desktop = floating 380px --}}
         <div id="live-chat-panel" class="live-chat-panel hidden fixed left-0 right-0 bottom-20 sm:left-auto sm:right-0 sm:bottom-16 sm:absolute w-full sm:w-[380px] max-h-[calc(100vh-6rem)] sm:max-h-[480px] sm:h-[480px] min-h-[280px] sm:min-h-0 bg-white shadow-2xl border border-slate-200 flex flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl border-b-0 sm:border-b">
@@ -1597,6 +1597,9 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
     #live-chat-toggle-wrap.live-chat-ring .live-chat-ring-target {
         animation: liveChatRing 0.5s ease-in-out 6 forwards;
     }
+    #live-chat-toggle-wrap.live-chat-has-unread .live-chat-ring-target {
+        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.45);
+    }
     @keyframes virtualNailFabPulse {
         0%, 100% { box-shadow: 0 0 0 0 rgba(233, 30, 140, 0.45); }
         50% { box-shadow: 0 0 0 10px rgba(233, 30, 140, 0); }
@@ -1640,10 +1643,9 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         var csrf = document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').content;
         var conversationId = null;
         var pollTimer = null;
-        var lastSeenMessageId = 0;
         var unreadCount = 0;
-        var POLL_MSG_OPEN = 15000;
-        var POLL_MSG_CLOSED = 60000;
+        var POLL_MSG_OPEN = 4000;
+        var POLL_MSG_CLOSED = 5000;
 
         var panel = document.getElementById('live-chat-panel');
         var unreadBadge = document.getElementById('live-chat-unread-badge');
@@ -1689,6 +1691,8 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
             unreadBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
             unreadBadge.classList.toggle('hidden', unreadCount <= 0);
             unreadBadge.setAttribute('aria-hidden', unreadCount <= 0);
+            var wrap = document.getElementById('live-chat-toggle-wrap');
+            if (wrap) wrap.classList.toggle('live-chat-has-unread', unreadCount > 0);
         }
         function triggerChatRing() {
             var wrap = document.getElementById('live-chat-toggle-wrap');
@@ -1700,20 +1704,29 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         }
         function fetchMessages() {
             if (!conversationId) return;
-            fetch(messagesUrl(), { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
+            var markSeen = isChatPanelOpen() ? '?mark_seen=1' : '';
+            fetch(messagesUrl() + markSeen, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                credentials: 'same-origin'
+            })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
-                    if (!data.success || !data.messages || !data.messages.length) return;
-                    var maxId = Math.max.apply(null, data.messages.map(function(m) { return m.id; }));
-                    var newFromSeller = data.messages.filter(function(m) { return !m.is_from_customer && m.id > lastSeenMessageId; });
-                    if (panel.classList.contains('hidden') && lastSeenMessageId > 0 && newFromSeller.length > 0) {
-                        unreadCount += newFromSeller.length;
+                    if (!data.success) return;
+                    if (data.messages && data.messages.length) {
+                        renderMessages(data.messages);
+                    }
+                    if (isChatPanelOpen()) {
+                        unreadCount = 0;
                         updateUnreadBadge();
+                        return;
+                    }
+                    var nextUnread = typeof data.unread_count === 'number' ? data.unread_count : unreadCount;
+                    if (nextUnread > unreadCount) {
                         triggerChatRing();
                         playNewMessageSound();
                     }
-                    lastSeenMessageId = Math.max(lastSeenMessageId, maxId);
-                    renderMessages(data.messages);
+                    unreadCount = nextUnread;
+                    updateUnreadBadge();
                 })
                 .catch(function() {});
         }
@@ -1769,6 +1782,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
             fetch(startUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
                 body: JSON.stringify(body)
             })
                 .then(function(r) { return r.json(); })
@@ -1843,6 +1857,19 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
             })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
+                    if (data && data.unread_count > 0) {
+                        unreadCount = data.unread_count;
+                        updateUnreadBadge();
+                        triggerChatRing();
+                    }
+                    if (data && data.guest_name) {
+                        var nameEl = document.getElementById('live-chat-guest-name');
+                        if (nameEl && !nameEl.value) nameEl.value = data.guest_name;
+                    }
+                    if (data && data.guest_email) {
+                        var emailEl = document.getElementById('live-chat-guest-email');
+                        if (emailEl && !emailEl.value) emailEl.value = data.guest_email;
+                    }
                     if (data && data.can_resume) {
                         tryResumeThenStart({}, null);
                         return;
@@ -1863,7 +1890,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                 });
         }
         {{-- Chat: chá»‰ gá»i resume-status sau load + delay â€” tÃ¡ch khá»i critical path trong lab. --}}
-        window.addEventListener('load', function () { setTimeout(prefillAndResume, 2600); }, { once: true });
+        window.addEventListener('DOMContentLoaded', function () { setTimeout(prefillAndResume, 200); }, { once: true });
 
         document.getElementById('live-chat-send-form').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -1875,6 +1902,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
             fetch(sendUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
                 body: JSON.stringify({ conversation_id: conversationId, body: body })
             })
                 .then(function(r) { return r.json(); })

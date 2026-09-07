@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\ReviewImportController;
 use App\Http\Controllers\Admin\CollectionController as AdminCollectionController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\AnalyticsSettingsController;
 use App\Http\Controllers\Admin\BulkDiscountSettingsController;
 use App\Http\Controllers\Admin\VirtualNailSettingsController;
@@ -36,6 +37,7 @@ use App\Http\Controllers\Api\AuthController as ApiAuthController;
 use App\Http\Controllers\Api\CartController as ApiCartController;
 use App\Http\Controllers\Api\OrderController as ApiOrderController;
 use App\Http\Controllers\Api\ProfileController as ApiProfileController;
+use App\Http\Controllers\Api\WishlistController as ApiWishlistController;
 use App\Http\Controllers\Api\ProductCrossSellController;
 use App\Http\Controllers\Api\CustomFileController;
 use App\Http\Controllers\Api\UploadController;
@@ -177,6 +179,9 @@ Route::prefix('payment/stripe')->name('payment.stripe.')->group(function () {
     Route::post('/process', [App\Http\Controllers\Payment\StripePaymentController::class, 'processPayment'])->name('process');
     Route::post('/webhook', [App\Http\Controllers\Payment\StripePaymentController::class, 'webhook'])->name('webhook');
 });
+
+Route::post('/webhooks/stripe', [App\Http\Controllers\Payment\StripePaymentController::class, 'webhook'])
+    ->name('webhooks.stripe');
 
 // Wishlist routes
 Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist.index');
@@ -546,13 +551,28 @@ Route::middleware(['web'])->prefix('api/auth')->group(function () {
         ->middleware('auth')
         ->name('api.auth.logout');
     Route::get('/user', [ApiAuthController::class, 'user'])->name('api.auth.user');
+    Route::get('/captcha', [ApiAuthController::class, 'captcha'])->name('api.auth.captcha');
 });
 
 // Customer account API (requires login + session cookie)
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/api/profile', [ApiProfileController::class, 'show'])->name('api.profile.show');
+    Route::put('/api/profile', [ApiProfileController::class, 'update'])->name('api.profile.update');
+    Route::put('/api/profile/address', [ApiProfileController::class, 'updateAddress'])->name('api.profile.address');
+    Route::put('/api/profile/password', [ApiProfileController::class, 'updatePassword'])->name('api.profile.password');
     Route::get('/api/orders', [ApiOrderController::class, 'index'])->name('api.orders.index');
     Route::get('/api/orders/{orderNumber}', [ApiOrderController::class, 'show'])->name('api.orders.show');
+});
+
+// Wishlist API — REST (PWA / session cookie; guest or logged-in)
+Route::middleware(['web'])->prefix('api/wishlist')->name('api.wishlist.')->group(function () {
+    Route::get('/', [ApiWishlistController::class, 'index'])->name('index');
+    Route::post('/', [ApiWishlistController::class, 'add'])->name('store');
+    Route::delete('/', [ApiWishlistController::class, 'remove'])->name('destroy');
+    Route::post('/toggle', [ApiWishlistController::class, 'toggle'])->name('toggle');
+    Route::get('/count', [ApiWishlistController::class, 'count'])->name('count');
+    Route::post('/check', [ApiWishlistController::class, 'check'])->name('check');
+    Route::delete('/clear', [ApiWishlistController::class, 'clear'])->name('clear');
 });
 
 // Cart API — REST (PWA / session cookie)
@@ -723,6 +743,13 @@ Route::middleware('auth')->group(function () {
         // Analytics settings
         Route::get('settings/analytics', [AnalyticsSettingsController::class, 'edit'])->name('settings.analytics.edit');
         Route::put('settings/analytics', [AnalyticsSettingsController::class, 'update'])->name('settings.analytics.update');
+
+        Route::get('backups', [BackupController::class, 'index'])->name('backups.index');
+        Route::post('backups', [BackupController::class, 'store'])->name('backups.store');
+        Route::post('backups/restore-upload', [BackupController::class, 'restoreUpload'])->name('backups.restore-upload');
+        Route::get('backups/{filename}/download', [BackupController::class, 'download'])->name('backups.download')->where('filename', '[A-Za-z0-9._-]+');
+        Route::post('backups/{filename}/restore', [BackupController::class, 'restore'])->name('backups.restore')->where('filename', '[A-Za-z0-9._-]+');
+        Route::delete('backups/{filename}', [BackupController::class, 'destroy'])->name('backups.destroy')->where('filename', '[A-Za-z0-9._-]+');
 
         // Virtual Nail Try-On settings
         Route::get('virtual-nail-trials', [VirtualNailTrialAdminController::class, 'index'])->name('virtual-nail-trials.index');

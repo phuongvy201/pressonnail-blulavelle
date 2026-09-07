@@ -52,6 +52,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // Spatie Permission middleware aliases
+        $middleware->append(\App\Http\Middleware\AssignRequestId::class);
+
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
@@ -63,7 +65,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Exclude API routes from CSRF protection
         $middleware->validateCsrfTokens(except: [
             'api/*',
-            'payment/stripe/webhook', // Stripe webhook POST without CSRF
+            'payment/stripe/webhook',
+            'webhooks/stripe',
         ]);
 
         $middleware->web(append: [
@@ -73,5 +76,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Throwable $e, \Illuminate\Http\Request $request) {
+            if ($request->is('api/v1/*')) {
+                return \App\Support\ApiV1\ApiResponse::fromException($e, $request);
+            }
+
+            return null;
+        });
     })->create();

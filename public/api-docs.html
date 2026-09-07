@@ -40,7 +40,8 @@
     <body>
         <div class="api-doc-intro">
             Public storefront API — no API token. Query parameters use <strong>camelCase</strong> where noted.
-            Auth / cart / checkout: session cookies, <code>credentials: 'include'</code>, JSON with <code>Content-Type: application/json</code>, and <code>X-CSRF-TOKEN</code> on POST/PUT/DELETE.
+            Auth / cart / checkout / wishlist: session cookies, <code>credentials: 'include'</code>, JSON with <code>Content-Type: application/json</code>, and <code>X-CSRF-TOKEN</code> on POST/PUT/DELETE.
+            Native iOS API: <a href="/api-v1-docs.html"><code>/api/v1</code> OpenAPI</a> (Bearer, envelope <code>data/error</code>, idempotent checkout attempts).
             <a href="/admin/api-token">API Token Dashboard</a>
         </div>
         <div id="swagger-ui"></div>
@@ -54,8 +55,8 @@
                     info: {
                         title: "Press On Nail API",
                         description:
-                            "Storefront JSON API. **Auth (session):** register/login → cookie + CSRF. **Account:** `GET /api/profile`, `GET /api/orders` (login required). **Checkout:** Cart → checkout → `POST /checkout/process`.",
-                        version: "2.13.1",
+                            "Storefront JSON API. **Auth (session):** register/login → cookie + CSRF. **Account:** `GET/PUT /api/profile`, address, password (login required). **Wishlist:** `GET/POST /api/wishlist` (guest session or login). **Checkout:** Cart → checkout → `POST /checkout/process` with `Idempotency-Key` so retries do not create a second order.",
+                        version: "2.15.0",
                     },
                     servers: [
                         {
@@ -222,6 +223,28 @@
                                 },
                             },
                         },
+                        "/api/auth/captcha": {
+                            get: {
+                                tags: ["Auth"],
+                                summary: "Captcha config",
+                                description:
+                                    "Whether reCAPTCHA is required for registration. If `required` is true, send `recaptchaToken` on `POST /api/auth/register` (and `POST /api/mobile/v1/auth/register`). Native apps typically obtain the token via a WebView or the platform reCAPTCHA SDK using `siteKey`.",
+                                operationId: "authCaptcha",
+                                security: [],
+                                responses: {
+                                    200: {
+                                        description: "Captcha configuration",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/AuthCaptchaResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
                         "/api/profile": {
                             get: {
                                 tags: ["Profile"],
@@ -247,6 +270,396 @@
                                             "application/json": {
                                                 schema: {
                                                     $ref: "#/components/schemas/AuthErrorResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                            put: {
+                                tags: ["Profile"],
+                                summary: "Update profile",
+                                description:
+                                    "Update name, email, phone, avatar, and shipping address. All fields optional; omitted fields stay unchanged. Avatar is `multipart/form-data`. Requires login.",
+                                operationId: "updateProfile",
+                                security: [{ cookieAuth: [] }],
+                                requestBody: {
+                                    required: true,
+                                    content: {
+                                        "application/json": {
+                                            schema: {
+                                                $ref: "#/components/schemas/ProfileUpdateRequest",
+                                            },
+                                        },
+                                        "multipart/form-data": {
+                                            schema: {
+                                                $ref: "#/components/schemas/ProfileUpdateRequest",
+                                            },
+                                        },
+                                    },
+                                },
+                                responses: {
+                                    200: {
+                                        description: "Profile updated",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ProfileUpdateResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    401: {
+                                        description: "Not authenticated",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/AuthErrorResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    422: {
+                                        description: "Validation error",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ValidationError",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/profile/address": {
+                            put: {
+                                tags: ["Profile"],
+                                summary: "Update address",
+                                description:
+                                    "Update shipping address only (street, city, state, postalCode, country). Requires login.",
+                                operationId: "updateProfileAddress",
+                                security: [{ cookieAuth: [] }],
+                                requestBody: {
+                                    required: true,
+                                    content: {
+                                        "application/json": {
+                                            schema: {
+                                                $ref: "#/components/schemas/ProfileAddressRequest",
+                                            },
+                                        },
+                                    },
+                                },
+                                responses: {
+                                    200: {
+                                        description: "Address updated",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ProfileUpdateResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    401: {
+                                        description: "Not authenticated",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/AuthErrorResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    422: {
+                                        description: "Validation error",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ValidationError",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/profile/password": {
+                            put: {
+                                tags: ["Profile"],
+                                summary: "Update password",
+                                description:
+                                    "Change password. Send `currentPassword`, `password`, and `passwordConfirmation`. Requires login.",
+                                operationId: "updateProfilePassword",
+                                security: [{ cookieAuth: [] }],
+                                requestBody: {
+                                    required: true,
+                                    content: {
+                                        "application/json": {
+                                            schema: {
+                                                $ref: "#/components/schemas/ProfilePasswordRequest",
+                                            },
+                                        },
+                                    },
+                                },
+                                responses: {
+                                    200: {
+                                        description: "Password updated",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ProfilePasswordResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    401: {
+                                        description: "Not authenticated",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/AuthErrorResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    422: {
+                                        description: "Current password incorrect or validation error",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ValidationError",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/wishlist": {
+                            get: {
+                                tags: ["Wishlist"],
+                                summary: "List wishlist",
+                                description:
+                                    "Wishlist for the logged-in user, or the guest session when not logged in. Guest items persist with the session cookie (storefront) or `X-Guest-Cart-Token` (mobile). Paginated.",
+                                operationId: "listWishlist",
+                                security: [],
+                                parameters: [
+                                    {
+                                        name: "page",
+                                        in: "query",
+                                        schema: { type: "integer", default: 1, minimum: 1 },
+                                    },
+                                    {
+                                        name: "perPage",
+                                        in: "query",
+                                        schema: {
+                                            type: "integer",
+                                            default: 24,
+                                            minimum: 1,
+                                            maximum: 50,
+                                        },
+                                    },
+                                ],
+                                responses: {
+                                    200: {
+                                        description: "Wishlist items",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/WishlistListResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                            post: {
+                                tags: ["Wishlist"],
+                                summary: "Add to wishlist",
+                                description:
+                                    "Add a product. Send `productId`. Guest or logged-in. Idempotent: already-in-wishlist returns 400.",
+                                operationId: "addToWishlist",
+                                security: [],
+                                requestBody: {
+                                    required: true,
+                                    content: {
+                                        "application/json": {
+                                            schema: {
+                                                $ref: "#/components/schemas/WishlistProductRequest",
+                                            },
+                                        },
+                                    },
+                                },
+                                responses: {
+                                    200: {
+                                        description: "Added",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/WishlistMutationResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    400: {
+                                        description: "Already in wishlist",
+                                    },
+                                    404: {
+                                        description: "Product not found",
+                                    },
+                                    422: {
+                                        description: "Validation error",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/ValidationError",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                            delete: {
+                                tags: ["Wishlist"],
+                                summary: "Remove from wishlist",
+                                description:
+                                    "Remove a product. Send `productId` in JSON body or query string.",
+                                operationId: "removeFromWishlist",
+                                security: [],
+                                parameters: [
+                                    {
+                                        name: "productId",
+                                        in: "query",
+                                        schema: { type: "integer", minimum: 1 },
+                                    },
+                                ],
+                                requestBody: {
+                                    content: {
+                                        "application/json": {
+                                            schema: {
+                                                $ref: "#/components/schemas/WishlistProductRequest",
+                                            },
+                                        },
+                                    },
+                                },
+                                responses: {
+                                    200: {
+                                        description: "Removed",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/WishlistMutationResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    404: {
+                                        description: "Product not in wishlist",
+                                    },
+                                },
+                            },
+                        },
+                        "/api/wishlist/toggle": {
+                            post: {
+                                tags: ["Wishlist"],
+                                summary: "Toggle wishlist",
+                                description:
+                                    "Add if missing, remove if present. Response `action` is `added` or `removed`.",
+                                operationId: "toggleWishlist",
+                                security: [],
+                                requestBody: {
+                                    required: true,
+                                    content: {
+                                        "application/json": {
+                                            schema: {
+                                                $ref: "#/components/schemas/WishlistProductRequest",
+                                            },
+                                        },
+                                    },
+                                },
+                                responses: {
+                                    200: {
+                                        description: "Toggled",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/WishlistToggleResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                    404: {
+                                        description: "Product not found",
+                                    },
+                                },
+                            },
+                        },
+                        "/api/wishlist/count": {
+                            get: {
+                                tags: ["Wishlist"],
+                                summary: "Wishlist count",
+                                operationId: "wishlistCount",
+                                security: [],
+                                responses: {
+                                    200: {
+                                        description: "Count",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/WishlistCountResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/wishlist/check": {
+                            post: {
+                                tags: ["Wishlist"],
+                                summary: "Check products in wishlist",
+                                description:
+                                    "Return which of the given product IDs are in the current wishlist.",
+                                operationId: "checkWishlist",
+                                security: [],
+                                requestBody: {
+                                    required: true,
+                                    content: {
+                                        "application/json": {
+                                            schema: {
+                                                $ref: "#/components/schemas/WishlistCheckRequest",
+                                            },
+                                        },
+                                    },
+                                },
+                                responses: {
+                                    200: {
+                                        description: "Matching product IDs",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/WishlistCheckResponse",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "/api/wishlist/clear": {
+                            delete: {
+                                tags: ["Wishlist"],
+                                summary: "Clear wishlist",
+                                operationId: "clearWishlist",
+                                security: [],
+                                responses: {
+                                    200: {
+                                        description: "Cleared",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/WishlistMutationResponse",
                                                 },
                                             },
                                         },
@@ -1204,8 +1617,26 @@
                             post: {
                                 tags: ["Checkout"],
                                 summary: "Create order & pay",
+                                description:
+                                    "Creates the order and completes payment. **Idempotency:** send header `Idempotency-Key` (UUID, reuse on retry). The same key + same body returns the first JSON response (header `Idempotency-Replayed: true`) and does **not** create a second order. Same key + different body → `409`. A request still in progress → `409` `idempotency_conflict` (retry the same key). Keys expire after 24 hours. **Required** on `POST /api/mobile/v1/checkout/process`. Recommended on this storefront path. Extra guard: retry with the same Stripe `payment_intent_id` or PayPal `paypal_order_id` returns the existing order if the cart was already cleared.",
                                 operationId: "checkoutProcess",
                                 security: [],
+                                parameters: [
+                                    {
+                                        name: "Idempotency-Key",
+                                        in: "header",
+                                        required: false,
+                                        description:
+                                            "Client-generated UUID. Required for the mobile API. Also accepted as `X-Idempotency-Key` or JSON `idempotencyKey`.",
+                                        schema: {
+                                            type: "string",
+                                            minLength: 16,
+                                            maxLength: 128,
+                                            pattern: "^[A-Za-z0-9_-]{16,128}$",
+                                            example: "8f1a2c3e-4b5d-6789-abcd-ef0123456789",
+                                        },
+                                    },
+                                ],
                                 requestBody: {
                                     required: true,
                                     content: {
@@ -1218,6 +1649,16 @@
                                 },
                                 responses: {
                                     200: {
+                                        description: "Order created or replayed",
+                                        headers: {
+                                            "Idempotency-Replayed": {
+                                                description: "`true` when this is a stored response for a retry",
+                                                schema: {
+                                                    type: "string",
+                                                    enum: ["true", "false"],
+                                                },
+                                            },
+                                        },
                                         content: {
                                             "application/json": {
                                                 schema: {
@@ -1235,7 +1676,18 @@
                                             },
                                         },
                                     },
+                                    409: {
+                                        description: "Idempotency conflict (in progress, or key reused with a different body)",
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    $ref: "#/components/schemas/CheckoutIdempotencyErrorResponse",
+                                                },
+                                            },
+                                        },
+                                    },
                                     422: {
+                                        description: "Validation error or missing/invalid Idempotency-Key (mobile)",
                                         content: {
                                             "application/json": {
                                                 schema: {
@@ -2791,6 +3243,11 @@
                                     payment_intent_id: { type: "string" },
                                     card_token: { type: "string" },
                                     card_type: { type: "string" },
+                                    idempotencyKey: {
+                                        type: "string",
+                                        description:
+                                            "Optional body alias for header Idempotency-Key (prefer the header)",
+                                    },
                                 },
                             },
                             CheckoutProcessResponse: {
@@ -2824,6 +3281,23 @@
                                     success: { type: "boolean", example: false },
                                     message: { type: "string" },
                                     error: { type: "string" },
+                                },
+                            },
+                            CheckoutIdempotencyErrorResponse: {
+                                type: "object",
+                                required: ["success", "message", "error"],
+                                properties: {
+                                    success: { type: "boolean", example: false },
+                                    message: { type: "string" },
+                                    error: {
+                                        type: "string",
+                                        enum: [
+                                            "idempotency_key_required",
+                                            "idempotency_key_invalid",
+                                            "idempotency_key_reused",
+                                            "idempotency_conflict",
+                                        ],
+                                    },
                                 },
                             },
                             StripeCreatePaymentIntentRequest: {
@@ -2982,6 +3456,26 @@
                                     },
                                 },
                             },
+                            AuthCaptchaResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    required: {
+                                        type: "boolean",
+                                        description:
+                                            "True when `services.recaptcha.secret_key` is set on the server",
+                                    },
+                                    siteKey: {
+                                        type: "string",
+                                        nullable: true,
+                                        description: "Public reCAPTCHA site key for the client SDK / WebView",
+                                    },
+                                    provider: {
+                                        type: "string",
+                                        example: "recaptcha",
+                                    },
+                                },
+                            },
                             ProfileUser: {
                                 type: "object",
                                 properties: {
@@ -3016,6 +3510,144 @@
                                     success: { type: "boolean", example: true },
                                     user: { $ref: "#/components/schemas/ProfileUser" },
                                     stats: { $ref: "#/components/schemas/ProfileStats" },
+                                },
+                            },
+                            ProfileUpdateRequest: {
+                                type: "object",
+                                properties: {
+                                    name: { type: "string", maxLength: 255 },
+                                    email: { type: "string", format: "email" },
+                                    phone: { type: "string", nullable: true, maxLength: 20 },
+                                    avatar: {
+                                        type: "string",
+                                        format: "binary",
+                                        description: "Optional image (jpeg/png/webp, max 5MB)",
+                                    },
+                                    address: { type: "string", nullable: true, maxLength: 500 },
+                                    city: { type: "string", nullable: true, maxLength: 100 },
+                                    state: { type: "string", nullable: true, maxLength: 100 },
+                                    postalCode: { type: "string", nullable: true, maxLength: 20 },
+                                    country: { type: "string", nullable: true, maxLength: 100 },
+                                },
+                            },
+                            ProfileAddressRequest: {
+                                type: "object",
+                                properties: {
+                                    address: { type: "string", nullable: true, maxLength: 500, example: "123 Main St" },
+                                    city: { type: "string", nullable: true, maxLength: 100, example: "Austin" },
+                                    state: { type: "string", nullable: true, maxLength: 100, example: "TX" },
+                                    postalCode: { type: "string", nullable: true, maxLength: 20, example: "78701" },
+                                    country: { type: "string", nullable: true, maxLength: 100, example: "US" },
+                                },
+                            },
+                            ProfileUpdateResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    message: { type: "string", example: "Profile updated successfully." },
+                                    user: { $ref: "#/components/schemas/ProfileUser" },
+                                },
+                            },
+                            ProfilePasswordRequest: {
+                                type: "object",
+                                required: ["currentPassword", "password", "passwordConfirmation"],
+                                properties: {
+                                    currentPassword: { type: "string", format: "password" },
+                                    password: { type: "string", format: "password" },
+                                    passwordConfirmation: { type: "string", format: "password" },
+                                },
+                            },
+                            ProfilePasswordResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    message: { type: "string", example: "Password updated successfully." },
+                                },
+                            },
+                            WishlistProductRequest: {
+                                type: "object",
+                                required: ["productId"],
+                                properties: {
+                                    productId: { type: "integer", minimum: 1, example: 10 },
+                                },
+                            },
+                            WishlistProductSummary: {
+                                type: "object",
+                                nullable: true,
+                                properties: {
+                                    id: { type: "integer" },
+                                    name: { type: "string" },
+                                    slug: { type: "string" },
+                                    price: { type: "number", format: "float" },
+                                    primaryImage: { type: "string", nullable: true },
+                                    inStock: { type: "boolean" },
+                                },
+                            },
+                            WishlistItem: {
+                                type: "object",
+                                properties: {
+                                    id: { type: "integer" },
+                                    productId: { type: "integer" },
+                                    addedAt: { type: "string", format: "date-time", nullable: true },
+                                    product: { $ref: "#/components/schemas/WishlistProductSummary" },
+                                },
+                            },
+                            WishlistListResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    count: { type: "integer" },
+                                    meta: { $ref: "#/components/schemas/PaginationMeta" },
+                                    items: {
+                                        type: "array",
+                                        items: { $ref: "#/components/schemas/WishlistItem" },
+                                    },
+                                },
+                            },
+                            WishlistMutationResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    message: { type: "string" },
+                                    count: { type: "integer" },
+                                },
+                            },
+                            WishlistToggleResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    action: { type: "string", enum: ["added", "removed"] },
+                                    message: { type: "string" },
+                                    count: { type: "integer" },
+                                },
+                            },
+                            WishlistCountResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    count: { type: "integer" },
+                                },
+                            },
+                            WishlistCheckRequest: {
+                                type: "object",
+                                required: ["productIds"],
+                                properties: {
+                                    productIds: {
+                                        type: "array",
+                                        items: { type: "integer" },
+                                        example: [10, 11, 12],
+                                    },
+                                },
+                            },
+                            WishlistCheckResponse: {
+                                type: "object",
+                                properties: {
+                                    success: { type: "boolean", example: true },
+                                    productIds: {
+                                        type: "array",
+                                        items: { type: "integer" },
+                                        description: "IDs from the request that are currently in the wishlist",
+                                    },
                                 },
                             },
                             OrderStats: {
@@ -3158,6 +3790,7 @@
                     tags: [
                         { name: "Auth" },
                         { name: "Profile" },
+                        { name: "Wishlist" },
                         { name: "Orders" },
                         { name: "Products" },
                         { name: "Collections" },

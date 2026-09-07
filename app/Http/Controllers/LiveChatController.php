@@ -4,15 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
-use App\Models\User;
+use App\Services\LiveChatService;
 use App\Services\TelegramBotService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class LiveChatController extends Controller
 {
-    public function __construct(private readonly TelegramBotService $telegramBot)
-    {
+    public function __construct(
+        private readonly TelegramBotService $telegramBot,
+        private readonly LiveChatService $liveChat,
+    ) {
     }
 
     /**
@@ -21,15 +23,27 @@ class LiveChatController extends Controller
     public function resumeStatus(Request $request): JsonResponse
     {
         $userId = auth()->id();
-        $sessionId = $request->session()->getId();
+        $session = $request->session();
+        $sessionId = $session->getId();
+        $conversation = null;
 
         if ($userId) {
-            $open = ChatConversation::where('customer_user_id', $userId)->open()->exists();
+            $conversation = ChatConversation::where('customer_user_id', $userId)->open()->first();
         } else {
-            $open = ChatConversation::where('guest_session_id', $sessionId)->open()->exists();
+            $conversation = ChatConversation::where('guest_session_id', $sessionId)->open()->first()
+                ?: $this->liveChat->conversationFromHttpSession($session);
         }
 
-        return response()->json(['can_resume' => $open]);
+        $unread = $conversation ? $this->liveChat->unreadSellerCount($conversation, $session) : 0;
+
+        return response()->json([
+            'can_resume' => (bool) $conversation
+                || (filled($this->liveChat->guestNameFromSession($session))
+                    && filled($this->liveChat->guestEmailFromSession($session))),
+            'unread_count' => $unread,
+            'guest_name' => $this->liveChat->guestNameFromSession($session),
+            'guest_email' => $this->liveChat->guestEmailFromSession($session),
+        ]);
     }
 
     /**
@@ -54,39 +68,29 @@ class LiveChatController extends Controller
             $conversation = ChatConversation::where('customer_user_id', $userId)
                 ->open()
                 ->first();
-        } else {
-            $email = $request->input('email');
-            $name = $request->input('name');
-            $conversation = ChatConversation::where('guest_session_id', $sessionId)
-                ->open()
-                ->first();
-
-            // Đã có conversation theo session => resume, không cần name/email
-            if ($conversation) {
-                // nothing to do
-            } elseif (!$email || !$name) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Please enter your name and email to start chat.',
-                ], 422);
-            } else {
+            if (!$conversation) {
                 $conversation = ChatConversation::create([
-                    'guest_email' => $email,
-                    'guest_name' => $name,
-                    'guest_session_id' => $sessionId,
-                    'seller_id' => $this->getFirstAvailableSeller(),
+                    'customer_user_id' => $userId,
+                    'seller_id' => $this->liveChat->firstAvailableSellerId(),
                     'status' => 'open',
                 ]);
             }
+        } else {
+            $conversation = $this->liveChat->resumeOrCreateGuest(
+                $sessionId,
+                $request->input('name'),
+                $request->input('email'),
+                $request->session(),
+            );
+            if (is_string($conversation)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $conversation,
+                ], 422);
+            }
         }
 
-        if (!$conversation && $userId) {
-            $conversation = ChatConversation::create([
-                'customer_user_id' => $userId,
-                'seller_id' => $this->getFirstAvailableSeller(),
-                'status' => 'open',
-            ]);
-        }
+        $this->liveChat->rememberInSession($request->session(), $conversation);
 
         return response()->json([
             'success' => true,
@@ -114,7 +118,17 @@ class LiveChatController extends Controller
                 'created_at' => $m->created_at->toIso8601String(),
             ];
         });
-        return response()->json(['success' => true, 'messages' => $messages]);
+        $unread = $this->liveChat->unreadSellerCount($conversation, $request->session());
+        if ($request->boolean('mark_seen')) {
+            $this->liveChat->markSeen($conversation, $request->session());
+            $unread = 0;
+        }
+
+        return response()->json([
+            'success' => true,
+            'messages' => $messages,
+            'unread_count' => $unread,
+        ]);
     }
 
     /**
@@ -162,12 +176,12 @@ class LiveChatController extends Controller
         if (!$userId && $conversation->guest_session_id === $sessionId) {
             return $conversation;
         }
-        return null;
-    }
+        if (!$userId && (int) $request->session()->get(LiveChatService::SESSION_CONVERSATION) === (int) $conversation->id) {
+            $conversation->guest_session_id = $sessionId;
+            $conversation->save();
 
-    private function getFirstAvailableSeller(): ?int
-    {
-        $user = User::role(['admin', 'seller'])->first();
-        return $user?->id;
+            return $conversation;
+        }
+        return null;
     }
 }
