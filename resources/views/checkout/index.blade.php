@@ -229,9 +229,22 @@
 
     $checkoutLocationSvc = app(\App\Services\CustomerLocationService::class);
     $checkoutShipCountryCode = $checkoutLocationSvc->detectCountryCode(request(), 'US');
+    $checkoutAddressPrefill = $checkoutAddressPrefill ?? null;
+    if (! empty($checkoutAddressPrefill['country'])) {
+        $checkoutShipCountryCode = strtoupper((string) $checkoutAddressPrefill['country']);
+    }
     if (is_string(old('country')) && strlen(trim((string) old('country'))) === 2) {
         $checkoutShipCountryCode = strtoupper(trim((string) old('country')));
     }
+
+    $prefillName = old('customer_name', $checkoutAddressPrefill['customer_name'] ?? (auth()->user()->name ?? ''));
+    $prefillEmail = old('customer_email', auth()->user()->email ?? '');
+    $prefillPhone = old('customer_phone', $checkoutAddressPrefill['customer_phone'] ?? (auth()->user()->phone ?? ''));
+    $prefillStreet = old('shipping_address', $checkoutAddressPrefill['shipping_address'] ?? '');
+    $prefillCity = old('city', $checkoutAddressPrefill['city'] ?? '');
+    $prefillState = old('state', $checkoutAddressPrefill['state'] ?? '');
+    $prefillPostal = old('postal_code', $checkoutAddressPrefill['postal_code'] ?? '');
+    $prefillCountry = old('country', $checkoutShipCountryCode);
 
     $checkoutDeliveryStart = now()->startOfDay()->addDays(11);
     $checkoutDeliveryEnd = now()->startOfDay()->addDays(20);
@@ -837,7 +850,7 @@ function buildCheckoutCustomizationInputs(customizations) {
                                     </label>
                                     <input type="text" id="customer_name" name="customer_name" 
                                            class="w-full px-4 py-3 bg-white border-2 border-primary/20 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5" required
-                                           value="{{ auth()->user() ? auth()->user()->name : '' }}"
+                                           value="{{ $prefillName }}"
                                            placeholder="John Doe">
                                     @error('customer_name')
                                         <p class="text-red-500 text-xs mt-1.5 flex items-center">
@@ -860,7 +873,7 @@ function buildCheckoutCustomizationInputs(customizations) {
                                     </label>
                                     <input type="email" id="customer_email" name="customer_email" 
                                            class="w-full px-4 py-3 bg-white border-2 border-primary/20 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5" required
-                                           value="{{ auth()->user() ? auth()->user()->email : '' }}"
+                                           value="{{ $prefillEmail }}"
                                            placeholder="john@example.com">
                                     @error('customer_email')
                                         <p class="text-red-500 text-xs mt-1.5 flex items-center">
@@ -884,6 +897,7 @@ function buildCheckoutCustomizationInputs(customizations) {
                                 </label>
                                 <input type="tel" id="customer_phone" name="customer_phone" 
                                        class="w-full px-4 py-3 bg-white border-2 border-primary/20 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5"
+                                       value="{{ $prefillPhone }}"
                                        placeholder="+1 (555) 123-4567">
                                 @error('customer_phone')
                                     <p class="text-red-500 text-xs mt-1.5 flex items-center">
@@ -919,7 +933,7 @@ function buildCheckoutCustomizationInputs(customizations) {
                                 </label>
                                 <textarea id="shipping_address" name="shipping_address" 
                                           class="w-full px-4 py-3 bg-white border-2 border-primary/20 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5 resize-vertical min-h-[100px]" rows="3" required
-                                          placeholder="Street address, apartment, suite, unit, etc."></textarea>
+                                          placeholder="Street address, apartment, suite, unit, etc.">{{ $prefillStreet }}</textarea>
                                 @error('shipping_address')
                                     <p class="text-red-500 text-xs mt-1.5 flex items-center">
                                         <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
@@ -942,6 +956,7 @@ function buildCheckoutCustomizationInputs(customizations) {
                                     </label>
                                     <input type="text" id="city" name="city" 
                                            class="w-full px-4 py-3 bg-white border-2 border-primary/20 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5" required
+                                           value="{{ $prefillCity }}"
                                            placeholder="New York">
                                     @error('city')
                                         <p class="text-red-500 text-xs mt-1.5 flex items-center">
@@ -964,6 +979,7 @@ function buildCheckoutCustomizationInputs(customizations) {
                                     </label>
                                     <input type="text" id="state" name="state" 
                                            class="w-full px-4 py-3 bg-white border-2 border-primary/20 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5"
+                                           value="{{ $prefillState }}"
                                            placeholder="NY">
                                     @error('state')
                                         <p class="text-red-500 text-xs mt-1.5 flex items-center">
@@ -986,6 +1002,7 @@ function buildCheckoutCustomizationInputs(customizations) {
                                     </label>
                                     <input type="text" id="postal_code" name="postal_code" 
                                            class="w-full px-4 py-3 bg-white border-2 border-primary/20 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5" required
+                                           value="{{ $prefillPostal }}"
                                            placeholder="10001">
                                     @error('postal_code')
                                         <p class="text-red-500 text-xs mt-1.5 flex items-center">
@@ -1013,7 +1030,7 @@ function buildCheckoutCustomizationInputs(customizations) {
                                         @foreach($zonesWithCountries as $zone)
                                             <optgroup label="{{ $zone['name'] }}">
                                                 @foreach($zone['country_options'] as $country)
-                                                    <option value="{{ $country['value'] }}" data-zone-id="{{ $country['zone_id'] }}">
+                                                    <option value="{{ $country['value'] }}" data-zone-id="{{ $country['zone_id'] }}" @selected($prefillCountry === $country['value'])>
                                                         {{ $country['label'] }}
                                                     </option>
                                                 @endforeach
@@ -1021,22 +1038,22 @@ function buildCheckoutCustomizationInputs(customizations) {
                                         @endforeach
                                     @else
                                         {{-- Fallback: show all countries if no shipping rates configured --}}
-                                        <option value="US">🇺🇸 United States</option>
-                                        <option value="GB">🇬🇧 United Kingdom</option>
-                                        <option value="CA">🇨🇦 Canada</option>
-                                        <option value="AU">🇦🇺 Australia</option>
-                                        <option value="DE">🇩🇪 Germany</option>
-                                        <option value="FR">🇫🇷 France</option>
-                                        <option value="IT">🇮🇹 Italy</option>
-                                        <option value="ES">🇪🇸 Spain</option>
-                                        <option value="NL">🇳🇱 Netherlands</option>
-                                        <option value="BE">🇧🇪 Belgium</option>
-                                        <option value="CH">🇨🇭 Switzerland</option>
-                                        <option value="AT">🇦🇹 Austria</option>
-                                        <option value="SE">🇸🇪 Sweden</option>
-                                        <option value="NO">🇳🇴 Norway</option>
-                                        <option value="DK">🇩🇰 Denmark</option>
-                                        <option value="FI">🇫🇮 Finland</option>
+                                        <option value="US" @selected($prefillCountry === 'US')>🇺🇸 United States</option>
+                                        <option value="GB" @selected($prefillCountry === 'GB')>🇬🇧 United Kingdom</option>
+                                        <option value="CA" @selected($prefillCountry === 'CA')>🇨🇦 Canada</option>
+                                        <option value="AU" @selected($prefillCountry === 'AU')>🇦🇺 Australia</option>
+                                        <option value="DE" @selected($prefillCountry === 'DE')>🇩🇪 Germany</option>
+                                        <option value="FR" @selected($prefillCountry === 'FR')>🇫🇷 France</option>
+                                        <option value="IT" @selected($prefillCountry === 'IT')>🇮🇹 Italy</option>
+                                        <option value="ES" @selected($prefillCountry === 'ES')>🇪🇸 Spain</option>
+                                        <option value="NL" @selected($prefillCountry === 'NL')>🇳🇱 Netherlands</option>
+                                        <option value="BE" @selected($prefillCountry === 'BE')>🇧🇪 Belgium</option>
+                                        <option value="CH" @selected($prefillCountry === 'CH')>🇨🇭 Switzerland</option>
+                                        <option value="AT" @selected($prefillCountry === 'AT')>🇦🇹 Austria</option>
+                                        <option value="SE" @selected($prefillCountry === 'SE')>🇸🇪 Sweden</option>
+                                        <option value="NO" @selected($prefillCountry === 'NO')>🇳🇴 Norway</option>
+                                        <option value="DK" @selected($prefillCountry === 'DK')>🇩🇰 Denmark</option>
+                                        <option value="FI" @selected($prefillCountry === 'FI')>🇫🇮 Finland</option>
                                         <option value="IE">🇮🇪 Ireland</option>
                                         <option value="PT">🇵🇹 Portugal</option>
                                         <option value="GR">🇬🇷 Greece</option>

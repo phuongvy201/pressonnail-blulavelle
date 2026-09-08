@@ -260,6 +260,11 @@ Route::middleware('auth')->prefix('customer')->name('customer.')->group(function
     Route::put('/profile', [App\Http\Controllers\Customer\ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [App\Http\Controllers\Customer\ProfileController::class, 'updatePassword'])->name('profile.password');
     Route::delete('/profile', [App\Http\Controllers\Customer\ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::post('/addresses', [App\Http\Controllers\Customer\AddressController::class, 'store'])->name('addresses.store');
+    Route::put('/addresses/{address}', [App\Http\Controllers\Customer\AddressController::class, 'update'])->name('addresses.update');
+    Route::delete('/addresses/{address}', [App\Http\Controllers\Customer\AddressController::class, 'destroy'])->name('addresses.destroy');
+    Route::post('/addresses/{address}/default', [App\Http\Controllers\Customer\AddressController::class, 'makeDefault'])->name('addresses.default');
 });
 
 // Test route

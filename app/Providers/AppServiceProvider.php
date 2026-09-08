@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -64,6 +65,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Blade::directive('cspNonce', function () {
+            return '<?php echo e(csp_nonce()); ?>';
+        });
+
         if (! $this->app->runningInConsole()) {
             $userAgent = (string) request()->userAgent();
             if ($this->isSessionlessBotUserAgent($userAgent)) {

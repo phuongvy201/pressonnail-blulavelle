@@ -1,37 +1,9 @@
-@extends('layouts.app')
+@extends('layouts.customer-account')
 
 @section('title', __('Edit Profile'))
 
-@section('content')
-<div class="min-h-screen bg-background-light font-display text-slate-900">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        @if(session('success'))
-            <div class="mb-6 bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
-                <span class="material-symbols-outlined text-green-600">check_circle</span>
-                <p class="text-green-800">{{ session('success') }}</p>
-            </div>
-        @endif
+@section('account-content')
 
-        @if($errors->any())
-            <div class="mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
-                <div class="flex items-start gap-3">
-                    <span class="material-symbols-outlined text-red-600 shrink-0">error</span>
-                    <div>
-                        <h3 class="font-semibold text-red-800">{{ __('Please fix the following errors:') }}</h3>
-                        <ul class="list-disc list-inside text-sm text-red-700 mt-2">
-                            @foreach($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        @endif
-
-        <div class="flex flex-col lg:flex-row gap-8">
-            @include('customer.profile.partials.sidebar')
-
-            <div class="flex-1 space-y-8">
                 {{-- Profile Header (theo code.html) --}}
                 <section class="bg-white border border-primary/10 rounded-xl p-6 flex flex-col sm:flex-row items-center gap-6 shadow-sm">
                     <div class="relative group">
@@ -97,41 +69,6 @@
                         </div>
                     </section>
 
-                    {{-- Address (anchor #address for sidebar) --}}
-                    <section id="address" class="bg-white border border-primary/10 rounded-xl p-8 shadow-sm scroll-mt-24">
-                        <h3 class="text-lg font-bold mb-6 text-slate-900 flex items-center gap-2">
-                            <span class="material-symbols-outlined text-primary">location_on</span>
-                            {{ __('Address') }}
-                        </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="md:col-span-2 flex flex-col gap-2">
-                                <label class="text-sm font-semibold text-slate-700" for="address">{{ __('Street Address') }}</label>
-                                <input id="address" name="address" type="text" value="{{ old('address', $user->address) }}"
-                                    class="w-full px-4 py-3 rounded-lg border border-primary/10 bg-primary/5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-slate-900">
-                            </div>
-                            <div class="flex flex-col gap-2">
-                                <label class="text-sm font-semibold text-slate-700" for="city">{{ __('City') }}</label>
-                                <input id="city" name="city" type="text" value="{{ old('city', $user->city) }}"
-                                    class="w-full px-4 py-3 rounded-lg border border-primary/10 bg-primary/5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-slate-900">
-                            </div>
-                            <div class="flex flex-col gap-2">
-                                <label class="text-sm font-semibold text-slate-700" for="state">{{ __('State / Province') }}</label>
-                                <input id="state" name="state" type="text" value="{{ old('state', $user->state) }}"
-                                    class="w-full px-4 py-3 rounded-lg border border-primary/10 bg-primary/5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-slate-900">
-                            </div>
-                            <div class="flex flex-col gap-2">
-                                <label class="text-sm font-semibold text-slate-700" for="postal_code">{{ __('Postal Code') }}</label>
-                                <input id="postal_code" name="postal_code" type="text" value="{{ old('postal_code', $user->postal_code) }}"
-                                    class="w-full px-4 py-3 rounded-lg border border-primary/10 bg-primary/5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-slate-900">
-                            </div>
-                            <div class="flex flex-col gap-2">
-                                <label class="text-sm font-semibold text-slate-700" for="country">{{ __('Country') }}</label>
-                                <input id="country" name="country" type="text" value="{{ old('country', $user->country) }}"
-                                    class="w-full px-4 py-3 rounded-lg border border-primary/10 bg-primary/5 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-slate-900">
-                            </div>
-                        </div>
-                    </section>
-
                     {{-- Actions --}}
                     <div class="flex justify-end gap-4">
                         <a href="{{ route('customer.profile.index') }}" class="px-6 py-3 rounded-lg border border-primary text-primary font-bold hover:bg-primary/5 transition-colors">
@@ -142,6 +79,8 @@
                         </button>
                     </div>
                 </form>
+
+                @include('customer.profile.partials.address-book')
 
                 {{-- Change Password Section (theo code.html) --}}
                 <section class="bg-white border border-primary/10 rounded-xl p-8 shadow-sm">
@@ -221,10 +160,6 @@
                         </div>
                     </div>
                 </section>
-            </div>
-        </div>
-    </div>
-</div>
 
 <form id="send-verification" method="post" action="{{ route('verification.send') }}" class="hidden">
     @csrf

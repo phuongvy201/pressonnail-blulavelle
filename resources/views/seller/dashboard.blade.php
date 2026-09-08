@@ -158,7 +158,7 @@
                 </div>
             </a>
 
-            <a href="{{ route('profile.edit') }}" 
+            <a href="{{ route('customer.profile.edit') }}" 
                class="flex items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors border border-purple-200">
                 <div class="p-2 bg-purple-600 rounded-lg">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

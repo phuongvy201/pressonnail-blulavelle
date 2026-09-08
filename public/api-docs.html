@@ -41,7 +41,7 @@
         <div class="api-doc-intro">
             Public storefront API — no API token. Query parameters use <strong>camelCase</strong> where noted.
             Auth / cart / checkout / wishlist: session cookies, <code>credentials: 'include'</code>, JSON with <code>Content-Type: application/json</code>, and <code>X-CSRF-TOKEN</code> on POST/PUT/DELETE.
-            Native iOS API: <a href="/api-v1-docs.html"><code>/api/v1</code> OpenAPI</a> (Bearer, envelope <code>data/error</code>, idempotent checkout attempts).
+            Native iOS uses the full surface at <a href="/api-v1-docs.html"><code>/api/v1</code> OpenAPI</a> (Bearer, envelope <code>data/error</code>, minor-unit money, idempotent checkout attempts).
             <a href="/admin/api-token">API Token Dashboard</a>
         </div>
         <div id="swagger-ui"></div>
@@ -280,7 +280,7 @@
                                 tags: ["Profile"],
                                 summary: "Update profile",
                                 description:
-                                    "Update name, email, phone, avatar, and shipping address. All fields optional; omitted fields stay unchanged. Avatar is `multipart/form-data`. Requires login.",
+                                    "Update personal info only: name, email, phone, avatar. Shipping address is managed by `PUT /api/profile/address` (default address book entry) or `/api/v1/addresses`. Requires login.",
                                 operationId: "updateProfile",
                                 security: [{ cookieAuth: [] }],
                                 requestBody: {
@@ -337,7 +337,7 @@
                                 tags: ["Profile"],
                                 summary: "Update address",
                                 description:
-                                    "Update shipping address only (street, city, state, postalCode, country). Requires login.",
+                                    "Create or update the **default shipping address** in the address book (`customer_addresses`). Also mirrors flat `user.address` fields for older clients. Prefer `/api/v1/addresses` for full multi-address CRUD. Requires login.",
                                 operationId: "updateProfileAddress",
                                 security: [{ cookieAuth: [] }],
                                 requestBody: {
@@ -3484,11 +3484,30 @@
                                     email: { type: "string", format: "email" },
                                     phone: { type: "string", nullable: true },
                                     avatar: { type: "string", format: "uri", nullable: true },
-                                    address: { type: "string", nullable: true },
+                                    address: { type: "string", nullable: true, description: "Flat mirror of defaultAddress.line1" },
                                     city: { type: "string", nullable: true },
                                     state: { type: "string", nullable: true },
                                     postalCode: { type: "string", nullable: true },
                                     country: { type: "string", nullable: true },
+                                    defaultAddress: {
+                                        nullable: true,
+                                        type: "object",
+                                        description: "Default shipping address from address book",
+                                        properties: {
+                                            id: { type: "integer" },
+                                            recipientName: { type: "string" },
+                                            phone: { type: "string", nullable: true },
+                                            line1: { type: "string" },
+                                            line2: { type: "string", nullable: true },
+                                            city: { type: "string" },
+                                            stateProvince: { type: "string", nullable: true },
+                                            postalCode: { type: "string" },
+                                            countryCode: { type: "string" },
+                                            label: { type: "string", nullable: true },
+                                            isDefaultShipping: { type: "boolean" },
+                                            isDefaultBilling: { type: "boolean" },
+                                        },
+                                    },
                                     emailVerified: { type: "boolean" },
                                     roles: {
                                         type: "array",
@@ -3523,21 +3542,24 @@
                                         format: "binary",
                                         description: "Optional image (jpeg/png/webp, max 5MB)",
                                     },
-                                    address: { type: "string", nullable: true, maxLength: 500 },
-                                    city: { type: "string", nullable: true, maxLength: 100 },
-                                    state: { type: "string", nullable: true, maxLength: 100 },
-                                    postalCode: { type: "string", nullable: true, maxLength: 20 },
-                                    country: { type: "string", nullable: true, maxLength: 100 },
                                 },
                             },
                             ProfileAddressRequest: {
                                 type: "object",
+                                description: "Default shipping address. `address` is an alias for `line1`. `country` may be ISO2 (US) or full name (first 2 letters used if needed—prefer countryCode).",
                                 properties: {
-                                    address: { type: "string", nullable: true, maxLength: 500, example: "123 Main St" },
+                                    recipientName: { type: "string", nullable: true, maxLength: 255 },
+                                    phone: { type: "string", nullable: true, maxLength: 20 },
+                                    line1: { type: "string", nullable: true, maxLength: 255, example: "123 Main St" },
+                                    address: { type: "string", nullable: true, maxLength: 500, example: "123 Main St", description: "Alias for line1" },
+                                    line2: { type: "string", nullable: true, maxLength: 255 },
                                     city: { type: "string", nullable: true, maxLength: 100, example: "Austin" },
                                     state: { type: "string", nullable: true, maxLength: 100, example: "TX" },
+                                    stateProvince: { type: "string", nullable: true, maxLength: 100 },
                                     postalCode: { type: "string", nullable: true, maxLength: 20, example: "78701" },
                                     country: { type: "string", nullable: true, maxLength: 100, example: "US" },
+                                    countryCode: { type: "string", nullable: true, maxLength: 2, example: "US" },
+                                    label: { type: "string", nullable: true, maxLength: 40, example: "Home" },
                                 },
                             },
                             ProfileUpdateResponse: {

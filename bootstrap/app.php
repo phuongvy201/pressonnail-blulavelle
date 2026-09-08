@@ -53,6 +53,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Spatie Permission middleware aliases
         $middleware->append(\App\Http\Middleware\AssignRequestId::class);
+        $middleware->append(\App\Http\Middleware\ContentSecurityPolicy::class);
 
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,

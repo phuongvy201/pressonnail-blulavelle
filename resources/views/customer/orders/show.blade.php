@@ -1,41 +1,19 @@
-@extends('layouts.app')
+@extends('layouts.customer-account')
 
-@section('content')
-<div class="min-h-screen bg-gray-50 py-8">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+@section('title', __('Order Details'))
+
+@section('account-content')
+<div class="space-y-6">
         <!-- Back Button -->
-        <div class="mb-6">
+        <div>
             <a href="{{ route('customer.orders.index') }}" 
-               class="inline-flex items-center text-[#0195FE] hover:text-[#017fda] transition">
+               class="inline-flex items-center text-primary hover:text-primary/80 transition">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                 </svg>
                 Back to Orders
             </a>
         </div>
-
-        <!-- Success/Error Messages -->
-        @if(session('success'))
-            <div class="mb-6 bg-green-50 border-l-4 border-green-400 p-4 rounded-r-lg">
-                <div class="flex">
-                    <svg class="w-5 h-5 text-green-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                    </svg>
-                    <p class="text-green-700">{{ session('success') }}</p>
-                </div>
-            </div>
-        @endif
-
-        @if(session('error'))
-            <div class="mb-6 bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
-                <div class="flex">
-                    <svg class="w-5 h-5 text-red-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-                    </svg>
-                    <p class="text-red-700">{{ session('error') }}</p>
-                </div>
-            </div>
-        @endif
 
         <!-- Order Header -->
         <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
@@ -556,4 +534,3 @@
     </div>
 </div>
 @endsection
-

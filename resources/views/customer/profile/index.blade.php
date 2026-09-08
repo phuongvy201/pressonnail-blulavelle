@@ -1,21 +1,9 @@
-@extends('layouts.app')
+@extends('layouts.customer-account')
 
 @section('title', __('My Profile'))
 
-@section('content')
-<div class="min-h-screen bg-background-light font-display text-slate-900">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        @if(session('success'))
-            <div class="mb-6 bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
-                <span class="material-symbols-outlined text-green-600">check_circle</span>
-                <p class="text-green-800">{{ session('success') }}</p>
-            </div>
-        @endif
+@section('account-content')
 
-        <div class="flex flex-col lg:flex-row gap-8">
-            @include('customer.profile.partials.sidebar')
-
-            <div class="flex-1 space-y-8">
                 {{-- Profile Header (theo code.html) --}}
                 <section class="bg-white border border-primary/10 rounded-xl p-6 flex flex-col sm:flex-row items-center gap-6 shadow-sm">
                     <div class="h-24 w-24 rounded-full overflow-hidden border-4 border-primary/10 bg-slate-100 shrink-0">
@@ -163,8 +151,4 @@
                         </div>
                     </a>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
 @endsection

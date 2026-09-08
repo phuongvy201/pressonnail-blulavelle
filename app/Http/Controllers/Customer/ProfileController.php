@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
+use App\Services\CustomerAddressService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -11,6 +12,10 @@ use Illuminate\Validation\Rules\Password;
 
 class ProfileController extends Controller
 {
+    public function __construct(private readonly CustomerAddressService $addresses)
+    {
+    }
+
     /**
      * Show customer profile
      */
@@ -34,7 +39,9 @@ class ProfileController extends Controller
     public function edit()
     {
         $user = auth()->user();
-        return view('customer.profile.edit', compact('user'));
+        $addresses = $this->addresses->listFor($user);
+
+        return view('customer.profile.edit', compact('user', 'addresses'));
     }
 
     /**
@@ -46,14 +53,9 @@ class ProfileController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
+            'email' => 'required|email|max:255|unique:users,email,'.$user->id,
             'phone' => 'nullable|string|max:20',
             'avatar' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:5120',
-            'address' => 'nullable|string|max:500',
-            'city' => 'nullable|string|max:100',
-            'state' => 'nullable|string|max:100',
-            'postal_code' => 'nullable|string|max:20',
-            'country' => 'nullable|string|max:100',
         ]);
 
         // Handle avatar upload to AWS S3 (optimized)

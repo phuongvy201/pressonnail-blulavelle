@@ -409,3 +409,23 @@ if (! function_exists('optimized_local_img')) {
         return storage_image_resize_url($src, $maxWidth) ?? $src;
     }
 }
+
+if (! function_exists('csp_nonce')) {
+    /**
+     * Per-request CSP nonce (base64). Use on inline scripts when CSP_USE_NONCES=true:
+     * <script nonce="{{ csp_nonce() }}">...</script>
+     */
+    function csp_nonce(): string
+    {
+        $nonce = request()->attributes->get('csp_nonce');
+        if (is_string($nonce) && $nonce !== '') {
+            return $nonce;
+        }
+
+        // Fallback when middleware has not run (console / early views).
+        $generated = base64_encode(random_bytes(16));
+        request()->attributes->set('csp_nonce', $generated);
+
+        return $generated;
+    }
+}

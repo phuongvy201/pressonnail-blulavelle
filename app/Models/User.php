@@ -48,6 +48,12 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(CustomerAddress::class);
     }
 
+    public function defaultShippingAddress(): ?CustomerAddress
+    {
+        return $this->addresses()->where('is_default_shipping', true)->first()
+            ?? $this->addresses()->latest('id')->first();
+    }
+
     public function cartItems(): HasMany
     {
         return $this->hasMany(CartItem::class);

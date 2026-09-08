@@ -136,7 +136,7 @@
     @endforeach
 
     <!-- Quick Links -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
         <a href="/api-docs.html" target="_blank" class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
             <div class="flex items-center">
                 <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
@@ -146,7 +146,21 @@
                 </div>
                 <div>
                     <h3 class="text-lg font-semibold text-gray-900">API Documentation</h3>
-                    <p class="text-sm text-gray-600">Xem hướng dẫn sử dụng API chi tiết</p>
+                    <p class="text-sm text-gray-600">Storefront API (X-API-Token)</p>
+                </div>
+            </div>
+        </a>
+
+        <a href="/api-v1-docs.html" target="_blank" class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+            <div class="flex items-center">
+                <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mr-4">
+                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Native iOS API v1</h3>
+                    <p class="text-sm text-gray-600">OpenAPI <code class="text-xs">/api/v1</code> (Bearer)</p>
                 </div>
             </div>
         </a>

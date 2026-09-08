@@ -34,6 +34,11 @@ class AuthController extends Controller
         ]);
     }
 
+    public function captcha(RecaptchaVerifier $recaptcha): JsonResponse
+    {
+        return ApiResponse::success($recaptcha->config());
+    }
+
     public function register(Request $request, TokenIssuer $tokens, GuestCartMerger $merger, RecaptchaVerifier $recaptcha): JsonResponse
     {
         $request->merge([

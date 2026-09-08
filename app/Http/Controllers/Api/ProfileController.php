@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\CustomerAddress;
+use App\Services\CustomerAddressService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +15,10 @@ use Illuminate\Validation\Rules\Password;
 
 class ProfileController extends Controller
 {
+    public function __construct(private readonly CustomerAddressService $addresses)
+    {
+    }
+
     public function show(Request $request): JsonResponse
     {
         $user = Auth::user();
@@ -35,6 +41,10 @@ class ProfileController extends Controller
         ]);
     }
 
+    /**
+     * Update personal profile only (name, email, phone, avatar).
+     * Shipping addresses use PUT /api/profile/address or /api/v1/addresses.
+     */
     public function update(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -51,16 +61,16 @@ class ProfileController extends Controller
             'email' => ['sometimes', 'required', 'email', 'max:255', 'unique:users,email,'.$user->id],
             'phone' => ['nullable', 'string', 'max:20'],
             'avatar' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
-            'address' => ['nullable', 'string', 'max:500'],
-            'city' => ['nullable', 'string', 'max:100'],
-            'state' => ['nullable', 'string', 'max:100'],
-            'postalCode' => ['nullable', 'string', 'max:20'],
-            'postal_code' => ['nullable', 'string', 'max:20'],
-            'country' => ['nullable', 'string', 'max:100'],
         ]);
 
         $this->applyAvatarUpload($request, $user, $validated);
-        $user->update($this->profileAttributes($user, $validated));
+
+        $user->update([
+            'name' => $validated['name'] ?? $user->name,
+            'email' => $validated['email'] ?? $user->email,
+            'phone' => array_key_exists('phone', $validated) ? $validated['phone'] : $user->phone,
+            'avatar' => $validated['avatar'] ?? $user->avatar,
+        ]);
 
         return response()->json([
             'success' => true,
@@ -69,6 +79,9 @@ class ProfileController extends Controller
         ]);
     }
 
+    /**
+     * Create/update the default shipping address in the address book.
+     */
     public function updateAddress(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -81,26 +94,69 @@ class ProfileController extends Controller
         }
 
         $validated = $request->validate([
+            'recipientName' => ['nullable', 'string', 'max:255'],
+            'recipient_name' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'line1' => ['nullable', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:500'],
+            'line2' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:100'],
             'state' => ['nullable', 'string', 'max:100'],
+            'stateProvince' => ['nullable', 'string', 'max:100'],
+            'state_province' => ['nullable', 'string', 'max:100'],
             'postalCode' => ['nullable', 'string', 'max:20'],
             'postal_code' => ['nullable', 'string', 'max:20'],
             'country' => ['nullable', 'string', 'max:100'],
+            'countryCode' => ['nullable', 'string', 'max:2'],
+            'country_code' => ['nullable', 'string', 'max:2'],
+            'label' => ['nullable', 'string', 'max:40'],
         ]);
 
-        $user->update([
-            'address' => array_key_exists('address', $validated) ? $validated['address'] : $user->address,
-            'city' => array_key_exists('city', $validated) ? $validated['city'] : $user->city,
-            'state' => array_key_exists('state', $validated) ? $validated['state'] : $user->state,
-            'postal_code' => $validated['postalCode'] ?? $validated['postal_code'] ?? $user->postal_code,
-            'country' => array_key_exists('country', $validated) ? $validated['country'] : $user->country,
-        ]);
+        $line1 = $validated['line1'] ?? $validated['address'] ?? null;
+        $state = $validated['stateProvince'] ?? $validated['state_province'] ?? $validated['state'] ?? null;
+        $postal = $validated['postalCode'] ?? $validated['postal_code'] ?? null;
+        $countryRaw = $validated['countryCode'] ?? $validated['country_code'] ?? $validated['country'] ?? null;
+        $countryCode = $this->normalizeCountryCode($countryRaw);
+
+        $existing = $this->addresses->defaultShipping($user);
+
+        $payload = array_filter([
+            'recipient_name' => $validated['recipientName'] ?? $validated['recipient_name'] ?? $existing?->recipient_name ?? $user->name,
+            'phone' => array_key_exists('phone', $validated) ? $validated['phone'] : ($existing?->phone ?? $user->phone),
+            'line1' => $line1 ?? $existing?->line1,
+            'line2' => array_key_exists('line2', $validated) ? $validated['line2'] : $existing?->line2,
+            'city' => array_key_exists('city', $validated) ? $validated['city'] : $existing?->city,
+            'state_province' => $state ?? $existing?->state_province,
+            'postal_code' => $postal ?? $existing?->postal_code,
+            'country_code' => $countryCode ?? $existing?->country_code,
+            'label' => array_key_exists('label', $validated) ? $validated['label'] : ($existing?->label ?? 'Default'),
+            'is_default_shipping' => true,
+            'is_default_billing' => true,
+        ], static fn ($value) => $value !== null && $value !== '');
+
+        if (empty($payload['line1']) || empty($payload['city']) || empty($payload['postal_code']) || empty($payload['country_code'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Address requires line1/address, city, postalCode, and countryCode (or country).',
+                'errors' => [
+                    'address' => ['Provide street, city, postal code, and country.'],
+                ],
+            ], 422);
+        }
+
+        if ($existing) {
+            $address = $this->addresses->update($user, $existing, $payload);
+        } else {
+            $address = $this->addresses->create($user, $payload);
+        }
+
+        $this->syncLegacyUserAddress($user, $address);
 
         return response()->json([
             'success' => true,
-            'message' => 'Address updated successfully.',
+            'message' => 'Default shipping address updated.',
             'user' => $this->formatUser($user->fresh()),
+            'defaultAddress' => $this->formatAddress($address),
         ]);
     }
 
@@ -153,35 +209,78 @@ class ProfileController extends Controller
 
     private function formatUser($user): array
     {
+        $default = $this->addresses->defaultShipping($user);
+
         return [
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
             'phone' => $user->phone,
             'avatar' => $user->avatar,
-            'address' => $user->address,
-            'city' => $user->city,
-            'state' => $user->state,
-            'postalCode' => $user->postal_code,
-            'country' => $user->country,
+            // Flat fields mirror default address (backward compatible for older clients).
+            'address' => $default?->line1 ?? $user->address,
+            'city' => $default?->city ?? $user->city,
+            'state' => $default?->state_province ?? $user->state,
+            'postalCode' => $default?->postal_code ?? $user->postal_code,
+            'country' => $default?->country_code ?? $user->country,
+            'defaultAddress' => $default ? $this->formatAddress($default) : null,
             'emailVerified' => $user->email_verified_at !== null,
             'roles' => $user->getRoleNames()->values()->all(),
         ];
     }
 
-    private function profileAttributes($user, array $validated): array
+    private function formatAddress(CustomerAddress $address): array
     {
         return [
-            'name' => $validated['name'] ?? $user->name,
-            'email' => $validated['email'] ?? $user->email,
-            'phone' => array_key_exists('phone', $validated) ? $validated['phone'] : $user->phone,
-            'address' => array_key_exists('address', $validated) ? $validated['address'] : $user->address,
-            'city' => array_key_exists('city', $validated) ? $validated['city'] : $user->city,
-            'state' => array_key_exists('state', $validated) ? $validated['state'] : $user->state,
-            'postal_code' => $validated['postalCode'] ?? $validated['postal_code'] ?? $user->postal_code,
-            'country' => array_key_exists('country', $validated) ? $validated['country'] : $user->country,
-            'avatar' => $validated['avatar'] ?? $user->avatar,
+            'id' => $address->id,
+            'recipientName' => $address->recipient_name,
+            'phone' => $address->phone,
+            'line1' => $address->line1,
+            'line2' => $address->line2,
+            'city' => $address->city,
+            'stateProvince' => $address->state_province,
+            'postalCode' => $address->postal_code,
+            'countryCode' => $address->country_code,
+            'label' => $address->label,
+            'isDefaultShipping' => $address->is_default_shipping,
+            'isDefaultBilling' => $address->is_default_billing,
         ];
+    }
+
+    private function normalizeCountryCode(mixed $raw): ?string
+    {
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        $value = trim((string) $raw);
+        if (strlen($value) === 2) {
+            return strtoupper($value);
+        }
+
+        $map = [
+            'united states' => 'US',
+            'usa' => 'US',
+            'united kingdom' => 'GB',
+            'uk' => 'GB',
+            'canada' => 'CA',
+            'australia' => 'AU',
+            'vietnam' => 'VN',
+            'viet nam' => 'VN',
+        ];
+
+        return $map[strtolower($value)] ?? strtoupper(substr($value, 0, 2));
+    }
+
+    private function syncLegacyUserAddress($user, CustomerAddress $address): void
+    {
+        $user->forceFill([
+            'address' => $address->line1,
+            'city' => $address->city,
+            'state' => $address->state_province,
+            'postal_code' => $address->postal_code,
+            'country' => $address->country_code,
+        ])->save();
     }
 
     private function applyAvatarUpload(Request $request, $user, array &$validated): void

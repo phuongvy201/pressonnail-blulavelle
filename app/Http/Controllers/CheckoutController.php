@@ -19,6 +19,7 @@ use App\Services\AffiliateAttributionService;
 use App\Mail\OrderConfirmation;
 use App\Services\PromoCodeSendService;
 use App\Services\CheckoutIdempotencyService;
+use App\Services\CustomerAddressService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -332,6 +333,14 @@ class CheckoutController extends Controller
 
         $checkoutMissingCrossSellProducts = $this->getMissingCrossSellProducts($cartItems, 6);
 
+        $checkoutAddressPrefill = null;
+        if ($userId) {
+            $checkoutAddressPrefill = app(CustomerAddressService::class)->checkoutPrefill(Auth::user());
+            if ($checkoutAddressPrefill && ! empty($checkoutAddressPrefill['country'])) {
+                $defaultCountry = $checkoutAddressPrefill['country'];
+            }
+        }
+
         return view('checkout.index', compact(
             'products',
             'cartItems',
@@ -360,7 +369,8 @@ class CheckoutController extends Controller
             'availableZones',
             'defaultZone',
             'defaultCountry',
-            'checkoutMissingCrossSellProducts'
+            'checkoutMissingCrossSellProducts',
+            'checkoutAddressPrefill'
         ));
     }
 

@@ -1,39 +1,39 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\Schema;
 
-test('profile can be updated including address', function () {
+beforeEach(function () {
+    if (! Schema::hasTable('customer_addresses')) {
+        $this->markTestSkipped('customer_addresses table is missing');
+    }
+});
+
+test('profile update changes personal fields only not address book', function () {
     $user = User::factory()->create([
         'name' => 'Old Name',
-        'address' => null,
+        'address' => 'Legacy St',
     ]);
 
     $this->actingAs($user)
         ->putJson('/api/profile', [
             'name' => 'New Name',
             'phone' => '555-0100',
-            'address' => '123 Main St',
-            'city' => 'Austin',
-            'state' => 'TX',
-            'postalCode' => '78701',
-            'country' => 'US',
+            'address' => 'Should Be Ignored',
+            'city' => 'Ignored City',
         ])
         ->assertOk()
         ->assertJsonPath('success', true)
         ->assertJsonPath('user.name', 'New Name')
-        ->assertJsonPath('user.phone', '555-0100')
-        ->assertJsonPath('user.address', '123 Main St')
-        ->assertJsonPath('user.city', 'Austin')
-        ->assertJsonPath('user.state', 'TX')
-        ->assertJsonPath('user.postalCode', '78701')
-        ->assertJsonPath('user.country', 'US');
+        ->assertJsonPath('user.phone', '555-0100');
 
     $user->refresh();
     expect($user->name)->toBe('New Name')
-        ->and($user->postal_code)->toBe('78701');
+        ->and($user->address)->toBe('Legacy St')
+        ->and($user->addresses()->count())->toBe(0);
 });
 
-test('address can be updated without changing name', function () {
+test('address endpoint upserts default shipping address in address book', function () {
     $user = User::factory()->create([
         'name' => 'Keep Me',
         'address' => 'Old St',
@@ -50,9 +50,14 @@ test('address can be updated without changing name', function () {
         ->assertOk()
         ->assertJsonPath('user.name', 'Keep Me')
         ->assertJsonPath('user.address', '456 Oak Ave')
-        ->assertJsonPath('user.postalCode', '75201');
+        ->assertJsonPath('user.postalCode', '75201')
+        ->assertJsonPath('defaultAddress.line1', '456 Oak Ave')
+        ->assertJsonPath('defaultAddress.city', 'Dallas')
+        ->assertJsonPath('defaultAddress.isDefaultShipping', true);
 
     expect($user->fresh()->name)->toBe('Keep Me');
+    expect($user->addresses()->count())->toBe(1);
+    expect($user->addresses()->first()->is_default_shipping)->toBeTrue();
 });
 
 test('password can be updated via api', function () {

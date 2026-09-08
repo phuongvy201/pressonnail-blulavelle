@@ -1122,6 +1122,213 @@ class VirtualNailTrialService
         ];
     }
 
+    /**
+     * Config payload for native NailBox try-on (GET /api/v1/nail/products/{id}/try-on-config).
+     *
+     * @return array{
+     *   productId: int|null,
+     *   variantId: int|null,
+     *   tryOnEnabled: bool,
+     *   unsupportedReason: string|null,
+     *   unsupportedMessage: string|null,
+     *   tryOnAssetVersion: string|null,
+     *   product: ?array,
+     *   defaults: array{shape: string, length: string},
+     *   supportedShapes: list<string>,
+     *   supportedLengths: list<string>,
+     *   supportedVariants: list<array<string, mixed>>,
+     *   assets: array{designImageUrl: ?string, handGuideUrl: string, sampleAssets: list<array{type: string, url: string, label: string}>},
+     *   captureTips: list<string>,
+     *   async: bool
+     * }
+     */
+    public function tryOnConfigForProduct(?int $productId): array
+    {
+        $defaults = [
+            'shape' => (string) VirtualNailSettings::defaultShape(),
+            'length' => (string) VirtualNailSettings::defaultLength(),
+        ];
+
+        $handGuideUrl = asset('images/virtual-nail/hand-guide-traced.svg');
+        $sampleAssets = [
+            [
+                'type' => 'hand_guide',
+                'url' => $handGuideUrl,
+                'label' => 'BluLavelle hand placement guide',
+            ],
+        ];
+
+        $base = [
+            'productId' => $productId,
+            'variantId' => null,
+            'tryOnEnabled' => false,
+            'unsupportedReason' => null,
+            'unsupportedMessage' => null,
+            'tryOnAssetVersion' => null,
+            'product' => null,
+            'defaults' => $defaults,
+            'supportedShapes' => [],
+            'supportedLengths' => [],
+            'supportedVariants' => [],
+            'assets' => [
+                'designImageUrl' => null,
+                'handGuideUrl' => $handGuideUrl,
+                'sampleAssets' => $sampleAssets,
+            ],
+            'captureTips' => VirtualNailSettings::captureTips(),
+            'async' => (bool) config('virtual_nail.async', true),
+        ];
+
+        if (! VirtualNailSettings::enabled()) {
+            return array_merge($base, [
+                'unsupportedReason' => 'FEATURE_DISABLED',
+                'unsupportedMessage' => 'Virtual nail try-on is currently turned off.',
+            ]);
+        }
+
+        if (! $this->isConfigured()) {
+            return array_merge($base, [
+                'unsupportedReason' => 'PROVIDER_NOT_CONFIGURED',
+                'unsupportedMessage' => 'Virtual nail try-on is not available right now.',
+            ]);
+        }
+
+        if (! $productId) {
+            return array_merge($base, [
+                'unsupportedReason' => 'PRODUCT_NOT_FOUND',
+                'unsupportedMessage' => 'Selected nail design is not available.',
+            ]);
+        }
+
+        $product = Product::query()
+            ->availableForDisplay()
+            ->with(['template.variants', 'variants', 'template.category'])
+            ->find($productId);
+
+        if (! $product) {
+            return array_merge($base, [
+                'unsupportedReason' => 'PRODUCT_NOT_FOUND',
+                'unsupportedMessage' => 'Selected nail design is not available.',
+            ]);
+        }
+
+        $styles = $this->styleOptionsForProduct($product);
+        $designImageUrl = $this->resolveProductImageUrl($product);
+        $supportedVariants = $this->supportedVariantsForProduct($product);
+        $defaultVariantId = $supportedVariants[0]['variantId'] ?? null;
+        $productPayload = $this->resolveProductPayload($product);
+
+        if ($designImageUrl) {
+            $sampleAssets[] = [
+                'type' => 'design_reference',
+                'url' => $designImageUrl,
+                'label' => 'Nail design reference from BluLavelle',
+            ];
+        }
+
+        $assetVersion = substr(hash(
+            'sha256',
+            implode('|', [
+                (string) $product->id,
+                optional($product->updated_at)?->timestamp ?? 0,
+                (string) $designImageUrl,
+                implode(',', $styles['shapes']),
+                implode(',', $styles['lengths']),
+            ])
+        ), 0, 16);
+
+        $enabled = $designImageUrl !== null;
+        $reason = $enabled ? null : 'MISSING_DESIGN_ASSET';
+        $message = $enabled ? null : 'This nail set does not have a design image required for virtual try-on.';
+
+        return [
+            'productId' => (int) $product->id,
+            'variantId' => $defaultVariantId,
+            'tryOnEnabled' => $enabled,
+            'unsupportedReason' => $reason,
+            'unsupportedMessage' => $message,
+            'tryOnAssetVersion' => 'v1-'.$assetVersion,
+            'product' => $productPayload ? [
+                'id' => $productPayload['id'],
+                'name' => $productPayload['name'],
+                'slug' => $productPayload['slug'],
+                'imageUrl' => $productPayload['image'],
+                'price' => $productPayload['price'],
+            ] : null,
+            'defaults' => [
+                'shape' => $this->normalizeShape((string) VirtualNailSettings::defaultShape(), $product),
+                'length' => $this->normalizeLength((string) VirtualNailSettings::defaultLength(), $product),
+            ],
+            'supportedShapes' => $styles['shapes'],
+            'supportedLengths' => $styles['lengths'],
+            'supportedVariants' => $supportedVariants,
+            'assets' => [
+                'designImageUrl' => $designImageUrl,
+                'handGuideUrl' => $handGuideUrl,
+                'sampleAssets' => $sampleAssets,
+            ],
+            'captureTips' => VirtualNailSettings::captureTips(),
+            'async' => (bool) config('virtual_nail.async', true),
+        ];
+    }
+
+    /**
+     * @return list<array{variantId: int, label: string, shape: ?string, length: ?string, imageUrl: ?string}>
+     */
+    public function supportedVariantsForProduct(Product $product): array
+    {
+        if (! $product->relationLoaded('variants')) {
+            $product->load('variants');
+        }
+
+        $out = [];
+        foreach ($product->variants as $variant) {
+            $attrs = $variant->getRawOriginal('attributes');
+            if (is_string($attrs)) {
+                $attrs = json_decode($attrs, true);
+            }
+            if (! is_array($attrs)) {
+                $attrs = [];
+            }
+
+            $shape = null;
+            $length = null;
+            foreach ($attrs as $key => $val) {
+                if ($val === null || $val === '') {
+                    continue;
+                }
+                $parsed = $this->parseShapeLengthValue(trim((string) $val));
+                if ($parsed !== null) {
+                    $shape = $parsed['shape'] !== '' ? $parsed['shape'] : $shape;
+                    $length = $parsed['length'] !== '' ? $parsed['length'] : $length;
+                    continue;
+                }
+                $keyLower = mb_strtolower(trim((string) $key));
+                if ($this->isShapeAttributeKey($keyLower)) {
+                    $shape = $this->normalizeShapeToken(trim((string) $val));
+                }
+                if ($this->isLengthAttributeKey($keyLower)) {
+                    $length = $this->normalizeLengthToken(trim((string) $val));
+                }
+            }
+
+            $label = (string) ($variant->variant_name ?? $variant->name ?? ('Variant #'.$variant->id));
+            if ($shape || $length) {
+                $label = trim(implode(' - ', array_filter([$length, $shape])));
+            }
+
+            $out[] = [
+                'variantId' => (int) $variant->id,
+                'label' => $label !== '' ? $label : ('Variant #'.$variant->id),
+                'shape' => $shape,
+                'length' => $length,
+                'imageUrl' => null,
+            ];
+        }
+
+        return $out;
+    }
+
     public function normalizeShape(string $value, ?Product $product = null): string
     {
         return $this->pickAllowedOption(

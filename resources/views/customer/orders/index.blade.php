@@ -1,58 +1,12 @@
-@extends('layouts.app')
+@extends('layouts.customer-account')
 
-@section('content')
+@section('title', __('My Orders'))
+
+@section('account-content')
 @php
     $primary = '#0195FE';
 @endphp
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-<div class="min-h-screen bg-[#f8f6f6] text-slate-900" style="font-family: 'Plus Jakarta Sans', sans-serif;">
-    <main class="max-w-6xl mx-auto w-full px-4 py-8 md:py-12">
-        <div class="flex flex-col md:flex-row gap-8">
-            {{-- Sidebar (giống code.html) --}}
-            <aside class="w-full md:w-64 shrink-0">
-                <div class="bg-white/80 backdrop-blur p-2 rounded-xl border border-black/5">
-                    <nav class="flex flex-col gap-1">
-                        @if(\Illuminate\Support\Facades\Route::has('profile.edit'))
-                            <a href="{{ route('profile.edit') }}"
-                               class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-black/5 transition-all">
-                                <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                <span class="font-medium text-sm">Profile</span>
-                            </a>
-                        @endif
-
-                        <a href="{{ route('customer.orders.index') }}"
-                           class="flex items-center gap-3 px-4 py-3 rounded-lg text-white shadow-lg transition-all"
-                           style="background: {{ $primary }}; box-shadow: 0 12px 30px rgba(1,149,254,.18);">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
-                            <span class="font-medium text-sm">My Orders</span>
-                        </a>
-
-                        @if(\Illuminate\Support\Facades\Route::has('wishlist.index'))
-                            <a href="{{ route('wishlist.index') }}"
-                               class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-black/5 transition-all">
-                                <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
-                                <span class="font-medium text-sm">Wishlist</span>
-                            </a>
-                        @endif
-
-                        <div class="my-2 border-t border-black/5"></div>
-
-                        @if(\Illuminate\Support\Facades\Route::has('logout'))
-                            <form method="POST" action="{{ route('logout') }}">
-                                @csrf
-                                <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-500 hover:bg-red-50 transition-all">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1"/></svg>
-                                    <span class="font-medium text-sm">Logout</span>
-                                </button>
-                            </form>
-                        @endif
-                    </nav>
-                </div>
-            </aside>
-
-            {{-- Content --}}
-            <section class="flex-1">
                 <div class="flex flex-col gap-6">
                     <div class="flex flex-col gap-1">
                         <h1 class="text-2xl md:text-3xl font-bold text-slate-900">Order History</h1>
@@ -327,9 +281,4 @@
                         </div>
                     @endif
                 </div>
-            </section>
-        </div>
-    </main>
-</div>
 @endsection
-
