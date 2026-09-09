@@ -27,6 +27,7 @@
         <nav class="mb-6 flex flex-wrap gap-2" aria-label="Mục cấu hình">
             @foreach ([
                 'google' => 'Google',
+                'recaptcha' => 'reCAPTCHA',
                 'meta' => 'Meta',
                 'tiktok' => 'TikTok',
                 'chatgpt' => 'ChatGPT',
@@ -73,6 +74,9 @@
                                class="{{ $inputClass }}">
                         @error('google_ads_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                         <p class="{{ $hintClass }}">Ví dụ: <code>{{ $defaults['google_ads_id'] }}</code></p>
+                    </div>
+                    <div class="md:col-span-2" id="section-recaptcha">
+                        @include('admin.partials.recaptcha-site-key')
                     </div>
                     <div>
                         <label for="google_analytics_property_id" class="{{ $labelClass }}">GA4 Property ID</label>

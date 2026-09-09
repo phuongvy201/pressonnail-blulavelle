@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ApiToken;
+use App\Services\RecaptchaVerifier;
 use Illuminate\Http\Request;
 
 class ApiDocController extends Controller
@@ -21,7 +22,9 @@ class ApiDocController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return view('api.token-dashboard', compact('tokens'));
+        $recaptcha = app(RecaptchaVerifier::class)->config();
+
+        return view('api.token-dashboard', compact('tokens', 'recaptcha'));
     }
 
     /**

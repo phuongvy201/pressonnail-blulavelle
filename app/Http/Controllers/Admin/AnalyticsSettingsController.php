@@ -59,7 +59,11 @@ class AnalyticsSettingsController extends Controller
             'show_product_social_proof' => (bool) Settings::get('gmc.show_product_social_proof', '1'),
         ];
 
-        return view('admin.settings.analytics', compact('settings', 'defaults'));
+        return view('admin.settings.analytics', [
+            'settings' => $settings,
+            'defaults' => $defaults,
+            'recaptcha' => app(\App\Services\RecaptchaVerifier::class)->config(),
+        ]);
     }
 
     public function update(Request $request): RedirectResponse

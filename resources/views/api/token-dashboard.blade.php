@@ -23,6 +23,8 @@
         </div>
     @endif
 
+    @include('admin.partials.recaptcha-site-key', ['class' => 'mb-6'])
+
     <!-- Active Tokens -->
     @foreach($tokens as $token)
     <div class="bg-white rounded-lg shadow-md overflow-hidden mb-6">
