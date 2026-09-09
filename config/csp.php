@@ -15,10 +15,10 @@ return [
     'enabled' => filter_var(env('CSP_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
 
     /*
-    | Default true: browser reports violations but does NOT block scripts/styles.
-    | Set CSP_REPORT_ONLY=false only after Console is clean of CSP errors.
+    | false = send the real Content-Security-Policy header (what security scanners look for).
+    | true  = Report-Only only (no blocking; scanners treat CSP as missing).
     */
-    'report_only' => filter_var(env('CSP_REPORT_ONLY', true), FILTER_VALIDATE_BOOLEAN),
+    'report_only' => filter_var(env('CSP_REPORT_ONLY', false), FILTER_VALIDATE_BOOLEAN),
 
     /*
     | IMPORTANT: Do NOT enable until every inline <script> has nonce="{{ csp_nonce() }}".

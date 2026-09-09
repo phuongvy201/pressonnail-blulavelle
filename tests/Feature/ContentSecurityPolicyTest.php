@@ -1,6 +1,6 @@
 <?php
 
-it('sends enforcing Content-Security-Policy when report_only is false', function () {
+it('sends Content-Security-Policy on html by default', function () {
     config([
         'csp.enabled' => true,
         'csp.report_only' => false,
@@ -27,7 +27,7 @@ it('sends enforcing Content-Security-Policy when report_only is false', function
         ->and($csp)->toContain('https://images.dmca.com');
 });
 
-it('defaults to report-only so inline scripts are not blocked', function () {
+it('can send report-only instead of enforcing', function () {
     config([
         'csp.enabled' => true,
         'csp.report_only' => true,
