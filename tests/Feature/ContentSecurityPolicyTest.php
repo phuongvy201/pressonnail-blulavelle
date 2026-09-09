@@ -19,7 +19,12 @@ it('sends enforcing Content-Security-Policy when report_only is false', function
         ->and($csp)->toContain('script-src')
         ->and($csp)->toContain("'unsafe-inline'")
         ->and($csp)->toContain('https://js.stripe.com')
-        ->and($csp)->toContain('https://fonts.googleapis.com');
+        ->and($csp)->toContain('https://fonts.googleapis.com')
+        ->and($csp)->toContain('https://connect.facebook.net')
+        ->and($csp)->toContain('https://analytics.tiktok.com')
+        ->and($csp)->toContain('https://s.pinimg.com')
+        ->and($csp)->toContain('https://widget.trustpilot.com')
+        ->and($csp)->toContain('https://images.dmca.com');
 });
 
 it('defaults to report-only so inline scripts are not blocked', function () {
