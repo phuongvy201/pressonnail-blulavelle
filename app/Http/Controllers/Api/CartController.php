@@ -975,43 +975,35 @@ class CartController extends Controller
     {
         $rate = (float) ($data['currency_rate'] ?? 1.0);
         $useConvertedFields = abs($rate - 1.0) >= 0.0001;
+        $bulkPercent = (float) ($data['bulk_discount_percent'] ?? 0);
+        $bulkDiscount = (float) ($data['bulk_discount'] ?? 0);
+        $discountMode = (string) ($data['discount_mode'] ?? 'volume');
+        if (! in_array($discountMode, ['volume', 'promo'], true)) {
+            $discountMode = 'volume';
+        }
 
+        // Always expose mobile-friendly discount fields (volume vs promo are mutually exclusive).
         $summary = [
+            'discount_mode' => $discountMode,
             'subtotal' => $data['subtotal'],
+            'bulk_discount' => $bulkDiscount,
+            'bulk_discount_percent' => $bulkPercent,
+            'subtotal_after_bulk_discount' => $data['subtotal_after_bulk_discount'] ?? max(0, (float) $data['subtotal'] - $bulkDiscount),
             'shipping' => $useConvertedFields ? $data['shipping'] : $data['converted_shipping'],
-            'discount' => $data['discount'],
+            'discount' => $data['discount'], // promo-code discount amount
             'gift_card_discount' => $data['gift_card_discount'],
             'total' => $data['total'],
+            'applied_promo_code' => ! empty($data['applied_promo_code']) ? (string) $data['applied_promo_code'] : null,
+            'applied_gift_card_code' => ! empty($data['applied_gift_card_code']) ? (string) $data['applied_gift_card_code'] : null,
+            'applied_gift_card_balance' => (float) ($data['applied_gift_card_balance'] ?? 0),
         ];
-
-        $bulkPercent = (float) ($data['bulk_discount_percent'] ?? 0);
-        if ($bulkPercent > 0) {
-            $summary['discount_mode'] = $data['discount_mode'];
-            $summary['bulk_discount'] = $data['bulk_discount'];
-            $summary['bulk_discount_percent'] = $bulkPercent;
-            $summary['subtotal_after_bulk_discount'] = $data['subtotal_after_bulk_discount'];
-        } elseif (($data['discount_mode'] ?? '') === 'promo') {
-            $summary['discount_mode'] = 'promo';
-        }
-
-        if (! empty($data['applied_promo_code'])) {
-            $summary['applied_promo_code'] = $data['applied_promo_code'];
-        }
-
-        if (! empty($data['applied_gift_card_code'])) {
-            $summary['applied_gift_card_code'] = $data['applied_gift_card_code'];
-            $summary['applied_gift_card_balance'] = $data['applied_gift_card_balance'];
-        }
 
         // Always expose converted_* keys for storefront JS (same values when currency is USD).
         $summary['converted_subtotal'] = $data['converted_subtotal'];
-        if ($bulkPercent > 0) {
-            $summary['converted_bulk_discount'] = $data['bulk_discount'];
-            $summary['converted_bulk_discount_percent'] = $bulkPercent;
-            $summary['converted_subtotal_after_bulk_discount'] = $data['converted_subtotal_after_bulk_discount'];
-        } elseif (isset($data['converted_subtotal_after_bulk_discount'])) {
-            $summary['converted_subtotal_after_bulk_discount'] = $data['converted_subtotal_after_bulk_discount'];
-        }
+        $summary['converted_bulk_discount'] = $bulkDiscount;
+        $summary['converted_bulk_discount_percent'] = $bulkPercent;
+        $summary['converted_subtotal_after_bulk_discount'] = $data['converted_subtotal_after_bulk_discount']
+            ?? max(0, (float) $data['converted_subtotal'] - $bulkDiscount);
         $summary['converted_shipping'] = $data['converted_shipping'];
         $summary['converted_discount'] = $data['discount'];
         $summary['converted_gift_card_discount'] = $data['gift_card_discount'];

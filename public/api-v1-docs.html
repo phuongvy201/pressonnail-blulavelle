@@ -463,28 +463,94 @@
                         "$ref": "#/components/schemas/MoneyMinor"
                     },
                     "summary": {
+                        "$ref": "#/components/schemas/CartSummary"
+                    },
+                    "shipping_details": {
                         "type": "object",
-                        "properties": {
-                            "subtotal": {
-                                "$ref": "#/components/schemas/MoneyMinor"
-                            },
-                            "shipping": {
-                                "$ref": "#/components/schemas/MoneyMinor"
-                            },
-                            "discount": {
-                                "$ref": "#/components/schemas/MoneyMinor"
-                            },
-                            "gift_card_discount": {
-                                "$ref": "#/components/schemas/MoneyMinor"
-                            },
-                            "total": {
-                                "$ref": "#/components/schemas/MoneyMinor"
-                            }
-                        }
+                        "nullable": true,
+                        "additionalProperties": true
                     },
                     "currency": {
                         "type": "string",
                         "example": "USD"
+                    },
+                    "currency_rate": {
+                        "type": "number",
+                        "example": 1
+                    }
+                }
+            },
+            "CartSummary": {
+                "type": "object",
+                "description": "Cart totals for mobile Cart/Checkout. Volume and promo modes are mutually exclusive (freeship/gift card can still stack). Money fields are integer minor units.",
+                "required": [
+                    "discount_mode",
+                    "subtotal",
+                    "bulk_discount",
+                    "bulk_discount_percent",
+                    "subtotal_after_bulk_discount",
+                    "shipping",
+                    "discount",
+                    "gift_card_discount",
+                    "total"
+                ],
+                "properties": {
+                    "discount_mode": {
+                        "type": "string",
+                        "enum": [
+                            "volume",
+                            "promo"
+                        ],
+                        "description": "`volume` = quantity/bulk discount active; `promo` = promo code active."
+                    },
+                    "subtotal": {
+                        "$ref": "#/components/schemas/MoneyMinor"
+                    },
+                    "bulk_discount": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MoneyMinor"
+                            }
+                        ],
+                        "description": "Volume/combo discount amount. 0 when mode is promo or no tier matched."
+                    },
+                    "bulk_discount_percent": {
+                        "type": "number",
+                        "example": 20,
+                        "description": "Active volume discount percent (0–95). Not money — do not treat as minor units."
+                    },
+                    "subtotal_after_bulk_discount": {
+                        "$ref": "#/components/schemas/MoneyMinor"
+                    },
+                    "shipping": {
+                        "$ref": "#/components/schemas/MoneyMinor"
+                    },
+                    "discount": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MoneyMinor"
+                            }
+                        ],
+                        "description": "Promo-code discount amount. 0 when mode is volume or no code applied."
+                    },
+                    "gift_card_discount": {
+                        "$ref": "#/components/schemas/MoneyMinor"
+                    },
+                    "total": {
+                        "$ref": "#/components/schemas/MoneyMinor"
+                    },
+                    "applied_promo_code": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "SAVE10",
+                        "description": "Applied promo code, or null when none."
+                    },
+                    "applied_gift_card_code": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "applied_gift_card_balance": {
+                        "$ref": "#/components/schemas/MoneyMinor"
                     }
                 }
             },
@@ -7189,9 +7255,9 @@
                                                 "id": 42,
                                                 "product_id": 10,
                                                 "variant_id": 5,
-                                                "quantity": 1,
+                                                "quantity": 2,
                                                 "price": 2499,
-                                                "line_total": 2499,
+                                                "line_total": 4998,
                                                 "product": {
                                                     "id": 10,
                                                     "name": "Classic Set",
@@ -7199,16 +7265,24 @@
                                                 }
                                             }
                                         ],
-                                        "total_items": 1,
-                                        "total_price": 2499,
+                                        "total_items": 2,
+                                        "total_price": 4998,
                                         "summary": {
-                                            "subtotal": 2499,
+                                            "discount_mode": "volume",
+                                            "subtotal": 4998,
+                                            "bulk_discount": 1000,
+                                            "bulk_discount_percent": 20,
+                                            "subtotal_after_bulk_discount": 3998,
                                             "shipping": 599,
                                             "discount": 0,
                                             "gift_card_discount": 0,
-                                            "total": 3098
+                                            "total": 4597,
+                                            "applied_promo_code": null,
+                                            "applied_gift_card_code": null,
+                                            "applied_gift_card_balance": 0
                                         },
-                                        "currency": "USD"
+                                        "currency": "USD",
+                                        "currency_rate": 1
                                     }
                                 }
                             }
@@ -7390,9 +7464,9 @@
                                                 "id": 42,
                                                 "product_id": 10,
                                                 "variant_id": 5,
-                                                "quantity": 1,
+                                                "quantity": 2,
                                                 "price": 2499,
-                                                "line_total": 2499,
+                                                "line_total": 4998,
                                                 "product": {
                                                     "id": 10,
                                                     "name": "Classic Set",
@@ -7400,16 +7474,24 @@
                                                 }
                                             }
                                         ],
-                                        "total_items": 1,
-                                        "total_price": 2499,
+                                        "total_items": 2,
+                                        "total_price": 4998,
                                         "summary": {
-                                            "subtotal": 2499,
+                                            "discount_mode": "volume",
+                                            "subtotal": 4998,
+                                            "bulk_discount": 1000,
+                                            "bulk_discount_percent": 20,
+                                            "subtotal_after_bulk_discount": 3998,
                                             "shipping": 599,
                                             "discount": 0,
                                             "gift_card_discount": 0,
-                                            "total": 3098
+                                            "total": 4597,
+                                            "applied_promo_code": null,
+                                            "applied_gift_card_code": null,
+                                            "applied_gift_card_balance": 0
                                         },
-                                        "currency": "USD"
+                                        "currency": "USD",
+                                        "currency_rate": 1
                                     },
                                     "meta": {
                                         "message": "Item added to cart"
@@ -7843,9 +7925,9 @@
                                                 "id": 42,
                                                 "product_id": 10,
                                                 "variant_id": 5,
-                                                "quantity": 1,
+                                                "quantity": 2,
                                                 "price": 2499,
-                                                "line_total": 2499,
+                                                "line_total": 4998,
                                                 "product": {
                                                     "id": 10,
                                                     "name": "Classic Set",
@@ -7853,16 +7935,24 @@
                                                 }
                                             }
                                         ],
-                                        "total_items": 1,
-                                        "total_price": 2499,
+                                        "total_items": 2,
+                                        "total_price": 4998,
                                         "summary": {
-                                            "subtotal": 2499,
+                                            "discount_mode": "volume",
+                                            "subtotal": 4998,
+                                            "bulk_discount": 1000,
+                                            "bulk_discount_percent": 20,
+                                            "subtotal_after_bulk_discount": 3998,
                                             "shipping": 599,
                                             "discount": 0,
                                             "gift_card_discount": 0,
-                                            "total": 3098
+                                            "total": 4597,
+                                            "applied_promo_code": null,
+                                            "applied_gift_card_code": null,
+                                            "applied_gift_card_balance": 0
                                         },
-                                        "currency": "USD"
+                                        "currency": "USD",
+                                        "currency_rate": 1
                                     }
                                 }
                             }
@@ -8087,15 +8177,23 @@
                                     "data": {
                                         "cart_items": [],
                                         "total_items": 0,
-                                        "total_price": 2499,
+                                        "total_price": 4998,
                                         "summary": {
-                                            "subtotal": 2499,
+                                            "discount_mode": "volume",
+                                            "subtotal": 4998,
+                                            "bulk_discount": 1000,
+                                            "bulk_discount_percent": 20,
+                                            "subtotal_after_bulk_discount": 3998,
                                             "shipping": 599,
                                             "discount": 0,
                                             "gift_card_discount": 0,
-                                            "total": 3098
+                                            "total": 4597,
+                                            "applied_promo_code": null,
+                                            "applied_gift_card_code": null,
+                                            "applied_gift_card_balance": 0
                                         },
-                                        "currency": "USD"
+                                        "currency": "USD",
+                                        "currency_rate": 1
                                     }
                                 }
                             }
@@ -8288,9 +8386,9 @@
                                                 "id": 42,
                                                 "product_id": 10,
                                                 "variant_id": 5,
-                                                "quantity": 1,
+                                                "quantity": 2,
                                                 "price": 2499,
-                                                "line_total": 2499,
+                                                "line_total": 4998,
                                                 "product": {
                                                     "id": 10,
                                                     "name": "Classic Set",
@@ -8298,16 +8396,24 @@
                                                 }
                                             }
                                         ],
-                                        "total_items": 1,
-                                        "total_price": 2499,
+                                        "total_items": 2,
+                                        "total_price": 4998,
                                         "summary": {
-                                            "subtotal": 2499,
+                                            "discount_mode": "volume",
+                                            "subtotal": 4998,
+                                            "bulk_discount": 1000,
+                                            "bulk_discount_percent": 20,
+                                            "subtotal_after_bulk_discount": 3998,
                                             "shipping": 599,
                                             "discount": 0,
                                             "gift_card_discount": 0,
-                                            "total": 3098
+                                            "total": 4597,
+                                            "applied_promo_code": null,
+                                            "applied_gift_card_code": null,
+                                            "applied_gift_card_balance": 0
                                         },
                                         "currency": "USD",
+                                        "currency_rate": 1,
                                         "shipping_details": {
                                             "country": "US",
                                             "total_shipping": 599
@@ -8495,9 +8601,9 @@
                                                 "id": 42,
                                                 "product_id": 10,
                                                 "variant_id": 5,
-                                                "quantity": 1,
+                                                "quantity": 2,
                                                 "price": 2499,
-                                                "line_total": 2499,
+                                                "line_total": 4998,
                                                 "product": {
                                                     "id": 10,
                                                     "name": "Classic Set",
@@ -8505,16 +8611,24 @@
                                                 }
                                             }
                                         ],
-                                        "total_items": 1,
-                                        "total_price": 2499,
+                                        "total_items": 2,
+                                        "total_price": 4998,
                                         "summary": {
-                                            "subtotal": 2499,
+                                            "discount_mode": "volume",
+                                            "subtotal": 4998,
+                                            "bulk_discount": 1000,
+                                            "bulk_discount_percent": 20,
+                                            "subtotal_after_bulk_discount": 3998,
                                             "shipping": 599,
                                             "discount": 0,
                                             "gift_card_discount": 0,
-                                            "total": 3098
+                                            "total": 4597,
+                                            "applied_promo_code": null,
+                                            "applied_gift_card_code": null,
+                                            "applied_gift_card_balance": 0
                                         },
-                                        "currency": "USD"
+                                        "currency": "USD",
+                                        "currency_rate": 1
                                     },
                                     "meta": {
                                         "message": "Promo applied"
@@ -8719,9 +8833,9 @@
                                                 "id": 42,
                                                 "product_id": 10,
                                                 "variant_id": 5,
-                                                "quantity": 1,
+                                                "quantity": 2,
                                                 "price": 2499,
-                                                "line_total": 2499,
+                                                "line_total": 4998,
                                                 "product": {
                                                     "id": 10,
                                                     "name": "Classic Set",
@@ -8729,16 +8843,24 @@
                                                 }
                                             }
                                         ],
-                                        "total_items": 1,
-                                        "total_price": 2499,
+                                        "total_items": 2,
+                                        "total_price": 4998,
                                         "summary": {
-                                            "subtotal": 2499,
+                                            "discount_mode": "volume",
+                                            "subtotal": 4998,
+                                            "bulk_discount": 1000,
+                                            "bulk_discount_percent": 20,
+                                            "subtotal_after_bulk_discount": 3998,
                                             "shipping": 599,
                                             "discount": 0,
                                             "gift_card_discount": 0,
-                                            "total": 3098
+                                            "total": 4597,
+                                            "applied_promo_code": null,
+                                            "applied_gift_card_code": null,
+                                            "applied_gift_card_balance": 0
                                         },
-                                        "currency": "USD"
+                                        "currency": "USD",
+                                        "currency_rate": 1
                                     }
                                 }
                             }
@@ -8922,9 +9044,9 @@
                                                 "id": 42,
                                                 "product_id": 10,
                                                 "variant_id": 5,
-                                                "quantity": 1,
+                                                "quantity": 2,
                                                 "price": 2499,
-                                                "line_total": 2499,
+                                                "line_total": 4998,
                                                 "product": {
                                                     "id": 10,
                                                     "name": "Classic Set",
@@ -8932,16 +9054,24 @@
                                                 }
                                             }
                                         ],
-                                        "total_items": 1,
-                                        "total_price": 2499,
+                                        "total_items": 2,
+                                        "total_price": 4998,
                                         "summary": {
-                                            "subtotal": 2499,
+                                            "discount_mode": "volume",
+                                            "subtotal": 4998,
+                                            "bulk_discount": 1000,
+                                            "bulk_discount_percent": 20,
+                                            "subtotal_after_bulk_discount": 3998,
                                             "shipping": 599,
                                             "discount": 0,
                                             "gift_card_discount": 0,
-                                            "total": 3098
+                                            "total": 4597,
+                                            "applied_promo_code": null,
+                                            "applied_gift_card_code": null,
+                                            "applied_gift_card_balance": 0
                                         },
-                                        "currency": "USD"
+                                        "currency": "USD",
+                                        "currency_rate": 1
                                     }
                                 }
                             }
@@ -9143,9 +9273,9 @@
                                                 "id": 42,
                                                 "product_id": 10,
                                                 "variant_id": 5,
-                                                "quantity": 1,
+                                                "quantity": 2,
                                                 "price": 2499,
-                                                "line_total": 2499,
+                                                "line_total": 4998,
                                                 "product": {
                                                     "id": 10,
                                                     "name": "Classic Set",
@@ -9153,16 +9283,24 @@
                                                 }
                                             }
                                         ],
-                                        "total_items": 1,
-                                        "total_price": 2499,
+                                        "total_items": 2,
+                                        "total_price": 4998,
                                         "summary": {
-                                            "subtotal": 2499,
+                                            "discount_mode": "volume",
+                                            "subtotal": 4998,
+                                            "bulk_discount": 1000,
+                                            "bulk_discount_percent": 20,
+                                            "subtotal_after_bulk_discount": 3998,
                                             "shipping": 599,
                                             "discount": 0,
                                             "gift_card_discount": 0,
-                                            "total": 3098
+                                            "total": 4597,
+                                            "applied_promo_code": null,
+                                            "applied_gift_card_code": null,
+                                            "applied_gift_card_balance": 0
                                         },
-                                        "currency": "USD"
+                                        "currency": "USD",
+                                        "currency_rate": 1
                                     }
                                 }
                             }
@@ -9328,16 +9466,7 @@
                                             ]
                                         },
                                         "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "mode": {
-                                                    "type": "string",
-                                                    "enum": [
-                                                        "volume",
-                                                        "promo"
-                                                    ]
-                                                }
-                                            }
+                                            "$ref": "#/components/schemas/CartData"
                                         },
                                         "meta": {
                                             "type": "object",
@@ -9350,7 +9479,42 @@
                                 "example": {
                                     "success": true,
                                     "data": {
-                                        "mode": "promo"
+                                        "cart_items": [
+                                            {
+                                                "id": 42,
+                                                "product_id": 10,
+                                                "variant_id": 5,
+                                                "quantity": 2,
+                                                "price": 2499,
+                                                "line_total": 4998,
+                                                "product": {
+                                                    "id": 10,
+                                                    "name": "Classic Set",
+                                                    "slug": "classic-set"
+                                                }
+                                            }
+                                        ],
+                                        "total_items": 2,
+                                        "total_price": 4998,
+                                        "summary": {
+                                            "discount_mode": "volume",
+                                            "subtotal": 4998,
+                                            "bulk_discount": 1000,
+                                            "bulk_discount_percent": 20,
+                                            "subtotal_after_bulk_discount": 3998,
+                                            "shipping": 599,
+                                            "discount": 0,
+                                            "gift_card_discount": 0,
+                                            "total": 4597,
+                                            "applied_promo_code": null,
+                                            "applied_gift_card_code": null,
+                                            "applied_gift_card_balance": 0
+                                        },
+                                        "currency": "USD",
+                                        "currency_rate": 1
+                                    },
+                                    "meta": {
+                                        "message": "Discount mode updated"
                                     }
                                 }
                             }
@@ -9557,9 +9721,9 @@
                                                 "id": 42,
                                                 "product_id": 10,
                                                 "variant_id": 5,
-                                                "quantity": 1,
+                                                "quantity": 2,
                                                 "price": 2499,
-                                                "line_total": 2499,
+                                                "line_total": 4998,
                                                 "product": {
                                                     "id": 10,
                                                     "name": "Classic Set",
@@ -9567,16 +9731,24 @@
                                                 }
                                             }
                                         ],
-                                        "total_items": 1,
-                                        "total_price": 2499,
+                                        "total_items": 2,
+                                        "total_price": 4998,
                                         "summary": {
-                                            "subtotal": 2499,
+                                            "discount_mode": "volume",
+                                            "subtotal": 4998,
+                                            "bulk_discount": 1000,
+                                            "bulk_discount_percent": 20,
+                                            "subtotal_after_bulk_discount": 3998,
                                             "shipping": 599,
                                             "discount": 0,
                                             "gift_card_discount": 0,
-                                            "total": 3098
+                                            "total": 4597,
+                                            "applied_promo_code": null,
+                                            "applied_gift_card_code": null,
+                                            "applied_gift_card_balance": 0
                                         },
-                                        "currency": "USD"
+                                        "currency": "USD",
+                                        "currency_rate": 1
                                     }
                                 }
                             }
