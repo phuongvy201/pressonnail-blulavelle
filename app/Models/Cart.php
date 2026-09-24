@@ -71,6 +71,26 @@ class Cart extends Model
      */
     public static function getComboDiscountPercentForQty(int $totalQty): float
     {
+        $rules = self::getComboDiscountRules();
+
+        $qty = (int) $totalQty;
+        if ($qty < 1 || empty($rules)) {
+            return 0.0;
+        }
+
+        $best = 0.0;
+        foreach ($rules as $rule) {
+            if ($qty >= $rule['min_qty']) {
+                $best = max($best, $rule['percent']);
+            }
+        }
+
+        return max(0.0, min(95.0, $best));
+    }
+
+    /** @return array<int, array{min_qty: int, percent: float}> */
+    public static function getComboDiscountRules(): array
+    {
         $raw = Settings::get('pricing.bulk_discounts');
         $rules = [];
 
@@ -81,21 +101,21 @@ class Cart extends Model
             $rules = $raw;
         }
 
-        $qty = (int) $totalQty;
-        if ($qty < 1 || empty($rules)) {
-            return 0.0;
-        }
-
-        $best = 0.0;
+        $normalized = [];
         foreach ($rules as $rule) {
             $minQty = (int) ($rule['min_qty'] ?? 0);
             $percent = (float) ($rule['percent'] ?? 0);
-            if ($minQty > 0 && $qty >= $minQty) {
-                $best = max($best, $percent);
+            if ($minQty > 0 && $percent > 0) {
+                $normalized[$minQty] = max($normalized[$minQty] ?? 0, min(95.0, $percent));
             }
         }
 
-        return max(0.0, min(95.0, $best));
+        ksort($normalized);
+        $result = [];
+        foreach ($normalized as $minQty => $percent) {
+            $result[] = ['min_qty' => (int) $minQty, 'percent' => (float) $percent];
+        }
+        return $result;
     }
 
     // NOTE: Per-line bulk discount helpers removed in favor of combo discount at cart level.

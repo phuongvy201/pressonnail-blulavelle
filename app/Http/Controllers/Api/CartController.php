@@ -316,6 +316,8 @@ class CartController extends Controller
                     'subtotal' => $subtotal,
                     'bulk_discount' => $bulkDiscount,
                     'bulk_discount_percent' => $bulkDiscountPercent,
+                    'bulk_discount_eligible_quantity' => $discountEligibleQty,
+                    'volume_discount_eligible' => ! $cartContainsGiftCardProduct,
                     'subtotal_after_bulk_discount' => $subtotalAfterBulk,
                     'shipping' => $shipping,
                     'discount' => $discount,
@@ -985,9 +987,12 @@ class CartController extends Controller
         // Always expose mobile-friendly discount fields (volume vs promo are mutually exclusive).
         $summary = [
             'discount_mode' => $discountMode,
+            'bulk_discount_tiers' => Cart::getComboDiscountRules(),
             'subtotal' => $data['subtotal'],
             'bulk_discount' => $bulkDiscount,
             'bulk_discount_percent' => $bulkPercent,
+            'bulk_discount_eligible_quantity' => (int) ($data['bulk_discount_eligible_quantity'] ?? 0),
+            'volume_discount_eligible' => (bool) ($data['volume_discount_eligible'] ?? true),
             'subtotal_after_bulk_discount' => $data['subtotal_after_bulk_discount'] ?? max(0, (float) $data['subtotal'] - $bulkDiscount),
             'shipping' => $useConvertedFields ? $data['shipping'] : $data['converted_shipping'],
             'discount' => $data['discount'], // promo-code discount amount

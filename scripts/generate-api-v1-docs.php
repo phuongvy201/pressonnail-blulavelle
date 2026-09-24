@@ -1092,6 +1092,7 @@ $cartExample = [
     'total_price' => 4998,
     'summary' => [
         'discount_mode' => 'volume',
+        'bulk_discount_tiers' => [],
         'subtotal' => 4998,
         'bulk_discount' => 1000,
         'bulk_discount_percent' => 20,
@@ -1879,6 +1880,11 @@ $componentSchemas = [
             'primary_image' => ['type' => 'string', 'nullable' => true],
             'sales_count' => ['type' => 'integer', 'description' => 'Units in paid orders; populated for best_selling sort.'],
             'in_stock' => ['type' => 'boolean'],
+            'shop' => ['type' => 'object', 'nullable' => true, 'properties' => [
+                'id' => ['type' => 'integer'],
+                'name' => ['type' => 'string'],
+                'logo' => ['type' => 'string', 'nullable' => true],
+            ]],
         ],
     ],
     'ProductDetail' => [
@@ -1941,6 +1947,16 @@ $componentSchemas = [
                 'enum' => ['volume', 'promo'],
                 'description' => '`volume` = quantity/bulk discount active; `promo` = promo code active.',
             ],
+            'bulk_discount_tiers' => [
+                'type' => 'array',
+                'description' => 'Admin-configured quantity thresholds from pricing.bulk_discounts.',
+                'items' => ['type' => 'object', 'properties' => [
+                    'min_qty' => ['type' => 'integer'],
+                    'percent' => ['type' => 'number'],
+                ]],
+            ],
+            'bulk_discount_eligible_quantity' => ['type' => 'integer'],
+            'volume_discount_eligible' => ['type' => 'boolean'],
             'subtotal' => ['$ref' => '#/components/schemas/MoneyMinor'],
             'bulk_discount' => [
                 'allOf' => [['$ref' => '#/components/schemas/MoneyMinor']],
@@ -1950,6 +1966,14 @@ $componentSchemas = [
                 'type' => 'number',
                 'example' => 20,
                 'description' => 'Active volume discount percent (0–95). Not money — do not treat as minor units.',
+            ],
+            'bulk_discount_tiers' => [
+                'type' => 'array',
+                'description' => 'Configured quantity discount tiers from pricing.bulk_discounts.',
+                'items' => ['type' => 'object', 'properties' => [
+                    'min_qty' => ['type' => 'integer'],
+                    'percent' => ['type' => 'number'],
+                ]],
             ],
             'subtotal_after_bulk_discount' => ['$ref' => '#/components/schemas/MoneyMinor'],
             'shipping' => ['$ref' => '#/components/schemas/MoneyMinor'],

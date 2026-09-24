@@ -624,6 +624,7 @@ class ProductController extends Controller
             'shop' => $product->shop ? [
                 'id' => $product->shop->id,
                 'name' => $product->shop->name,
+                'logo' => $product->shop->getLogoUrl(),
             ] : null,
         ];
     }

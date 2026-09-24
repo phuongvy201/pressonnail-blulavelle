@@ -393,6 +393,22 @@
                     },
                     "in_stock": {
                         "type": "boolean"
+                    },
+                    "shop": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "logo": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        }
                     }
                 }
             },
@@ -506,6 +522,27 @@
                             "promo"
                         ],
                         "description": "`volume` = quantity/bulk discount active; `promo` = promo code active."
+                    },
+                    "bulk_discount_tiers": {
+                        "type": "array",
+                        "description": "Configured quantity discount tiers from pricing.bulk_discounts.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "min_qty": {
+                                    "type": "integer"
+                                },
+                                "percent": {
+                                    "type": "number"
+                                }
+                            }
+                        }
+                    },
+                    "bulk_discount_eligible_quantity": {
+                        "type": "integer"
+                    },
+                    "volume_discount_eligible": {
+                        "type": "boolean"
                     },
                     "subtotal": {
                         "$ref": "#/components/schemas/MoneyMinor"
@@ -7279,6 +7316,7 @@
                                         "total_price": 4998,
                                         "summary": {
                                             "discount_mode": "volume",
+                                            "bulk_discount_tiers": [],
                                             "subtotal": 4998,
                                             "bulk_discount": 1000,
                                             "bulk_discount_percent": 20,
@@ -7488,6 +7526,7 @@
                                         "total_price": 4998,
                                         "summary": {
                                             "discount_mode": "volume",
+                                            "bulk_discount_tiers": [],
                                             "subtotal": 4998,
                                             "bulk_discount": 1000,
                                             "bulk_discount_percent": 20,
@@ -7949,6 +7988,7 @@
                                         "total_price": 4998,
                                         "summary": {
                                             "discount_mode": "volume",
+                                            "bulk_discount_tiers": [],
                                             "subtotal": 4998,
                                             "bulk_discount": 1000,
                                             "bulk_discount_percent": 20,
@@ -8190,6 +8230,7 @@
                                         "total_price": 4998,
                                         "summary": {
                                             "discount_mode": "volume",
+                                            "bulk_discount_tiers": [],
                                             "subtotal": 4998,
                                             "bulk_discount": 1000,
                                             "bulk_discount_percent": 20,
@@ -8410,6 +8451,7 @@
                                         "total_price": 4998,
                                         "summary": {
                                             "discount_mode": "volume",
+                                            "bulk_discount_tiers": [],
                                             "subtotal": 4998,
                                             "bulk_discount": 1000,
                                             "bulk_discount_percent": 20,
@@ -8625,6 +8667,7 @@
                                         "total_price": 4998,
                                         "summary": {
                                             "discount_mode": "volume",
+                                            "bulk_discount_tiers": [],
                                             "subtotal": 4998,
                                             "bulk_discount": 1000,
                                             "bulk_discount_percent": 20,
@@ -8857,6 +8900,7 @@
                                         "total_price": 4998,
                                         "summary": {
                                             "discount_mode": "volume",
+                                            "bulk_discount_tiers": [],
                                             "subtotal": 4998,
                                             "bulk_discount": 1000,
                                             "bulk_discount_percent": 20,
@@ -9068,6 +9112,7 @@
                                         "total_price": 4998,
                                         "summary": {
                                             "discount_mode": "volume",
+                                            "bulk_discount_tiers": [],
                                             "subtotal": 4998,
                                             "bulk_discount": 1000,
                                             "bulk_discount_percent": 20,
@@ -9297,6 +9342,7 @@
                                         "total_price": 4998,
                                         "summary": {
                                             "discount_mode": "volume",
+                                            "bulk_discount_tiers": [],
                                             "subtotal": 4998,
                                             "bulk_discount": 1000,
                                             "bulk_discount_percent": 20,
@@ -9508,6 +9554,7 @@
                                         "total_price": 4998,
                                         "summary": {
                                             "discount_mode": "volume",
+                                            "bulk_discount_tiers": [],
                                             "subtotal": 4998,
                                             "bulk_discount": 1000,
                                             "bulk_discount_percent": 20,
@@ -9745,6 +9792,7 @@
                                         "total_price": 4998,
                                         "summary": {
                                             "discount_mode": "volume",
+                                            "bulk_discount_tiers": [],
                                             "subtotal": 4998,
                                             "bulk_discount": 1000,
                                             "bulk_discount_percent": 20,
