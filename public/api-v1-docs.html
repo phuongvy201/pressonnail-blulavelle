@@ -387,6 +387,10 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "sales_count": {
+                        "type": "integer",
+                        "description": "Units in paid orders; populated for best_selling sort."
+                    },
                     "in_stock": {
                         "type": "boolean"
                     }
@@ -678,6 +682,11 @@
                     "clientSecret": {
                         "type": "string",
                         "nullable": true
+                    },
+                    "checkoutUrl": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Stripe-hosted Checkout URL for browser clients."
                     },
                     "paymentIntentId": {
                         "type": "string",
@@ -5574,7 +5583,8 @@
                                 "price_asc",
                                 "price_desc",
                                 "name",
-                                "popular"
+                                "popular",
+                                "best_selling"
                             ],
                             "default": "newest"
                         }
@@ -12875,6 +12885,7 @@
                                         "status": "requires_payment",
                                         "orderNumber": null,
                                         "clientSecret": "pi_3Abc_secret_xyz",
+                                        "checkoutUrl": "https://checkout.stripe.com/c/pay/cs_test_example",
                                         "paymentIntentId": "pi_3Abc",
                                         "amount": 3098,
                                         "currency": "usd"
@@ -12993,9 +13004,15 @@
                             "schema": {
                                 "type": "object",
                                 "properties": {
-                                    "email": {
+                                    "customer_name": {
+                                        "type": "string"
+                                    },
+                                    "customer_email": {
                                         "type": "string",
                                         "format": "email"
+                                    },
+                                    "customer_phone": {
+                                        "type": "string"
                                     },
                                     "shippingAddressId": {
                                         "type": "integer",
@@ -13006,30 +13023,29 @@
                                         "type": "integer",
                                         "minimum": 1
                                     },
-                                    "shipping_first_name": {
-                                        "type": "string"
-                                    },
-                                    "shipping_last_name": {
-                                        "type": "string"
-                                    },
                                     "shipping_address": {
                                         "type": "string"
                                     },
-                                    "shipping_city": {
+                                    "city": {
                                         "type": "string"
                                     },
-                                    "shipping_state": {
+                                    "state": {
                                         "type": "string"
                                     },
-                                    "shipping_postal_code": {
+                                    "postal_code": {
                                         "type": "string"
                                     },
-                                    "shipping_country": {
+                                    "country": {
                                         "type": "string",
                                         "example": "US"
                                     },
-                                    "shipping_phone": {
-                                        "type": "string"
+                                    "shipping_cost": {
+                                        "type": "number",
+                                        "minimum": 0
+                                    },
+                                    "shipping_zone_id": {
+                                        "type": "integer",
+                                        "minimum": 1
                                     },
                                     "payment_method": {
                                         "type": "string",
@@ -13038,6 +13054,15 @@
                                             "cod"
                                         ],
                                         "example": "stripe"
+                                    },
+                                    "payment_ui": {
+                                        "type": "string",
+                                        "enum": [
+                                            "checkout_session",
+                                            "payment_sheet"
+                                        ],
+                                        "example": "checkout_session",
+                                        "description": "Select the Stripe-hosted Checkout Session flow for Expo Go/browser clients."
                                     },
                                     "shipping_method": {
                                         "type": "string"
@@ -13138,6 +13163,7 @@
                                         "status": "requires_payment",
                                         "orderNumber": null,
                                         "clientSecret": "pi_3Abc_secret_xyz",
+                                        "checkoutUrl": "https://checkout.stripe.com/c/pay/cs_test_example",
                                         "paymentIntentId": "pi_3Abc",
                                         "amount": 3098,
                                         "currency": "usd"
@@ -13332,6 +13358,7 @@
                                         "status": "succeeded",
                                         "orderNumber": "BL-100234",
                                         "clientSecret": "pi_3Abc_secret_xyz",
+                                        "checkoutUrl": "https://checkout.stripe.com/c/pay/cs_test_example",
                                         "paymentIntentId": "pi_3Abc",
                                         "amount": 3098,
                                         "currency": "usd"
@@ -13558,6 +13585,7 @@
                                         "status": "requires_payment",
                                         "orderNumber": null,
                                         "clientSecret": "pi_3Abc_secret_xyz",
+                                        "checkoutUrl": "https://checkout.stripe.com/c/pay/cs_test_example",
                                         "paymentIntentId": "pi_3Abc",
                                         "amount": 3098,
                                         "currency": "usd"

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductTemplate;
+use Illuminate\Support\Facades\DB;
 use App\Models\ApiToken;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -389,7 +390,7 @@ class ProductController extends Controller
             'search' => ['nullable', 'string', 'max:200'],
             'searchScope' => ['nullable', 'string', Rule::in(['all', 'name', 'description', 'shop'])],
             'sortBy' => ['nullable', 'string', Rule::in([
-                'newest', 'price_asc', 'price_desc', 'name', 'popular',
+                'newest', 'price_asc', 'price_desc', 'name', 'popular', 'best_selling',
                 'price_low', 'price_high',
             ])],
             'inStock' => ['nullable'],
@@ -398,7 +399,7 @@ class ProductController extends Controller
             'minPrice.numeric' => 'minPrice must be a non-negative number (USD).',
             'maxPrice.numeric' => 'maxPrice must be a non-negative number (USD).',
             'searchScope.in' => 'searchScope must be one of: all, name, description, shop.',
-            'sortBy.in' => 'sortBy must be one of: newest, price_asc, price_desc, name, popular.',
+            'sortBy.in' => 'sortBy must be one of: newest, price_asc, price_desc, name, popular, best_selling.',
         ]);
 
         $validator->after(function ($validator) use ($input) {
@@ -524,7 +525,17 @@ class ProductController extends Controller
 
         $sortBy = $this->normalizeCatalogSortBy((string) ($filters['sortBy'] ?? 'newest'));
 
-        if ($sortBy === 'popular') {
+        if ($sortBy === 'best_selling') {
+            $paidUnits = DB::table('order_items')
+                ->join('orders', 'orders.id', '=', 'order_items.order_id')
+                ->selectRaw('COALESCE(SUM(order_items.quantity), 0)')
+                ->whereColumn('order_items.product_id', 'products.id')
+                ->where('orders.payment_status', 'paid');
+            $query->select('products.*')
+                ->selectSub($paidUnits, 'catalog_units_sold')
+                ->orderByDesc('catalog_units_sold')
+                ->orderByDesc('created_at');
+        } elseif ($sortBy === 'popular') {
             $query->withCount(['approvedReviews as catalog_reviews_count'])
                 ->orderByDesc('catalog_reviews_count')
                 ->orderByDesc('created_at');
@@ -607,6 +618,7 @@ class ProductController extends Controller
             'category_name' => $product->template?->category?->name,
             'average_rating' => round($product->getAverageRating(), 1),
             'reviews_count' => $product->getTotalReviews(),
+            'sales_count' => (int) ($product->catalog_units_sold ?? 0),
             'in_stock' => $product->hasStock(),
             'url' => route('products.show', ['slug' => $product->slug]),
             'shop' => $product->shop ? [

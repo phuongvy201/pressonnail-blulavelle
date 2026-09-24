@@ -8,7 +8,7 @@ use App\Models\Order;
 use App\Support\ApiV1\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use Stripe\Checkout\Session as StripeCheckoutSession;
 use Stripe\PaymentIntent;
 use Stripe\Stripe;
 
@@ -40,6 +40,17 @@ class CheckoutAttemptService
                     'Idempotency-Key was already used with a different cart or address.',
                     409
                 );
+            }
+
+            if ($existing->status === 'requires_action' && $existing->order && $this->usesCheckoutSession($request)) {
+                $this->ensureStripeCheckoutSession($existing);
+                $existing = $existing->fresh();
+            } elseif ($existing->status === 'requires_action' && $existing->order && ! data_get($existing->response_body, 'client_secret')) {
+                if (! config('api_v1.stripe_checkout_enabled')) {
+                    return ApiResponse::error('STRIPE_CHECKOUT_DISABLED', 'Stripe checkout is not enabled for the mobile API.', 503);
+                }
+                $this->ensureStripeIntent($existing);
+                $existing = $existing->fresh();
             }
 
             return ApiResponse::success($this->payload($existing), [
@@ -76,6 +87,27 @@ class CheckoutAttemptService
             );
         }
 
+        if ($attempt->status === 'requires_action' && $attempt->order) {
+            try {
+                if (! config('api_v1.stripe_checkout_enabled')) {
+                    return ApiResponse::error('STRIPE_CHECKOUT_DISABLED', 'Stripe checkout is not enabled for the mobile API.', 503);
+                }
+                if ($this->usesCheckoutSession($request)) {
+                    $this->ensureStripeCheckoutSession($attempt);
+                } else {
+                    $this->ensureStripeIntent($attempt);
+                }
+            } catch (\Throwable $exception) {
+                report($exception);
+
+                return ApiResponse::error(
+                    'STRIPE_INITIALIZATION_FAILED',
+                    'The order was created, but Stripe could not start the payment. Please retry checkout.',
+                    502
+                );
+            }
+        }
+
         return ApiResponse::success($this->payload($attempt), [
             'replayed' => $replayed,
         ]);
@@ -87,6 +119,12 @@ class CheckoutAttemptService
             $attempt->update(['status' => 'expired']);
         }
 
+        $attempt = $attempt->fresh();
+        if ($attempt->status === 'requires_action' && $attempt->order && ! $attempt->payment_intent_id) {
+            abort_unless(config('api_v1.stripe_checkout_enabled'), 503, 'Stripe checkout is not enabled for the mobile API.');
+            $this->ensureStripeIntent($attempt);
+        }
+
         return ApiResponse::success($this->payload($attempt->fresh()));
     }
 
@@ -96,9 +134,29 @@ class CheckoutAttemptService
             return ApiResponse::success($this->payload($attempt), ['replayed' => true]);
         }
 
-        $pi = $attempt->payment_intent_id ?: $request->input('payment_intent_id');
+        $pi = $attempt->payment_intent_id;
         if (! $pi) {
             return ApiResponse::error('PAYMENT_INTENT_REQUIRED', 'payment_intent_id is required to confirm.', 422);
+        }
+
+        $checkoutSessionId = data_get($attempt->response_body, 'checkout_session_id');
+        if ($checkoutSessionId) {
+            Stripe::setApiKey(config('services.stripe.secret'));
+            $session = StripeCheckoutSession::retrieve($checkoutSessionId);
+            $paymentIntentId = is_string($session->payment_intent ?? null)
+                ? $session->payment_intent
+                : ($session->payment_intent->id ?? null);
+            if (($session->payment_status ?? null) === 'paid' && $paymentIntentId) {
+                $this->markSucceededFromIntent($attempt, $paymentIntentId);
+            } else {
+                $attempt->update(['status' => 'requires_action']);
+            }
+
+            return ApiResponse::success($this->payload($attempt->fresh()));
+        }
+        $requestedPi = $request->input('paymentIntentId', $request->input('payment_intent_id'));
+        if ($requestedPi && ! hash_equals($pi, (string) $requestedPi)) {
+            return ApiResponse::error('PAYMENT_INTENT_MISMATCH', 'This payment intent does not belong to the checkout attempt.', 409);
         }
 
         Stripe::setApiKey(config('services.stripe.secret'));
@@ -174,12 +232,137 @@ class CheckoutAttemptService
             'orderId' => $attempt->order_id,
             'orderNumber' => $order?->order_number,
             'paymentIntentId' => $attempt->payment_intent_id,
+            'clientSecret' => data_get($attempt->response_body, 'client_secret'),
+            'checkoutUrl' => data_get($attempt->response_body, 'checkout_url'),
+            'amount' => $order ? ApiResponse::toMinor($order->total_amount) : null,
+            'currency' => strtolower((string) ($order?->currency ?: 'usd')),
             'errorCode' => $attempt->error_code,
             'result' => $this->normalizeResult($attempt, $order),
             'createdAt' => ApiResponse::iso($attempt->created_at),
             'updatedAt' => ApiResponse::iso($attempt->updated_at),
             'expiresAt' => ApiResponse::iso($attempt->expires_at),
         ];
+    }
+
+    private function usesCheckoutSession(Request $request): bool
+    {
+        return $request->input('payment_ui') === 'checkout_session';
+    }
+
+    private function ensureStripeCheckoutSession(CheckoutAttempt $attempt): void
+    {
+        $secret = config('services.stripe.secret');
+        if (! is_string($secret) || $secret === '') {
+            throw new \RuntimeException('Stripe secret key is not configured.');
+        }
+        Stripe::setApiKey($secret);
+
+        $body = $attempt->response_body ?? [];
+        if (! empty($body['checkout_session_id'])) {
+            $existing = StripeCheckoutSession::retrieve($body['checkout_session_id']);
+            if (($existing->status ?? null) === 'open' && ! empty($existing->url)) {
+                $body['checkout_url'] = $existing->url;
+                $attempt->update(['response_body' => $body]);
+                return;
+            }
+            if (($existing->status ?? null) === 'complete') {
+                return;
+            }
+        }
+
+        $order = $attempt->order;
+        if (! $order || $order->payment_status === 'paid') {
+            return;
+        }
+        $amount = ApiResponse::toMinor($order->total_amount);
+        if ($amount < 50) {
+            throw new \RuntimeException('Stripe requires a minimum payment amount of 50 minor units.');
+        }
+
+        $sessionGeneration = (int) ($body['checkout_session_generation'] ?? 0) + 1;
+        $session = StripeCheckoutSession::create([
+            'mode' => 'payment',
+            'success_url' => route('checkout.success', ['orderNumber' => $order->order_number]) . '?checkout_attempt=' . urlencode($attempt->id),
+            'cancel_url' => route('checkout.index'),
+            'client_reference_id' => $attempt->id,
+            'customer_email' => $order->customer_email,
+            'line_items' => [[
+                'quantity' => 1,
+                'price_data' => [
+                    'currency' => strtolower((string) ($order->currency ?: 'usd')),
+                    'unit_amount' => $amount,
+                    'product_data' => ['name' => 'BluLavelle order ' . $order->order_number],
+                ],
+            ]],
+            'metadata' => [
+                'checkout_attempt_id' => $attempt->id,
+                'order_id' => (string) $order->id,
+                'order_number' => $order->order_number,
+            ],
+            'payment_intent_data' => ['metadata' => [
+                'checkout_attempt_id' => $attempt->id,
+                'order_id' => (string) $order->id,
+                'order_number' => $order->order_number,
+            ]],
+        ], [
+            'idempotency_key' => 'checkout-session-' . $attempt->id . '-' . $sessionGeneration,
+        ]);
+
+        $body['checkout_session_id'] = $session->id;
+        $body['checkout_url'] = $session->url;
+        $body['checkout_session_generation'] = $sessionGeneration;
+        $attempt->update(['response_body' => $body]);
+    }
+
+    private function ensureStripeIntent(CheckoutAttempt $attempt): void
+    {
+        $secret = config('services.stripe.secret');
+        if (! is_string($secret) || $secret === '') {
+            throw new \RuntimeException('Stripe secret key is not configured.');
+        }
+        Stripe::setApiKey($secret);
+
+        if ($attempt->payment_intent_id) {
+            $intent = PaymentIntent::retrieve($attempt->payment_intent_id);
+            $this->storeClientSecret($attempt, $intent->client_secret);
+
+            return;
+        }
+
+        $order = $attempt->order;
+        if (! $order || $order->payment_status === 'paid') {
+            return;
+        }
+
+        $amount = ApiResponse::toMinor($order->total_amount);
+        if ($amount < 50) {
+            throw new \RuntimeException('Stripe requires a minimum payment amount of 50 minor units.');
+        }
+
+        $intent = PaymentIntent::create([
+            'amount' => $amount,
+            'currency' => strtolower((string) ($order->currency ?: 'usd')),
+            'automatic_payment_methods' => ['enabled' => true],
+            'receipt_email' => $order->customer_email,
+            'metadata' => [
+                'checkout_attempt_id' => $attempt->id,
+                'order_id' => (string) $order->id,
+                'order_number' => $order->order_number,
+            ],
+        ], [
+            'idempotency_key' => 'checkout-attempt-' . $attempt->id,
+        ]);
+
+        $order->update(['payment_id' => $intent->id]);
+        $attempt->update(['payment_intent_id' => $intent->id]);
+        $this->storeClientSecret($attempt->fresh(), $intent->client_secret);
+    }
+
+    private function storeClientSecret(CheckoutAttempt $attempt, ?string $clientSecret): void
+    {
+        $body = $attempt->response_body ?? [];
+        $body['client_secret'] = $clientSecret;
+        $attempt->update(['response_body' => $body]);
     }
 
     private function ingestCheckoutResponse(CheckoutAttempt $attempt, mixed $response): void

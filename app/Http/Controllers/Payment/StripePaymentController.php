@@ -416,7 +416,10 @@ class StripePaymentController extends Controller
                 case 'checkout.session.completed':
                     $session = $event->data->object;
                     if (!empty($session->payment_intent)) {
-                        $this->handlePaymentIntentSucceeded((object) ['id' => $session->payment_intent]);
+                        $this->handlePaymentIntentSucceeded((object) [
+                            'id' => $session->payment_intent,
+                            'metadata' => $session->metadata ?? new \stdClass(),
+                        ]);
                     }
                     break;
 
@@ -458,23 +461,32 @@ class StripePaymentController extends Controller
     protected function handlePaymentIntentSucceeded($paymentIntent)
     {
         $order = Order::where('payment_id', $paymentIntent->id)->first();
+        if (! $order && ! empty($paymentIntent->metadata->order_id)) {
+            $order = Order::find($paymentIntent->metadata->order_id);
+        }
 
         if ($order && $order->payment_status !== 'paid') {
             $order->update([
                 'payment_status' => 'paid',
                 'status' => 'processing',
+                'payment_id' => $paymentIntent->id,
+                'payment_transaction_id' => $paymentIntent->id,
                 'paid_at' => $order->paid_at ?? now(),
             ]);
 
             Log::info('Payment intent succeeded for order: ' . $order->order_number);
         }
 
-        CheckoutAttempt::query()
-            ->where('payment_intent_id', $paymentIntent->id)
+        $attemptQuery = CheckoutAttempt::query()->where('payment_intent_id', $paymentIntent->id);
+        if (! empty($paymentIntent->metadata->checkout_attempt_id)) {
+            $attemptQuery->orWhere('id', $paymentIntent->metadata->checkout_attempt_id);
+        }
+        $attemptQuery
             ->whereNotIn('status', ['succeeded'])
             ->update([
                 'status' => 'succeeded',
                 'order_id' => $order?->id,
+                'payment_intent_id' => $paymentIntent->id,
                 'error_code' => null,
             ]);
 

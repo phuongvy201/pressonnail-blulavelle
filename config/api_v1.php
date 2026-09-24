@@ -10,6 +10,8 @@ return [
 
     'attempt_ttl_hours' => (int) env('CHECKOUT_ATTEMPT_TTL_HOURS', 24),
 
+    'stripe_checkout_enabled' => (bool) env('API_V1_STRIPE_CHECKOUT_ENABLED', true),
+
     'guest_cart_header' => 'X-Guest-Cart-Token',
 
     'upload_disk' => env('API_V1_UPLOAD_DISK', 'local'),
