@@ -206,6 +206,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () use ($v1Guest) {
         ]);
     })->name('health');
 
+    Route::get('/home/hero', [\App\Http\Controllers\Api\V1\HomeHeroController::class, 'show'])
+        ->name('home.hero');
+
     Route::prefix('auth')->name('auth.')->group(function () {
         Route::get('/csrf', [V1AuthController::class, 'csrf'])->name('csrf');
         Route::get('/captcha', [V1AuthController::class, 'captcha'])->name('captcha');
@@ -224,6 +227,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () use ($v1Guest) {
                 ->name('products.show');
             Route::get('/collections', [V1CatalogController::class, 'collections'])->name('collections.index');
             Route::get('/shops', [V1CatalogController::class, 'shops'])->name('shops.index');
+            Route::get('/shops/{shopId}/reviews', [V1CatalogController::class, 'shopReviews'])
+                ->whereNumber('shopId')
+                ->name('shops.reviews');
             Route::get('/templates', [V1CatalogController::class, 'templates'])->name('templates.index');
             Route::get('/templates/{id}', [V1CatalogController::class, 'template'])
                 ->whereNumber('id')

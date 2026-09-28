@@ -162,6 +162,9 @@ $paths = [
     '/api/v1/health' => [
         'get' => $ops('Health', 'Health', false, 'Service health + API version.'),
     ],
+    '/api/v1/home/hero' => [
+        'get' => $ops('Mobile Home hero carousel', 'Catalog', false, 'Returns the active Home hero slides configured in Admin → Home → Edit Hero. The response is briefly cached and refreshed when the admin saves the hero.'),
+    ],
     '/api/v1/auth/csrf' => [
         'get' => $ops('Auth mode (csrfRequired=false)', 'Auth', false, 'iOS uses Bearer tokens; do not scrape HTML CSRF.'),
     ],
@@ -403,6 +406,14 @@ $paths = [
             $q('perPage', ['type' => 'integer', 'default' => 24, 'minimum' => 1, 'maximum' => 50]),
             $q('search', ['type' => 'string', 'maxLength' => 200]),
             $q('sortBy', ['type' => 'string', 'enum' => ['newest', 'name', 'popular'], 'default' => 'newest']),
+        ]),
+    ],
+    '/api/v1/catalog/shops/{shopId}/reviews' => [
+        'get' => $ops('Shop reviews', 'Catalog', false, 'Paginated approved reviews for products from a shop. Optionally exclude one product to show reviews from the shop’s other products.', [
+            $path('shopId', ['type' => 'integer', 'minimum' => 1], 'Shop id'),
+            $q('page', ['type' => 'integer', 'default' => 1, 'minimum' => 1]),
+            $q('perPage', ['type' => 'integer', 'default' => 12, 'minimum' => 1, 'maximum' => 48]),
+            $q('excludeProductId', ['type' => 'integer', 'minimum' => 1]),
         ]),
     ],
     '/api/v1/catalog/templates' => [

@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\CollectionController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductTemplateController;
 use App\Http\Controllers\Api\ShopController;
+use App\Http\Controllers\Api\V1\ShopReviewController;
 use App\Http\Controllers\Api\V1\Concerns\WrapsStorefrontJson;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\SearchController;
@@ -39,6 +40,11 @@ class CatalogController extends Controller
     public function shops(Request $request, ShopController $controller): JsonResponse
     {
         return $this->wrapStorefront($controller->index($request));
+    }
+
+    public function shopReviews(int $shopId, Request $request, ShopReviewController $controller): JsonResponse
+    {
+        return $this->wrapStorefront($controller->index($shopId, $request));
     }
 
     public function templates(Request $request, ProductTemplateController $controller): JsonResponse

@@ -694,6 +694,8 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                         </p>
                         <form id="newsletter-form" class="flex gap-2 mb-3" action="{{ route('newsletter.subscribe') }}" method="POST">
                             @csrf
+                            <input type="text" name="company_website" value="" tabindex="-1" autocomplete="off" aria-hidden="true" class="absolute -left-[9999px] h-px w-px opacity-0" style="position:absolute;left:-9999px" aria-label="Leave this field blank">
+                            <input type="hidden" id="newsletter-form-started-at" name="form_started_at" value="{{ now()->timestamp }}">
                             <input type="email" id="newsletter-email" name="email" placeholder="Your email address" required
                                 class="font-display flex-1 min-w-0 px-4 py-3 rounded-xl bg-slate-700/50 border border-slate-600 text-white placeholder-slate-500 focus:ring-2 focus:ring-primary focus:border-primary text-sm">
                             <button type="submit" id="newsletter-submit" class="shrink-0 w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center hover:opacity-90 transition-opacity" aria-label="Subscribe">
@@ -1533,6 +1535,8 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                 e.preventDefault();
                 var emailInput = document.getElementById('newsletter-email');
                 var email = (emailInput && emailInput.value) ? emailInput.value.trim() : '';
+                var honeypot = newsletterForm.querySelector('[name="company_website"]');
+                var startedAt = document.getElementById('newsletter-form-started-at');
                 var button = document.getElementById('newsletter-submit');
                 var originalHtml = button ? button.innerHTML : '';
 
@@ -1551,7 +1555,11 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({ email: email })
+                    body: JSON.stringify({
+                        email: email,
+                        company_website: honeypot ? honeypot.value : '',
+                        form_started_at: startedAt ? startedAt.value : ''
+                    })
                 })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
@@ -2178,4 +2186,3 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
     @endif
 </body>
 </html>
-

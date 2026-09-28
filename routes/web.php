@@ -982,7 +982,9 @@ Route::get('/test-remove-variant', [ProductTemplateController::class, 'testRemov
     ->name('test.remove.variant');
 
 // Newsletter routes
-Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe'])->name('newsletter.subscribe');
+Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe'])
+    ->middleware('throttle:newsletter-subscribe')
+    ->name('newsletter.subscribe');
 Route::get('/newsletter/unsubscribe/{email}', [NewsletterController::class, 'showUnsubscribe'])->name('newsletter.unsubscribe');
 Route::post('/newsletter/unsubscribe/{email}', [NewsletterController::class, 'unsubscribe'])->name('newsletter.unsubscribe.post');
 Route::get('/newsletter/status', [NewsletterController::class, 'status'])->name('newsletter.status');

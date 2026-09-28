@@ -16,8 +16,26 @@ class NewsletterController extends Controller
      */
     public function subscribe(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email|max:255',
+        // Quietly accept honeypot submissions so simple bots do not learn the trap.
+        if (trim((string) $request->input('company_website', '')) !== '') {
+            return response()->json([
+                'success' => true,
+                'message' => 'Thank you for subscribing! Please check your email for a welcome message.',
+            ]);
+        }
+
+        $startedAt = filter_var($request->input('form_started_at'), FILTER_VALIDATE_INT);
+        $now = now()->timestamp;
+        if (!$startedAt || $startedAt > $now || ($now - $startedAt) < 3 || ($now - $startedAt) > 86400) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please refresh the page and try again.',
+            ], 422);
+        }
+
+        $email = mb_strtolower(trim((string) $request->input('email', '')));
+        $validator = Validator::make(['email' => $email], [
+            'email' => 'required|email:rfc|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -28,7 +46,6 @@ class NewsletterController extends Controller
             ], 422);
         }
 
-        $email = $request->email;
         $ipAddress = $request->ip();
         $userAgent = $request->userAgent();
 

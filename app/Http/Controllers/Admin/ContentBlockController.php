@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -123,6 +124,9 @@ class ContentBlockController extends Controller
         $current = is_array($block->content) ? $block->content : [];
         $block->content = array_merge($current, $input['content']);
         $block->save();
+        if ($key === 'home.hero') {
+            Cache::forget('api:v1:home:hero');
+        }
         return response()->json([
             'block_key' => $key,
             'content' => $block->content,
