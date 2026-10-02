@@ -37,6 +37,10 @@
                 <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11.5V8a5 5 0 0110 0v3.5M6 12h12l-1 8H7l-1-8z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.5 12.5l1 1.5 2-2.5 2.5 3"/></svg>
                 Virtual Nail
             </a>
+            <a href="{{ route('admin.sample-hands.index') }}" {!! $clk !!} class="{{ $ac(request()->routeIs('admin.sample-hands.*'), $m) }}">
+                <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                Sample Hands
+            </a>
             <a href="{{ route('admin.backups.index') }}" {!! $clk !!} class="{{ $ac(request()->routeIs('admin.backups.*'), $m) }}">
                 <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
                 Backup &amp; Restore

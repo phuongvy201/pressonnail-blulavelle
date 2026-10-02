@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\ApiUploadAsset;
 use App\Models\Collection;
 use App\Models\Product;
 use App\Models\VirtualNailTrial;
+use App\Services\ApiV1\ApiUploadService;
 use App\Support\VirtualNailSettings;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
@@ -1123,6 +1125,70 @@ class VirtualNailTrialService
     }
 
     /**
+     * @return list<array{id: string, label: string, handSide: string, previewUrl: string}>
+     */
+    public function sampleHandsForConfig(): array
+    {
+        $rows = ApiUploadAsset::query()
+            ->where('purpose', ApiUploadAsset::PURPOSE_VIRTUAL_TRY_ON_SAMPLE_HAND)
+            ->where('status', ApiUploadAsset::STATUS_READY)
+            ->whereNull('deleted_at')
+            ->orderBy('id')
+            ->get();
+
+        $out = [];
+        foreach ($rows as $asset) {
+            $label = (string) ($asset->upload_token ?? '');
+            // upload_token field is repurposed at seed time as the human-readable label
+            // (e.g. "Light skin — left hand"). Fallback to public_id.
+            $label = $label !== '' ? $label : $asset->public_id;
+
+            // Public preview URL — these are static reference images stored under public/.
+            // Production builds should put the originals under public/images/virtual-nail/sample-hands/
+            // so they are served by the web server without a DB lookup.
+            $previewUrl = $this->resolveSampleAssetPublicUrl($asset);
+
+            $out[] = [
+                'id' => $asset->public_id,
+                'label' => $label,
+                'handSide' => (string) ($asset->guest_token ?? 'right'),
+                'previewUrl' => $previewUrl,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Sample hand images live in two places — public/ for fast static serving (previewUrl),
+     * and storage/app/private/api-uploads/sample-hands/ for the worker that processes the AI job.
+     * PreviewUrl points to the public copy so the mobile UI doesn't pay a DB round-trip per thumbnail.
+     */
+    private function resolveSampleAssetPublicUrl(ApiUploadAsset $asset): ?string
+    {
+        if (! $asset->path) {
+            return null;
+        }
+
+        // Public copies share the same filename as the private path's basename.
+        $filename = basename($asset->path);
+        $publicPath = 'images/virtual-nail/sample-hands/'.$filename;
+
+        $absolutePublicPath = public_path($publicPath);
+        if (is_file($absolutePublicPath)) {
+            return asset($publicPath);
+        }
+
+        // Fallback to signed download URL (always works, slightly slower).
+        $signedUrl = app(ApiUploadService::class)->temporaryUrl($asset, 60);
+        if ($signedUrl) {
+            return $signedUrl;
+        }
+
+        return null;
+    }
+
+    /**
      * Config payload for native NailBox try-on (GET /api/v1/nail/products/{id}/try-on-config).
      *
      * @return array{
@@ -1137,7 +1203,12 @@ class VirtualNailTrialService
      *   supportedShapes: list<string>,
      *   supportedLengths: list<string>,
      *   supportedVariants: list<array<string, mixed>>,
-     *   assets: array{designImageUrl: ?string, handGuideUrl: string, sampleAssets: list<array{type: string, url: string, label: string}>},
+     *   assets: array{
+     *     designImageUrl: ?string,
+     *     handGuideUrl: string,
+     *     sampleAssets: list<array{type: string, url: string, label: string}>,
+     *     sampleHands: list<array{id: string, label: string, handSide: string, previewUrl: string}>
+     *   },
      *   captureTips: list<string>,
      *   async: bool
      * }
@@ -1158,6 +1229,8 @@ class VirtualNailTrialService
             ],
         ];
 
+        $sampleHands = $this->sampleHandsForConfig();
+
         $base = [
             'productId' => $productId,
             'variantId' => null,
@@ -1174,6 +1247,7 @@ class VirtualNailTrialService
                 'designImageUrl' => null,
                 'handGuideUrl' => $handGuideUrl,
                 'sampleAssets' => $sampleAssets,
+                'sampleHands' => $sampleHands,
             ],
             'captureTips' => VirtualNailSettings::captureTips(),
             'async' => (bool) config('virtual_nail.async', true),
@@ -1266,6 +1340,7 @@ class VirtualNailTrialService
                 'designImageUrl' => $designImageUrl,
                 'handGuideUrl' => $handGuideUrl,
                 'sampleAssets' => $sampleAssets,
+                'sampleHands' => $sampleHands,
             ],
             'captureTips' => VirtualNailSettings::captureTips(),
             'async' => (bool) config('virtual_nail.async', true),

@@ -15,6 +15,14 @@ class ApiUploadAsset extends Model
 
     public const PURPOSE_VIRTUAL_TRY_ON_OUTPUT = 'virtual_try_on_output';
 
+    /** Pre-uploaded reference hand photos that customers can try designs on when they have no hand photo of their own. */
+    public const PURPOSE_VIRTUAL_TRY_ON_SAMPLE_HAND = 'virtual_try_on_sample_hand';
+
+    /** Purposes that any authenticated or guest caller may reference — public assets with no owner. */
+    public const PUBLIC_PURPOSES = [
+        self::PURPOSE_VIRTUAL_TRY_ON_SAMPLE_HAND,
+    ];
+
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_UPLOADING = 'uploading';
@@ -60,9 +68,11 @@ class ApiUploadAsset extends Model
     {
         static::creating(function (self $asset) {
             if (! $asset->public_id) {
-                $prefix = $asset->purpose === self::PURPOSE_VIRTUAL_TRY_ON_OUTPUT
-                    ? 'asset_out_'
-                    : 'asset_hand_';
+                $prefix = match ($asset->purpose) {
+                    self::PURPOSE_VIRTUAL_TRY_ON_OUTPUT => 'asset_out_',
+                    self::PURPOSE_VIRTUAL_TRY_ON_SAMPLE_HAND => 'asset_sample_',
+                    default => 'asset_hand_',
+                };
                 $asset->public_id = $prefix.Str::lower((string) Str::ulid());
             }
         });

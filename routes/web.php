@@ -765,6 +765,12 @@ Route::middleware('auth')->group(function () {
         Route::put('settings/virtual-nail', [VirtualNailSettingsController::class, 'update'])->name('settings.virtual-nail.update');
         Route::post('settings/virtual-nail/reset-prompt', [VirtualNailSettingsController::class, 'resetPrompt'])->name('settings.virtual-nail.reset-prompt');
 
+        // Sample Hands
+        Route::get('sample-hands', [\App\Http\Controllers\Admin\SampleHandController::class, 'index'])->name('sample-hands.index');
+        Route::post('sample-hands', [\App\Http\Controllers\Admin\SampleHandController::class, 'store'])->name('sample-hands.store');
+        Route::put('sample-hands/{publicId}', [\App\Http\Controllers\Admin\SampleHandController::class, 'update'])->name('sample-hands.update');
+        Route::delete('sample-hands/{publicId}', [\App\Http\Controllers\Admin\SampleHandController::class, 'destroy'])->name('sample-hands.destroy');
+
         // Pricing settings: quantity/bulk discounts
         Route::get('settings/bulk-discounts', [BulkDiscountSettingsController::class, 'edit'])->name('settings.bulk-discounts.edit');
         Route::put('settings/bulk-discounts', [BulkDiscountSettingsController::class, 'update'])->name('settings.bulk-discounts.update');

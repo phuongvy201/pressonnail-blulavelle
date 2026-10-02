@@ -41,12 +41,22 @@ class ApiUploadService
 
     public function presign(Request $request): JsonResponse
     {
-        $validated = $request->validate([
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'purpose' => ['required', 'string', 'in:'.ApiUploadAsset::PURPOSE_VIRTUAL_TRY_ON_HAND],
             'mimeType' => ['required', 'string', 'in:image/jpeg,image/jpg,image/png,image/webp'],
             'size' => ['required', 'integer', 'min:1024', 'max:'.($this->maxBytes())],
             'checksum' => ['required', 'string', 'regex:/^(sha256:)?[a-fA-F0-9]{64}$/'],
         ]);
+
+        if ($validator->fails()) {
+            $fields = [];
+            foreach ($validator->errors()->toArray() as $field => $messages) {
+                $fields[$field] = $messages;
+            }
+            return ApiResponse::error('VALIDATION_ERROR', 'Presign validation failed.', 422, $fields);
+        }
+
+        $validated = $validator->validated();
 
         $owner = $this->ownerFrom($request);
         if (! $owner['user_id'] && ! $owner['guest_token']) {

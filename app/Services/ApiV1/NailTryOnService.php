@@ -102,14 +102,29 @@ class NailTryOnService
         }
 
         $hand = ApiUploadAsset::query()->where('public_id', $validated['handImageAssetId'])->first();
-        if (! $hand || ! $hand->isOwnedBy($owner['user_id'], $owner['guest_token'])) {
+        if (! $hand || $hand->trashed()) {
+            return ApiResponse::error('ASSET_NOT_FOUND', 'Hand image asset not found.', 404);
+        }
+
+        // Public reference assets (sample hands) are owned by the system — anyone with a valid session may use them.
+        $isPublicSample = in_array($hand->purpose, ApiUploadAsset::PUBLIC_PURPOSES, true);
+
+        if (! $isPublicSample && ! $hand->isOwnedBy($owner['user_id'], $owner['guest_token'])) {
             return ApiResponse::error('ASSET_NOT_OWNED', 'Hand image asset not found or not owned.', 403);
         }
-        if ($hand->isExpired() || $hand->trashed()) {
+        if ($hand->isExpired()) {
             return ApiResponse::error('ASSET_EXPIRED', 'Hand image asset expired.', 410);
         }
-        if (! $hand->isReady() || $hand->purpose !== ApiUploadAsset::PURPOSE_VIRTUAL_TRY_ON_HAND) {
+        if (! $hand->isReady()) {
             return ApiResponse::error('UNSUPPORTED_IMAGE', 'Hand image asset is not ready for try-on.', 422);
+        }
+
+        // Sample hands skip user uploads but still go through the AI flow — same shape/length defaults.
+        if (! in_array($hand->purpose, [
+            ApiUploadAsset::PURPOSE_VIRTUAL_TRY_ON_HAND,
+            ApiUploadAsset::PURPOSE_VIRTUAL_TRY_ON_SAMPLE_HAND,
+        ], true)) {
+            return ApiResponse::error('UNSUPPORTED_IMAGE', 'Hand image asset is not supported for try-on.', 422);
         }
 
         $config = $this->virtualNail->tryOnConfigForProduct((int) $validated['productId']);
