@@ -59,6 +59,18 @@ class NailTryOnService
             );
         }
 
+        // Normalise snake_case from mobile clients to camelCase before validation.
+        $request->merge([
+            'handImageAssetId' => $request->input('hand_image_asset_id')
+                ?? $request->input('handImageAssetId'),
+            'productId' => $request->input('product_id')
+                ?? $request->input('productId'),
+            'variantId' => $request->input('variant_id')
+                ?? $request->input('variantId'),
+            'tryOnAssetVersion' => $request->input('try_on_asset_version')
+                ?? $request->input('tryOnAssetVersion'),
+        ]);
+
         $validated = $request->validate([
             'handImageAssetId' => ['required', 'string', 'max:64'],
             'productId' => ['required', 'integer', 'min:1'],
@@ -227,6 +239,12 @@ class NailTryOnService
     public function variants(Request $request, NailTryOn $parent): JsonResponse
     {
         $key = $this->idempotencyKey($request) ?: ('variant-'.$parent->public_id.'-'.Str::uuid());
+
+        $request->merge([
+            'productId' => $request->input('product_id') ?? $request->input('productId'),
+            'variantId' => $request->input('variant_id') ?? $request->input('variantId'),
+            'tryOnAssetVersion' => $request->input('try_on_asset_version') ?? $request->input('tryOnAssetVersion'),
+        ]);
 
         $validated = $request->validate([
             'productId' => ['required', 'integer', 'min:1'],

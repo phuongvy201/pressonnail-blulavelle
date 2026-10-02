@@ -61,9 +61,18 @@ class SampleHandController extends Controller
         $originalName = $file->getClientOriginalName();
         $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
 
-        // ── Determine mime type BEFORE moving (temp file will be deleted by move()) ──
-        $mimeType = $file->getMimeType()
-            ?? ($extension === 'jpg' || $extension === 'jpeg' ? 'image/jpeg' : 'image/'.$extension);
+        // ── Determine mime type — infer from extension first (temp file may be gone); getMimeType() as fallback ──
+        $mimeType = in_array($extension, ['jpg', 'jpeg'], true)
+            ? 'image/jpeg'
+            : ($extension === 'png' ? 'image/png' : ($extension === 'webp' ? 'image/webp' : null));
+
+        if ($mimeType === null) {
+            try {
+                $mimeType = $file->getMimeType();
+            } catch (\Throwable) {
+                $mimeType = 'application/octet-stream';
+            }
+        }
 
         // ── Persist the public copy ──────────────────────────────────────────
         $publicDir = public_path(self::PUBLIC_DIR);
