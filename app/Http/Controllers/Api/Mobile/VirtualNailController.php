@@ -44,23 +44,23 @@ class VirtualNailController extends Controller
         return $controller->history($request);
     }
 
-    public function pending(VirtualNailTrialController $controller): JsonResponse
+    public function pending(Request $request, VirtualNailTrialController $controller): JsonResponse
     {
-        return $controller->pending();
+        return $controller->pending($request);
     }
 
-    public function trialStatus(string $uuid, VirtualNailTrialController $controller): JsonResponse
+    public function trialStatus(Request $request, string $uuid, VirtualNailTrialController $controller): JsonResponse
     {
-        return $controller->trialStatus($uuid);
+        return $controller->trialStatus($request, $uuid);
     }
 
-    public function trialResult(string $uuid, VirtualNailTrialController $controller): JsonResponse
+    public function trialResult(Request $request, string $uuid, VirtualNailTrialController $controller)
     {
-        return $controller->trialResult($uuid);
+        return $controller->trialResult($request, $uuid);
     }
 
-    public function trialHand(string $uuid, VirtualNailTrialController $controller)
+    public function trialHand(Request $request, string $uuid, VirtualNailTrialController $controller)
     {
-        return $controller->trialHand($uuid);
+        return $controller->trialHand($request, $uuid);
     }
 }

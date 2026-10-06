@@ -48,24 +48,28 @@ class VirtualNailController extends Controller
         return $this->wrapStorefront($controller->history($request));
     }
 
-    public function pending(VirtualNailTrialController $controller): JsonResponse
+    public function pending(Request $request, VirtualNailTrialController $controller): JsonResponse
     {
-        return $this->wrapStorefront($controller->pending());
+        return $this->wrapStorefront($controller->pending($request));
     }
 
-    public function trialStatus(string $uuid, VirtualNailTrialController $controller): JsonResponse
+    public function trialStatus(Request $request, string $uuid, VirtualNailTrialController $controller): JsonResponse
     {
-        return $this->wrapStorefront($controller->trialStatus($uuid));
+        return $this->wrapStorefront($controller->trialStatus($request, $uuid));
     }
 
-    public function trialResult(string $uuid, VirtualNailTrialController $controller): JsonResponse
+    public function trialResult(Request $request, string $uuid, VirtualNailTrialController $controller): Response
     {
-        return $this->wrapStorefront($controller->trialResult($uuid));
+        $result = $controller->trialResult($request, $uuid);
+
+        return $result instanceof JsonResponse
+            ? $this->wrapStorefront($result)
+            : $result;
     }
 
-    public function trialHand(string $uuid, VirtualNailTrialController $controller): Response
+    public function trialHand(Request $request, string $uuid, VirtualNailTrialController $controller): Response
     {
-        $result = $controller->trialHand($uuid);
+        $result = $controller->trialHand($request, $uuid);
 
         return $result instanceof JsonResponse
             ? $this->wrapStorefront($result)
