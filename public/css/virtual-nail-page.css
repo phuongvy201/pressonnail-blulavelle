@@ -1204,6 +1204,84 @@
   background: rgba(255, 255, 255, .28);
 }
 
+/* Maintenance / unavailable banner — shown when AI try-on fails. */
+.vnt-tryon-banner {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 44px 18px 20px;
+  margin: 0 0 18px;
+  border-radius: 18px;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.vnt-tryon-banner--unavailable {
+  background: linear-gradient(135deg, #FFF1F5 0%, #FFE4EC 100%);
+  border: 1px solid #F5C2D1;
+  color: #6B1F38;
+  box-shadow: 0 6px 20px rgba(228, 73, 124, 0.08);
+}
+
+.vnt-tryon-banner__icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(228, 73, 124, 0.14);
+  color: #C41E5A;
+  margin-top: 2px;
+}
+
+.vnt-tryon-banner__body {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.vnt-tryon-banner__title {
+  margin: 0 0 4px;
+  font-family: var(--vnt-display, 'Fraunces', serif);
+  font-size: 17px;
+  font-weight: 700;
+  color: #6B1F38;
+  line-height: 1.25;
+}
+
+.vnt-tryon-banner__text {
+  margin: 0;
+  font-size: 13.5px;
+  color: #8A2A4A;
+  line-height: 1.55;
+}
+
+.vnt-tryon-banner__close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: #8A2A4A;
+  font-size: 22px;
+  line-height: 1;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.vnt-tryon-banner__close:hover {
+  background: rgba(196, 30, 90, 0.10);
+  color: #6B1F38;
+}
+
 .vnt-empty-box {
   max-width: 420px;
   margin: 64px auto;

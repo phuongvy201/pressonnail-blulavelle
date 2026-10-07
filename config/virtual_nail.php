@@ -25,8 +25,9 @@ return [
     ],
 
     'image_api' => [
-        'api_key' => (string) env('OPENAI_API_KEY', ''),
-        'base_url' => rtrim((string) env('OPENAI_BASE_URL', 'https://sv.devquote.shop/v1'), '/'),
+        // Dedicated override so we can disable image_api without breaking OpenAIService.
+        'api_key' => (string) env('VIRTUAL_NAIL_IMAGE_API_KEY', env('OPENAI_API_KEY', '')),
+        'base_url' => rtrim((string) env('VIRTUAL_NAIL_IMAGE_API_BASE_URL', env('OPENAI_BASE_URL', 'https://sv.devquote.shop/v1')), '/'),
         'model' => (string) env('VIRTUAL_NAIL_IMAGE_MODEL', env('OPENAI_IMAGE_MODEL', 'gpt-image-2')),
         'size' => (string) env('VIRTUAL_NAIL_IMAGE_SIZE', '1024x1024'),
         'response_format' => (string) env('VIRTUAL_NAIL_IMAGE_RESPONSE_FORMAT', 'b64_json'),

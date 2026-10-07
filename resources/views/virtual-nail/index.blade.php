@@ -42,6 +42,17 @@
             <p class="vnt-async-tip__text"><strong>Tip:</strong> Generation can take 1–3 minutes. You can browse the store while you wait — we’ll notify you when your preview is ready.</p>
         </div>
 
+        <div id="vnt-tryon-unavailable" class="vnt-tryon-banner vnt-tryon-banner--unavailable is-hidden" role="alert" aria-live="polite">
+            <div class="vnt-tryon-banner__icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+            </div>
+            <div class="vnt-tryon-banner__body">
+                <p class="vnt-tryon-banner__title">Try On is temporarily unavailable</p>
+                <p class="vnt-tryon-banner__text">We’re making a few improvements to our Try On experience. Please check back soon! You can still browse and shop all of our press-on nails as usual. 💕</p>
+            </div>
+            <button type="button" id="vnt-tryon-unavailable-close" class="vnt-tryon-banner__close" aria-label="Dismiss">×</button>
+        </div>
+
         <div class="vnt-page__grid">
             <div class="vnt-page__hand">
                 {{-- Step 1 --}}

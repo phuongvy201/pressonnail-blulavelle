@@ -61,7 +61,6 @@ class RecoverSampleHands extends Command
         // ── Step 1: restore missing binaries for sample-hand assets ────────
         $sampleAssets = ApiUploadAsset::query()
             ->where('purpose', ApiUploadAsset::PURPOSE_VIRTUAL_TRY_ON_SAMPLE_HAND)
-            ->whereNull('trashed_at')
             ->orderBy('id')
             ->get();
 

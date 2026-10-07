@@ -65,6 +65,8 @@
         els.lengthOptions = $('vnt-length-options');
         els.generateBtn = $('vnt-generate-btn');
         els.error = $('vnt-error');
+        els.tryonUnavailable = $('vnt-tryon-unavailable');
+        els.tryonUnavailableClose = $('vnt-tryon-unavailable-close');
         els.resultWrap = $('vnt-result-wrap');
         els.resultProcessing = $('vnt-result-processing');
         els.resultDone = $('vnt-result-done');
@@ -109,6 +111,29 @@
         }
         els.error.textContent = message;
         setHidden(els.error, false);
+    }
+
+    // Friendly "Try On is temporarily unavailable" banner — shown when AI generation
+    // fails for any reason (provider error, timeout, model unavailable, etc.).
+    // Validation errors (bad file, missing shape) still use the inline showError().
+    function showTryonUnavailable(reason) {
+        setHidden(els.tryonUnavailable, false);
+        if (els.resultWrap) {
+            setHidden(els.resultWrap, true);
+        }
+        if (els.backgroundNotice) {
+            setHidden(els.backgroundNotice, true);
+        }
+        if (state) {
+            state.pendingTrialId = null;
+        }
+        if (window.VirtualNailNotifier && reason && reason.trialId) {
+            window.VirtualNailNotifier.removePending(reason.trialId);
+        }
+    }
+
+    function hideTryonUnavailable() {
+        setHidden(els.tryonUnavailable, true);
     }
 
     function updateStatus(mode) {
@@ -784,6 +809,7 @@
         state.processing = true;
         updateGenerateButton();
         showError('');
+        hideTryonUnavailable();
         setResultView('processing');
 
         var form = new FormData();
@@ -809,11 +835,13 @@
                     throw new Error((res.data && res.data.message) ? res.data.message : 'Generation failed.');
                 }
                 state.resultImage = res.data.image;
+                hideTryonUnavailable();
                 showResult();
             })
             .catch(function (err) {
                 setResultView('idle');
                 showError(err.message || 'Something went wrong. Please try again.');
+                showTryonUnavailable();
             })
             .finally(function () {
                 state.processing = false;
@@ -932,6 +960,7 @@
         pollTrialStatus(trialId).then(function (data) {
             if (!data) return;
             if (data.status === 'completed') {
+                hideTryonUnavailable();
                 applyTrialResult(data);
             } else if (data.status === 'pending' || data.status === 'processing') {
                 trackAsyncTrial(trialId);
@@ -939,6 +968,7 @@
             } else if (data.status === 'failed') {
                 showError(data.error_message || 'Generation failed.');
                 setResultView('idle');
+                showTryonUnavailable({ trialId: trialId });
             }
         });
     }
@@ -1161,6 +1191,10 @@
         loadHistory();
         resumeTrialFromQuery();
     });
+
+    if (els.tryonUnavailableClose) {
+        els.tryonUnavailableClose.addEventListener('click', hideTryonUnavailable);
+    }
 
     window.addEventListener('pagehide', stopCamera);
 })();
