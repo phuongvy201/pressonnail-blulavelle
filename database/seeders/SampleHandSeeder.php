@@ -101,7 +101,8 @@ class SampleHandSeeder extends Seeder
                     'mime_type' => $meta['mime'],
                     'expected_size' => $meta['size'],
                     'checksum_sha256' => $meta['checksum'],
-                    'disk' => config('api_v1.upload_disk', 'local'),
+                    // Must match SampleHandController::store() which hardcodes 's3'.
+                    'disk' => 's3',
                     'path' => $stored['relative'],
                     'width' => $meta['width'],
                     'height' => $meta['height'],
@@ -165,7 +166,8 @@ class SampleHandSeeder extends Seeder
      */
     private function copyToPrivateDisk(string $sourceAbsolute, string $filename): ?array
     {
-        $disk = Storage::disk(config('api_v1.upload_disk', 'local'));
+        // Must use the same disk as SampleHandController::store() — that controller hardcodes 's3'.
+        $disk = Storage::disk('s3');
         $relative = self::STORAGE_DIR.'/'.$filename;
         $bytes = @file_get_contents($sourceAbsolute);
 
@@ -176,7 +178,7 @@ class SampleHandSeeder extends Seeder
         }
 
         if (! $disk->put($relative, $bytes)) {
-            $this->warn('Could not write '.$relative.' to private disk');
+            $this->warn('Could not write '.$relative.' to S3');
 
             return null;
         }
