@@ -24,8 +24,11 @@ class SampleHandController extends Controller
     /** Source folder served publicly as previews. */
     private const PUBLIC_DIR = 'images/virtual-nail/sample-hands';
 
-    /** Private folder on S3 accessed by the AI worker. */
-    private const S3_DIR = 'api-uploads/sample-hands';
+    /** Private folder on local disk accessed by the AI worker (must match SampleHandSeeder::STORAGE_DIR). */
+    private const STORAGE_DIR = 'api-uploads/sample-hands';
+
+    /** Local disk used to store sample hand binaries — must match ProcessNailTryOnJob reader. */
+    private const STORAGE_DISK = 'local';
 
     public function __construct(private ApiUploadService $uploads)
     {
@@ -92,13 +95,10 @@ class SampleHandController extends Controller
         $publicPath = $publicDir.'/'.$publicFilename;
         $file->move($publicDir, $publicFilename);
 
-        // ── Copy to S3 private storage (worker reads from here) ───────────────
-        $s3Path = self::S3_DIR.'/'.$publicFilename;
+        // ── Copy to private local storage (worker reads from here via local FS calls) ─
+        $s3Path = self::STORAGE_DIR.'/'.$publicFilename;
         $binary = file_get_contents($publicPath);
-        Storage::disk('s3')->put($s3Path, $binary, [
-            'ContentType' => $mimeType,
-            'visibility' => 'private',
-        ]);
+        Storage::disk(self::STORAGE_DISK)->put($s3Path, $binary);
 
         $byteSize = strlen($binary);
         $checksum = hash('sha256', $binary);
@@ -111,7 +111,7 @@ class SampleHandController extends Controller
             'mime_type' => $mimeType,
             'expected_size' => $byteSize,
             'checksum_sha256' => $checksum,
-            'disk' => 's3',
+            'disk' => self::STORAGE_DISK,
             'path' => $s3Path,
             'byte_size' => $byteSize,
             'status' => ApiUploadAsset::STATUS_READY,
@@ -170,15 +170,9 @@ class SampleHandController extends Controller
                 unlink($publicFile);
             }
 
-            // Remove S3 copy
-            if ($asset->disk === 's3' && $asset->path) {
-                Storage::disk('s3')->delete($asset->path);
-            } else {
-                // Legacy local fallback
-                $privateFile = Storage::disk('local')->path($asset->path ?? '');
-                if ($privateFile && is_file($privateFile)) {
-                    unlink($privateFile);
-                }
+            // Remove private copy from whichever disk the asset lives on
+            if ($asset->path && $asset->disk) {
+                Storage::disk($asset->disk)->delete($asset->path);
             }
         }
 

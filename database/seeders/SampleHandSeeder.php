@@ -32,6 +32,9 @@ class SampleHandSeeder extends Seeder
     /** Destination folder on the private local disk — used by ProcessNailTryOnJob. */
     private const STORAGE_DIR = 'api-uploads/sample-hands';
 
+    /** Local disk used to store sample hand binaries — must match ProcessNailTryOnJob reader. */
+    private const STORAGE_DISK = 'local';
+
     /** Hand-side keywords inferred from the filename. Anything else falls back to 'right'. */
     private const SIDE_KEYWORDS = [
         'left' => 'left',
@@ -101,8 +104,11 @@ class SampleHandSeeder extends Seeder
                     'mime_type' => $meta['mime'],
                     'expected_size' => $meta['size'],
                     'checksum_sha256' => $meta['checksum'],
-                    // Must match SampleHandController::store() which hardcodes 's3'.
-                    'disk' => 's3',
+                    // The queue worker (ProcessNailTryOnJob) reads files via local FS operations
+                    // (filesize/getimagesize/imagecreatefromstring). S3 disk->path() returns a virtual
+                    // key, not a local file path, so the worker would see "file not found" and fail
+                    // the job with UNSUPPORTED_IMAGE. Keep sample hands on the 'local' disk.
+                    'disk' => 'local',
                     'path' => $stored['relative'],
                     'width' => $meta['width'],
                     'height' => $meta['height'],
@@ -166,8 +172,9 @@ class SampleHandSeeder extends Seeder
      */
     private function copyToPrivateDisk(string $sourceAbsolute, string $filename): ?array
     {
-        // Must use the same disk as SampleHandController::store() — that controller hardcodes 's3'.
-        $disk = Storage::disk('s3');
+        // Must use the same disk as SampleHandController::store() so the AI worker can read the
+        // binary via local FS calls (filesize/getimagesize/imagecreatefromstring).
+        $disk = Storage::disk(self::STORAGE_DISK);
         $relative = self::STORAGE_DIR.'/'.$filename;
         $bytes = @file_get_contents($sourceAbsolute);
 
@@ -178,7 +185,7 @@ class SampleHandSeeder extends Seeder
         }
 
         if (! $disk->put($relative, $bytes)) {
-            $this->warn('Could not write '.$relative.' to S3');
+            $this->warn('Could not write '.$relative.' to '.self::STORAGE_DISK);
 
             return null;
         }
