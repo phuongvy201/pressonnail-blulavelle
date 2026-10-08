@@ -12,6 +12,9 @@ return [
 
     'stripe_checkout_enabled' => (bool) env('API_V1_STRIPE_CHECKOUT_ENABLED', true),
 
+    // Local mobile payment tests. Stays off unless this process uses an sk_test key.
+    'stripe_test_checkout_enabled' => (bool) env('API_V1_STRIPE_TEST_CHECKOUT_ENABLED', false),
+
     'guest_cart_header' => 'X-Guest-Cart-Token',
 
     'upload_disk' => env('API_V1_UPLOAD_DISK', 'local'),

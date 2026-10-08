@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\V1\OrderReviewController as V1OrderReviewController
 use App\Http\Controllers\Api\V1\PaymentController as V1PaymentController;
 use App\Http\Controllers\Api\V1\ProfileController as V1ProfileController;
 use App\Http\Controllers\Api\V1\SessionController as V1SessionController;
+use App\Http\Controllers\Api\V1\StripeTestCheckoutController as V1StripeTestCheckoutController;
 use App\Http\Controllers\Api\V1\UploadController as V1UploadController;
 use App\Http\Controllers\Api\V1\VirtualNailController as V1VirtualNailController;
 use App\Http\Controllers\Api\V1\WishlistController as V1WishlistController;
@@ -336,6 +337,13 @@ Route::prefix('v1')->name('api.v1.')->group(function () use ($v1Guest) {
 
         Route::post('/payments/stripe/intent', [V1PaymentController::class, 'createStripeIntent'])
             ->name('payments.stripe.intent');
+
+        Route::prefix('payments/stripe/test-checkout')->name('payments.stripe.test-checkout.')->group(function () {
+            Route::get('/complete', [V1StripeTestCheckoutController::class, 'complete'])->name('complete');
+            Route::post('/', [V1StripeTestCheckoutController::class, 'store'])->middleware('throttle:20,1')->name('store');
+            Route::get('/{attemptId}', [V1StripeTestCheckoutController::class, 'show'])->name('show');
+            Route::post('/{attemptId}/confirm', [V1StripeTestCheckoutController::class, 'confirm'])->name('confirm');
+        });
     });
 
     Route::middleware(array_merge($v1Guest, ['auth:sanctum', MobileCartSessionBridge::class]))->group(function () {
