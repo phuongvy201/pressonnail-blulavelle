@@ -6,9 +6,11 @@ use App\Models\ApiUploadAsset;
 use App\Support\ApiV1\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
+use Throwable;
 
 class ApiUploadService
 {
@@ -71,37 +73,118 @@ class ApiUploadService
         $ttlMinutes = (int) config('api_v1.upload_ttl_minutes', 15);
         $token = Str::random(40);
 
+        $mime = strtolower($validated['mimeType']) === 'image/jpg'
+            ? 'image/jpeg'
+            : strtolower($validated['mimeType']);
+        $ext = match ($mime) {
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            default => 'jpg',
+        };
+
+        $diskName = (string) config('api_v1.upload_disk', 'local');
+        $useS3 = $diskName === 's3' && $this->canUseS3();
+
+        // Build public_id up-front so we can derive the S3 key (matches the model's booted() rule).
+        $publicId = 'asset_hand_'.Str::lower((string) Str::ulid());
+        $s3Key = "api-uploads/{$publicId}/original.{$ext}";
+
         $asset = ApiUploadAsset::query()->create([
+            'public_id' => $publicId,
             'user_id' => $owner['user_id'],
             'guest_token' => $owner['guest_token'],
             'purpose' => $validated['purpose'],
-            'mime_type' => strtolower($validated['mimeType']) === 'image/jpg' ? 'image/jpeg' : strtolower($validated['mimeType']),
+            'mime_type' => $mime,
             'expected_size' => (int) $validated['size'],
             'checksum_sha256' => $checksum,
-            'disk' => config('api_v1.upload_disk', 'local'),
+            'disk' => $useS3 ? 's3' : $diskName,
+            'path' => $useS3 ? $s3Key : null,
             'status' => ApiUploadAsset::STATUS_PENDING,
             'upload_token' => hash('sha256', $token),
             'upload_expires_at' => now()->addMinutes($ttlMinutes),
         ]);
 
-        $uploadUrl = URL::temporarySignedRoute(
-            'api.v1.uploads.content',
-            now()->addMinutes($ttlMinutes),
-            ['uploadId' => $asset->public_id, 'uploadToken' => $token]
-        );
+        if ($useS3) {
+            try {
+                $presign = $this->presignS3PutObject($s3Key, $mime, $ttlMinutes);
+                $uploadUrl = $presign['url'];
+                $headers = array_merge($presign['headers'], [
+                    'Content-Type' => $mime,
+                ]);
+            } catch (Throwable $e) {
+                Log::error('ApiUploadService: S3 presign failed', [
+                    'uploadId' => $publicId,
+                    'key' => $s3Key,
+                    'error' => $e->getMessage(),
+                ]);
+                $asset->delete();
+
+                return ApiResponse::error(
+                    'STORAGE_UNAVAILABLE',
+                    'Could not generate upload URL. Try again or contact support.',
+                    503
+                );
+            }
+        } else {
+            $uploadUrl = URL::temporarySignedRoute(
+                'api.v1.uploads.content',
+                now()->addMinutes($ttlMinutes),
+                ['uploadId' => $asset->public_id, 'uploadToken' => $token]
+            );
+
+            $headers = [
+                'Content-Type' => $asset->mime_type,
+                'X-Upload-Token' => $token,
+            ];
+        }
 
         return ApiResponse::success([
             'uploadId' => $asset->public_id,
             'uploadUrl' => $uploadUrl,
             'method' => 'PUT',
-            'headers' => [
-                'Content-Type' => $asset->mime_type,
-                'X-Upload-Token' => $token,
-            ],
+            'headers' => $headers,
             'expiresAt' => ApiResponse::iso($asset->upload_expires_at),
             'purpose' => $asset->purpose,
             'maxBytes' => $this->maxBytes(),
+            'storage' => $useS3 ? 's3' : $diskName,
         ], null, 201);
+    }
+
+    private function canUseS3(): bool
+    {
+        $s3Config = config('filesystems.disks.s3');
+        if (! is_array($s3Config) || ($s3Config['driver'] ?? null) !== 's3') {
+            return false;
+        }
+
+        return ! empty($s3Config['key'])
+            && ! empty($s3Config['secret'])
+            && ! empty($s3Config['bucket'])
+            && ! empty($s3Config['region']);
+    }
+
+    private function presignS3PutObject(string $key, string $mimeType, int $ttlMinutes): array
+    {
+        $expiresAt = now()->addMinutes($ttlMinutes);
+
+        $disk = Storage::disk('s3');
+
+        if (! method_exists($disk, 'temporaryUploadUrl')) {
+            throw new \RuntimeException('S3 disk does not support temporaryUploadUrl.');
+        }
+
+        $result = $disk->temporaryUploadUrl($key, $expiresAt, [
+            'ContentType' => $mimeType,
+        ]);
+
+        $headers = $result['headers'] ?? [];
+        // Drop the host header — client will compute the destination itself.
+        unset($headers['Host']);
+
+        return [
+            'url' => $result['url'],
+            'headers' => $headers,
+        ];
     }
 
     public function putContent(Request $request, string $uploadId): JsonResponse
@@ -213,6 +296,15 @@ class ApiUploadService
             return ApiResponse::error('UNSUPPORTED_IMAGE', 'Upload content missing. PUT binary first.', 422);
         }
 
+        // For S3 direct uploads the validation pipeline (size, checksum, EXIF, dimensions)
+        // didn't run during PUT, so do it now before marking ready.
+        if ($asset->disk === 's3') {
+            $result = $this->finalizeS3Asset($asset);
+            if ($result !== null) {
+                return $result;
+            }
+        }
+
         $asset->update([
             'status' => ApiUploadAsset::STATUS_READY,
             'completed_at' => now(),
@@ -220,6 +312,84 @@ class ApiUploadService
         ]);
 
         return ApiResponse::success($this->readyPayload($asset->fresh()));
+    }
+
+    /**
+     * Download the freshly uploaded S3 object, validate it, strip EXIF, and re-upload.
+     * Returns null on success, or a JsonResponse with the proper error on failure.
+     */
+    private function finalizeS3Asset(ApiUploadAsset $asset): ?JsonResponse
+    {
+        try {
+            $binary = Storage::disk('s3')->get($asset->path);
+        } catch (Throwable $e) {
+            Log::error('ApiUploadService: S3 download failed during finalize', [
+                'uploadId' => $asset->public_id,
+                'key' => $asset->path,
+                'error' => $e->getMessage(),
+            ]);
+
+            return ApiResponse::error('UNSUPPORTED_IMAGE', 'Could not read uploaded object.', 422);
+        }
+
+        if ($binary === '' || $binary === false) {
+            return ApiResponse::error('UNSUPPORTED_IMAGE', 'Empty upload body.', 422);
+        }
+
+        $size = strlen($binary);
+        if ($size > $this->maxBytes()) {
+            return ApiResponse::error('UNSUPPORTED_IMAGE', 'Image exceeds maximum allowed size.', 422);
+        }
+
+        if (abs($size - (int) $asset->expected_size) > max(1024, (int) ($asset->expected_size * 0.02))) {
+            return ApiResponse::error('UNSUPPORTED_IMAGE', 'Uploaded size does not match declared size.', 422);
+        }
+
+        $checksum = hash('sha256', $binary);
+        if (! hash_equals($asset->checksum_sha256, $checksum)) {
+            return ApiResponse::error('UNSUPPORTED_IMAGE', 'Checksum mismatch.', 422);
+        }
+
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $detected = $finfo->buffer($binary) ?: '';
+        if (! in_array($detected, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+            return ApiResponse::error('UNSUPPORTED_IMAGE', 'MIME type is not an allowed image.', 422);
+        }
+
+        $cleaned = $this->stripExif($binary, $detected);
+        if ($cleaned === null) {
+            return ApiResponse::error('UNSUPPORTED_IMAGE', 'Could not process image pixels.', 422);
+        }
+
+        [$width, $height] = $this->dimensions($cleaned['binary']);
+        $minSide = (int) config('api_v1.upload_min_side', 256);
+        $maxSide = (int) config('api_v1.upload_max_side', 4096);
+        if ($width < $minSide || $height < $minSide) {
+            return ApiResponse::error('UNSUPPORTED_IMAGE', 'Image resolution is too small.', 422);
+        }
+        if ($width > $maxSide || $height > $maxSide) {
+            return ApiResponse::error('UNSUPPORTED_IMAGE', 'Image resolution is too large.', 422);
+        }
+
+        // Re-upload sanitized bytes (so EXIF metadata is stripped from S3 object).
+        $ext = match ($cleaned['mime']) {
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            default => 'jpg',
+        };
+        $sanitizedKey = 'api-uploads/'.$asset->public_id.'/original.'.$ext;
+        Storage::disk('s3')->put($sanitizedKey, $cleaned['binary']);
+
+        $asset->update([
+            'path' => $sanitizedKey,
+            'mime_type' => $cleaned['mime'],
+            'byte_size' => strlen($cleaned['binary']),
+            'width' => $width,
+            'height' => $height,
+            'checksum_sha256' => hash('sha256', $cleaned['binary']),
+        ]);
+
+        return null;
     }
 
     public function destroy(Request $request, string $uploadId): JsonResponse
