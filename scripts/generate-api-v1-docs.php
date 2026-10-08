@@ -665,6 +665,33 @@ $paths = [
             [$path('orderNumber', ['type' => 'string', 'example' => 'BL-100234'], 'Order number')]
         ),
     ],
+    '/api/v1/orders/{orderNumber}/reviews' => [
+        'get' => $ops(
+            'Order review eligibility',
+            'Orders',
+            true,
+            'Shows which products on this order can be reviewed. A review is allowed only when the order status is delivered, the product is on the order, it is not a gift card, and this customer has not already reviewed that product.',
+            [$path('orderNumber', ['type' => 'string', 'example' => 'BL-100234'], 'Order number')]
+        ),
+        'post' => $ops(
+            'Submit a verified purchase review',
+            'Orders',
+            true,
+            'Creates one verified-purchase review for a product on a delivered order. Shipped, processing, pending and cancelled orders are rejected with ORDER_NOT_DELIVERED. A second review for the same product returns ALREADY_REVIEWED.',
+            [$path('orderNumber', ['type' => 'string', 'example' => 'BL-100234'], 'Order number')],
+            $jsonBody([
+                'type' => 'object',
+                'required' => ['productId', 'rating', 'reviewText'],
+                'properties' => [
+                    'productId' => ['type' => 'integer', 'minimum' => 1, 'example' => 10, 'description' => 'Product on this order. `product_id` is accepted as an alias.'],
+                    'rating' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 5, 'example' => 5],
+                    'title' => ['type' => 'string', 'maxLength' => 120, 'nullable' => true, 'example' => 'Beautiful set'],
+                    'reviewText' => ['type' => 'string', 'maxLength' => 2000, 'example' => 'The nails arrived in perfect shape.', 'description' => '`review_text` is accepted as an alias.'],
+                    'reviewImage' => ['type' => 'string', 'format' => 'binary', 'nullable' => true, 'description' => 'Optional jpeg, png, webp or gif up to 5 MB. Send as multipart field `reviewImage` or `review_image`.'],
+                ],
+            ])
+        ),
+    ],
     '/api/v1/orders/{orderNumber}/cancel' => [
         'post' => $ops(
             'Cancel order',
@@ -1533,6 +1560,60 @@ $responseCatalog = [
             'totalAmount' => 3098,
             'currency' => 'USD',
             'items' => [['productId' => 10, 'name' => 'Classic Set', 'quantity' => 1, 'price' => 2499]],
+        ],
+    ],
+    'GET /api/v1/orders/{orderNumber}/reviews' => [
+        'data' => ['type' => 'object', 'additionalProperties' => true],
+        'example' => [
+            'orderNumber' => 'BL-100234',
+            'status' => 'delivered',
+            'canReview' => true,
+            'items' => [[
+                'orderItemId' => 501,
+                'productId' => 10,
+                'productName' => 'Classic Set',
+                'canReview' => true,
+                'reviewBlockReason' => null,
+                'review' => null,
+            ]],
+        ],
+    ],
+    'POST /api/v1/orders/{orderNumber}/reviews' => [
+        'status' => 201,
+        'data' => ['type' => 'object', 'additionalProperties' => true],
+        'example' => [
+            'review' => [
+                'id' => 88,
+                'orderNumber' => 'BL-100234',
+                'productId' => 10,
+                'rating' => 5,
+                'title' => 'Beautiful set',
+                'reviewText' => 'The nails arrived in perfect shape.',
+                'imageUrl' => null,
+                'isVerifiedPurchase' => true,
+                'isApproved' => true,
+                'createdAt' => '2026-10-08T08:00:00Z',
+            ],
+        ],
+        'metaExample' => ['message' => 'Thank you! Your review has been submitted successfully.'],
+        'extra' => [
+            '409' => [
+                'description' => 'Order is not delivered, or this product was already reviewed',
+                'content' => [
+                    'application/json' => [
+                        'schema' => ['$ref' => '#/components/schemas/ErrorEnvelope'],
+                        'example' => [
+                            'success' => false,
+                            'error' => [
+                                'code' => 'ORDER_NOT_DELIVERED',
+                                'message' => 'You can review this order after it is delivered.',
+                                'fields' => new stdClass(),
+                            ],
+                            'requestId' => 'ios-req-001',
+                        ],
+                    ],
+                ],
+            ],
         ],
     ],
     'POST /api/v1/orders/{orderNumber}/cancel' => [

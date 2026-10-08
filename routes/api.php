@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\CheckoutController as V1CheckoutController;
 use App\Http\Controllers\Api\V1\NailTryOnController as V1NailTryOnController;
 use App\Http\Controllers\Api\V1\NailTryOnJobController as V1NailTryOnJobController;
 use App\Http\Controllers\Api\V1\OrderController as V1OrderController;
+use App\Http\Controllers\Api\V1\OrderReviewController as V1OrderReviewController;
 use App\Http\Controllers\Api\V1\PaymentController as V1PaymentController;
 use App\Http\Controllers\Api\V1\ProfileController as V1ProfileController;
 use App\Http\Controllers\Api\V1\SessionController as V1SessionController;
@@ -365,6 +366,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () use ($v1Guest) {
         Route::prefix('orders')->name('orders.')->group(function () {
             Route::get('/', [V1OrderController::class, 'index'])->name('index');
             Route::get('/{orderNumber}', [V1OrderController::class, 'show'])->name('show');
+            Route::get('/{orderNumber}/reviews', [V1OrderReviewController::class, 'index'])->name('reviews.index');
+            Route::post('/{orderNumber}/reviews', [V1OrderReviewController::class, 'store'])->name('reviews.store');
             Route::post('/{orderNumber}/cancel', [V1OrderController::class, 'cancel'])->name('cancel');
             Route::post('/{orderNumber}/return-request', [V1OrderController::class, 'returnRequest'])->name('return-request');
         });
