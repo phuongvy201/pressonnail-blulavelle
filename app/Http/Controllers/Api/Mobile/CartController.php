@@ -35,12 +35,12 @@ class CartController extends Controller
 
     public function destroy(Request $request, int $itemId, StorefrontCartController $controller): JsonResponse
     {
-        return $controller->remove($request, $itemId);
+        return $controller->remove($itemId);
     }
 
     public function clear(Request $request, StorefrontCartController $controller): JsonResponse
     {
-        return $controller->clear($request);
+        return $controller->clear();
     }
 
     public function setDiscountMode(Request $request, StorefrontCartController $controller): JsonResponse

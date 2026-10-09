@@ -839,8 +839,28 @@
                     "productId": {
                         "type": "integer"
                     },
+                    "productName": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "productSlug": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "productImageUrl": {
+                        "type": "string",
+                        "nullable": true
+                    },
                     "variantId": {
                         "type": "integer",
+                        "nullable": true
+                    },
+                    "shape": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "length": {
+                        "type": "string",
                         "nullable": true
                     },
                     "tryOnAssetVersion": {
@@ -14786,6 +14806,204 @@
                 }
             }
         },
+        "/api/v1/nail/try-on-studio": {
+            "get": {
+                "tags": [
+                    "Nail Try-On"
+                ],
+                "summary": "Try-on studio options",
+                "description": "Shapes, lengths, capture tips, notice copy and sample hands from Virtual Nail settings. Does not require a product.",
+                "security": [],
+                "parameters": [
+                    {
+                        "name": "X-Guest-Cart-Token",
+                        "in": "header",
+                        "description": "Guest cart/wishlist token. Returned on first cart/wishlist response; send on subsequent guest calls.",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 32,
+                            "maxLength": 64
+                        }
+                    },
+                    {
+                        "name": "X-Request-ID",
+                        "in": "header",
+                        "description": "Optional client request id; echoed back on the response.",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 8,
+                            "maxLength": 128,
+                            "example": "ios-req-001"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success envelope. Money fields inside `data` are integer minor units (3299 = $32.99).",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "Echo of request id",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "success",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "enum": [
+                                                true
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/TryOnConfig"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "nullable": true,
+                                            "additionalProperties": true,
+                                            "description": "Optional metadata (pagination, message, api version, replayed, …)"
+                                        }
+                                    }
+                                },
+                                "example": {
+                                    "success": true,
+                                    "data": {
+                                        "productId": 10,
+                                        "variantId": null,
+                                        "tryOnEnabled": true,
+                                        "tryOnAssetVersion": "2026-09-01",
+                                        "supportedVariants": [
+                                            {
+                                                "shape": "almond",
+                                                "length": "medium"
+                                            }
+                                        ],
+                                        "assets": {
+                                            "handGuideUrl": "https://cdn.example.com/try-on/hand-guide.webp",
+                                            "designReferenceUrl": "https://cdn.example.com/products/classic.webp"
+                                        },
+                                        "unsupportedReason": null,
+                                        "unsupportedMessage": null
+                                    },
+                                    "meta": {
+                                        "api": "nail.try-on-studio",
+                                        "version": "1.2.0"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "UNAUTHENTICATED",
+                                        "message": "Authentication is required.",
+                                        "fields": {}
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "VALIDATION_ERROR",
+                                        "message": "The given data was invalid.",
+                                        "fields": {
+                                            "email": [
+                                                "The email field is required."
+                                            ]
+                                        }
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "NOT_FOUND",
+                                        "message": "The requested resource was not found.",
+                                        "fields": {}
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limited",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "RATE_LIMITED",
+                                        "message": "Too many requests.",
+                                        "fields": {}
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "INTERNAL_ERROR",
+                                        "message": "An unexpected error occurred.",
+                                        "fields": {}
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/nail/products/{productId}/try-on-config": {
             "get": {
                 "tags": [
@@ -16071,6 +16289,14 @@
                                             "right"
                                         ],
                                         "default": "auto"
+                                    },
+                                    "shape": {
+                                        "type": "string",
+                                        "example": "Almond"
+                                    },
+                                    "length": {
+                                        "type": "string",
+                                        "example": "Medium"
                                     }
                                 }
                             }

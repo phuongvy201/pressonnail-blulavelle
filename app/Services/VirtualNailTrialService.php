@@ -1250,6 +1250,8 @@ class VirtualNailTrialService
                 'sampleHands' => $sampleHands,
             ],
             'captureTips' => VirtualNailSettings::captureTips(),
+            'noticeTitle' => VirtualNailSettings::noticeTitle(),
+            'noticeText' => VirtualNailSettings::noticeText(),
             'async' => (bool) config('virtual_nail.async', true),
         ];
 
@@ -1343,8 +1345,40 @@ class VirtualNailTrialService
                 'sampleHands' => $sampleHands,
             ],
             'captureTips' => VirtualNailSettings::captureTips(),
+            'noticeTitle' => VirtualNailSettings::noticeTitle(),
+            'noticeText' => VirtualNailSettings::noticeText(),
             'async' => (bool) config('virtual_nail.async', true),
         ];
+    }
+
+    /**
+     * Storefront try-on options that do not depend on a product: shapes, lengths,
+     * capture tips, notice copy and sample hands from Virtual Nail settings.
+     *
+     * @return array<string, mixed>
+     */
+    public function tryOnStudioConfig(): array
+    {
+        $config = $this->tryOnConfigForProduct(null);
+        $ready = VirtualNailSettings::enabled() && $this->isConfigured();
+
+        $config['productId'] = null;
+        $config['tryOnEnabled'] = $ready;
+        $config['supportedShapes'] = VirtualNailSettings::shapes();
+        $config['supportedLengths'] = VirtualNailSettings::lengths();
+        $config['defaults'] = [
+            'shape' => VirtualNailSettings::defaultShape(),
+            'length' => VirtualNailSettings::defaultLength(),
+        ];
+        $config['noticeTitle'] = VirtualNailSettings::noticeTitle();
+        $config['noticeText'] = VirtualNailSettings::noticeText();
+        $config['captureTips'] = VirtualNailSettings::captureTips();
+        if ($ready) {
+            $config['unsupportedReason'] = null;
+            $config['unsupportedMessage'] = null;
+        }
+
+        return $config;
     }
 
     /**

@@ -49,13 +49,14 @@ class StripeTestCheckoutController extends Controller
         $amount = ApiResponse::toMinor($validated['total']);
         $currency = strtolower($validated['currency']);
         Stripe::setApiKey((string) config('services.stripe.secret'));
+        $returnUrl = rtrim($request->getSchemeAndHttpHost(), '/').'/api/v1/payments/stripe/test-checkout/complete';
 
         $session = StripeCheckoutSession::create([
             'mode' => 'payment',
             'customer_email' => $validated['customer_email'],
             'client_reference_id' => $attemptId,
-            'success_url' => url('/api/v1/payments/stripe/test-checkout/complete').'?attempt='.urlencode($attemptId),
-            'cancel_url' => url('/api/v1/payments/stripe/test-checkout/complete').'?attempt='.urlencode($attemptId).'&cancelled=1',
+            'success_url' => $returnUrl.'?attempt='.urlencode($attemptId),
+            'cancel_url' => $returnUrl.'?attempt='.urlencode($attemptId).'&cancelled=1',
             'line_items' => [[
                 'quantity' => 1,
                 'price_data' => [

@@ -607,6 +607,20 @@ class CartController extends Controller
     public function remove($item_id)
     {
         try {
+            // Some callers passed the HTTP request as the first argument, so
+            // Cart::where('id', $request) never matched line 6159 and firstOrFail threw.
+            if ($item_id instanceof Request) {
+                $item_id = $item_id->route('itemId') ?? $item_id->route('item_id');
+            }
+
+            $item_id = (int) $item_id;
+            if ($item_id < 1) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cart item was not found.',
+                ], 404);
+            }
+
             $sessionId = session()->getId();
             $userId = Auth::id();
 

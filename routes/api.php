@@ -243,6 +243,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () use ($v1Guest) {
         });
 
         Route::prefix('nail')->name('nail.')->middleware('throttle:virtual-nail-browse')->group(function () {
+            Route::get('/try-on-studio', [V1NailTryOnController::class, 'studio'])->name('try-on-studio');
             Route::get('/products/{productId}/try-on-config', [V1NailTryOnController::class, 'tryOnConfig'])
                 ->whereNumber('productId')
                 ->name('products.try-on-config');

@@ -837,6 +837,15 @@ $paths = [
             ], false)
         ),
     ],
+    '/api/v1/nail/try-on-studio' => [
+        'get' => $ops(
+            'Try-on studio options',
+            'Nail Try-On',
+            false,
+            'Shapes, lengths, capture tips, notice copy and sample hands from Virtual Nail settings. Does not require a product.',
+            [$guestCartHeader]
+        ),
+    ],
     '/api/v1/nail/products/{productId}/try-on-config' => [
         'get' => $ops(
             'NailBox try-on config',
@@ -904,6 +913,8 @@ $paths = [
                     'variantId' => ['type' => 'integer', 'nullable' => true, 'example' => 789],
                     'tryOnAssetVersion' => ['type' => 'string', 'example' => 'tryon_456_v3'],
                     'handSide' => ['type' => 'string', 'enum' => ['auto', 'left', 'right'], 'default' => 'auto'],
+                    'shape' => ['type' => 'string', 'example' => 'Almond'],
+                    'length' => ['type' => 'string', 'example' => 'Medium'],
                 ],
             ])
         ),
@@ -1662,6 +1673,11 @@ $responseCatalog = [
             'currency' => 'usd',
         ],
     ],
+    'GET /api/v1/nail/try-on-studio' => [
+        'data' => $ref('TryOnConfig'),
+        'example' => $tryOnConfigExample,
+        'metaExample' => ['api' => 'nail.try-on-studio', 'version' => '1.2.0'],
+    ],
     'GET /api/v1/nail/products/{productId}/try-on-config' => [
         'data' => $ref('TryOnConfig'),
         'example' => $tryOnConfigExample,
@@ -2188,7 +2204,12 @@ $componentSchemas = [
             ],
             'handImageAssetId' => ['type' => 'string', 'nullable' => true],
             'productId' => ['type' => 'integer'],
+            'productName' => ['type' => 'string', 'nullable' => true],
+            'productSlug' => ['type' => 'string', 'nullable' => true],
+            'productImageUrl' => ['type' => 'string', 'nullable' => true],
             'variantId' => ['type' => 'integer', 'nullable' => true],
+            'shape' => ['type' => 'string', 'nullable' => true],
+            'length' => ['type' => 'string', 'nullable' => true],
             'tryOnAssetVersion' => ['type' => 'string', 'nullable' => true],
             'outputAssetId' => ['type' => 'string', 'nullable' => true],
             'resultImageUrl' => ['type' => 'string', 'nullable' => true, 'description' => 'Short-lived signed URL'],

@@ -14,6 +14,18 @@ class NailTryOnController extends Controller
     }
 
     /**
+     * GET /api/v1/nail/try-on-studio
+     * Shapes, lengths, capture tips, notice and sample hands from Virtual Nail settings.
+     */
+    public function studio(): JsonResponse
+    {
+        return ApiResponse::success($this->virtualNail->tryOnStudioConfig(), [
+            'api' => 'nail.try-on-studio',
+            'version' => config('api_v1.version', '1.0.0'),
+        ]);
+    }
+
+    /**
      * GET /api/v1/nail/products/{productId}/try-on-config
      */
     public function tryOnConfig(int $productId): JsonResponse
