@@ -210,6 +210,25 @@ $paths = [
             ])
         ),
     ],
+    '/api/v1/auth/social' => [
+        'post' => $ops(
+            'Google or Facebook sign-in + Bearer token',
+            'Auth',
+            false,
+            'Verifies a Google ID token or Facebook user access token, then returns the same access token as login. Send idToken for Google and accessToken for Facebook. Optional X-Guest-Cart-Token merges a guest cart.',
+            [$guestCartHeader],
+            $jsonBody([
+                'type' => 'object',
+                'required' => ['provider'],
+                'properties' => [
+                    'provider' => ['type' => 'string', 'enum' => ['google', 'facebook'], 'example' => 'facebook'],
+                    'idToken' => ['type' => 'string', 'description' => 'Google ID token. Required when provider is google.'],
+                    'accessToken' => ['type' => 'string', 'description' => 'Facebook user access token. Required when provider is facebook.'],
+                    'deviceName' => ['type' => 'string', 'maxLength' => 120, 'example' => 'BluLavelle app'],
+                ],
+            ])
+        ),
+    ],
     '/api/v1/auth/forgot-password' => [
         'post' => $ops(
             'Forgot password',
@@ -1321,6 +1340,10 @@ $responseCatalog = [
         'example' => ['token' => $tokenExample, 'user' => $userExample],
     ],
     'POST /api/v1/auth/login' => [
+        'data' => $ref('AuthTokenData'),
+        'example' => ['token' => $tokenExample, 'user' => $userExample],
+    ],
+    'POST /api/v1/auth/social' => [
         'data' => $ref('AuthTokenData'),
         'example' => ['token' => $tokenExample, 'user' => $userExample],
     ],

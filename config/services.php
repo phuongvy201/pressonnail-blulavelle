@@ -62,6 +62,7 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'mobile_client_ids' => env('GOOGLE_MOBILE_CLIENT_IDS', ''),
         'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL') . '/auth/google/callback'),
         'tag_manager_id' => env('GOOGLE_TAG_MANAGER_ID', 'GTM-5T5M2NG4'),
         'ads_id' => env('GOOGLE_ADS_ID', 'AW-17718009492'),

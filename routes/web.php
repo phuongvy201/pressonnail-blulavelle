@@ -552,6 +552,9 @@ Route::middleware(['web'])->prefix('api/auth')->group(function () {
     Route::post('/login', [ApiAuthController::class, 'login'])
         ->middleware('guest')
         ->name('api.auth.login');
+    Route::post('/social', [\App\Http\Controllers\Api\SocialAuthController::class, 'store'])
+        ->middleware(['guest', 'throttle:login'])
+        ->name('api.auth.social');
     Route::post('/logout', [ApiAuthController::class, 'logout'])
         ->middleware('auth')
         ->name('api.auth.logout');

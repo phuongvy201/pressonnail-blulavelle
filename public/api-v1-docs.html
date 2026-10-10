@@ -2056,6 +2056,237 @@
                 }
             }
         },
+        "/api/v1/auth/social": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Google or Facebook sign-in + Bearer token",
+                "description": "Verifies a Google ID token or Facebook user access token, then returns the same access token as login. Send idToken for Google and accessToken for Facebook. Optional X-Guest-Cart-Token merges a guest cart.",
+                "security": [],
+                "parameters": [
+                    {
+                        "name": "X-Guest-Cart-Token",
+                        "in": "header",
+                        "description": "Guest cart/wishlist token. Returned on first cart/wishlist response; send on subsequent guest calls.",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 32,
+                            "maxLength": 64
+                        }
+                    },
+                    {
+                        "name": "X-Request-ID",
+                        "in": "header",
+                        "description": "Optional client request id; echoed back on the response.",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 8,
+                            "maxLength": 128,
+                            "example": "ios-req-001"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success envelope. Money fields inside `data` are integer minor units (3299 = $32.99).",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "Echo of request id",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "success",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "enum": [
+                                                true
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/AuthTokenData"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "nullable": true,
+                                            "additionalProperties": true,
+                                            "description": "Optional metadata (pagination, message, api version, replayed, …)"
+                                        }
+                                    }
+                                },
+                                "example": {
+                                    "success": true,
+                                    "data": {
+                                        "token": {
+                                            "token": "1|plainTextSanctumTokenHere",
+                                            "tokenType": "Bearer",
+                                            "expiresAt": "2026-10-07T08:00:00Z",
+                                            "sessionId": "42",
+                                            "deviceName": "iPhone 16"
+                                        },
+                                        "user": {
+                                            "id": 1,
+                                            "name": "Jane Doe",
+                                            "email": "jane@example.com",
+                                            "phone": "+12025550123",
+                                            "avatar": null,
+                                            "emailVerified": true,
+                                            "createdAt": "2026-09-01T12:00:00Z",
+                                            "updatedAt": "2026-09-07T08:00:00Z"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "UNAUTHENTICATED",
+                                        "message": "Authentication is required.",
+                                        "fields": {}
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "VALIDATION_ERROR",
+                                        "message": "The given data was invalid.",
+                                        "fields": {
+                                            "email": [
+                                                "The email field is required."
+                                            ]
+                                        }
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "NOT_FOUND",
+                                        "message": "The requested resource was not found.",
+                                        "fields": {}
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limited",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "RATE_LIMITED",
+                                        "message": "Too many requests.",
+                                        "fields": {}
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "INTERNAL_ERROR",
+                                        "message": "An unexpected error occurred.",
+                                        "fields": {}
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "provider"
+                                ],
+                                "properties": {
+                                    "provider": {
+                                        "type": "string",
+                                        "enum": [
+                                            "google",
+                                            "facebook"
+                                        ],
+                                        "example": "facebook"
+                                    },
+                                    "idToken": {
+                                        "type": "string",
+                                        "description": "Google ID token. Required when provider is google."
+                                    },
+                                    "accessToken": {
+                                        "type": "string",
+                                        "description": "Facebook user access token. Required when provider is facebook."
+                                    },
+                                    "deviceName": {
+                                        "type": "string",
+                                        "maxLength": 120,
+                                        "example": "BluLavelle app"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/forgot-password": {
             "post": {
                 "tags": [

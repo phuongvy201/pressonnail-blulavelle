@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Mobile\GuestCartMerger;
 use App\Services\RecaptchaVerifier;
+use App\Services\SocialIdentityVerifier;
 use App\Support\ApiV1\ApiResponse;
 use App\Support\ApiV1\TokenIssuer;
 use Illuminate\Auth\Events\PasswordReset;
@@ -93,6 +94,41 @@ class AuthController extends Controller
 
         return ApiResponse::success([
             'token' => $tokens->issue($user, $request, $request->input('deviceName')),
+            'user' => $this->userPayload($user),
+        ]);
+    }
+
+    public function social(Request $request, TokenIssuer $tokens, GuestCartMerger $merger, SocialIdentityVerifier $identities): JsonResponse
+    {
+        $validated = $request->validate([
+            'provider' => ['required', 'in:google,facebook'],
+            'idToken' => ['nullable', 'string', 'max:4096'],
+            'accessToken' => ['nullable', 'string', 'max:4096'],
+            'deviceName' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        try {
+            $user = $identities->findOrCreate($identities->profile(
+                $validated['provider'],
+                $validated['idToken'] ?? '',
+                $validated['accessToken'] ?? '',
+            ));
+        } catch (\InvalidArgumentException $exception) {
+            return ApiResponse::error('SOCIAL_AUTH_FAILED', $exception->getMessage(), 422);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return ApiResponse::error('SOCIAL_AUTH_FAILED', 'Unable to sign in with this account. Please try again.', 502);
+        }
+
+        if ($user->anonymized_at) {
+            return ApiResponse::error('SOCIAL_AUTH_FAILED', 'This account is no longer available.', 403);
+        }
+
+        $this->mergeGuest($request, $user, $merger);
+
+        return ApiResponse::success([
+            'token' => $tokens->issue($user, $request, $validated['deviceName'] ?? null),
             'user' => $this->userPayload($user),
         ]);
     }

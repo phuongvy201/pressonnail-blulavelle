@@ -219,6 +219,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () use ($v1Guest) {
         Route::get('/captcha', [V1AuthController::class, 'captcha'])->name('captcha');
         Route::post('/register', [V1AuthController::class, 'register'])->middleware('throttle:register')->name('register');
         Route::post('/login', [V1AuthController::class, 'login'])->middleware('throttle:login')->name('login');
+        Route::post('/social', [V1AuthController::class, 'social'])->middleware('throttle:login')->name('social');
         Route::post('/forgot-password', [V1AuthController::class, 'forgotPassword'])->middleware('throttle:6,1')->name('forgot-password');
         Route::post('/reset-password', [V1AuthController::class, 'resetPassword'])->middleware('throttle:6,1')->name('reset-password');
     });
