@@ -2061,8 +2061,8 @@
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Google or Facebook sign-in + Bearer token",
-                "description": "Verifies a Google ID token or Facebook user access token, then returns the same access token as login. Send idToken for Google and accessToken for Facebook. Optional X-Guest-Cart-Token merges a guest cart.",
+                "summary": "Google, Facebook, or Apple sign-in + Bearer token",
+                "description": "Verifies a Google ID token, a Facebook user access token, or an Apple identity token, then returns the same access token as login. Send idToken for Google and Apple, accessToken for Facebook, and nonce for Apple. Optional X-Guest-Cart-Token merges a guest cart. Apple email and name are often present only on the first authorization; later sign-ins match apple_id.",
                 "security": [],
                 "parameters": [
                     {
@@ -2263,22 +2263,620 @@
                                         "type": "string",
                                         "enum": [
                                             "google",
-                                            "facebook"
+                                            "facebook",
+                                            "apple"
                                         ],
-                                        "example": "facebook"
+                                        "example": "apple"
                                     },
                                     "idToken": {
                                         "type": "string",
-                                        "description": "Google ID token. Required when provider is google."
+                                        "description": "Google ID token or Apple identity token. Required when provider is google or apple."
                                     },
                                     "accessToken": {
                                         "type": "string",
                                         "description": "Facebook user access token. Required when provider is facebook."
                                     },
+                                    "nonce": {
+                                        "type": "string",
+                                        "maxLength": 128,
+                                        "description": "Raw nonce whose SHA-256 hex digest was sent to Apple. Required when provider is apple."
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 120,
+                                        "description": "Name from the first Apple authorization. Used only when creating an account."
+                                    },
                                     "deviceName": {
                                         "type": "string",
                                         "maxLength": 120,
                                         "example": "BluLavelle app"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/live-chat": {
+            "get": {
+                "tags": [
+                    "Live Chat"
+                ],
+                "summary": "Current live chat",
+                "description": "Returns the open conversation for the Bearer user, or for the X-Live-Chat-Guest token. Guests with no conversation receive conversation: null.",
+                "security": [],
+                "parameters": [
+                    {
+                        "name": "X-Live-Chat-Guest",
+                        "in": "header",
+                        "description": "Device token required for guests.",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 32,
+                            "maxLength": 64
+                        }
+                    },
+                    {
+                        "name": "lastSeenMessageId",
+                        "in": "query",
+                        "description": "Shop replies after this id count as unread.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 0
+                        }
+                    },
+                    {
+                        "name": "X-Request-ID",
+                        "in": "header",
+                        "description": "Optional client request id; echoed back on the response.",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 8,
+                            "maxLength": 128,
+                            "example": "ios-req-001"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success envelope. Money fields inside `data` are integer minor units (3299 = $32.99).",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "Echo of request id",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "success",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "enum": [
+                                                true
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": true
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "nullable": true,
+                                            "additionalProperties": true,
+                                            "description": "Optional metadata (pagination, message, api version, replayed, …)"
+                                        }
+                                    }
+                                },
+                                "example": {
+                                    "success": true,
+                                    "data": {}
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "UNAUTHENTICATED",
+                                        "message": "Authentication is required.",
+                                        "fields": {}
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "VALIDATION_ERROR",
+                                        "message": "The given data was invalid.",
+                                        "fields": {
+                                            "email": [
+                                                "The email field is required."
+                                            ]
+                                        }
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "NOT_FOUND",
+                                        "message": "The requested resource was not found.",
+                                        "fields": {}
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limited",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "RATE_LIMITED",
+                                        "message": "Too many requests.",
+                                        "fields": {}
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "INTERNAL_ERROR",
+                                        "message": "An unexpected error occurred.",
+                                        "fields": {}
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Live Chat"
+                ],
+                "summary": "Start or resume live chat",
+                "description": "Signed-in customers open their conversation immediately. Guests send name and email. The same name and email resume an open guest conversation. Customer messages still notify the shop Telegram, and shop replies still email the customer.",
+                "security": [],
+                "parameters": [
+                    {
+                        "name": "X-Live-Chat-Guest",
+                        "in": "header",
+                        "description": "Device token required for guests.",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 32,
+                            "maxLength": 64
+                        }
+                    },
+                    {
+                        "name": "X-Request-ID",
+                        "in": "header",
+                        "description": "Optional client request id; echoed back on the response.",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 8,
+                            "maxLength": 128,
+                            "example": "ios-req-001"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success envelope. Money fields inside `data` are integer minor units (3299 = $32.99).",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "Echo of request id",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "success",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "enum": [
+                                                true
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": true
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "nullable": true,
+                                            "additionalProperties": true,
+                                            "description": "Optional metadata (pagination, message, api version, replayed, …)"
+                                        }
+                                    }
+                                },
+                                "example": {
+                                    "success": true,
+                                    "data": {}
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "UNAUTHENTICATED",
+                                        "message": "Authentication is required.",
+                                        "fields": {}
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "VALIDATION_ERROR",
+                                        "message": "The given data was invalid.",
+                                        "fields": {
+                                            "email": [
+                                                "The email field is required."
+                                            ]
+                                        }
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "NOT_FOUND",
+                                        "message": "The requested resource was not found.",
+                                        "fields": {}
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limited",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "RATE_LIMITED",
+                                        "message": "Too many requests.",
+                                        "fields": {}
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "INTERNAL_ERROR",
+                                        "message": "An unexpected error occurred.",
+                                        "fields": {}
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    }
+                },
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 120,
+                                        "example": "Tra My"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "guest@example.com"
+                                    },
+                                    "lastSeenMessageId": {
+                                        "type": "integer",
+                                        "minimum": 0
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/live-chat/messages": {
+            "post": {
+                "tags": [
+                    "Live Chat"
+                ],
+                "summary": "Send a live chat message",
+                "description": "Sends a customer message on the open conversation and notifies the shop.",
+                "security": [],
+                "parameters": [
+                    {
+                        "name": "X-Live-Chat-Guest",
+                        "in": "header",
+                        "description": "Device token required for guests.",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 32,
+                            "maxLength": 64
+                        }
+                    },
+                    {
+                        "name": "X-Request-ID",
+                        "in": "header",
+                        "description": "Optional client request id; echoed back on the response.",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 8,
+                            "maxLength": 128,
+                            "example": "ios-req-001"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success envelope. Money fields inside `data` are integer minor units (3299 = $32.99).",
+                        "headers": {
+                            "X-Request-ID": {
+                                "description": "Echo of request id",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "success",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "enum": [
+                                                true
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": true
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "nullable": true,
+                                            "additionalProperties": true,
+                                            "description": "Optional metadata (pagination, message, api version, replayed, …)"
+                                        }
+                                    }
+                                },
+                                "example": {
+                                    "success": true,
+                                    "data": {}
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "UNAUTHENTICATED",
+                                        "message": "Authentication is required.",
+                                        "fields": {}
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "VALIDATION_ERROR",
+                                        "message": "The given data was invalid.",
+                                        "fields": {
+                                            "email": [
+                                                "The email field is required."
+                                            ]
+                                        }
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "NOT_FOUND",
+                                        "message": "The requested resource was not found.",
+                                        "fields": {}
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limited",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "RATE_LIMITED",
+                                        "message": "Too many requests.",
+                                        "fields": {}
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "error": {
+                                        "code": "INTERNAL_ERROR",
+                                        "message": "An unexpected error occurred.",
+                                        "fields": {}
+                                    },
+                                    "requestId": "ios-req-001"
+                                }
+                            }
+                        }
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "body"
+                                ],
+                                "properties": {
+                                    "body": {
+                                        "type": "string",
+                                        "maxLength": 2000,
+                                        "example": "Where is my order?"
                                     }
                                 }
                             }

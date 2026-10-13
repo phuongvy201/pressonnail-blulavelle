@@ -59,6 +59,13 @@ return [
         'redirect' => env('FACEBOOK_REDIRECT_URI', env('APP_URL') . '/auth/facebook/callback'),
     ],
 
+    'apple' => [
+        'client_id' => env('APPLE_CLIENT_ID', 'com.bluprinter.blucommerce'),
+        'client_ids' => env('APPLE_CLIENT_IDS', env('APP_ENV') === 'local'
+            ? 'com.bluprinter.blucommerce,host.exp.Exponent'
+            : 'com.bluprinter.blucommerce'),
+    ],
+
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),

@@ -101,9 +101,11 @@ class AuthController extends Controller
     public function social(Request $request, TokenIssuer $tokens, GuestCartMerger $merger, SocialIdentityVerifier $identities): JsonResponse
     {
         $validated = $request->validate([
-            'provider' => ['required', 'in:google,facebook'],
-            'idToken' => ['nullable', 'string', 'max:4096'],
+            'provider' => ['required', 'in:google,facebook,apple'],
+            'idToken' => ['nullable', 'string', 'max:8192'],
             'accessToken' => ['nullable', 'string', 'max:4096'],
+            'nonce' => ['nullable', 'string', 'max:128'],
+            'name' => ['nullable', 'string', 'max:120'],
             'deviceName' => ['nullable', 'string', 'max:120'],
         ]);
 
@@ -112,6 +114,8 @@ class AuthController extends Controller
                 $validated['provider'],
                 $validated['idToken'] ?? '',
                 $validated['accessToken'] ?? '',
+                $validated['nonce'] ?? '',
+                $validated['name'] ?? '',
             ));
         } catch (\InvalidArgumentException $exception) {
             return ApiResponse::error('SOCIAL_AUTH_FAILED', $exception->getMessage(), 422);

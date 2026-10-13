@@ -71,6 +71,7 @@ class AccountController extends Controller
                 'country' => null,
                 'google_id' => null,
                 'facebook_id' => null,
+                'apple_id' => null,
                 'password' => Str::random(40),
                 'anonymized_at' => now(),
             ])->save();

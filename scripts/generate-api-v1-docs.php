@@ -212,19 +212,68 @@ $paths = [
     ],
     '/api/v1/auth/social' => [
         'post' => $ops(
-            'Google or Facebook sign-in + Bearer token',
+            'Google, Facebook, or Apple sign-in + Bearer token',
             'Auth',
             false,
-            'Verifies a Google ID token or Facebook user access token, then returns the same access token as login. Send idToken for Google and accessToken for Facebook. Optional X-Guest-Cart-Token merges a guest cart.',
+            'Verifies a Google ID token, a Facebook user access token, or an Apple identity token, then returns the same access token as login. Send idToken for Google and Apple, accessToken for Facebook, and nonce for Apple. Optional X-Guest-Cart-Token merges a guest cart. Apple email and name are often present only on the first authorization; later sign-ins match apple_id.',
             [$guestCartHeader],
             $jsonBody([
                 'type' => 'object',
                 'required' => ['provider'],
                 'properties' => [
-                    'provider' => ['type' => 'string', 'enum' => ['google', 'facebook'], 'example' => 'facebook'],
-                    'idToken' => ['type' => 'string', 'description' => 'Google ID token. Required when provider is google.'],
+                    'provider' => ['type' => 'string', 'enum' => ['google', 'facebook', 'apple'], 'example' => 'apple'],
+                    'idToken' => ['type' => 'string', 'description' => 'Google ID token or Apple identity token. Required when provider is google or apple.'],
                     'accessToken' => ['type' => 'string', 'description' => 'Facebook user access token. Required when provider is facebook.'],
+                    'nonce' => ['type' => 'string', 'maxLength' => 128, 'description' => 'Raw nonce whose SHA-256 hex digest was sent to Apple. Required when provider is apple.'],
+                    'name' => ['type' => 'string', 'maxLength' => 120, 'description' => 'Name from the first Apple authorization. Used only when creating an account.'],
                     'deviceName' => ['type' => 'string', 'maxLength' => 120, 'example' => 'BluLavelle app'],
+                ],
+            ])
+        ),
+    ],
+    '/api/v1/live-chat' => [
+        'get' => $ops(
+            'Current live chat',
+            'Live Chat',
+            false,
+            'Returns the open conversation for the Bearer user, or for the X-Live-Chat-Guest token. Guests with no conversation receive conversation: null.',
+            [
+                $header('X-Live-Chat-Guest', ['type' => 'string', 'minLength' => 32, 'maxLength' => 64], 'Device token required for guests.'),
+                $q('lastSeenMessageId', ['type' => 'integer', 'minimum' => 0], 'Shop replies after this id count as unread.'),
+            ]
+        ),
+        'post' => $ops(
+            'Start or resume live chat',
+            'Live Chat',
+            false,
+            'Signed-in customers open their conversation immediately. Guests send name and email. The same name and email resume an open guest conversation. Customer messages still notify the shop Telegram, and shop replies still email the customer.',
+            [
+                $header('X-Live-Chat-Guest', ['type' => 'string', 'minLength' => 32, 'maxLength' => 64], 'Device token required for guests.'),
+            ],
+            $jsonBody([
+                'type' => 'object',
+                'properties' => [
+                    'name' => ['type' => 'string', 'maxLength' => 120, 'example' => 'Tra My'],
+                    'email' => ['type' => 'string', 'format' => 'email', 'example' => 'guest@example.com'],
+                    'lastSeenMessageId' => ['type' => 'integer', 'minimum' => 0],
+                ],
+            ], false)
+        ),
+    ],
+    '/api/v1/live-chat/messages' => [
+        'post' => $ops(
+            'Send a live chat message',
+            'Live Chat',
+            false,
+            'Sends a customer message on the open conversation and notifies the shop.',
+            [
+                $header('X-Live-Chat-Guest', ['type' => 'string', 'minLength' => 32, 'maxLength' => 64], 'Device token required for guests.'),
+            ],
+            $jsonBody([
+                'type' => 'object',
+                'required' => ['body'],
+                'properties' => [
+                    'body' => ['type' => 'string', 'maxLength' => 2000, 'example' => 'Where is my order?'],
                 ],
             ])
         ),

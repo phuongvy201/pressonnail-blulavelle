@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\CartController as V1CartController;
 use App\Http\Controllers\Api\V1\CatalogController as V1CatalogController;
 use App\Http\Controllers\Api\V1\CheckoutAttemptController as V1CheckoutAttemptController;
 use App\Http\Controllers\Api\V1\CheckoutController as V1CheckoutController;
+use App\Http\Controllers\Api\V1\LiveChatController as V1LiveChatController;
 use App\Http\Controllers\Api\V1\NailTryOnController as V1NailTryOnController;
 use App\Http\Controllers\Api\V1\NailTryOnJobController as V1NailTryOnJobController;
 use App\Http\Controllers\Api\V1\OrderController as V1OrderController;
@@ -297,6 +298,12 @@ Route::prefix('v1')->name('api.v1.')->group(function () use ($v1Guest) {
         });
 
         Route::post('/orders/track', [V1OrderController::class, 'track'])->name('orders.track');
+
+        Route::prefix('live-chat')->name('live-chat.')->group(function () {
+            Route::get('/', [V1LiveChatController::class, 'show'])->name('show');
+            Route::post('/', [V1LiveChatController::class, 'start'])->middleware('throttle:20,1')->name('start');
+            Route::post('/messages', [V1LiveChatController::class, 'send'])->middleware('throttle:30,1')->name('messages.store');
+        });
     });
 
     Route::middleware(array_merge($v1Guest, [MobileCartSessionBridge::class]))->group(function () {
