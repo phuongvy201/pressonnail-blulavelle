@@ -58,6 +58,15 @@ class PromoCodeSendService
 
             Mail::to($email)->send(new PromoCodeRewardMail($email, $promo->code, $label, $description));
 
+            try {
+                app(ExpoPushService::class)->notifyPromoReward($email, $promo->code, $label, $userId);
+            } catch (\Throwable $pushError) {
+                Log::warning('PromoCodeSendService: Push failed.', [
+                    'trigger' => $trigger,
+                    'error' => $pushError->getMessage(),
+                ]);
+            }
+
             if ($throttle && in_array($trigger, [self::TRIGGER_WISHLIST, self::TRIGGER_ADD_TO_CART, self::TRIGGER_CHECKOUT_FAIL], true)) {
                 Cache::put($cacheKey, true, now()->addHours(self::THROTTLE_HOURS));
             }

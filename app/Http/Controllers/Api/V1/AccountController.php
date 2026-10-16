@@ -41,13 +41,21 @@ class AccountController extends Controller
     public function destroy(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'password' => ['required', 'string'],
+            'password' => ['nullable', 'string'],
             'confirmation' => ['required', 'accepted'],
         ]);
 
         $user = $request->user();
+        $password = $validated['password'] ?? null;
+        $hasSocialIdentity = filled($user->google_id) || filled($user->facebook_id) || filled($user->apple_id);
 
-        if (! Hash::check($validated['password'], (string) $user->password)) {
+        if (! $hasSocialIdentity && ! filled($password)) {
+            return ApiResponse::error('CURRENT_PASSWORD_INVALID', 'Enter your password to delete this account.', 422, [
+                'password' => ['Enter your password to delete this account.'],
+            ]);
+        }
+
+        if (filled($password) && ! Hash::check($password, (string) $user->password)) {
             return ApiResponse::error('CURRENT_PASSWORD_INVALID', 'Password is incorrect.', 422, [
                 'password' => ['Password is incorrect.'],
             ]);

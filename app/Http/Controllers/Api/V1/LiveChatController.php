@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
+use App\Models\UgcBlock;
 use App\Services\LiveChatService;
 use App\Services\TelegramBotService;
 use App\Support\ApiV1\ApiResponse;
+use App\Support\ContentSafety;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class LiveChatController extends Controller
 {
@@ -83,9 +86,17 @@ class LiveChatController extends Controller
             return ApiResponse::error('CHAT_EMPTY', 'Enter a message before sending.', 422);
         }
 
+        if (ContentSafety::containsObjectionable($body)) {
+            return ApiResponse::error('CHAT_REJECTED', 'That message includes language that is not allowed.', 422);
+        }
+
         $conversation = $this->openConversation($request);
         if (! $conversation) {
             return ApiResponse::error('CHAT_NOT_STARTED', 'Start a chat before sending a message.', 422);
+        }
+
+        if ($this->isBlocked($request, $conversation)) {
+            return ApiResponse::error('CHAT_BLOCKED', 'You blocked this chat. Unblock it to send another message.', 403);
         }
 
         $message = ChatMessage::create([
@@ -141,7 +152,7 @@ class LiveChatController extends Controller
     }
 
     /**
-     * @return array{conversation: array{id: int, customerName: string}|null, messages: list<array{id: int, fromCustomer: bool, body: string, createdAt: string|null}>, unreadCount: int}
+     * @return array{conversation: array{id: int, customerName: string, blocked: bool}|null, messages: list<array{id: int, fromCustomer: bool, body: string, createdAt: string|null}>, unreadCount: int}
      */
     private function payload(?ChatConversation $conversation, int $lastSeen): array
     {
@@ -154,18 +165,50 @@ class LiveChatController extends Controller
         }
 
         $conversation->loadMissing('customer');
+        $blocked = $this->isBlocked(request(), $conversation);
         $messages = $conversation->messages()->orderBy('id')->get();
+        if ($blocked) {
+            $messages = $messages->filter(fn (ChatMessage $message) => (bool) $message->is_from_customer)->values();
+        }
 
         return [
             'conversation' => [
                 'id' => $conversation->id,
                 'customerName' => $conversation->customer_name,
+                'blocked' => $blocked,
             ],
             'messages' => $messages->map(fn (ChatMessage $message) => $this->messagePayload($message))->values()->all(),
-            'unreadCount' => $messages->filter(
+            'unreadCount' => $blocked ? 0 : $messages->filter(
                 fn (ChatMessage $message) => ! $message->is_from_customer && $message->id > $lastSeen
             )->count(),
         ];
+    }
+
+    private function isBlocked(Request $request, ChatConversation $conversation): bool
+    {
+        if (! Schema::hasTable('ugc_blocks')) {
+            return false;
+        }
+
+        $user = $request->user();
+        if ($user) {
+            return UgcBlock::query()
+                ->where('scope', 'chat_conversation')
+                ->where('target_id', $conversation->id)
+                ->where('blocker_key', 'user:'.$user->id)
+                ->exists();
+        }
+
+        $token = $this->guestToken($request);
+        if ($token === null) {
+            return false;
+        }
+
+        return UgcBlock::query()
+            ->where('scope', 'chat_conversation')
+            ->where('target_id', $conversation->id)
+            ->where('blocker_key', 'guest:'.$token)
+            ->exists();
     }
 
     /**

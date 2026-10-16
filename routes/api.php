@@ -17,6 +17,8 @@ use App\Http\Controllers\Api\V1\CatalogController as V1CatalogController;
 use App\Http\Controllers\Api\V1\CheckoutAttemptController as V1CheckoutAttemptController;
 use App\Http\Controllers\Api\V1\CheckoutController as V1CheckoutController;
 use App\Http\Controllers\Api\V1\LiveChatController as V1LiveChatController;
+use App\Http\Controllers\Api\V1\PushTokenController as V1PushTokenController;
+use App\Http\Controllers\Api\V1\SafetyController as V1SafetyController;
 use App\Http\Controllers\Api\V1\NailTryOnController as V1NailTryOnController;
 use App\Http\Controllers\Api\V1\NailTryOnJobController as V1NailTryOnJobController;
 use App\Http\Controllers\Api\V1\OrderController as V1OrderController;
@@ -303,6 +305,18 @@ Route::prefix('v1')->name('api.v1.')->group(function () use ($v1Guest) {
             Route::get('/', [V1LiveChatController::class, 'show'])->name('show');
             Route::post('/', [V1LiveChatController::class, 'start'])->middleware('throttle:20,1')->name('start');
             Route::post('/messages', [V1LiveChatController::class, 'send'])->middleware('throttle:30,1')->name('messages.store');
+        });
+
+        Route::prefix('safety')->name('safety.')->group(function () {
+            Route::post('/reports', [V1SafetyController::class, 'report'])->middleware('throttle:20,1')->name('reports.store');
+            Route::get('/blocks', [V1SafetyController::class, 'blocks'])->name('blocks.index');
+            Route::post('/blocks', [V1SafetyController::class, 'block'])->middleware('throttle:20,1')->name('blocks.store');
+            Route::delete('/blocks', [V1SafetyController::class, 'unblock'])->middleware('throttle:20,1')->name('blocks.destroy');
+        });
+
+        Route::prefix('push-tokens')->name('push-tokens.')->group(function () {
+            Route::post('/', [V1PushTokenController::class, 'store'])->middleware('throttle:30,1')->name('store');
+            Route::delete('/', [V1PushTokenController::class, 'destroy'])->middleware('throttle:30,1')->name('destroy');
         });
     });
 

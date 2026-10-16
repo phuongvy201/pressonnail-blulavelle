@@ -83,6 +83,12 @@ class OrderReviewController extends Controller
             'is_approved' => true,
         ]);
 
+        try {
+            app(\App\Services\ExpoPushService::class)->notifyReviewSubmitted((int) $user->id, (string) $order->order_number);
+        } catch (\Throwable) {
+            // Review save already succeeded.
+        }
+
         return ApiResponse::success([
             'review' => $this->reviewPayload($review, $order->order_number),
         ], [

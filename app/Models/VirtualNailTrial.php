@@ -87,6 +87,12 @@ class VirtualNailTrial extends Model
             'error_message' => null,
             'completed_at' => now(),
         ]);
+
+        try {
+            app(\App\Services\ExpoPushService::class)->notifyTryOnReady($this->fresh() ?? $this);
+        } catch (\Throwable) {
+            // Push must not block trial completion.
+        }
     }
 
     public function markFailed(string $message): void
@@ -96,5 +102,11 @@ class VirtualNailTrial extends Model
             'error_message' => Str::limit($message, 500),
             'completed_at' => now(),
         ]);
+
+        try {
+            app(\App\Services\ExpoPushService::class)->notifyTryOnFailed($this->fresh() ?? $this);
+        } catch (\Throwable) {
+            // Push must not block trial failure handling.
+        }
     }
 }

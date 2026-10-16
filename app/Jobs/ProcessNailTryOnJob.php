@@ -127,6 +127,15 @@ class ProcessNailTryOnJob implements ShouldQueue
             'completed_at' => now(),
         ]);
 
+        try {
+            app(\App\Services\ExpoPushService::class)->notifyTryOnReady($job->fresh() ?? $job);
+        } catch (\Throwable $e) {
+            Log::warning('expo_push.try_on_ready_failed', [
+                'try_on_id' => $job->public_id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         Log::info('Nail try-on succeeded', [
             'try_on_id' => $job->public_id,
             'product_id' => $job->product_id,
@@ -153,6 +162,15 @@ class ProcessNailTryOnJob implements ShouldQueue
             'error_message' => Str::limit($message, 500),
             'completed_at' => now(),
         ]);
+
+        try {
+            app(\App\Services\ExpoPushService::class)->notifyTryOnFailed($job->fresh() ?? $job);
+        } catch (\Throwable $e) {
+            Log::warning('expo_push.try_on_failed_push', [
+                'try_on_id' => $job->public_id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         Log::warning('Nail try-on failed', [
             'try_on_id' => $job->public_id,

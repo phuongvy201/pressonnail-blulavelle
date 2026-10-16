@@ -22,7 +22,7 @@ class VirtualNailTrialService
             return false;
         }
 
-        return $this->isChatgpt2apiConfigured() || $this->isImageApiConfigured();
+        return $this->isChatgpt2apiConfigured();
     }
 
     public function isChatgpt2apiConfigured(): bool
@@ -92,66 +92,25 @@ class VirtualNailTrialService
             'prompt_preview' => Str::limit($context['prompt'], 200),
         ]);
 
-        $preferBrowser = VirtualNailSettings::preferBrowserPool();
-        $browserOk = $this->isChatgpt2apiConfigured();
-        $imageApiOk = $this->isImageApiConfigured();
+        if (! $this->isChatgpt2apiConfigured()) {
+            return [
+                'success' => false,
+                'message' => 'Virtual nail trial is not configured.',
+            ];
+        }
 
-        Log::info('Virtual nail tryOn: provider routing', [
+        Log::info('Virtual nail tryOn: using chatgpt2api', [
             'step' => 2,
             'product_id' => $product->id,
-            'prefer_browser_pool' => $preferBrowser,
-            'chatgpt2api_configured' => $browserOk,
-            'image_api_configured' => $imageApiOk,
+            'pool_healthy' => $this->isBrowserPoolHealthy(),
         ]);
 
-        if ($preferBrowser && $browserOk && $this->isBrowserPoolHealthy()) {
-            Log::info('Virtual nail tryOn: browser pool healthy — using chatgpt2api', [
-                'step' => 3,
-                'product_id' => $product->id,
-            ]);
-
-            $result = $this->tryOnViaChatgpt2api($context);
-            if ($result['success']) {
-                return $result;
-            }
-
-            if ($imageApiOk && $this->shouldFallbackToImageApi($result)) {
-                Log::warning('Virtual nail: chatgpt2api failed — falling back to image edits API.', [
-                    'product_id' => $product->id,
-                    'browser_message' => $result['message'] ?? null,
-                    'browser_status' => $result['status'] ?? null,
-                ]);
-
-                return $this->tryOnViaImageEdits($context);
-            }
-
-            return $this->publicFailure($result);
+        $result = $this->tryOnViaChatgpt2api($context);
+        if ($result['success']) {
+            return $result;
         }
 
-        if ($imageApiOk) {
-            Log::info('Virtual nail tryOn: using image edits API (hand photo)', [
-                'step' => 3,
-                'product_id' => $product->id,
-                'browser_ok' => $browserOk,
-                'prefer_browser_pool' => $preferBrowser,
-            ]);
-
-            return $this->tryOnViaImageEdits($context);
-        }
-
-        if ($preferBrowser && $browserOk) {
-            Log::info('Virtual nail tryOn: chatgpt2api (pool health unknown)', [
-                'step' => 3,
-                'product_id' => $product->id,
-            ]);
-
-            return $this->tryOnViaChatgpt2api($context);
-        }
-
-        return [
-            'success' => false,
-            'message' => 'Virtual nail trial is not configured.',
-        ];
+        return $this->publicFailure($result);
     }
 
     /**

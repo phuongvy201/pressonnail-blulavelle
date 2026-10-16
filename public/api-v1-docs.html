@@ -5022,7 +5022,7 @@
                     "Account"
                 ],
                 "summary": "Delete / anonymize account",
-                "description": "Requires confirmation password.",
+                "description": "Deletes the signed-in account inside the app. confirmation must be accepted. Password accounts must send the current password. Apple, Google, and Facebook accounts may omit it.",
                 "security": [
                     {
                         "bearerAuth": []
@@ -5199,9 +5199,12 @@
                             "schema": {
                                 "type": "object",
                                 "required": [
-                                    "password"
+                                    "confirmation"
                                 ],
                                 "properties": {
+                                    "confirmation": {
+                                        "type": "boolean"
+                                    },
                                     "password": {
                                         "type": "string",
                                         "format": "password"

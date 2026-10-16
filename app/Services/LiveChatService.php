@@ -75,8 +75,17 @@ class LiveChatService
             return;
         }
 
+        try {
+            app(ExpoPushService::class)->notifyShopChatReply($conversation, $message);
+        } catch (\Throwable $e) {
+            Log::warning('Live chat customer push failed.', [
+                'conversation_id' => $conversation->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         $email = $conversation->customer_email;
-        if (!filled($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if (! filled($email) || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return;
         }
 

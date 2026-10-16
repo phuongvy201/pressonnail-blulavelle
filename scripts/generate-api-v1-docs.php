@@ -377,12 +377,13 @@ $paths = [
             'Delete / anonymize account',
             'Account',
             true,
-            'Requires confirmation password.',
+            'Deletes the signed-in account inside the app. confirmation must be accepted. Password accounts must send the current password. Apple, Google, and Facebook accounts may omit it.',
             [],
             $jsonBody([
                 'type' => 'object',
-                'required' => ['password'],
+                'required' => ['confirmation'],
                 'properties' => [
+                    'confirmation' => ['type' => 'boolean'],
                     'password' => ['type' => 'string', 'format' => 'password'],
                 ],
             ])

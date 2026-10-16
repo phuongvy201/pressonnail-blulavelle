@@ -6,6 +6,7 @@ use App\Models\Affiliate;
 use App\Models\Order;
 use App\Services\AffiliateCommissionService;
 use App\Services\AffiliateTierService;
+use App\Services\ExpoPushService;
 use App\Services\GiftCardService;
 use Illuminate\Support\Facades\Log;
 
@@ -17,6 +18,15 @@ class OrderObserver
             || (!$order->wasRecentlyCreated && $order->wasChanged('payment_status') && $order->payment_status === 'paid');
 
         if ($becamePaid) {
+            try {
+                app(ExpoPushService::class)->notifyPaymentReceived($order);
+            } catch (\Throwable $e) {
+                Log::warning('expo_push.payment_received_failed', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
             try {
                 /** @var GiftCardService $giftCardService */
                 $giftCardService = app(GiftCardService::class);
@@ -81,6 +91,23 @@ class OrderObserver
                     'error' => $e->getMessage(),
                 ]);
             }
+        }
+
+    }
+
+    public function updated(Order $order): void
+    {
+        if (! $order->wasChanged('status') && ! $order->wasChanged('tracking_number')) {
+            return;
+        }
+
+        try {
+            app(ExpoPushService::class)->notifyOrderUpdate($order);
+        } catch (\Throwable $e) {
+            Log::warning('expo_push.order_observer_failed', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }
