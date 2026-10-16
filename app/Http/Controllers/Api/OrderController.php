@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\Concerns\BuildsApiListResponse;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -154,6 +155,7 @@ class OrderController extends Controller
                     'name' => $item->product->name,
                     'slug' => $item->product->slug,
                     'url' => '/products/'.$item->product->slug,
+                    'primaryImage' => $this->productImageUrl($item->product),
                 ] : null,
             ])->values()->all(),
             'returnRequests' => $order->returnRequests->map(fn ($rr) => [
@@ -162,5 +164,43 @@ class OrderController extends Controller
                 'createdAt' => $rr->created_at?->toIso8601String(),
             ])->values()->all(),
         ];
+    }
+
+    private function productImageUrl(Product $product): ?string
+    {
+        $primary = $product->primary_image;
+        if (is_string($primary) && trim($primary) !== '') {
+            return $this->absoluteMediaUrl($primary);
+        }
+        if (is_array($primary)) {
+            $url = $primary['url'] ?? $primary['src'] ?? $primary['path'] ?? null;
+            if (is_string($url) && trim($url) !== '') {
+                return $this->absoluteMediaUrl($url);
+            }
+        }
+
+        $media = $product->getEffectiveMedia();
+        $first = $media[0] ?? null;
+        if (is_string($first) && trim($first) !== '') {
+            return $this->absoluteMediaUrl($first);
+        }
+        if (is_array($first)) {
+            $url = $first['url'] ?? $first['src'] ?? $first['path'] ?? null;
+            if (is_string($url) && trim($url) !== '') {
+                return $this->absoluteMediaUrl($url);
+            }
+        }
+
+        return null;
+    }
+
+    private function absoluteMediaUrl(string $path): string
+    {
+        $path = trim($path);
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        return asset('/'.ltrim($path, '/'));
     }
 }
