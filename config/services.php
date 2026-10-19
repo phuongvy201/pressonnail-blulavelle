@@ -44,9 +44,14 @@ return [
     ],
 
     'stripe' => [
+        // Website + production mobile checkout (/api/v1/checkout/attempts).
         'key' => env('STRIPE_KEY'),
         'secret' => env('STRIPE_SECRET'),
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        // Optional. Used only by /api/v1/payments/stripe/test-checkout so
+        // mobile Expo Go can use sk_test_ without changing live website keys.
+        'test_key' => env('STRIPE_TEST_KEY'),
+        'test_secret' => env('STRIPE_TEST_SECRET'),
     ],
 
     'meta' => [

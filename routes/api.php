@@ -375,6 +375,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () use ($v1Guest) {
             Route::post('/refresh', [V1AuthController::class, 'refresh'])->name('refresh');
             Route::post('/revoke', [V1AuthController::class, 'revoke'])->name('revoke');
             Route::post('/change-password', [V1AuthController::class, 'changePassword'])->name('change-password');
+            Route::post('/email/verification-notification', [V1AuthController::class, 'sendVerificationEmail'])
+                ->middleware('throttle:6,1')
+                ->name('email.verification-notification');
             Route::get('/sessions', [V1SessionController::class, 'index'])->name('sessions.index');
             Route::delete('/sessions/{sessionId}', [V1SessionController::class, 'destroy'])->whereNumber('sessionId')->name('sessions.destroy');
         });

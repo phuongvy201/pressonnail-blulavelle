@@ -48,7 +48,7 @@ class StripeTestCheckoutController extends Controller
         $attemptId = 'stest_'.Str::lower(Str::random(24));
         $amount = ApiResponse::toMinor($validated['total']);
         $currency = strtolower($validated['currency']);
-        Stripe::setApiKey((string) config('services.stripe.secret'));
+        Stripe::setApiKey($this->testSecret());
         $returnUrl = rtrim($request->getSchemeAndHttpHost(), '/').'/api/v1/payments/stripe/test-checkout/complete';
 
         $session = StripeCheckoutSession::create([
@@ -116,7 +116,7 @@ class StripeTestCheckoutController extends Controller
             return ApiResponse::error('NOT_FOUND', 'Stripe test checkout was not found.', 404);
         }
 
-        Stripe::setApiKey((string) config('services.stripe.secret'));
+        Stripe::setApiKey($this->testSecret());
         $session = StripeCheckoutSession::retrieve($stored['session_id']);
         $paid = ($session->payment_status ?? null) === 'paid';
         $stored['status'] = $paid ? 'succeeded' : 'requires_action';
@@ -139,13 +139,30 @@ class StripeTestCheckoutController extends Controller
             return ApiResponse::error('NOT_FOUND', 'Stripe test checkout is disabled.', 404);
         }
 
-        $secret = config('services.stripe.secret');
-        if (! is_string($secret) || ! str_starts_with($secret, 'sk_test_')) {
+        if ($this->testSecret() === null) {
             return ApiResponse::error(
                 'STRIPE_TEST_KEY_REQUIRED',
-                'Stripe test checkout only runs when the server uses an sk_test secret.',
+                'Set STRIPE_TEST_SECRET=sk_test_… (or use STRIPE_SECRET=sk_test_… on a non-live server). Live STRIPE_SECRET is left alone for website checkout.',
                 503
             );
+        }
+
+        return null;
+    }
+
+    /**
+     * Prefer dedicated test keys so production STRIPE_SECRET can stay sk_live_.
+     */
+    private function testSecret(): ?string
+    {
+        $dedicated = config('services.stripe.test_secret');
+        if (is_string($dedicated) && str_starts_with($dedicated, 'sk_test_')) {
+            return $dedicated;
+        }
+
+        $shared = config('services.stripe.secret');
+        if (is_string($shared) && str_starts_with($shared, 'sk_test_')) {
+            return $shared;
         }
 
         return null;

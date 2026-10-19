@@ -225,6 +225,27 @@ class AuthController extends Controller
         return ApiResponse::success(['changed' => true]);
     }
 
+    public function sendVerificationEmail(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user->hasVerifiedEmail()) {
+            return ApiResponse::success([
+                'sent' => false,
+                'alreadyVerified' => true,
+                'user' => $this->userPayload($user),
+            ]);
+        }
+
+        $user->sendEmailVerificationNotification();
+
+        return ApiResponse::success([
+            'sent' => true,
+            'alreadyVerified' => false,
+            'user' => $this->userPayload($user->fresh()),
+        ]);
+    }
+
     public function me(Request $request): JsonResponse
     {
         return ApiResponse::success([
