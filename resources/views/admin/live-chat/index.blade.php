@@ -19,6 +19,7 @@
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Customer</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Email</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Last message</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Mode</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Updated</th>
                         <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
                     </tr>
@@ -39,6 +40,16 @@
                                 —
                             @endif
                         </td>
+                        <td class="px-6 py-4">
+                            @if(($conv->handling_mode ?? 'bot') === 'human')
+                                <span class="inline-flex px-2 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold">Human</span>
+                            @else
+                                <span class="inline-flex px-2 py-1 rounded-full bg-sky-100 text-sky-800 text-xs font-bold">Bot</span>
+                            @endif
+                            @if($conv->last_bot_intent)
+                                <span class="block mt-1 text-[11px] text-gray-400">{{ $conv->last_bot_intent }}</span>
+                            @endif
+                        </td>
                         <td class="px-6 py-4 text-sm text-gray-500">
                             {{ $conv->updated_at->diffForHumans() }}
                         </td>
@@ -51,7 +62,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="5" class="px-6 py-12 text-center text-gray-500">No conversations yet.</td>
+                        <td colspan="6" class="px-6 py-12 text-center text-gray-500">No conversations yet.</td>
                     </tr>
                     @endforelse
                 </tbody>

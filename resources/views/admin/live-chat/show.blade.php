@@ -4,11 +4,20 @@
 
 @section('content')
 <div class="space-y-6" x-data="liveChatShow({{ $conversation->id }})" data-customer-name="{{ e($conversation->customer_name) }}">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between gap-4 flex-wrap">
         <div>
             <a href="{{ route('admin.live-chat.index') }}" class="text-sm text-gray-600 hover:text-gray-900 mb-2 inline-block">← Chat list</a>
             <h1 class="text-2xl font-bold text-gray-900">Chat with {{ $conversation->customer_name }}</h1>
             <p class="text-sm text-gray-500">{{ $conversation->customer_email ?? '—' }}</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-bold"
+                  :class="handlingMode === 'human' ? 'bg-amber-100 text-amber-800' : 'bg-sky-100 text-sky-800'"
+                  x-text="handlingMode === 'human' ? 'Human support' : 'Blu Assistant'"></span>
+            <button type="button" x-show="handlingMode !== 'human'" @click="takeover" :disabled="modeSaving"
+                    class="px-3 py-2 rounded-lg bg-amber-500 text-white text-sm font-semibold disabled:opacity-50">Take over</button>
+            <button type="button" x-show="handlingMode === 'human'" @click="returnToBot" :disabled="modeSaving"
+                    class="px-3 py-2 rounded-lg bg-sky-600 text-white text-sm font-semibold disabled:opacity-50">Return to bot</button>
         </div>
     </div>
 
@@ -19,10 +28,10 @@
             </template>
             <template x-for="m in messages" :key="m.id">
                 <div :class="m.is_from_customer ? 'flex justify-start' : 'flex justify-end'">
-                    <div :class="m.is_from_customer ? 'bg-gray-100 text-gray-900' : 'text-white'"
+                    <div :class="m.is_from_customer ? 'bg-gray-100 text-gray-900' : (m.sender_type === 'bot' ? 'bg-sky-50 text-gray-900 border border-sky-100' : 'text-white')"
                          class="max-w-[80%] rounded-xl px-4 py-2 text-sm shadow-sm"
-                         :style="!m.is_from_customer ? 'background:#f0427c' : ''">
-                        <p class="text-xs font-semibold opacity-90 mb-1" x-text="m.is_from_customer ? 'Customer' : 'You'"></p>
+                         :style="(!m.is_from_customer && m.sender_type !== 'bot') ? 'background:#f0427c' : ''">
+                        <p class="text-xs font-semibold opacity-90 mb-1" x-text="m.sender_type === 'bot' ? 'Blu Assistant' : (m.is_from_customer ? 'Customer' : 'You')"></p>
                         <p x-text="m.body" class="whitespace-pre-wrap"></p>
                         <p class="text-xs mt-1 opacity-80" x-text="formatTime(m.created_at)"></p>
                     </div>
@@ -48,6 +57,7 @@
         return [
             'id' => $m->id,
             'is_from_customer' => $m->is_from_customer,
+            'sender_type' => $m->senderType(),
             'body' => $m->body,
             'created_at' => $m->created_at->toIso8601String(),
         ];
@@ -64,6 +74,8 @@ document.addEventListener('alpine:init', function() {
             lastSeenMessageId: {{ $conversation->messages->max('id') ?? 0 }},
             replyBody: '',
             sending: false,
+            handlingMode: @json($conversation->handling_mode ?? 'bot'),
+            modeSaving: false,
             pollInterval: null,
             formatTime(iso) {
                 if (!iso) return '';
@@ -79,7 +91,28 @@ document.addEventListener('alpine:init', function() {
                     var maxId = Math.max(0, ...data.messages.map(function(m) { return m.id; }));
                     self.lastSeenMessageId = maxId;
                     self.messages = data.messages;
+                    if (data.handling_mode) self.handlingMode = data.handling_mode;
                 }).catch(() => {});
+            },
+            changeMode(path) {
+                if (this.modeSaving) return;
+                this.modeSaving = true;
+                fetch(path, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                }).then(r => r.json()).then(data => {
+                    if (data.handling_mode) this.handlingMode = data.handling_mode;
+                }).catch(() => {}).finally(() => { this.modeSaving = false; });
+            },
+            takeover() {
+                this.changeMode('{{ url("/admin/live-chat") }}/' + this.conversationId + '/takeover');
+            },
+            returnToBot() {
+                this.changeMode('{{ url("/admin/live-chat") }}/' + this.conversationId + '/return-to-bot');
             },
             sendReply() {
                 var body = (this.replyBody || '').trim();
@@ -97,6 +130,7 @@ document.addEventListener('alpine:init', function() {
                 }).then(r => r.json()).then(data => {
                     if (data.success && data.message) {
                         this.messages.push(data.message);
+                        if (data.handling_mode) this.handlingMode = data.handling_mode;
                         this.replyBody = '';
                     }
                 }).catch(() => {}).finally(() => { this.sending = false; });

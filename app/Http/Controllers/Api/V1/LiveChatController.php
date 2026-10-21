@@ -102,6 +102,7 @@ class LiveChatController extends Controller
         $message = ChatMessage::create([
             'conversation_id' => $conversation->id,
             'is_from_customer' => true,
+            'sender_type' => ChatMessage::SENDER_CUSTOMER,
             'body' => $body,
         ]);
         $conversation->load('customer');
@@ -165,6 +166,9 @@ class LiveChatController extends Controller
         }
 
         $conversation->loadMissing('customer');
+        if ($lastSeen > 0) {
+            $this->liveChat->markSeenUpTo($conversation, $lastSeen);
+        }
         $blocked = $this->isBlocked(request(), $conversation);
         $messages = $conversation->messages()->orderBy('id')->get();
         if ($blocked) {

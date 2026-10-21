@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Services\Chatbot\ChatbotAiProvider;
+use App\Services\Chatbot\OpenAiChatbotProvider;
 use App\Support\AffiliateSetupStatus;
 use App\Services\CurrencyService;
 use App\Models\AffiliateApplication;
@@ -57,7 +59,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(ChatbotAiProvider::class, OpenAiChatbotProvider::class);
     }
 
     /**

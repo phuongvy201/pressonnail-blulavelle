@@ -414,6 +414,33 @@ class Product extends Model
         return $this->hasMany(ProductVariant::class);
     }
 
+    public function embedding(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(ProductEmbedding::class);
+    }
+
+    /**
+     * Text used for semantic search indexing: only real catalogue facts.
+     */
+    public function searchIndexText(): string
+    {
+        $variantText = $this->variants
+            ->map(fn ($variant) => trim((string) $variant->variant_name.' '.json_encode($variant->attributes ?? [])))
+            ->implode(' ');
+
+        return trim(implode(' ', array_filter([
+            (string) $this->name,
+            (string) ($this->color ?? ''),
+            (string) ($this->pattern ?? ''),
+            (string) ($this->material ?? ''),
+            (string) ($this->meta_keywords ?? ''),
+            (string) ($this->template?->name ?? ''),
+            (string) ($this->template?->category?->name ?? ''),
+            $variantText,
+            strip_tags((string) $this->getEffectiveDescription()),
+        ])));
+    }
+
     public function collections(): BelongsToMany
     {
         return $this->belongsToMany(Collection::class, 'product_collection')

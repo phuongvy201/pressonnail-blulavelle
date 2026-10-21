@@ -13,23 +13,25 @@
                     <tr>
                         <td style="padding:24px;text-align:center;background:#0195FE;color:#ffffff;">
                             <p style="margin:0;font-size:14px;opacity:.9;">{{ config('app.name') }}</p>
-                            <p style="margin:8px 0 0 0;font-size:24px;font-weight:700;">New live chat message</p>
+                            <p style="margin:8px 0 0 0;font-size:24px;font-weight:700;">Our support team replied</p>
                         </td>
                     </tr>
                     <tr>
                         <td style="padding:24px;">
                             <p style="margin:0 0 16px 0;">Hi {{ $conversation->customer_name }},</p>
-                            <p style="margin:0 0 16px 0;">You have a new reply in your live chat:</p>
-                            <div style="background:#f8fafc;border-left:4px solid #0195FE;padding:14px 16px;border-radius:6px;">
-                                <p style="margin:0;white-space:pre-wrap;color:#0f172a;">{{ $message->body }}</p>
-                            </div>
+                            <p style="margin:0 0 16px 0;">Our support team replied about your request <strong>#{{ $supportReference }}</strong>:</p>
+                            @foreach($replyMessages as $replyMessage)
+                                <div style="background:#f8fafc;border-left:4px solid #0195FE;padding:14px 16px;border-radius:6px;margin:0 0 12px 0;">
+                                    <p style="margin:0;white-space:pre-wrap;color:#0f172a;">{{ $replyMessage->body }}</p>
+                                </div>
+                            @endforeach
                             <p style="margin:20px 0 0 0;text-align:center;">
                                 <a href="{{ config('app.url') }}" style="display:inline-block;background:#0195FE;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:700;">
                                     Continue this chat
                                 </a>
                             </p>
                             <p style="margin:16px 0 0 0;color:#64748b;font-size:13px;">
-                                Open the site and enter the same name and email to see your full chat history.
+                                You can continue the conversation right where you left off. If you started as a guest, use the same name and email to reopen your full chat history.
                             </p>
                         </td>
                     </tr>

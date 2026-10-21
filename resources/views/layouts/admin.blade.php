@@ -521,8 +521,11 @@
                 var last = c.last_message ? (c.last_message.body || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '—';
                 var time = c.last_message && c.last_message.created_at ? new Date(c.last_message.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
                 var unread = (c.unread_count || 0) > 0 ? '<span class="ml-2 w-2 h-2 rounded-full bg-red-500 inline-block"></span>' : '';
+                var mode = c.handling_mode === 'human'
+                    ? '<span class="ml-2 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">Human</span>'
+                    : '<span class="ml-2 px-1.5 py-0.5 rounded-full bg-sky-100 text-sky-800 text-[10px] font-bold">Bot</span>';
                 return '<button type="button" class="admin-live-chat-conv w-full text-left px-3 py-3 rounded-xl hover:bg-gray-100 border border-transparent hover:border-gray-200 flex items-center justify-between gap-2" data-id="' + c.id + '" data-name="' + (c.customer_name || 'Customer').replace(/"/g, '&quot;') + '">' +
-                    '<div class="min-w-0 flex-1"><p class="font-medium text-gray-900 truncate">' + (c.customer_name || 'Customer').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p><p class="text-xs text-gray-500 truncate">' + last + '</p></div>' + unread + '<span class="text-xs text-gray-400 flex-shrink-0">' + time + '</span></button>';
+                    '<div class="min-w-0 flex-1"><p class="font-medium text-gray-900 truncate">' + (c.customer_name || 'Customer').replace(/</g, '&lt;').replace(/>/g, '&gt;') + mode + '</p><p class="text-xs text-gray-500 truncate">' + last + '</p></div>' + unread + '<span class="text-xs text-gray-400 flex-shrink-0">' + time + '</span></button>';
             }).join('');
         }
         function showList() {
@@ -549,10 +552,11 @@
             }
             messagesEl.innerHTML = messages.map(function(m) {
                 var isCustomer = m.is_from_customer;
+                var isBot = m.sender_type === 'bot';
                 var align = isCustomer ? 'justify-start' : 'justify-end';
-                var bg = isCustomer ? 'bg-gray-100 text-gray-900' : 'text-white';
-                var style = !isCustomer ? 'background:#2563eb' : '';
-                var sender = isCustomer ? currentCustomerName : 'You';
+                var bg = isCustomer ? 'bg-gray-100 text-gray-900' : (isBot ? 'bg-sky-50 text-gray-900' : 'text-white');
+                var style = !isCustomer && !isBot ? 'background:#2563eb' : '';
+                var sender = isCustomer ? currentCustomerName : (isBot ? 'Blu Assistant' : 'You');
                 var time = new Date(m.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
                 return '<div class="flex ' + align + '"><div class="max-w-[85%] rounded-xl px-3 py-2 text-sm ' + bg + '" style="' + style + '"><p class="text-xs font-semibold opacity-90 mb-1">' + sender + '</p><p class="whitespace-pre-wrap">' + (m.body || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p><p class="text-xs mt-1 opacity-80">' + time + '</p></div></div>';
             }).join('');

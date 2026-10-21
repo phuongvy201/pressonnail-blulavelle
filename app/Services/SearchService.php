@@ -3,16 +3,26 @@
 namespace App\Services;
 
 use App\Models\Product;
-use App\Models\Category;
+use App\Models\ProductEmbedding;
+use App\Services\Search\EmbeddingService;
+use App\Services\Search\SearchText;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class SearchService
 {
+    public function __construct(
+        private readonly SearchText $text,
+        private readonly EmbeddingService $embeddings,
+    ) {}
+
     /**
-     * Tìm sản phẩm: name, description, category, template, variant (variant_name + attributes).
-     * Multi-word: mỗi từ phải khớp ít nhất một trường (gần đúng, "lux" khớp "luxury").
-     * Ưu tiên category: nếu từ khóa trùng tên category thì sản phẩm thuộc category đó lên trước.
+     * Hybrid product search used by the storefront and suggestions:
+     * diacritic-insensitive keyword/fuzzy matching first, semantic
+     * embedding similarity as a rerank layer when available.
      */
     public function buildProductSearchQuery(
         string $query,
@@ -20,235 +30,341 @@ class SearchService
         bool $paginate = false,
         int $perPage = 12,
         int $limit = 6
-    ) {
-        $terms = $this->splitSearchTerms($query);
-        if (empty($terms)) {
-            return $paginate
-                ? Product::availableForDisplay()->whereRaw('1 = 0')->paginate($perPage)
-                : Product::availableForDisplay()->whereRaw('1 = 0')->limit($limit)->get();
-        }
+    ): Collection|LengthAwarePaginator {
+        $candidateLimit = max(
+            (int) config('search.candidate_limit', 300),
+            $paginate ? $perPage * 5 : $limit,
+        );
+        $ranked = $this->searchProducts($query, $filters, $candidateLimit);
 
-        $q = Product::with(['template.category', 'shop', 'variants'])
-            ->availableForDisplay();
+        if ($paginate) {
+            $page = Paginator::resolveCurrentPage();
+            $items = $ranked->slice(($page - 1) * $perPage, $perPage)->values();
 
-        // Mỗi từ phải khớp ít nhất một trong: name, description, template, category, variant
-        foreach ($terms as $term) {
-            $q->where(function (Builder $b) use ($term) {
-                $b->where('products.name', 'like', "%{$term}%")
-                    ->orWhere('products.description', 'like', "%{$term}%")
-                    ->orWhereHas('template', function (Builder $t) use ($term) {
-                        $t->where('name', 'like', "%{$term}%")
-                            ->orWhere('description', 'like', "%{$term}%");
-                    })
-                    ->orWhereHas('template.category', function (Builder $c) use ($term) {
-                        $c->where('name', 'like', "%{$term}%");
-                    })
-                    ->orWhereHas('variants', function (Builder $v) use ($term) {
-                        $v->where('variant_name', 'like', "%{$term}%")
-                            ->orWhereRaw('CAST(attributes AS CHAR) LIKE ?', ['%' . $term . '%']);
-                    });
-            });
-        }
-
-        // Filter: color, shape, size (từ variant attributes)
-        if (!empty($filters['color'])) {
-            $q->whereHas('variants', function (Builder $v) use ($filters) {
-                $this->whereVariantAttribute($v, ['Color', 'color'], $filters['color']);
-            });
-        }
-        if (!empty($filters['shape'])) {
-            $q->whereHas('variants', function (Builder $v) use ($filters) {
-                $this->whereVariantAttribute($v, ['Shape', 'shape'], $filters['shape']);
-            });
-        }
-        if (!empty($filters['size'])) {
-            $q->whereHas('variants', function (Builder $v) use ($filters) {
-                $this->whereVariantAttribute($v, ['Size', 'size'], $filters['size']);
-            });
-        }
-
-        // Filter: price
-        if (isset($filters['price_min']) && $filters['price_min'] !== '' && is_numeric($filters['price_min'])) {
-            $min = (float) $filters['price_min'];
-            $q->where(function (Builder $b) use ($min) {
-                $b->where('products.price', '>=', $min)
-                    ->orWhereHas('variants', fn(Builder $v) => $v->where('price', '>=', $min));
-            });
-        }
-        if (isset($filters['price_max']) && $filters['price_max'] !== '' && is_numeric($filters['price_max'])) {
-            $max = (float) $filters['price_max'];
-            $q->where(function (Builder $b) use ($max) {
-                $b->where('products.price', '<=', $max)
-                    ->orWhereHas('variants', fn(Builder $v) => $v->where('price', '<=', $max));
-            });
-        }
-
-        // Ưu tiên category trùng với từ khóa (order by category match)
-        $categoryIds = Category::where(function (Builder $c) use ($terms) {
-            foreach ($terms as $term) {
-                $c->orWhere('name', 'like', "%{$term}%");
-            }
-        })->pluck('id');
-
-        if ($categoryIds->isNotEmpty()) {
-            $ids = $categoryIds->toArray();
-            $placeholders = implode(',', array_map('intval', $ids));
-            $q->orderByRaw(
-                "CASE WHEN EXISTS (SELECT 1 FROM product_templates pt WHERE pt.id = products.template_id AND pt.category_id IN ({$placeholders})) THEN 0 ELSE 1 END"
+            return new \Illuminate\Pagination\LengthAwarePaginator(
+                $items,
+                $ranked->count(),
+                $perPage,
+                $page,
             );
         }
 
-        $q->orderBy('products.name');
-
-        if ($paginate) {
-            return $q->paginate($perPage);
-        }
-        return $q->limit($limit)->get();
+        return $ranked->take($limit)->values();
     }
 
     /**
-     * Đếm sản phẩm với cùng điều kiện search + filter (dùng cho counts).
+     * @return Collection<int, Product>
      */
+    public function searchProducts(string $query, array $filters = [], int $limit = 6, string $scope = 'all'): Collection
+    {
+        $concepts = $this->text->concepts($query);
+        if ($concepts === []) {
+            return collect();
+        }
+
+        $base = $this->baseQuery($filters);
+        $candidates = $this->keywordCandidates(clone $base, $concepts, $scope);
+        $semanticScores = $this->semanticScores(clone $base, $query);
+
+        if ($semanticScores !== []) {
+            $semanticCandidates = (clone $base)
+                ->whereIn('products.id', array_keys($semanticScores))
+                ->get();
+            $candidates = $candidates->concat($semanticCandidates)->unique('id')->values();
+        }
+
+        $scored = $candidates
+            ->map(function (Product $product) use ($concepts, $semanticScores, $scope) {
+                $keywordScore = $this->keywordScore($product, $concepts, $scope);
+                $semanticScore = (float) ($semanticScores[$product->id] ?? 0.0);
+                $hasSemantic = array_key_exists($product->id, $semanticScores);
+                $finalScore = $hasSemantic
+                    ? (1 - (float) config('search.semantic_weight', 0.35)) * $keywordScore
+                        + (float) config('search.semantic_weight', 0.35) * max(0.0, $semanticScore)
+                    : $keywordScore;
+
+                $product->setAttribute('search_score', round($finalScore, 4));
+                $product->setAttribute('search_semantic_score', round(max(0.0, $semanticScore), 4));
+
+                return ['product' => $product, 'score' => $finalScore, 'keyword' => $keywordScore, 'semantic' => $semanticScore];
+            })
+            ->filter(function (array $row) {
+                return $row['keyword'] >= 0.2
+                    || ($row['semantic'] >= 0.35 && $row['score'] >= 0.12);
+            })
+            ->sortBy([
+                ['score', 'desc'],
+                ['keyword', 'desc'],
+            ])
+            ->take($limit)
+            ->values();
+
+        return $scored->map(fn (array $row) => $row['product'])->values();
+    }
+
+    /**
+     * @return list<int>
+     */
+    public function rankedProductIds(string $query, array $filters = [], int $limit = 200, string $scope = 'all'): array
+    {
+        return $this->searchProducts($query, $filters, $limit, $scope)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
     public function countProducts(string $query, array $filters = []): int
     {
-        $terms = $this->splitSearchTerms($query);
-        if (empty($terms)) {
-            return 0;
-        }
+        return count($this->rankedProductIds($query, $filters, max(200, (int) config('search.candidate_limit', 300))));
+    }
 
-        $q = Product::availableForDisplay();
+    private function baseQuery(array $filters): Builder
+    {
+        $query = Product::with(['template.category', 'shop', 'variants'])
+            ->availableForDisplay();
 
-        foreach ($terms as $term) {
-            $q->where(function (Builder $b) use ($term) {
-                $b->where('products.name', 'like', "%{$term}%")
-                    ->orWhere('products.description', 'like', "%{$term}%")
-                    ->orWhereHas('template', function (Builder $t) use ($term) {
-                        $t->where('name', 'like', "%{$term}%")
-                            ->orWhere('description', 'like', "%{$term}%");
-                    })
-                    ->orWhereHas('template.category', function (Builder $c) use ($term) {
-                        $c->where('name', 'like', "%{$term}%");
-                    })
-                    ->orWhereHas('variants', function (Builder $v) use ($term) {
-                        $v->where('variant_name', 'like', "%{$term}%")
-                            ->orWhereRaw('CAST(attributes AS CHAR) LIKE ?', ['%' . $term . '%']);
-                    });
+        $this->applyFilters($query, $filters);
+
+        return $query;
+    }
+
+    private function applyFilters(Builder $query, array $filters): void
+    {
+        if (! empty($filters['color'])) {
+            $query->whereHas('variants', function (Builder $variant) use ($filters) {
+                $this->whereVariantAttribute($variant, ['Color', 'color'], (string) $filters['color']);
             });
         }
-
-        if (!empty($filters['color'])) {
-            $q->whereHas('variants', function (Builder $v) use ($filters) {
-                $this->whereVariantAttribute($v, ['Color', 'color'], $filters['color']);
+        if (! empty($filters['shape'])) {
+            $query->whereHas('variants', function (Builder $variant) use ($filters) {
+                $this->whereVariantAttribute($variant, ['Shape', 'shape'], (string) $filters['shape']);
             });
         }
-        if (!empty($filters['shape'])) {
-            $q->whereHas('variants', function (Builder $v) use ($filters) {
-                $this->whereVariantAttribute($v, ['Shape', 'shape'], $filters['shape']);
-            });
-        }
-        if (!empty($filters['size'])) {
-            $q->whereHas('variants', function (Builder $v) use ($filters) {
-                $this->whereVariantAttribute($v, ['Size', 'size'], $filters['size']);
+        if (! empty($filters['size'])) {
+            $query->whereHas('variants', function (Builder $variant) use ($filters) {
+                $this->whereVariantAttribute($variant, ['Size', 'size'], (string) $filters['size']);
             });
         }
         if (isset($filters['price_min']) && $filters['price_min'] !== '' && is_numeric($filters['price_min'])) {
             $min = (float) $filters['price_min'];
-            $q->where(function (Builder $b) use ($min) {
-                $b->where('products.price', '>=', $min)
-                    ->orWhereHas('variants', fn(Builder $v) => $v->where('price', '>=', $min));
+            $query->where(function (Builder $builder) use ($min) {
+                $builder->where('products.price', '>=', $min)
+                    ->orWhereHas('variants', fn (Builder $variant) => $variant->where('price', '>=', $min));
             });
         }
         if (isset($filters['price_max']) && $filters['price_max'] !== '' && is_numeric($filters['price_max'])) {
             $max = (float) $filters['price_max'];
-            $q->where(function (Builder $b) use ($max) {
-                $b->where('products.price', '<=', $max)
-                    ->orWhereHas('variants', fn(Builder $v) => $v->where('price', '<=', $max));
+            $query->where(function (Builder $builder) use ($max) {
+                $builder->where('products.price', '<=', $max)
+                    ->orWhereHas('variants', fn (Builder $variant) => $variant->where('price', '<=', $max));
             });
         }
-
-        return $q->count();
-    }
-
-    private function splitSearchTerms(string $query): array
-    {
-        $words = preg_split('/\s+/u', trim($query), -1, PREG_SPLIT_NO_EMPTY);
-        return array_values(array_filter(array_map('trim', $words), fn($w) => strlen($w) >= 1));
     }
 
     /**
-     * Filter variant by attribute key (Color/color, Shape/shape, Size/size).
-     * MySQL: JSON_EXTRACT(attributes, '$.Color') = "Pink" or LIKE.
+     * @param  list<list<string>>  $concepts
+     * @return Collection<int, Product>
      */
-    private function whereVariantAttribute(Builder $v, array $keys, string $value): void
+    private function keywordCandidates(Builder $base, array $concepts, string $scope): Collection
+    {
+        $terms = [];
+        foreach ($concepts as $alternatives) {
+            foreach ($alternatives as $term) {
+                $terms[$term] = $term;
+            }
+        }
+        $terms = array_values($terms);
+        if ($terms === []) {
+            return collect();
+        }
+
+        return $base
+            ->where(function (Builder $builder) use ($terms, $scope) {
+                foreach ($terms as $term) {
+                    $like = '%'.$term.'%';
+                    $builder->orWhere(function (Builder $termQuery) use ($like, $scope) {
+                        if ($scope === 'all' || $scope === 'name') {
+                            $termQuery->orWhere('products.name', 'like', $like);
+                        }
+                        if ($scope === 'all' || $scope === 'description') {
+                            $termQuery->orWhere('products.description', 'like', $like);
+                        }
+                        if ($scope === 'all') {
+                            $termQuery->orWhere('products.color', 'like', $like)
+                                ->orWhere('products.pattern', 'like', $like)
+                                ->orWhere('products.material', 'like', $like)
+                                ->orWhere('products.meta_keywords', 'like', $like)
+                                ->orWhereHas('template', function (Builder $template) use ($like) {
+                                    $template->where('name', 'like', $like)
+                                        ->orWhere('description', 'like', $like);
+                                })
+                                ->orWhereHas('template.category', fn (Builder $category) => $category->where('name', 'like', $like))
+                                ->orWhereHas('variants', function (Builder $variant) use ($like) {
+                                    $variant->where('variant_name', 'like', $like)
+                                        ->orWhereRaw('CAST(attributes AS CHAR) LIKE ?', [$like]);
+                                });
+                        }
+                        if ($scope === 'all' || $scope === 'shop') {
+                            $termQuery->orWhereHas('shop', fn (Builder $shop) => $shop->where('name', 'like', $like));
+                        }
+                    });
+                }
+            })
+            ->limit(max(20, (int) config('search.candidate_limit', 300)))
+            ->get();
+    }
+
+    /**
+     * @return array<int, float> product id => cosine similarity
+     */
+    private function semanticScores(Builder $base, string $query): array
+    {
+        if (! $this->embeddings->enabled()) {
+            return [];
+        }
+
+        $queryVector = $this->embeddings->embed($query);
+        if ($queryVector === null) {
+            return [];
+        }
+
+        $productIds = (clone $base)->select('products.id');
+        $rows = ProductEmbedding::query()
+            ->where('model', $this->embeddings->model())
+            ->whereIn('product_id', $productIds)
+            ->get();
+
+        $scores = [];
+        foreach ($rows as $row) {
+            if (is_array($row->vector) && $row->vector !== []) {
+                $scores[(int) $row->product_id] = $this->embeddings->cosine($queryVector, $row->vector);
+            }
+        }
+
+        arsort($scores);
+
+        return array_slice($scores, 0, 50, true);
+    }
+
+    /**
+     * @param  list<list<string>>  $concepts
+     */
+    private function keywordScore(Product $product, array $concepts, string $scope): float
+    {
+        $fields = $this->productFields($product, $scope);
+        if ($fields === [] || $concepts === []) {
+            return 0.0;
+        }
+
+        $maxWeight = max(array_column($fields, 'weight'));
+        $total = 0.0;
+        foreach ($concepts as $alternatives) {
+            $best = 0.0;
+            foreach ($fields as $field) {
+                $score = $this->text->conceptScore($alternatives, $field['text'], $field['tokens']);
+                $best = max($best, $score * ($field['weight'] / $maxWeight));
+            }
+            $total += $best;
+        }
+
+        return $total / count($concepts);
+    }
+
+    /**
+     * @return list<array{text: string, tokens: list<string>, weight: int}>
+     */
+    private function productFields(Product $product, string $scope): array
+    {
+        $raw = [];
+        if ($scope === 'all' || $scope === 'name') {
+            $raw[] = [(string) $product->name, 5];
+        }
+        if ($scope === 'all') {
+            $variantText = $product->variants
+                ->map(fn ($variant) => trim((string) $variant->variant_name.' '.json_encode($variant->attributes ?? [])))
+                ->implode(' ');
+            $raw[] = [$variantText, 4];
+            $raw[] = [(string) ($product->color ?? ''), 4];
+            $raw[] = [(string) ($product->meta_keywords ?? ''), 3];
+            $raw[] = [(string) ($product->pattern ?? ''), 3];
+            $raw[] = [(string) ($product->material ?? ''), 3];
+            $raw[] = [(string) ($product->template?->category?->name ?? ''), 3];
+            $raw[] = [(string) ($product->template?->name ?? ''), 2];
+        }
+        if ($scope === 'all' || $scope === 'shop') {
+            $raw[] = [(string) ($product->shop?->name ?? ''), 2];
+        }
+        if ($scope === 'all' || $scope === 'description') {
+            $raw[] = [strip_tags((string) $product->getEffectiveDescription()), 1];
+        }
+
+        return collect($raw)
+            ->filter(fn (array $field) => trim((string) $field[0]) !== '')
+            ->map(fn (array $field) => [
+                'text' => $this->text->normalize((string) $field[0]),
+                'tokens' => $this->text->tokens((string) $field[0]),
+                'weight' => (int) $field[1],
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function whereVariantAttribute(Builder $variant, array $keys, string $value): void
     {
         $value = trim($value);
         if ($value === '') {
             return;
         }
-        $v->where(function (Builder $b) use ($keys, $value) {
+        $variant->where(function (Builder $builder) use ($keys, $value) {
             foreach ($keys as $key) {
-                $b->orWhereRaw('LOWER(JSON_UNQUOTE(JSON_EXTRACT(attributes, ?))) LIKE ?', ['$.' . $key, '%' . Str::lower($value) . '%']);
+                $builder->orWhereRaw('LOWER(JSON_UNQUOTE(JSON_EXTRACT(attributes, ?))) LIKE ?', ['$.'.$key, '%'.Str::lower($value).'%']);
             }
         });
     }
 
     /**
-     * Lấy danh sách giá trị filter (màu, shape, size) từ variants trong DB (cho search hiện tại).
+     * Filter values (colour, shape, size) available among smart-search results.
      */
     public function getAvailableFilters(string $query): array
     {
-        $terms = $this->splitSearchTerms($query);
-        $productIds = Product::availableForDisplay()
-            ->when(!empty($terms), function (Builder $q) use ($terms) {
-                foreach ($terms as $term) {
-                    $q->where(function (Builder $b) use ($term) {
-                        $b->where('products.name', 'like', "%{$term}%")
-                            ->orWhere('products.description', 'like', "%{$term}%")
-                            ->orWhereHas('template', fn(Builder $t) => $t->where('name', 'like', "%{$term}%")->orWhere('description', 'like', "%{$term}%"))
-                            ->orWhereHas('template.category', fn(Builder $c) => $c->where('name', 'like', "%{$term}%"))
-                            ->orWhereHas('variants', fn(Builder $v) => $v->where('variant_name', 'like', "%{$term}%")->orWhereRaw('CAST(attributes AS CHAR) LIKE ?', ['%' . $term . '%']));
-                    });
-                }
-            })
-            ->pluck('id');
+        $productIds = $this->rankedProductIds($query, [], max(100, (int) config('search.candidate_limit', 300)));
 
-        if ($productIds->isEmpty()) {
+        if ($productIds === []) {
             return ['colors' => [], 'shapes' => [], 'sizes' => []];
         }
 
-        $variants = \App\Models\ProductVariant::whereIn('product_id', $productIds)
-            ->get();
+        $variants = \App\Models\ProductVariant::whereIn('product_id', $productIds)->get();
 
         $colors = [];
         $shapes = [];
         $sizes = [];
 
-        foreach ($variants as $v) {
-            $attrs = $v->attributes ?? [];
+        foreach ($variants as $variant) {
+            $attrs = $variant->attributes ?? [];
             if (is_string($attrs)) {
                 $attrs = json_decode($attrs, true) ?? [];
             }
-            foreach (['Color', 'color'] as $k) {
-                if (!empty($attrs[$k])) {
-                    $colors[Str::lower(trim($attrs[$k]))] = trim($attrs[$k]);
+            foreach (['Color', 'color'] as $key) {
+                if (! empty($attrs[$key])) {
+                    $colors[Str::lower(trim((string) $attrs[$key]))] = trim((string) $attrs[$key]);
                 }
             }
-            foreach (['Shape', 'shape'] as $k) {
-                if (!empty($attrs[$k])) {
-                    $shapes[Str::lower(trim($attrs[$k]))] = trim($attrs[$k]);
+            foreach (['Shape', 'shape'] as $key) {
+                if (! empty($attrs[$key])) {
+                    $shapes[Str::lower(trim((string) $attrs[$key]))] = trim((string) $attrs[$key]);
                 }
             }
-            foreach (['Size', 'size'] as $k) {
-                if (!empty($attrs[$k])) {
-                    $sizes[Str::lower(trim($attrs[$k]))] = trim($attrs[$k]);
+            foreach (['Size', 'size'] as $key) {
+                if (! empty($attrs[$key])) {
+                    $sizes[Str::lower(trim((string) $attrs[$key]))] = trim((string) $attrs[$key]);
                 }
             }
         }
 
         return [
-            'colors' => array_values(array_unique($colors)),
-            'shapes' => array_values(array_unique($shapes)),
-            'sizes' => array_values(array_unique($sizes)),
+            'colors' => array_values($colors),
+            'shapes' => array_values($shapes),
+            'sizes' => array_values($sizes),
         ];
     }
 }

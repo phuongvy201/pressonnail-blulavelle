@@ -829,6 +829,8 @@ Route::middleware('auth')->group(function () {
         Route::get('live-chat/{conversation}', [App\Http\Controllers\Admin\LiveChatController::class, 'show'])->name('live-chat.show');
         Route::get('live-chat/{conversation}/messages', [App\Http\Controllers\Admin\LiveChatController::class, 'messages'])->name('live-chat.messages');
         Route::post('live-chat/{conversation}/reply', [App\Http\Controllers\Admin\LiveChatController::class, 'reply'])->name('live-chat.reply');
+        Route::post('live-chat/{conversation}/takeover', [App\Http\Controllers\Admin\LiveChatController::class, 'takeover'])->name('live-chat.takeover');
+        Route::post('live-chat/{conversation}/return-to-bot', [App\Http\Controllers\Admin\LiveChatController::class, 'returnToBot'])->name('live-chat.return-to-bot');
     });
 
     // Orders management (Admin + Ad-Partner) - using controller middleware

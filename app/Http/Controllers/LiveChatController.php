@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\GenerateChatbotReply;
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
 use App\Services\LiveChatService;
@@ -97,7 +98,11 @@ class LiveChatController extends Controller
             'conversation' => [
                 'id' => $conversation->id,
                 'customer_name' => $conversation->customer_name,
+                'handling_mode' => $conversation->handling_mode ?? ChatConversation::HANDLING_BOT,
             ],
+            'handling_mode' => $conversation->handling_mode ?? ChatConversation::HANDLING_BOT,
+            'bot_enabled' => (bool) config('chatbot.enabled'),
+            ...$this->liveChat->supportWidgetPayload($conversation),
         ]);
     }
 
@@ -114,7 +119,10 @@ class LiveChatController extends Controller
             return [
                 'id' => $m->id,
                 'is_from_customer' => $m->is_from_customer,
+                'sender_type' => $m->senderType(),
                 'body' => $m->body,
+                'metadata' => $m->metadata ?? [],
+                'intent' => $m->intent,
                 'created_at' => $m->created_at->toIso8601String(),
             ];
         });
@@ -128,6 +136,10 @@ class LiveChatController extends Controller
             'success' => true,
             'messages' => $messages,
             'unread_count' => $unread,
+            'handling_mode' => $conversation->handling_mode ?? ChatConversation::HANDLING_BOT,
+            'bot_processing' => $conversation->bot_processing_at !== null,
+            'bot_enabled' => (bool) config('chatbot.enabled'),
+            ...$this->liveChat->supportWidgetPayload($conversation),
         ]);
     }
 
@@ -145,19 +157,35 @@ class LiveChatController extends Controller
         $message = ChatMessage::create([
             'conversation_id' => $conversation->id,
             'is_from_customer' => true,
+            'sender_type' => ChatMessage::SENDER_CUSTOMER,
             'body' => $request->body,
         ]);
 
         $this->telegramBot->notifyCustomerMessage($conversation, $message);
+
+        $botStatus = 'disabled';
+        if ((bool) config('chatbot.enabled') && $conversation->isBotHandled()) {
+            GenerateChatbotReply::dispatch((int) $conversation->id, (int) $message->id);
+            $conversation->refresh();
+            $botStatus = $conversation->handling_mode === ChatConversation::HANDLING_HUMAN
+                ? 'handed_off'
+                : (config('queue.default') === 'sync' ? 'replied' : 'processing');
+        } elseif ($conversation->handling_mode === ChatConversation::HANDLING_HUMAN) {
+            $botStatus = 'human';
+        }
 
         return response()->json([
             'success' => true,
             'message' => [
                 'id' => $message->id,
                 'is_from_customer' => true,
+                'sender_type' => ChatMessage::SENDER_CUSTOMER,
                 'body' => $message->body,
                 'created_at' => $message->created_at->toIso8601String(),
             ],
+            'bot_status' => $botStatus,
+            'handling_mode' => $conversation->refresh()->handling_mode ?? ChatConversation::HANDLING_BOT,
+            ...$this->liveChat->supportWidgetPayload($conversation),
         ]);
     }
 

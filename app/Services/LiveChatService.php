@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Jobs\SendLiveChatReplyEmailIfUnread;
 use App\Mail\LiveChatReplyMail;
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Spatie\Permission\Exceptions\RoleDoesNotExist;
@@ -84,19 +86,116 @@ class LiveChatService
             ]);
         }
 
+        if ($message->is_from_customer
+            || in_array($message->senderType(), [ChatMessage::SENDER_BOT, ChatMessage::SENDER_SYSTEM], true)
+            || ! (bool) config('chatbot.reply_email_enabled', true)) {
+            return;
+        }
+
         $email = $conversation->customer_email;
         if (! filled($email) || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return;
         }
 
         try {
-            Mail::to($email)->send(new LiveChatReplyMail($conversation, $message));
+            SendLiveChatReplyEmailIfUnread::dispatch((int) $conversation->id, (int) $message->id)
+                ->delay(now()->addMinutes(max(1, (int) config('chatbot.reply_email_delay_minutes', 5))));
         } catch (\Throwable $e) {
-            Log::warning('Live chat customer email failed.', [
+            Log::warning('Live chat customer reply email could not be scheduled.', [
                 'conversation_id' => $conversation->id,
+                'message_id' => $message->id,
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    public function sendReplyEmailIfUnread(int $conversationId, int $messageId): void
+    {
+        DB::transaction(function () use ($conversationId, $messageId) {
+            $conversation = ChatConversation::query()
+                ->with('customer')
+                ->lockForUpdate()
+                ->find($conversationId);
+
+            if (! $conversation || $conversation->status !== 'open') {
+                return;
+            }
+
+            $seenMessageId = (int) ($conversation->customer_last_seen_message_id ?? 0);
+            if ($seenMessageId >= $messageId) {
+                return;
+            }
+
+            $unreadMessages = $conversation->messages()
+                ->where('id', '>', $seenMessageId)
+                ->where('is_from_customer', false)
+                ->whereNotIn('sender_type', [ChatMessage::SENDER_BOT, ChatMessage::SENDER_SYSTEM])
+                ->orderBy('id')
+                ->get();
+
+            if ($unreadMessages->isEmpty()) {
+                return;
+            }
+
+            $latestMessage = $unreadMessages->last();
+            if ((int) ($conversation->reply_email_notified_message_id ?? 0) >= (int) $latestMessage->id) {
+                return;
+            }
+
+            $email = $conversation->customer_email;
+            if (! filled($email) || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return;
+            }
+
+            Mail::to($email)->send(new LiveChatReplyMail(
+                $conversation,
+                $latestMessage,
+                $unreadMessages->all(),
+            ));
+
+            $conversation->forceFill([
+                'reply_email_notified_message_id' => (int) $latestMessage->id,
+                'reply_email_sent_at' => now(),
+            ])->save();
+        });
+    }
+
+    public function supportReference(ChatConversation $conversation): string
+    {
+        return 'SUP-'.$conversation->id;
+    }
+
+    public function supportStatus(ChatConversation $conversation): ?string
+    {
+        if (($conversation->handling_mode ?? ChatConversation::HANDLING_BOT) !== ChatConversation::HANDLING_HUMAN) {
+            return null;
+        }
+
+        $replies = $conversation->messages()
+            ->where('is_from_customer', false)
+            ->whereNotIn('sender_type', [ChatMessage::SENDER_BOT, ChatMessage::SENDER_SYSTEM]);
+
+        if ($conversation->handed_off_at) {
+            $replies->where('created_at', '>=', $conversation->handed_off_at);
+        }
+
+        return $replies->exists() ? 'replied' : 'waiting';
+    }
+
+    /**
+     * @return array{support_status: string|null, support_reference: string, support_reply_within: string, support_hours: string, support_email_alert: bool}
+     */
+    public function supportWidgetPayload(ChatConversation $conversation): array
+    {
+        $email = $conversation->customer_email;
+
+        return [
+            'support_status' => $this->supportStatus($conversation),
+            'support_reference' => $this->supportReference($conversation),
+            'support_reply_within' => (string) config('chatbot.support_reply_within', '2 business hours'),
+            'support_hours' => (string) config('chatbot.support_hours', 'Mon–Sat, 9am–6pm'),
+            'support_email_alert' => filled($email) && filter_var($email, FILTER_VALIDATE_EMAIL) !== false,
+        ];
     }
 
     public function firstAvailableSellerId(): ?int
@@ -135,7 +234,10 @@ class LiveChatService
 
     public function unreadSellerCount(ChatConversation $conversation, $session): int
     {
-        $lastSeen = (int) $session->get(self::SESSION_LAST_SEEN, 0);
+        $lastSeen = max(
+            (int) $session->get(self::SESSION_LAST_SEEN, 0),
+            (int) ($conversation->customer_last_seen_message_id ?? 0),
+        );
 
         return ChatMessage::query()
             ->where('conversation_id', $conversation->id)
@@ -146,7 +248,25 @@ class LiveChatService
 
     public function markSeen(ChatConversation $conversation, $session): void
     {
-        $session->put(self::SESSION_LAST_SEEN, (int) $conversation->messages()->max('id'));
+        $lastMessageId = (int) $conversation->messages()->max('id');
+        $session->put(self::SESSION_LAST_SEEN, $lastMessageId);
+
+        if ($lastMessageId > (int) ($conversation->customer_last_seen_message_id ?? 0)) {
+            $conversation->forceFill([
+                'customer_last_seen_message_id' => $lastMessageId,
+                'customer_last_seen_at' => now(),
+            ])->save();
+        }
+    }
+
+    public function markSeenUpTo(ChatConversation $conversation, int $messageId): void
+    {
+        if ($messageId > (int) ($conversation->customer_last_seen_message_id ?? 0)) {
+            $conversation->forceFill([
+                'customer_last_seen_message_id' => $messageId,
+                'customer_last_seen_at' => now(),
+            ])->save();
+        }
     }
 
     public function guestNameFromSession($session): ?string

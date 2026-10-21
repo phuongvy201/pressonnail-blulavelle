@@ -504,26 +504,26 @@ class ProductController extends Controller
             });
         }
 
+        $relevanceIds = [];
         if (! empty($filters['search'])) {
-            $search = $filters['search'];
-            $scope = $filters['searchScope'] ?? 'all';
-            $query->where(function ($q) use ($search, $scope) {
-                match ($scope) {
-                    'name' => $q->where('name', 'like', "%{$search}%"),
-                    'description' => $q->where('description', 'like', "%{$search}%"),
-                    'shop' => $q->whereHas('shop', function ($shopQuery) use ($search) {
-                        $shopQuery->where('name', 'like', "%{$search}%");
-                    }),
-                    default => $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('description', 'like', "%{$search}%")
-                        ->orWhereHas('shop', function ($shopQuery) use ($search) {
-                            $shopQuery->where('name', 'like', "%{$search}%");
-                        }),
-                };
-            });
+            $scope = (string) ($filters['searchScope'] ?? 'all');
+            $relevanceIds = app(\App\Services\SearchService::class)
+                ->rankedProductIds((string) $filters['search'], [], 200, $scope);
+            if ($relevanceIds === []) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->whereIn('products.id', $relevanceIds);
+            }
         }
 
         $sortBy = $this->normalizeCatalogSortBy((string) ($filters['sortBy'] ?? 'newest'));
+
+        if ($relevanceIds !== [] && in_array((string) ($filters['sortBy'] ?? 'newest'), ['newest'], true)) {
+            $cases = collect($relevanceIds)
+                ->map(fn ($id, $index) => 'WHEN '.(int) $id.' THEN '.$index)
+                ->implode(' ');
+            $query->orderByRaw('CASE products.id '.$cases.' ELSE 9999 END');
+        }
 
         if ($sortBy === 'best_selling') {
             $paidUnits = DB::table('order_items')

@@ -856,15 +856,18 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
             <span id="live-chat-unread-badge" class="absolute -top-1 -right-1 min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-5 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] sm:text-xs font-bold shadow z-10 hidden" aria-hidden="true">0</span>
         </div>
         {{-- Panel: mobile = bottom sheet full width, desktop = floating 380px --}}
-        <div id="live-chat-panel" class="live-chat-panel hidden fixed left-0 right-0 bottom-20 sm:left-auto sm:right-0 sm:bottom-16 sm:absolute w-full sm:w-[380px] max-h-[calc(100vh-6rem)] sm:max-h-[480px] sm:h-[480px] min-h-[280px] sm:min-h-0 bg-white shadow-2xl border border-slate-200 flex flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl border-b-0 sm:border-b">
+        <div id="live-chat-panel" class="live-chat-panel hidden fixed left-0 right-0 bottom-20 sm:left-auto sm:right-0 sm:bottom-16 sm:absolute w-full sm:w-[380px] max-h-[calc(100vh-6rem)] sm:max-h-[480px] sm:h-[480px] min-h-[280px] sm:min-h-0 bg-white shadow-2xl border border-slate-200 flex flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl border-b-0 sm:border-b" data-chatbot-enabled="{{ config('chatbot.enabled') ? '1' : '0' }}" data-chatbot-welcome="{{ config('chatbot.welcome') }}" data-support-reply-within="{{ config('chatbot.support_reply_within') }}" data-support-hours="{{ config('chatbot.support_hours') }}">
             <div class="flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3 border-b border-slate-200 flex-shrink-0" style="background: #0297FE;">
-                <span class="font-bold text-white text-sm sm:text-base">Chat with us</span>
+                <div class="min-w-0">
+                    <span class="block font-bold text-white text-sm sm:text-base leading-tight">Chat with us</span>
+                    <span id="live-chat-mode-label" class="block text-[11px] text-white/85 leading-tight">{{ config('chatbot.enabled') ? 'Blu Assistant · Support team' : 'Support team' }}</span>
+                </div>
                 <button type="button" id="live-chat-close" class="p-1.5 sm:p-1 rounded-lg text-white/90 hover:bg-white/20 touch-manipulation" aria-label="Close chat">
                     <span class="material-symbols-outlined text-xl sm:text-base">close</span>
                 </button>
             </div>
             <div id="live-chat-start" class="p-3 sm:p-4 flex-shrink-0">
-                <p class="text-xs sm:text-sm text-slate-600 mb-3 sm:mb-4">Send a message, we'll reply soon.</p>
+                <p class="text-xs sm:text-sm text-slate-600 mb-3 sm:mb-4">{{ config('chatbot.enabled') ? 'Blu Assistant can answer common questions instantly. Our support team can join this same chat whenever you need a person.' : 'Send a message, we\'ll reply soon.' }}</p>
                 <div id="live-chat-guest-form" class="space-y-2.5 sm:space-y-3 {{ auth()->check() ? 'hidden' : '' }}">
                     {{-- Honeypot: áº©n vá»›i CSS, bot Ä‘iá»n vÃ o sáº½ bá»‹ tá»« chá»‘i --}}
                     <input type="text" id="live-chat-website" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="absolute left-[-9999px] w-0 h-0 opacity-0 pointer-events-none">
@@ -875,9 +878,19 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
             </div>
             <div id="live-chat-box" class="hidden flex-1 flex flex-col min-h-0 overflow-hidden">
                 <div id="live-chat-messages" class="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 min-h-0"></div>
+                <div id="live-chat-bot-status" class="hidden px-3 py-2 text-xs text-slate-500 bg-sky-50 border-t border-sky-100 flex-shrink-0" role="status">Blu Assistant is typing…</div>
+                @if(config('chatbot.enabled'))
+                    <div id="live-chat-quick-replies" class="px-2 pt-2 sm:px-3 flex gap-1.5 flex-wrap flex-shrink-0 bg-white" aria-label="Suggested questions">
+                        <button type="button" class="live-chat-quick-reply px-2.5 py-1.5 rounded-full border border-sky-200 bg-sky-50 text-sky-800 text-xs font-semibold" data-message="Where is my order?">Track my order</button>
+                        <button type="button" class="live-chat-quick-reply px-2.5 py-1.5 rounded-full border border-sky-200 bg-sky-50 text-sky-800 text-xs font-semibold" data-message="Show me popular nail sets">Find nails</button>
+                        <button type="button" class="live-chat-quick-reply px-2.5 py-1.5 rounded-full border border-sky-200 bg-sky-50 text-sky-800 text-xs font-semibold" data-message="How do I choose the right nail size?">Sizing help</button>
+                        <button type="button" class="live-chat-quick-reply px-2.5 py-1.5 rounded-full border border-sky-200 bg-sky-50 text-sky-800 text-xs font-semibold" data-message="How long does shipping take?">Shipping</button>
+                        <button type="button" class="live-chat-quick-reply px-2.5 py-1.5 rounded-full border border-slate-200 bg-white text-slate-700 text-xs font-semibold" data-message="Talk to a human please">Talk to support</button>
+                    </div>
+                @endif
                 <div class="p-2 sm:p-3 border-t border-slate-200 flex-shrink-0 bg-white">
                     <form id="live-chat-send-form" class="flex gap-2">
-                        <input type="text" id="live-chat-input" placeholder="Enter message..." class="flex-1 min-w-0 px-3 py-2 sm:px-4 border border-slate-200 rounded-xl text-sm min-h-[44px] sm:min-h-0">
+                        <input type="text" id="live-chat-input" placeholder="{{ config('chatbot.enabled') ? 'Ask Blu Assistant...' : 'Enter message...' }}" class="flex-1 min-w-0 px-3 py-2 sm:px-4 border border-slate-200 rounded-xl text-sm min-h-[44px] sm:min-h-0">
                         <button type="submit" id="live-chat-send-btn" class="px-3 py-2 sm:px-4 rounded-xl font-semibold text-white text-sm flex-shrink-0 touch-manipulation min-h-[44px] sm:min-h-0" style="background: #0297FE;">Send</button>
                     </form>
                 </div>
@@ -1660,22 +1673,97 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         var startBlock = document.getElementById('live-chat-start');
         var boxBlock = document.getElementById('live-chat-box');
         var messagesEl = document.getElementById('live-chat-messages');
+        var modeLabel = document.getElementById('live-chat-mode-label');
+        var botStatus = document.getElementById('live-chat-bot-status');
+        var quickReplies = document.getElementById('live-chat-quick-replies');
+        var chatInput = document.getElementById('live-chat-input');
+        var chatbotEnabled = panel && panel.getAttribute('data-chatbot-enabled') === '1';
+        var chatbotWelcome = panel ? (panel.getAttribute('data-chatbot-welcome') || '') : '';
+        var supportReplyWithin = panel ? (panel.getAttribute('data-support-reply-within') || '2 business hours') : '2 business hours';
+        var supportHours = panel ? (panel.getAttribute('data-support-hours') || 'Mon–Sat, 9am–6pm') : 'Mon–Sat, 9am–6pm';
+        var supportStatus = null;
+        var supportReference = '';
+        var supportEmailAlert = false;
+        var handlingMode = 'bot';
         var STORAGE_KEY_NAME = 'liveChatGuestName';
         var STORAGE_KEY_EMAIL = 'liveChatGuestEmail';
 
         function messagesUrl() { return '{{ url("/live-chat/conversations") }}/' + conversationId + '/messages'; }
         function getHoneypotValue() { var el = document.getElementById('live-chat-website'); return (el && el.value) ? el.value : ''; }
+        function escapeChatHtml(value) {
+            return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+        function setChatProcessing(isProcessing) {
+            if (!botStatus) return;
+            if (isProcessing && chatbotEnabled && handlingMode === 'bot') {
+                botStatus.textContent = 'Blu Assistant is typing…';
+                botStatus.classList.remove('hidden');
+                return;
+            }
+            if (handlingMode === 'human') {
+                if (supportStatus === 'waiting') {
+                    botStatus.textContent = 'Waiting for support · Usually replies within ' + supportReplyWithin + ' (' + supportHours + ').'
+                        + (supportEmailAlert ? ' You can close this chat — we’ll email you when we reply.' : ' You can close this chat and return here for our reply.')
+                        + (supportReference ? ' Ref #' + supportReference + '.' : '');
+                } else {
+                    botStatus.textContent = 'You’re now chatting with our support team.';
+                }
+                botStatus.classList.remove('hidden');
+                return;
+            }
+            botStatus.classList.add('hidden');
+        }
+        function updateChatMode(nextMode, isProcessing) {
+            if (nextMode) handlingMode = nextMode;
+            if (modeLabel) {
+                modeLabel.textContent = handlingMode === 'human'
+                    ? 'Support team'
+                    : (chatbotEnabled ? 'Blu Assistant · Support team' : 'Support team');
+            }
+            if (quickReplies) quickReplies.classList.toggle('hidden', handlingMode === 'human');
+            if (chatInput) {
+                chatInput.placeholder = handlingMode === 'human'
+                    ? 'Message support...'
+                    : (chatbotEnabled ? 'Ask Blu Assistant...' : 'Enter message...');
+            }
+            setChatProcessing(!!isProcessing);
+        }
+        function applySupportPayload(data) {
+            if (!data) return;
+            if (typeof data.support_status !== 'undefined') supportStatus = data.support_status;
+            if (data.support_reference) supportReference = data.support_reference;
+            if (data.support_reply_within) supportReplyWithin = data.support_reply_within;
+            if (data.support_hours) supportHours = data.support_hours;
+            if (typeof data.support_email_alert !== 'undefined') supportEmailAlert = !!data.support_email_alert;
+        }
+        function renderProductCards(products) {
+            if (!products || !products.length) return '';
+            return '<div class="mt-2 space-y-2">' + products.map(function(product) {
+                var image = product.image ? '<img src="' + escapeChatHtml(product.image) + '" alt="" class="w-11 h-11 rounded-lg object-cover flex-shrink-0">' : '';
+                return '<a href="' + escapeChatHtml(product.url) + '" class="flex items-center gap-2 bg-white border border-sky-100 rounded-xl p-2 text-slate-900 no-underline">'
+                    + image
+                    + '<span class="min-w-0 flex-1"><span class="block text-xs font-bold truncate">' + escapeChatHtml(product.name) + '</span><span class="block text-xs text-sky-700 font-bold">$' + Number(product.price || 0).toFixed(2) + '</span></span>'
+                    + '<span class="text-sky-700 text-xs font-bold">View</span></a>';
+            }).join('') + '</div>';
+        }
 
         function renderMessages(messages) {
-            if (!messages || !messages.length) { messagesEl.innerHTML = '<p class="text-sm text-slate-500 text-center py-4">No messages yet.</p>'; return; }
+            if (!messages || !messages.length) {
+                messagesEl.innerHTML = chatbotEnabled && chatbotWelcome
+                    ? '<div class="flex justify-start"><div class="max-w-[85%] rounded-xl px-3 py-2 text-sm bg-sky-50 text-slate-900 border border-sky-100"><p class="text-xs font-semibold opacity-90 mb-1">Blu Assistant</p><p class="whitespace-pre-wrap">' + escapeChatHtml(chatbotWelcome) + '</p></div></div>'
+                    : '<p class="text-sm text-slate-500 text-center py-4">No messages yet.</p>';
+                return;
+            }
             messagesEl.innerHTML = messages.map(function(m) {
-                var isMe = m.is_from_customer;
+                var senderType = m.sender_type || (m.is_from_customer ? 'customer' : 'admin');
+                var isMe = senderType === 'customer';
                 var align = isMe ? 'justify-end' : 'justify-start';
-                var bg = isMe ? 'text-white' : 'bg-slate-100 text-slate-900';
+                var bg = isMe ? 'text-white' : (senderType === 'bot' ? 'bg-sky-50 text-slate-900 border border-sky-100' : 'bg-slate-100 text-slate-900');
                 var style = isMe ? ' style="background:#7BC5ED;color:#fff"' : '';
-                var sender = isMe ? 'You' : 'Blulavelle';
+                var sender = isMe ? 'You' : (senderType === 'bot' ? 'Blu Assistant' : (senderType === 'system' ? 'BluLavelle' : 'Support team'));
                 var time = (function() { var d = new Date(m.created_at); return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }); })();
-                return '<div class="flex ' + align + '"><div class="max-w-[85%] rounded-xl px-3 py-2 text-sm ' + bg + '"' + style + '><p class="text-xs font-semibold opacity-90 mb-1">' + sender + '</p><p class="whitespace-pre-wrap">' + (m.body || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p><p class="text-xs mt-1 opacity-80">' + time + '</p></div></div>';
+                var products = renderProductCards(m.metadata && m.metadata.products ? m.metadata.products : []);
+                return '<div class="flex ' + align + '"><div class="max-w-[85%] rounded-xl px-3 py-2 text-sm ' + bg + '"' + style + '><p class="text-xs font-semibold opacity-90 mb-1">' + sender + '</p><p class="whitespace-pre-wrap">' + escapeChatHtml(m.body || '') + '</p>' + products + '<p class="text-xs mt-1 opacity-80">' + time + '</p></div></div>';
             }).join('');
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
@@ -1720,7 +1808,9 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (!data.success) return;
-                    if (data.messages && data.messages.length) {
+                    applySupportPayload(data);
+                    updateChatMode(data.handling_mode, data.bot_processing);
+                    if (data.messages) {
                         renderMessages(data.messages);
                     }
                     if (isChatPanelOpen()) {
@@ -1797,6 +1887,8 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                 .then(function(data) {
                     if (data.success && data.conversation) {
                         conversationId = data.conversation.id;
+                        applySupportPayload(data);
+                        updateChatMode(data.handling_mode || data.conversation.handling_mode, false);
                         startBlock.classList.add('hidden');
                         boxBlock.classList.remove('hidden');
                         fetchMessages();
@@ -1900,13 +1992,13 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         {{-- Chat: chá»‰ gá»i resume-status sau load + delay â€” tÃ¡ch khá»i critical path trong lab. --}}
         window.addEventListener('DOMContentLoaded', function () { setTimeout(prefillAndResume, 200); }, { once: true });
 
-        document.getElementById('live-chat-send-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            var input = document.getElementById('live-chat-input');
-            var body = (input && input.value) ? input.value.trim() : '';
+        function sendChatBody(body) {
+            body = (body || '').trim();
             if (!body || !conversationId) return;
+            var input = document.getElementById('live-chat-input');
             var sendBtn = document.getElementById('live-chat-send-btn');
-            sendBtn.disabled = true;
+            if (sendBtn) sendBtn.disabled = true;
+            if (chatbotEnabled && handlingMode === 'bot') setChatProcessing(true);
             fetch(sendUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
@@ -1916,13 +2008,30 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (data.success && data.message) {
-                        input.value = '';
+                        if (input) input.value = '';
+                        applySupportPayload(data);
+                        updateChatMode(data.handling_mode, data.bot_status === 'processing');
                         fetchMessages();
+                    } else {
+                        setChatProcessing(false);
                     }
                 })
-                .catch(function() {})
-                .finally(function() { sendBtn.disabled = false; });
+                .catch(function() { setChatProcessing(false); })
+                .finally(function() { if (sendBtn) sendBtn.disabled = false; });
+        }
+
+        document.getElementById('live-chat-send-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var input = document.getElementById('live-chat-input');
+            sendChatBody(input ? input.value : '');
         });
+
+        document.querySelectorAll('.live-chat-quick-reply').forEach(function(button) {
+            button.addEventListener('click', function() {
+                sendChatBody(button.getAttribute('data-message') || button.textContent || '');
+            });
+        });
+        updateChatMode('bot', false);
     })();
     </script>
 

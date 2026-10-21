@@ -45,9 +45,16 @@ class TelegramWebhookController extends Controller
             return response()->json(['ok' => true]);
         }
 
+        $conversation->forceFill([
+            'handling_mode' => ChatConversation::HANDLING_HUMAN,
+            'handed_off_at' => $conversation->handed_off_at ?? now(),
+            'bot_processing_at' => null,
+        ])->save();
+
         $message = ChatMessage::create([
             'conversation_id' => $conversation->id,
             'is_from_customer' => false,
+            'sender_type' => ChatMessage::SENDER_ADMIN,
             'body' => $replyText,
         ]);
 

@@ -14,18 +14,27 @@ class LiveChatReplyMail extends Mailable
 {
     use Queueable, SerializesModels;
 
+    /** @var list<ChatMessage> */
+    public array $replyMessages;
+
+    public string $supportReference;
+
+    /**
+     * @param  list<ChatMessage>|null  $replyMessages
+     */
     public function __construct(
         public ChatConversation $conversation,
         public ChatMessage $message,
+        ?array $replyMessages = null,
     ) {
+        $this->replyMessages = $replyMessages ?: [$message];
+        $this->supportReference = 'SUP-'.$conversation->id;
     }
 
     public function envelope(): Envelope
     {
-        $appName = (string) config('app.name', 'BluLavelle');
-
         return new Envelope(
-            subject: 'New live chat message from '.$appName,
+            subject: 'Our support team replied to your message',
         );
     }
 
