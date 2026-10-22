@@ -15,8 +15,7 @@ class LiveChatController extends Controller
     public function __construct(
         private readonly TelegramBotService $telegramBot,
         private readonly LiveChatService $liveChat,
-    ) {
-    }
+    ) {}
 
     /**
      * Kiểm tra có conversation đang mở theo session/user (GET, luôn 200 — tránh POST /start → 422 khi load trang).
@@ -69,7 +68,7 @@ class LiveChatController extends Controller
             $conversation = ChatConversation::where('customer_user_id', $userId)
                 ->open()
                 ->first();
-            if (!$conversation) {
+            if (! $conversation) {
                 $conversation = ChatConversation::create([
                     'customer_user_id' => $userId,
                     'seller_id' => $this->liveChat->firstAvailableSellerId(),
@@ -112,7 +111,7 @@ class LiveChatController extends Controller
     public function messages(Request $request, int $conversationId): JsonResponse
     {
         $conversation = $this->resolveConversationForCustomer($request, $conversationId);
-        if (!$conversation) {
+        if (! $conversation) {
             return response()->json(['success' => false, 'message' => 'Conversation not found.'], 404);
         }
         $messages = $conversation->messages()->orderBy('id')->get()->map(function (ChatMessage $m) {
@@ -150,7 +149,7 @@ class LiveChatController extends Controller
     {
         $request->validate(['conversation_id' => 'required|integer', 'body' => 'required|string|max:2000']);
         $conversation = $this->resolveConversationForCustomer($request, (int) $request->conversation_id);
-        if (!$conversation) {
+        if (! $conversation) {
             return response()->json(['success' => false, 'message' => 'Conversation not found.'], 404);
         }
 
@@ -161,11 +160,16 @@ class LiveChatController extends Controller
             'body' => $request->body,
         ]);
 
-        $this->telegramBot->notifyCustomerMessage($conversation, $message);
+        $botWillHandle = (bool) config('chatbot.enabled') && $conversation->isBotHandled();
+        if (! $botWillHandle) {
+            // When the bot is in charge, staff are only alerted if the bot
+            // hands off or cannot answer (decided in ChatbotService).
+            $this->telegramBot->notifyCustomerMessage($conversation, $message);
+        }
 
         $botStatus = 'disabled';
-        if ((bool) config('chatbot.enabled') && $conversation->isBotHandled()) {
-            GenerateChatbotReply::dispatch((int) $conversation->id, (int) $message->id);
+        if ($botWillHandle) {
+            GenerateChatbotReply::dispatch((int) $conversation->id, (int) $message->id)->onQueue('chat');
             $conversation->refresh();
             $botStatus = $conversation->handling_mode === ChatConversation::HANDLING_HUMAN
                 ? 'handed_off'
@@ -195,21 +199,22 @@ class LiveChatController extends Controller
         $sessionId = $request->session()->getId();
 
         $conversation = ChatConversation::find($conversationId);
-        if (!$conversation) {
+        if (! $conversation) {
             return null;
         }
         if ($userId && $conversation->customer_user_id === $userId) {
             return $conversation;
         }
-        if (!$userId && $conversation->guest_session_id === $sessionId) {
+        if (! $userId && $conversation->guest_session_id === $sessionId) {
             return $conversation;
         }
-        if (!$userId && (int) $request->session()->get(LiveChatService::SESSION_CONVERSATION) === (int) $conversation->id) {
+        if (! $userId && (int) $request->session()->get(LiveChatService::SESSION_CONVERSATION) === (int) $conversation->id) {
             $conversation->guest_session_id = $sessionId;
             $conversation->save();
 
             return $conversation;
         }
+
         return null;
     }
 }

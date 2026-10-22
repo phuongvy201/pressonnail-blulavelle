@@ -75,6 +75,10 @@ class ChatbotService
                 'bot_processing_at' => null,
             ])->save();
 
+            if ($intent === 'fallback' || (float) $reply->confidence < 0.5) {
+                $this->telegram->notifyBotReply($conversation, $reply);
+            }
+
             return $reply;
         } catch (Throwable $exception) {
             Log::warning('Chatbot could not generate a reply.', [
@@ -84,7 +88,7 @@ class ChatbotService
             ]);
             $conversation->forceFill(['bot_processing_at' => null])->save();
 
-            return ChatMessage::query()->create([
+            $fallback = ChatMessage::query()->create([
                 'conversation_id' => $conversation->id,
                 'is_from_customer' => false,
                 'sender_type' => ChatMessage::SENDER_BOT,
@@ -96,6 +100,10 @@ class ChatbotService
                 'intent' => 'fallback',
                 'confidence' => 0.1,
             ]);
+
+            $this->telegram->notifyBotReply($conversation, $fallback);
+
+            return $fallback;
         }
     }
 
@@ -128,12 +136,22 @@ class ChatbotService
             'confidence' => 1,
         ]);
 
-        $this->telegram->sendMessage(implode("\n", [
-            'Chatbot handoff to support',
+        $lines = [
+            '🙋 Chatbot handoff to support',
             'Conversation: #'.$conversation->id,
             'Customer: '.$conversation->customer_name,
             'Reason: '.$reason,
-        ]));
+        ];
+        if ($customerMessage !== null && filled($customerMessage->body)) {
+            $lines[] = '';
+            $lines[] = 'Customer said:';
+            $lines[] = (string) $customerMessage->body;
+        }
+        $lines[] = '';
+        $lines[] = 'Bot said:';
+        $lines[] = $reply->body;
+
+        $this->telegram->sendMessage(implode("\n", $lines));
 
         return $reply;
     }
@@ -400,6 +418,17 @@ class ChatbotService
                     return null;
                 }
             }
+        }
+
+        $sources = collect($facts['sources'] ?? [])->pluck('source')->all();
+        if (in_array('sizing_kit', $sources, true)
+            && ! (str_contains($body, 'XS') && str_contains($body, 'mm'))) {
+            return [
+                'body' => $summary,
+                'confidence' => 0.9,
+                'model' => $composed['model'] ?? null,
+                'usage' => $composed['usage'] ?? [],
+            ];
         }
 
         if ($intent === 'order_lookup' && filled($facts['order']['tracking_number'] ?? null)) {

@@ -20,17 +20,40 @@ return [
     'semantic_weight' => 0.35,
     'semantic_min_similarity' => 0.18,
 
-    // Words that carry no product meaning in English or Vietnamese (already
-    // diacritic-normalised) and are dropped before matching.
+    // Words that carry no product meaning (already diacritic-normalised) and
+    // are dropped before matching. English is the primary storefront
+    // language; question fillers from natural English queries come first.
     'stopwords' => [
-        'a', 'an', 'the', 'for', 'me', 'my', 'i', 'show', 'find', 'looking', 'look',
-        'please', 'want', 'need', 'get', 'some', 'set', 'sets',
-        'kiem', 'cho', 'toi', 'minh', 'muon', 'can', 'bo', 'nao', 'dep',
-        'mau', 'kieu', 'loai', 'gia', 'duoi', 'tren', 'voi', 'va', 'di', 'lam',
+        'a', 'an', 'the', 'for', 'me', 'my', 'i', 'you', 'your', 'we', 'what',
+        'which', 'should', 'would', 'could', 'can', 'do', 'does', 'did', 'is',
+        'are', 'have', 'has', 'wear', 'wearing', 'go', 'goes', 'going', 'with',
+        'without', 'something', 'anything', 'show', 'find', 'looking', 'look',
+        'please', 'want', 'need', 'get', 'some', 'set', 'sets', 'pair', 'style',
+        'styles', 'good', 'best', 'nice',
+        // Secondary: Vietnamese fillers (kept, harmless for English queries).
+        'kiem', 'cho', 'toi', 'minh', 'muon', 'bo', 'nao', 'dep',
+        'mau', 'kieu', 'loai', 'gia', 'duoi', 'tren', 'voi', 'va', 'lam',
     ],
 
     // Multi-word phrases are matched before single words, longest first.
+    // English occasion/style phrases are the primary market language.
     'phrases' => [
+        'for a wedding' => ['wedding', 'bridal', 'elegant'],
+        'wedding guest' => ['wedding', 'elegant'],
+        'as a wedding guest' => ['wedding', 'elegant'],
+        'date night' => ['elegant', 'romantic'],
+        'prom night' => ['prom', 'glam', 'elegant'],
+        'for prom' => ['prom', 'glam'],
+        'every day' => ['everyday', 'natural'],
+        'everyday wear' => ['everyday', 'natural'],
+        'for work' => ['office', 'natural', 'professional'],
+        'for the office' => ['office', 'natural', 'professional'],
+        'for a party' => ['party', 'glam'],
+        'birthday party' => ['party', 'fun', 'colorful'],
+        'for vacation' => ['vacation', 'summer', 'colorful'],
+        'press on' => ['press on'],
+        'cat eye' => ['cat eye'],
+        // Secondary: Vietnamese phrases.
         'mong tay' => ['nails', 'press on'],
         'mong gia' => ['press on', 'nails'],
         'mong ngan' => ['short', 'nails'],
@@ -42,17 +65,43 @@ return [
         'ca tinh' => ['bold'],
         'nhe nhang' => ['natural', 'soft'],
         'sang trong' => ['elegant', 'luxury'],
-        'press on' => ['press on'],
     ],
 
-    // Vietnamese (diacritic-normalised) and common alias -> English catalogue terms.
+    // English aliases first (shapes, colours, finishes, occasions as US/UK
+    // customers actually type them), then Vietnamese equivalents.
     'synonyms' => [
+        'ballerina' => ['coffin'],
+        'squoval' => ['square', 'oval'],
+        'pointy' => ['stiletto'],
+        'pointed' => ['stiletto'],
+        'sparkly' => ['glitter'],
+        'sparkle' => ['glitter'],
+        'shiny' => ['glossy'],
+        'bridal' => ['wedding', 'bridal', 'ivory'],
+        'wedding' => ['wedding', 'bridal'],
+        'prom' => ['prom', 'glam'],
+        'glam' => ['glam', 'glitter', 'elegant'],
+        'classy' => ['elegant', 'classic'],
+        'elegant' => ['elegant', 'classic'],
+        'cute' => ['cute', 'pink'],
+        'natural' => ['natural', 'nude'],
+        'nude' => ['nude', 'natural', 'beige'],
+        'crimson' => ['red', 'burgundy'],
+        'burgundy' => ['burgundy', 'wine', 'red'],
+        'wine' => ['burgundy', 'red'],
+        'blush' => ['blush', 'pink'],
+        'pastel' => ['pastel', 'pink', 'lavender'],
+        'lavender' => ['lavender', 'purple'],
+        'french' => ['french', 'classic', 'white'],
+        'tips' => ['nails'],
+        'claws' => ['stiletto', 'long'],
+        // Vietnamese (diacritic-normalised) equivalents.
+        'hong' => ['pink', 'blush', 'rose'],
         'mong' => ['nails'],
         'tay' => ['nails'],
         'ngan' => ['short'],
         'dai' => ['long'],
         'vua' => ['medium'],
-        'hong' => ['pink', 'blush', 'rose'],
         'do' => ['red'],
         'trang' => ['white', 'ivory'],
         'den' => ['black'],
@@ -61,7 +110,6 @@ return [
         'tim' => ['purple'],
         'vang' => ['gold', 'yellow'],
         'bac' => ['silver'],
-        'nude' => ['nude', 'natural'],
         'trong' => ['clear'],
         'cuoi' => ['wedding', 'bridal'],
         'tiec' => ['party'],

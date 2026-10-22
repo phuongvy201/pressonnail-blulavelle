@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Page;
 use App\Models\Product;
 use App\Services\SearchService;
+use App\Support\ReferenceNailSizeChart;
 use Illuminate\Support\Str;
 
 class ChatbotKnowledgeService
@@ -28,6 +29,12 @@ class ChatbotKnowledgeService
     {
         $terms = $this->terms($question);
         $matches = [];
+
+        // The Sizing Kit is a dedicated route (/sizing-kit), not a CMS page,
+        // so it must be offered as a first-class knowledge source.
+        if ($this->isSizingQuestion($question)) {
+            $matches[] = $this->sizingKitFact();
+        }
 
         $faq = function_exists('content_block')
             ? content_block('layout.footer_faq', function_exists('footer_faq_block_defaults') ? footer_faq_block_defaults() : [])
@@ -67,8 +74,8 @@ class ChatbotKnowledgeService
                 }
 
                 if (preg_match('/\bsize|sizing|fit\b/i', $question) === 1) {
-                    $query->orWhere('slug', 'like', '%size%')
-                        ->orWhere('title', 'like', '%size%');
+                    $query->orWhere('slug', 'like', '%siz%')
+                        ->orWhere('title', 'like', '%siz%');
                 }
             })
             ->limit(12)
@@ -80,7 +87,14 @@ class ChatbotKnowledgeService
                 + $this->score((string) $page->slug, $terms) * 3
                 + $this->score($plain, $terms);
 
-            if ($score <= 0 && ! in_array($page->slug, $this->relevantSlugs($question), true)) {
+            // A page whose title/slug matches the question topic (for
+            // example a sizing guide) outranks generic pages that merely
+            // contain one shared word such as "choose".
+            if ($this->topicMatchesPage($question, (string) $page->slug, (string) $page->title)) {
+                $score += 10;
+            }
+
+            if ($score < 2 && ! in_array($page->slug, $this->relevantSlugs($question), true)) {
                 continue;
             }
 
@@ -219,6 +233,73 @@ class ChatbotKnowledgeService
         return (float) $matches[1];
     }
 
+    private function isSizingQuestion(string $question): bool
+    {
+        return preg_match('/\b(size|sizing|fit|fits|measure|measurement|measurements|mm|chart)\b/i', $question) === 1
+            || str_contains(mb_strtolower($question), 'sizing kit');
+    }
+
+    /**
+     * Verified facts from the dedicated Sizing Kit page and the shared
+     * reference size chart used by that page.
+     *
+     * @return array{title: string, body: string, url: string, source: string, score: int}
+     */
+    private function sizingKitFact(): array
+    {
+        $rows = collect(ReferenceNailSizeChart::table())
+            ->map(function (array $row) {
+                $mm = implode('-', [
+                    $row['thumb']['mm'],
+                    $row['index']['mm'],
+                    $row['middle']['mm'],
+                    $row['ring']['mm'],
+                    $row['pinky']['mm'],
+                ]);
+
+                return $row['preset'].' '.$mm.'mm';
+            })
+            ->implode('; ');
+
+        $body = implode(' ', [
+            'The most accurate way to choose your size is the Sizing Kit.',
+            'Place the numbered clear nail tips over your natural nails and press down firmly,',
+            'note the number that fits each finger from thumb to pinky for both hands,',
+            'then compare your numbers with the preset chart (thumb-index-middle-ring-pinky): '.$rows.'.',
+            'If you are between sizes, choose the larger size and gently file the sides for a perfect fit.',
+            'You can also measure the widest part of each natural nail in millimetres and match it to the same chart.',
+        ]);
+
+        return [
+            'title' => 'Sizing Kit',
+            'body' => $body,
+            'url' => route('sizing-kit.index'),
+            'source' => 'sizing_kit',
+            'score' => 50,
+        ];
+    }
+
+    private function topicMatchesPage(string $question, string $slug, string $title): bool
+    {
+        $question = mb_strtolower($question);
+        $target = mb_strtolower($slug.' '.$title);
+
+        $topics = [
+            '/\b(size|sizing|fit|measure)\b/' => '/siz|fit|measur/',
+            '/\b(ship|deliver|dispatch|arrive)\b/' => '/ship|deliver/',
+            '/\b(return|exchange|refund)\b/' => '/return|exchange|refund/',
+        ];
+
+        foreach ($topics as $questionPattern => $pagePattern) {
+            if (preg_match($questionPattern, $question) === 1
+                && preg_match($pagePattern, $target) === 1) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * @return list<string>
      */
@@ -250,22 +331,26 @@ class ChatbotKnowledgeService
             return '';
         }
 
-        $position = null;
-        foreach ($terms as $term) {
-            $found = mb_stripos($text, $term);
-            if ($found !== false) {
-                $position = $found;
-                break;
+        // Prefer whole sentences containing the question terms so excerpts
+        // never start mid-boilerplate (addresses, footers, navigation).
+        $sentences = preg_split('/(?<=[.!?])\s+/u', $text) ?: [];
+        $bestIndex = null;
+        $bestScore = 0;
+        foreach ($sentences as $index => $sentence) {
+            $sentenceScore = $this->score($sentence, $terms);
+            if ($sentenceScore > $bestScore) {
+                $bestScore = $sentenceScore;
+                $bestIndex = $index;
             }
         }
 
-        if ($position === null) {
-            return Str::limit($text, 650, '');
+        if ($bestIndex !== null && $bestScore > 0) {
+            $picked = array_slice($sentences, $bestIndex, 3);
+
+            return Str::limit(implode(' ', $picked), 650, '');
         }
 
-        $start = max(0, $position - 180);
-
-        return Str::limit(mb_substr($text, $start, 650), 650, '');
+        return Str::limit($text, 650, '');
     }
 
     private function plainText(string $html): string

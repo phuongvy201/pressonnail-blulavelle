@@ -1665,8 +1665,12 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         var conversationId = null;
         var pollTimer = null;
         var unreadCount = 0;
-        var POLL_MSG_OPEN = 4000;
-        var POLL_MSG_CLOSED = 5000;
+        var POLL_MSG_OPEN = 3500;
+        var POLL_MSG_CLOSED = 8000;
+        var POLL_MSG_AWAITING = 1200;
+        var awaitingReply = false;
+        var awaitingSince = 0;
+        var fetchInFlight = false;
 
         var panel = document.getElementById('live-chat-panel');
         var unreadBadge = document.getElementById('live-chat-unread-badge');
@@ -1799,7 +1803,8 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
             setTimeout(function() { wrap.classList.remove('live-chat-ring'); }, 3200);
         }
         function fetchMessages() {
-            if (!conversationId) return;
+            if (!conversationId || fetchInFlight) return;
+            fetchInFlight = true;
             var markSeen = isChatPanelOpen() ? '?mark_seen=1' : '';
             fetch(messagesUrl() + markSeen, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
@@ -1809,7 +1814,17 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                 .then(function(data) {
                     if (!data.success) return;
                     applySupportPayload(data);
-                    updateChatMode(data.handling_mode, data.bot_processing);
+                    if (data.messages && data.messages.length) {
+                        var last = data.messages[data.messages.length - 1];
+                        var lastSender = last.sender_type || (last.is_from_customer ? 'customer' : 'admin');
+                        if (awaitingReply && lastSender !== 'customer') {
+                            awaitingReply = false;
+                        }
+                    }
+                    if (awaitingReply && Date.now() - awaitingSince > 90000) {
+                        awaitingReply = false;
+                    }
+                    updateChatMode(data.handling_mode, data.bot_processing || awaitingReply);
                     if (data.messages) {
                         renderMessages(data.messages);
                     }
@@ -1826,19 +1841,27 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                     unreadCount = nextUnread;
                     updateUnreadBadge();
                 })
-                .catch(function() {});
+                .catch(function() {})
+                .finally(function() {
+                    fetchInFlight = false;
+                    scheduleMsgPolling();
+                });
         }
 
         function isChatPanelOpen() {
             return panel && !panel.classList.contains('hidden');
         }
 
+        function nextPollDelay() {
+            if (awaitingReply) return POLL_MSG_AWAITING;
+            return isChatPanelOpen() ? POLL_MSG_OPEN : POLL_MSG_CLOSED;
+        }
+
         function scheduleMsgPolling() {
-            if (pollTimer) clearInterval(pollTimer);
+            if (pollTimer) clearTimeout(pollTimer);
             pollTimer = null;
             if (!conversationId) return;
-            var ms = isChatPanelOpen() ? POLL_MSG_OPEN : POLL_MSG_CLOSED;
-            pollTimer = setInterval(fetchMessages, ms);
+            pollTimer = setTimeout(fetchMessages, nextPollDelay());
         }
 
         function startPolling() {
@@ -1846,8 +1869,18 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         }
 
         function stopPolling() {
-            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+            if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
         }
+
+        window.addEventListener('focus', function() {
+            if (conversationId) fetchMessages();
+        });
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden && conversationId) fetchMessages();
+        });
+        window.addEventListener('online', function() {
+            if (conversationId) fetchMessages();
+        });
 
         function isMobileChat() { return typeof window !== 'undefined' && window.innerWidth < 640; }
         function setChatPanelBodyScroll(open) {
@@ -1998,6 +2031,9 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
             var input = document.getElementById('live-chat-input');
             var sendBtn = document.getElementById('live-chat-send-btn');
             if (sendBtn) sendBtn.disabled = true;
+            awaitingReply = true;
+            awaitingSince = Date.now();
+            scheduleMsgPolling();
             if (chatbotEnabled && handlingMode === 'bot') setChatProcessing(true);
             fetch(sendUrl, {
                 method: 'POST',
@@ -2013,10 +2049,11 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                         updateChatMode(data.handling_mode, data.bot_status === 'processing');
                         fetchMessages();
                     } else {
+                        awaitingReply = false;
                         setChatProcessing(false);
                     }
                 })
-                .catch(function() { setChatProcessing(false); })
+                .catch(function() { awaitingReply = false; setChatProcessing(false); })
                 .finally(function() { if (sendBtn) sendBtn.disabled = false; });
         }
 

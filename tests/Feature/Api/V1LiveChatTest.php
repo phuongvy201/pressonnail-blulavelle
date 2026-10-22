@@ -2,6 +2,7 @@
 
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
+use App\Models\Page;
 use App\Models\User;
 
 test('a guest starts a chat and only that guest token can read it', function () {
@@ -91,4 +92,66 @@ test('unread count counts shop replies after the last seen message', function ()
         ->getJson('/api/v1/live-chat?lastSeenMessageId=0')
         ->assertOk()
         ->assertJsonPath('data.unreadCount', 1);
+});
+
+test('a mobile message is answered by the same chatbot as the website', function () {
+    config([
+        'chatbot.enabled' => true,
+        'chatbot.ai_enabled' => false,
+    ]);
+
+    $admin = User::factory()->create();
+    Page::query()->create([
+        'user_id' => $admin->id,
+        'title' => 'Shipping & Delivery',
+        'slug' => 'shipping-delivery',
+        'content' => '<p>Orders are processed in 1-7 business days. Delivery takes 10-20 business days after dispatch.</p>',
+        'status' => 'published',
+        'published_at' => now()->subDay(),
+    ]);
+
+    $token = str_repeat('e', 40);
+    $this->withHeader('X-Live-Chat-Guest', $token)
+        ->postJson('/api/v1/live-chat', [
+            'name' => 'Tra My',
+            'email' => 'guest@example.com',
+        ])
+        ->assertOk();
+
+    $this->withHeader('X-Live-Chat-Guest', $token)
+        ->postJson('/api/v1/live-chat/messages', ['body' => 'How long does shipping take?'])
+        ->assertCreated()
+        ->assertJsonPath('data.botStatus', 'replied')
+        ->assertJsonPath('data.handlingMode', ChatConversation::HANDLING_BOT)
+        ->assertJsonPath('data.message.senderType', ChatMessage::SENDER_CUSTOMER);
+
+    $thread = $this->withHeader('X-Live-Chat-Guest', $token)
+        ->getJson('/api/v1/live-chat')
+        ->assertOk()
+        ->assertJsonPath('data.botEnabled', true)
+        ->assertJsonPath('data.messages.1.senderType', ChatMessage::SENDER_BOT);
+
+    expect($thread->json('data.messages.1.body'))->toContain('1-7 business days');
+});
+
+test('a human-handled mobile chat does not ask the bot to reply', function () {
+    config(['chatbot.enabled' => true]);
+    $token = str_repeat('f', 40);
+    $conversation = ChatConversation::create([
+        'guest_email' => 'guest@example.com',
+        'guest_name' => 'Tra My',
+        'guest_session_id' => $token,
+        'status' => 'open',
+        'handling_mode' => ChatConversation::HANDLING_HUMAN,
+        'handed_off_at' => now(),
+    ]);
+
+    $this->withHeader('X-Live-Chat-Guest', $token)
+        ->postJson('/api/v1/live-chat/messages', ['body' => 'How long does shipping take?'])
+        ->assertCreated()
+        ->assertJsonPath('data.botStatus', 'human')
+        ->assertJsonPath('data.handlingMode', ChatConversation::HANDLING_HUMAN)
+        ->assertJsonPath('data.supportStatus', 'waiting');
+
+    expect(ChatMessage::query()->where('conversation_id', $conversation->id)->where('sender_type', ChatMessage::SENDER_BOT)->count())->toBe(0);
 });

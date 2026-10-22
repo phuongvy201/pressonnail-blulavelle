@@ -19,7 +19,7 @@ class TelegramBotService
 
     public function notifyCustomerMessage(ChatConversation $conversation, ChatMessage $message): void
     {
-        if (!$this->isEnabled()) {
+        if (! $this->isEnabled()) {
             return;
         }
 
@@ -42,9 +42,33 @@ class TelegramBotService
         $this->sendMessage($text);
     }
 
+    public function notifyBotReply(ChatConversation $conversation, ChatMessage $message): void
+    {
+        if (! $this->isEnabled()) {
+            return;
+        }
+
+        $conversationId = $conversation->id;
+        $body = trim((string) $message->body);
+        $lines = [
+            $message->intent === 'fallback'
+                ? '⚠️ Blu Assistant could not answer — please help'
+                : '🤖 Blu Assistant replied',
+            "CID: #{$conversationId}",
+            'Customer: '.$conversation->customer_name,
+            filled($message->intent) ? 'Intent: '.$message->intent : null,
+            '',
+            $body,
+            '',
+            "To take over, reply: /r {$conversationId} your message",
+        ];
+
+        $this->sendMessage(implode("\n", array_filter($lines, fn ($line) => $line !== null)));
+    }
+
     public function notifySellerMessage(ChatConversation $conversation, ChatMessage $message): void
     {
-        if (!$this->isEnabled()) {
+        if (! $this->isEnabled()) {
             return;
         }
 
@@ -85,11 +109,12 @@ class TelegramBotService
                     'text' => $text,
                 ]);
 
-            if (!$response->ok()) {
+            if (! $response->ok()) {
                 Log::warning('TelegramBotService sendMessage failed.', [
                     'status' => $response->status(),
                     'body' => $this->redactSecrets((string) $response->body()),
                 ]);
+
                 return false;
             }
 
@@ -98,6 +123,7 @@ class TelegramBotService
             Log::error('TelegramBotService sendMessage exception.', [
                 'error' => $this->redactSecrets($e->getMessage()),
             ]);
+
             return false;
         }
     }
@@ -111,7 +137,7 @@ class TelegramBotService
         $chatId = (string) data_get($update, 'message.chat.id', data_get($update, 'edited_message.chat.id', ''));
         $configuredChatId = (string) config('services.telegram.chat_id', '');
 
-        if (!empty($allowedIds)) {
+        if (! empty($allowedIds)) {
             return in_array($fromId, $allowedIds, true);
         }
 

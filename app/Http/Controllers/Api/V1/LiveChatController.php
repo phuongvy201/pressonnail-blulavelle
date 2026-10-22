@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\GenerateChatbotReply;
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
 use App\Models\UgcBlock;
@@ -106,10 +107,28 @@ class LiveChatController extends Controller
             'body' => $body,
         ]);
         $conversation->load('customer');
-        $this->telegram->notifyCustomerMessage($conversation, $message);
+
+        // Same hybrid assistant as the website widget: the bot replies when it
+        // owns the conversation, and staff are alerted only for human mode.
+        $botWillHandle = (bool) config('chatbot.enabled') && $conversation->isBotHandled();
+        if (! $botWillHandle) {
+            $this->telegram->notifyCustomerMessage($conversation, $message);
+        }
+
+        $botStatus = 'disabled';
+        if ($botWillHandle) {
+            GenerateChatbotReply::dispatch((int) $conversation->id, (int) $message->id)->onQueue('chat');
+            $conversation->refresh();
+            $botStatus = $conversation->handling_mode === ChatConversation::HANDLING_HUMAN
+                ? 'handed_off'
+                : (config('queue.default') === 'sync' ? 'replied' : 'processing');
+        } elseif (($conversation->handling_mode ?? ChatConversation::HANDLING_BOT) === ChatConversation::HANDLING_HUMAN) {
+            $botStatus = 'human';
+        }
 
         return ApiResponse::success([
             'message' => $this->messagePayload($message),
+            ...$this->assistantState($conversation, $botStatus),
         ], null, 201);
     }
 
@@ -162,6 +181,7 @@ class LiveChatController extends Controller
                 'conversation' => null,
                 'messages' => [],
                 'unreadCount' => 0,
+                ...$this->assistantState(null),
             ];
         }
 
@@ -185,7 +205,43 @@ class LiveChatController extends Controller
             'unreadCount' => $blocked ? 0 : $messages->filter(
                 fn (ChatMessage $message) => ! $message->is_from_customer && $message->id > $lastSeen
             )->count(),
+            ...$this->assistantState($conversation),
         ];
+    }
+
+    /**
+     * @return array{handlingMode: string, botEnabled: bool, botProcessing: bool, welcome: string|null, supportStatus: string|null, supportReference: string|null, supportReplyWithin: string, supportHours: string, supportEmailAlert: bool, botStatus?: string}
+     */
+    private function assistantState(?ChatConversation $conversation, ?string $botStatus = null): array
+    {
+        $botEnabled = (bool) config('chatbot.enabled');
+        $state = [
+            'handlingMode' => $conversation?->handling_mode ?? ChatConversation::HANDLING_BOT,
+            'botEnabled' => $botEnabled,
+            'botProcessing' => $conversation?->bot_processing_at !== null,
+            'welcome' => $botEnabled ? (string) config('chatbot.welcome') : null,
+            'supportStatus' => null,
+            'supportReference' => null,
+            'supportReplyWithin' => (string) config('chatbot.support_reply_within', '2 business hours'),
+            'supportHours' => (string) config('chatbot.support_hours', 'Mon–Sat, 9am–6pm'),
+            'supportEmailAlert' => false,
+        ];
+
+        if ($conversation) {
+            $support = $this->liveChat->supportWidgetPayload($conversation);
+            $state['handlingMode'] = $conversation->handling_mode ?? ChatConversation::HANDLING_BOT;
+            $state['supportStatus'] = $support['support_status'];
+            $state['supportReference'] = $support['support_reference'];
+            $state['supportReplyWithin'] = $support['support_reply_within'];
+            $state['supportHours'] = $support['support_hours'];
+            $state['supportEmailAlert'] = $support['support_email_alert'];
+        }
+
+        if ($botStatus !== null) {
+            $state['botStatus'] = $botStatus;
+        }
+
+        return $state;
     }
 
     private function isBlocked(Request $request, ChatConversation $conversation): bool
@@ -216,15 +272,55 @@ class LiveChatController extends Controller
     }
 
     /**
-     * @return array{id: int, fromCustomer: bool, body: string, createdAt: string|null}
+     * @return array{id: int, fromCustomer: bool, senderType: string, body: string, createdAt: string|null, products: list<array{id: int, name: string, price: float, image: string|null, slug: string|null, url: string|null}>}
      */
     private function messagePayload(ChatMessage $message): array
     {
         return [
             'id' => $message->id,
             'fromCustomer' => (bool) $message->is_from_customer,
+            'senderType' => $message->senderType(),
             'body' => $message->body,
             'createdAt' => $message->created_at?->toIso8601String(),
+            'products' => $this->productCards($message),
         ];
+    }
+
+    /**
+     * @return list<array{id: int, name: string, price: float, image: string|null, slug: string|null, url: string|null}>
+     */
+    private function productCards(ChatMessage $message): array
+    {
+        $metadata = $message->metadata;
+        $products = is_array($metadata) ? ($metadata['products'] ?? []) : [];
+        if (! is_array($products)) {
+            return [];
+        }
+
+        $cards = [];
+        foreach ($products as $product) {
+            if (! is_array($product) || ! isset($product['name']) || ! is_string($product['name']) || trim($product['name']) === '') {
+                continue;
+            }
+
+            $url = isset($product['url']) && is_string($product['url']) ? $product['url'] : null;
+            $slug = isset($product['slug']) && is_string($product['slug']) && $product['slug'] !== ''
+                ? $product['slug']
+                : null;
+            if ($slug === null && $url !== null && preg_match('#/products/([^/?#]+)#', $url, $matches) === 1) {
+                $slug = rawurldecode($matches[1]);
+            }
+
+            $cards[] = [
+                'id' => isset($product['id']) ? (int) $product['id'] : 0,
+                'name' => $product['name'],
+                'price' => isset($product['price']) ? (float) $product['price'] : 0.0,
+                'image' => isset($product['image']) && is_string($product['image']) ? $product['image'] : null,
+                'slug' => $slug,
+                'url' => $url,
+            ];
+        }
+
+        return $cards;
     }
 }

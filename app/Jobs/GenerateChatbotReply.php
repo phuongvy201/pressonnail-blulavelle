@@ -5,11 +5,13 @@ namespace App\Jobs;
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
 use App\Services\Chatbot\ChatbotService;
+use App\Services\TelegramBotService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Throwable;
 
 class GenerateChatbotReply implements ShouldQueue
 {
@@ -36,5 +38,16 @@ class GenerateChatbotReply implements ShouldQueue
         }
 
         $chatbot->handleMessage($conversation, $message);
+    }
+
+    public function failed(Throwable $exception): void
+    {
+        // The customer message was not Telegram-notified upfront (the bot
+        // was expected to handle it), so a dead job must still alert staff.
+        app(TelegramBotService::class)->sendMessage(implode("\n", [
+            '⚠️ Chatbot reply failed — please check this conversation',
+            'Conversation: #'.$this->conversationId,
+            'Error: '.$exception::class,
+        ]));
     }
 }

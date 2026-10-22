@@ -91,6 +91,41 @@ test('smart search ranks a semantic match that shares no keywords', function () 
     expect($results->first()?->id)->toBe($bridal->id);
 });
 
+test('smart search understands English occasion phrases and shape aliases', function () {
+    $match = smartSearchProduct('Luxury Coffin Glitter Press On Nails', [
+        'color' => 'rose gold',
+        'description' => 'Sparkle coffin nails made for prom and glam nights.',
+    ]);
+    smartSearchProduct('Short Square Matte Black Press On Nails', ['color' => 'black']);
+
+    $results = app(SearchService::class)->buildProductSearchQuery('sparkly ballerina nails for prom night', [], false, 12, 6);
+
+    expect($results->first()?->id)->toBe($match->id);
+});
+
+test('smart search understands a natural English wedding question', function () {
+    $match = smartSearchProduct('Ivory Pearl Bridal Press On Nails', [
+        'color' => 'ivory',
+        'description' => 'Elegant ivory nails with pearl accents for brides.',
+    ]);
+    smartSearchProduct('Neon Green Stiletto Press On Nails', ['color' => 'green']);
+
+    $results = app(SearchService::class)->buildProductSearchQuery('What should I wear for a wedding?', [], false, 12, 6);
+
+    expect($results->first()?->id)->toBe($match->id);
+});
+
+test('smart search maps English slang for pointed nails', function () {
+    $match = smartSearchProduct('Long Stiletto Crimson Press On Nails', [
+        'color' => 'crimson',
+        'description' => 'Bold long stiletto nails in deep red.',
+    ]);
+
+    $results = app(SearchService::class)->buildProductSearchQuery('pointy red claws under $30', [], false, 12, 6);
+
+    expect($results->first()?->id)->toBe($match->id);
+});
+
 test('chatbot product search uses the same Vietnamese understanding', function () {
     $match = smartSearchProduct('Short Almond Blush Pink Press On Nails', [
         'color' => 'blush pink',

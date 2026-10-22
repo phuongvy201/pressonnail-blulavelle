@@ -40,6 +40,8 @@ class SearchText
     public function concepts(string $query): array
     {
         $normalized = $this->normalize($query);
+        // Budget phrases ("under $30") are filters, not product concepts.
+        $normalized = trim(preg_replace('/\b(under|below|less than|max|budget|around)\s*\$?\d+(\.\d+)?/', '', $normalized) ?? $normalized);
         if ($normalized === '') {
             return [];
         }
