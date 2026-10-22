@@ -94,6 +94,36 @@ test('unread count counts shop replies after the last seen message', function ()
         ->assertJsonPath('data.unreadCount', 1);
 });
 
+test('a bot product card url does not crash the mobile chat payload', function () {
+    $token = str_repeat('e', 40);
+    $conversation = ChatConversation::create([
+        'guest_email' => 'guest@example.com',
+        'guest_name' => 'Tra My',
+        'guest_session_id' => $token,
+        'status' => 'open',
+    ]);
+    ChatMessage::create([
+        'conversation_id' => $conversation->id,
+        'is_from_customer' => false,
+        'sender_type' => ChatMessage::SENDER_BOT,
+        'body' => 'Here is a set that matches.',
+        'metadata' => [
+            'products' => [[
+                'id' => 12,
+                'name' => 'Short Almond Rose Set',
+                'price' => 24,
+                'url' => 'https://blulavelle.com/products/short-almond-rose',
+                'image' => null,
+            ]],
+        ],
+    ]);
+
+    $this->withHeader('X-Live-Chat-Guest', $token)
+        ->getJson('/api/v1/live-chat')
+        ->assertOk()
+        ->assertJsonPath('data.messages.0.products.0.slug', 'short-almond-rose');
+});
+
 test('a mobile message is answered by the same chatbot as the website', function () {
     config([
         'chatbot.enabled' => true,

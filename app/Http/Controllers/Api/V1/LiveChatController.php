@@ -307,7 +307,7 @@ class LiveChatController extends Controller
             $slug = isset($product['slug']) && is_string($product['slug']) && $product['slug'] !== ''
                 ? $product['slug']
                 : null;
-            if ($slug === null && $url !== null && preg_match('#/products/([^/?#]+)#', $url, $matches) === 1) {
+            if ($slug === null && $url !== null && preg_match('~/products/([^/?#]+)~', $url, $matches) === 1) {
                 $slug = rawurldecode($matches[1]);
             }
 
