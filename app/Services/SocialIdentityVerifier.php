@@ -203,14 +203,14 @@ class SocialIdentityVerifier
 
         $header = json_decode($this->base64UrlDecode($parts[0]), true);
         $claims = json_decode($this->base64UrlDecode($parts[1]), true);
-        if (! is_array($header) || ! is_array($claims) || ($header['alg'] ?? '') !== 'ES256') {
+        if (! is_array($header) || ! is_array($claims) || ($header['alg'] ?? '') !== 'RS256') {
             throw new \InvalidArgumentException('Apple could not confirm this sign-in.');
         }
 
         $signature = $this->base64UrlDecode($parts[2]);
         $verified = openssl_verify(
             $parts[0].'.'.$parts[1],
-            $this->ecdsaSignatureToDer($signature),
+            $signature,
             $this->applePublicKey((string) ($header['kid'] ?? '')),
             OPENSSL_ALGO_SHA256,
         );
@@ -289,7 +289,7 @@ class SocialIdentityVerifier
 
         foreach ($keys as $jwk) {
             if (is_array($jwk) && (string) ($jwk['kid'] ?? '') === $kid) {
-                return $this->p256PublicPem($jwk);
+                return $this->rsaPublicPem($jwk);
             }
         }
 
@@ -301,51 +301,66 @@ class SocialIdentityVerifier
     }
 
     /**
+     * Apple identity tokens are RS256. The JWKS at appleid.apple.com publishes RSA keys.
+     *
      * @param  array<string, mixed>  $jwk
      */
-    private function p256PublicPem(array $jwk): string
+    private function rsaPublicPem(array $jwk): string
     {
-        if (($jwk['kty'] ?? '') !== 'EC' || ($jwk['crv'] ?? '') !== 'P-256') {
+        if (($jwk['kty'] ?? '') !== 'RSA') {
             throw new \InvalidArgumentException('Apple could not confirm this sign-in.');
         }
 
-        $point = "\x04".$this->p256Coordinate((string) ($jwk['x'] ?? '')).$this->p256Coordinate((string) ($jwk['y'] ?? ''));
-        $der = hex2bin('3059301306072a8648ce3d020106082a8648ce3d030107034200').$point;
-        if ($der === false) {
+        $modulus = $this->unsignedInteger($this->base64UrlDecode((string) ($jwk['n'] ?? '')));
+        $exponent = $this->unsignedInteger($this->base64UrlDecode((string) ($jwk['e'] ?? '')));
+        $rsaKey = $this->derSequence($this->derInteger($modulus).$this->derInteger($exponent));
+        $algorithm = hex2bin('300d06092a864886f70d0101010500');
+        if ($algorithm === false) {
             throw new \InvalidArgumentException('Apple could not confirm this sign-in.');
         }
+        $subjectKey = "\x03".$this->derLength(strlen($rsaKey) + 1)."\x00".$rsaKey;
+        $der = $this->derSequence($algorithm.$subjectKey);
 
         return "-----BEGIN PUBLIC KEY-----\n".chunk_split(base64_encode($der), 64, "\n")."-----END PUBLIC KEY-----\n";
     }
 
-    private function p256Coordinate(string $value): string
+    private function unsignedInteger(string $bytes): string
     {
-        $bytes = $this->base64UrlDecode($value);
-
-        return str_pad(substr($bytes, -32), 32, "\x00", STR_PAD_LEFT);
-    }
-
-    private function ecdsaSignatureToDer(string $signature): string
-    {
-        if (strlen($signature) !== 64) {
-            throw new \InvalidArgumentException('Apple could not confirm this sign-in.');
+        $bytes = ltrim($bytes, "\x00");
+        if ($bytes === '') {
+            $bytes = "\x00";
+        }
+        if ((ord($bytes[0]) & 0x80) !== 0) {
+            $bytes = "\x00".$bytes;
         }
 
-        $integer = function (string $bytes): string {
-            $bytes = ltrim($bytes, "\x00");
-            if ($bytes === '') {
-                $bytes = "\x00";
-            }
-            if ((ord($bytes[0]) & 0x80) !== 0) {
-                $bytes = "\x00".$bytes;
-            }
+        return $bytes;
+    }
 
-            return "\x02".chr(strlen($bytes)).$bytes;
-        };
+    private function derInteger(string $bytes): string
+    {
+        return "\x02".$this->derLength(strlen($bytes)).$bytes;
+    }
 
-        $body = $integer(substr($signature, 0, 32)).$integer(substr($signature, 32));
+    private function derSequence(string $body): string
+    {
+        return "\x30".$this->derLength(strlen($body)).$body;
+    }
 
-        return "\x30".chr(strlen($body)).$body;
+    private function derLength(int $length): string
+    {
+        if ($length < 0x80) {
+            return chr($length);
+        }
+
+        $encoded = '';
+        $remaining = $length;
+        while ($remaining > 0) {
+            $encoded = chr($remaining & 0xff).$encoded;
+            $remaining >>= 8;
+        }
+
+        return chr(0x80 | strlen($encoded)).$encoded;
     }
 
     private function base64UrlDecode(string $value): string

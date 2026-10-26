@@ -16,7 +16,7 @@ test('apple sign-in rejects a token that is not a signed identity token', functi
 
 test('apple sign-in creates an account from a verified identity token', function () {
     Role::firstOrCreate(['name' => 'customer', 'guard_name' => 'web']);
-    config(['services.apple.client_id' => 'com.bluprinter.blucommerce', 'services.apple.client_ids' => 'com.bluprinter.blucommerce']);
+    config(['services.apple.client_id' => 'com.blulavelle.app', 'services.apple.client_ids' => 'com.blulavelle.app']);
 
     $rawNonce = 'raw-nonce-value';
     $token = appleIdentityToken($rawNonce, [
@@ -35,7 +35,7 @@ test('apple sign-in creates an account from a verified identity token', function
 });
 
 test('a later apple sign-in matches apple id when apple omits the email', function () {
-    config(['services.apple.client_id' => 'com.bluprinter.blucommerce', 'services.apple.client_ids' => 'com.bluprinter.blucommerce']);
+    config(['services.apple.client_id' => 'com.blulavelle.app', 'services.apple.client_ids' => 'com.blulavelle.app']);
     $existing = User::factory()->create([
         'name' => 'Ada Lovelace',
         'email' => 'ada@privaterelay.appleid.com',
@@ -56,7 +56,7 @@ test('a later apple sign-in matches apple id when apple omits the email', functi
 });
 
 test('apple sign-in rejects a token for another app', function () {
-    config(['services.apple.client_id' => 'com.bluprinter.blucommerce', 'services.apple.client_ids' => 'com.bluprinter.blucommerce']);
+    config(['services.apple.client_id' => 'com.blulavelle.app', 'services.apple.client_ids' => 'com.blulavelle.app']);
 
     expect(fn () => app(SocialIdentityVerifier::class)->profile(
         'apple',
@@ -71,10 +71,15 @@ test('apple sign-in rejects a token for another app', function () {
  */
 function appleIdentityToken(string $rawNonce, array $claims = []): string
 {
-    $key = openssl_pkey_new([
-        'private_key_type' => OPENSSL_KEYTYPE_EC,
-        'curve_name' => 'prime256v1',
-    ]);
+    $options = [
+        'private_key_type' => OPENSSL_KEYTYPE_RSA,
+        'private_key_bits' => 2048,
+    ];
+    $opensslConfig = dirname(PHP_BINARY).DIRECTORY_SEPARATOR.'extras'.DIRECTORY_SEPARATOR.'ssl'.DIRECTORY_SEPARATOR.'openssl.cnf';
+    if (is_file($opensslConfig)) {
+        $options['config'] = $opensslConfig;
+    }
+    $key = openssl_pkey_new($options);
     if ($key === false) {
         throw new RuntimeException('Unable to create a test Apple signing key.');
     }
@@ -84,48 +89,32 @@ function appleIdentityToken(string $rawNonce, array $claims = []): string
     Http::fake([
         'https://appleid.apple.com/auth/keys' => Http::response([
             'keys' => [[
-                'kty' => 'EC',
-                'crv' => 'P-256',
+                'kty' => 'RSA',
+                'alg' => 'RS256',
                 'kid' => $kid,
-                'x' => appleBase64Url($details['ec']['x']),
-                'y' => appleBase64Url($details['ec']['y']),
+                'n' => appleBase64Url($details['rsa']['n']),
+                'e' => appleBase64Url($details['rsa']['e']),
             ]],
         ]),
     ]);
 
-    $header = appleBase64Url((string) json_encode(['alg' => 'ES256', 'kid' => $kid]));
+    $header = appleBase64Url((string) json_encode(['alg' => 'RS256', 'kid' => $kid]));
     $payload = appleBase64Url((string) json_encode(array_merge([
         'iss' => 'https://appleid.apple.com',
-        'aud' => 'com.bluprinter.blucommerce',
+        'aud' => 'com.blulavelle.app',
         'sub' => 'apple-subject-1',
         'exp' => time() + 300,
         'nonce' => hash('sha256', $rawNonce),
     ], $claims)));
     $input = $header.'.'.$payload;
-    if (! openssl_sign($input, $der, $key, OPENSSL_ALGO_SHA256)) {
+    if (! openssl_sign($input, $signature, $key, OPENSSL_ALGO_SHA256)) {
         throw new RuntimeException('Unable to sign the test Apple token.');
     }
 
-    return $input.'.'.appleBase64Url(appleDerToRaw($der));
+    return $input.'.'.appleBase64Url($signature);
 }
 
 function appleBase64Url(string $value): string
 {
     return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
-}
-
-function appleDerToRaw(string $der): string
-{
-    $offset = 2;
-    $read = function () use ($der, &$offset): string {
-        $offset++;
-        $length = ord($der[$offset++]);
-        $value = substr($der, $offset, $length);
-        $offset += $length;
-
-        return $value;
-    };
-
-    return str_pad(ltrim($read(), "\x00"), 32, "\x00", STR_PAD_LEFT)
-        .str_pad(ltrim($read(), "\x00"), 32, "\x00", STR_PAD_LEFT);
 }

@@ -65,10 +65,10 @@ return [
     ],
 
     'apple' => [
-        'client_id' => env('APPLE_CLIENT_ID', 'com.bluprinter.blucommerce'),
+        'client_id' => env('APPLE_CLIENT_ID', 'com.blulavelle.app'),
         'client_ids' => env('APPLE_CLIENT_IDS', env('APP_ENV') === 'local'
-            ? 'com.bluprinter.blucommerce,host.exp.Exponent'
-            : 'com.bluprinter.blucommerce'),
+            ? 'com.blulavelle.app,host.exp.Exponent'
+            : 'com.blulavelle.app'),
     ],
 
     'google' => [

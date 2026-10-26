@@ -155,6 +155,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'facebook_id',
         'apple_id',
         'anonymized_at',
+        'style_preferences',
     ];
 
     /**
@@ -179,6 +180,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'anonymized_at' => 'datetime',
             'deleted_at' => 'datetime',
+            'style_preferences' => 'array',
         ];
     }
 

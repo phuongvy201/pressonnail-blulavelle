@@ -280,7 +280,7 @@ class LiveChatController extends Controller
             'id' => $message->id,
             'fromCustomer' => (bool) $message->is_from_customer,
             'senderType' => $message->senderType(),
-            'body' => $message->body,
+            'body' => $this->mobileChatBody((string) $message->body),
             'createdAt' => $message->created_at?->toIso8601String(),
             'products' => $this->productCards($message),
         ];
@@ -317,10 +317,71 @@ class LiveChatController extends Controller
                 'price' => isset($product['price']) ? (float) $product['price'] : 0.0,
                 'image' => isset($product['image']) && is_string($product['image']) ? $product['image'] : null,
                 'slug' => $slug,
-                'url' => $url,
+                'url' => $slug !== null
+                    ? 'blucommerce://product/'.rawurlencode($slug)
+                    : ($url !== null ? $this->appLinkFromWebUrl($url) : null),
             ];
         }
 
         return $cards;
+    }
+
+    private function mobileChatBody(string $body): string
+    {
+        $rewritten = preg_replace_callback(
+            '~https?://[^\s<>\]]+~i',
+            function (array $matches): string {
+                $raw = rtrim($matches[0], '.,);');
+                $trailing = substr($matches[0], strlen($raw));
+
+                return $this->appLinkFromWebUrl($raw).$trailing;
+            },
+            $body,
+        );
+
+        return is_string($rewritten) ? $rewritten : $body;
+    }
+
+    private function appLinkFromWebUrl(string $url): string
+    {
+        $parts = parse_url($url);
+        if (! is_array($parts)) {
+            return $url;
+        }
+
+        $host = strtolower((string) ($parts['host'] ?? ''));
+        $appHost = strtolower((string) parse_url((string) config('app.url'), PHP_URL_HOST));
+        $storeHosts = array_filter([$appHost, 'blulavelle.com', 'www.blulavelle.com']);
+        if (! in_array($host, $storeHosts, true)) {
+            return $url;
+        }
+
+        $path = (string) ($parts['path'] ?? '/');
+        if (preg_match('~/products/([^/]+)~', $path, $matches) === 1) {
+            return 'blucommerce://product/'.rawurlencode(rawurldecode($matches[1]));
+        }
+        if ($path === '/sizing-kit' || str_starts_with($path, '/sizing-kit/')) {
+            return 'blucommerce://content/nail-sizing';
+        }
+        if (preg_match('~/page/([^/]+)~', $path, $matches) === 1) {
+            return 'blucommerce://content/'.$this->appContentKey(rawurldecode($matches[1]));
+        }
+        if (($parts['fragment'] ?? '') === 'footer-faq') {
+            return 'blucommerce://content/support';
+        }
+
+        return 'blucommerce://content/support';
+    }
+
+    private function appContentKey(string $slug): string
+    {
+        return match ($slug) {
+            'shipping-delivery' => 'shipping',
+            'returns-exchanges-policy', 'refund-policy' => 'returns',
+            'cancelchange-order' => 'cancellation',
+            'privacy-policy', 'privacy' => 'privacy',
+            'terms-of-service', 'terms', 'terms-and-conditions' => 'terms',
+            default => 'support',
+        };
     }
 }

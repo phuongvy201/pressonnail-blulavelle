@@ -262,8 +262,24 @@ class AuthController extends Controller
             'phone' => $user->phone,
             'avatar' => $user->avatar,
             'emailVerified' => $user->email_verified_at !== null,
+            'stylePreferences' => self::stylePreferences($user),
             'createdAt' => ApiResponse::iso($user->created_at),
             'updatedAt' => ApiResponse::iso($user->updated_at),
+        ];
+    }
+
+    /**
+     * @return array{styles: list<string>, shapes: list<string>}
+     */
+    public static function stylePreferences(User $user): array
+    {
+        $stored = is_array($user->style_preferences) ? $user->style_preferences : [];
+        $styles = is_array($stored['styles'] ?? null) ? $stored['styles'] : [];
+        $shapes = is_array($stored['shapes'] ?? null) ? $stored['shapes'] : [];
+
+        return [
+            'styles' => array_values(array_intersect(config('style_preferences.styles', []), $styles)),
+            'shapes' => array_values(array_intersect(config('style_preferences.shapes', []), $shapes)),
         ];
     }
 

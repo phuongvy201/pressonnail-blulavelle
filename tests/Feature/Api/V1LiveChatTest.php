@@ -106,7 +106,7 @@ test('a bot product card url does not crash the mobile chat payload', function (
         'conversation_id' => $conversation->id,
         'is_from_customer' => false,
         'sender_type' => ChatMessage::SENDER_BOT,
-        'body' => 'Here is a set that matches.',
+        'body' => "Here is a set: https://blulavelle.com/products/short-almond-rose\nMore details: https://blulavelle.com/sizing-kit",
         'metadata' => [
             'products' => [[
                 'id' => 12,
@@ -121,7 +121,9 @@ test('a bot product card url does not crash the mobile chat payload', function (
     $this->withHeader('X-Live-Chat-Guest', $token)
         ->getJson('/api/v1/live-chat')
         ->assertOk()
-        ->assertJsonPath('data.messages.0.products.0.slug', 'short-almond-rose');
+        ->assertJsonPath('data.messages.0.products.0.slug', 'short-almond-rose')
+        ->assertJsonPath('data.messages.0.products.0.url', 'blucommerce://product/short-almond-rose')
+        ->assertJsonPath('data.messages.0.body', "Here is a set: blucommerce://product/short-almond-rose\nMore details: blucommerce://content/nail-sizing");
 });
 
 test('a mobile message is answered by the same chatbot as the website', function () {
