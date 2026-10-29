@@ -7,6 +7,7 @@ use App\Models\AffiliateApplication;
 use App\Models\AffiliateSampleRequest;
 use App\Models\Order;
 use App\Models\User;
+use App\Services\OrderChannelStats;
 use Spatie\Permission\Models\Role;
 
 class DashboardController extends Controller
@@ -16,6 +17,7 @@ class DashboardController extends Controller
         $totalUsers = User::count();
         $totalRoles = Role::count();
         $totalOrders = Order::count();
+        $channelStats = OrderChannelStats::summary();
 
         $pendingAffiliateApplicationsCount = AffiliateApplication::query()
             ->where('status', AffiliateApplication::STATUS_PENDING)
@@ -42,6 +44,7 @@ class DashboardController extends Controller
             'totalUsers',
             'totalRoles',
             'totalOrders',
+            'channelStats',
             'pendingAffiliateApplicationsCount',
             'recentAffiliateApplications',
             'pendingSampleRequestsCount',

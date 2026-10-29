@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Mobile\GuestCartMerger;
+use App\Services\Orders\GuestOrderAccess;
 use App\Services\RecaptchaVerifier;
 use App\Services\SocialIdentityVerifier;
 use App\Support\ApiV1\ApiResponse;
@@ -40,7 +41,7 @@ class AuthController extends Controller
         return ApiResponse::success($recaptcha->config());
     }
 
-    public function register(Request $request, TokenIssuer $tokens, GuestCartMerger $merger, RecaptchaVerifier $recaptcha): JsonResponse
+    public function register(Request $request, TokenIssuer $tokens, GuestCartMerger $merger, GuestOrderAccess $orders, RecaptchaVerifier $recaptcha): JsonResponse
     {
         $request->merge([
             'password_confirmation' => $request->input('passwordConfirmation', $request->input('password_confirmation')),
@@ -63,7 +64,7 @@ class AuthController extends Controller
         ]);
 
         event(new Registered($user));
-        $this->mergeGuest($request, $user, $merger);
+        $this->mergeGuest($request, $user, $merger, $orders);
 
         return ApiResponse::success([
             'token' => $tokens->issue($user, $request, $validated['deviceName'] ?? null),
@@ -71,7 +72,7 @@ class AuthController extends Controller
         ], null, 201);
     }
 
-    public function login(Request $request, TokenIssuer $tokens, GuestCartMerger $merger): JsonResponse
+    public function login(Request $request, TokenIssuer $tokens, GuestCartMerger $merger, GuestOrderAccess $orders): JsonResponse
     {
         $request->validate([
             'email' => ['required', 'email'],
@@ -90,7 +91,7 @@ class AuthController extends Controller
         }
 
         RateLimiter::clear($this->loginKey($request));
-        $this->mergeGuest($request, $user, $merger);
+        $this->mergeGuest($request, $user, $merger, $orders);
 
         return ApiResponse::success([
             'token' => $tokens->issue($user, $request, $request->input('deviceName')),
@@ -98,7 +99,7 @@ class AuthController extends Controller
         ]);
     }
 
-    public function social(Request $request, TokenIssuer $tokens, GuestCartMerger $merger, SocialIdentityVerifier $identities): JsonResponse
+    public function social(Request $request, TokenIssuer $tokens, GuestCartMerger $merger, GuestOrderAccess $orders, SocialIdentityVerifier $identities): JsonResponse
     {
         $validated = $request->validate([
             'provider' => ['required', 'in:google,facebook,apple'],
@@ -129,7 +130,7 @@ class AuthController extends Controller
             return ApiResponse::error('SOCIAL_AUTH_FAILED', 'This account is no longer available.', 403);
         }
 
-        $this->mergeGuest($request, $user, $merger);
+        $this->mergeGuest($request, $user, $merger, $orders);
 
         return ApiResponse::success([
             'token' => $tokens->issue($user, $request, $validated['deviceName'] ?? null),
@@ -283,13 +284,15 @@ class AuthController extends Controller
         ];
     }
 
-    private function mergeGuest(Request $request, User $user, GuestCartMerger $merger): void
+    private function mergeGuest(Request $request, User $user, GuestCartMerger $merger, GuestOrderAccess $orders): void
     {
         $header = config('api_v1.guest_cart_header', 'X-Guest-Cart-Token');
         $token = $request->header($header);
         if ($token && preg_match('/^[a-zA-Z0-9_-]{32,64}$/', $token)) {
             $merger->merge($token, $user);
         }
+
+        $orders->claimForVerifiedUser($user);
     }
 
     private function ensureLoginNotRateLimited(Request $request): void

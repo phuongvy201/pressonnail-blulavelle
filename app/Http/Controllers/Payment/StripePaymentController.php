@@ -273,6 +273,7 @@ class StripePaymentController extends Controller
                 'total_amount' => $totalAmount,
                 'currency' => $orderCurrency,
                 'payment_method' => 'stripe',
+                'sales_channel' => \App\Support\SalesChannel::WEBSITE,
                 'payment_status' => 'paid',
                 'status' => 'processing',
                 'payment_id' => $paymentIntent->id,

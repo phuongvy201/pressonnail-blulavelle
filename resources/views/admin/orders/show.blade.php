@@ -76,6 +76,9 @@
                     </a>
                     <h1 class="text-3xl font-bold text-gray-900">Order Details</h1>
                     <p class="text-gray-600 mt-2">Order #{{ $order->order_number }}</p>
+                    <p class="mt-1 text-sm font-semibold {{ $order->sales_channel === 'app' ? 'text-sky-700' : 'text-slate-600' }}">
+                        Bought on {{ $order->sales_channel === 'app' ? 'App' : 'Website' }}
+                    </p>
                     @if($order->affiliate_id && $order->relationLoaded('affiliate') && $order->affiliate)
                         <p class="mt-1 text-sm text-violet-700">
                             Creator: <span class="font-mono font-semibold">{{ $order->affiliate->code }}</span>

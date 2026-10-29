@@ -66,6 +66,28 @@ test('apple sign-in rejects a token for another app', function () {
     ))->toThrow(InvalidArgumentException::class, 'This Apple account is not allowed for BluLavelle.');
 });
 
+test('apple sign-in replaces an email placeholder name when a real name is provided', function () {
+    config(['services.apple.client_id' => 'com.blulavelle.app', 'services.apple.client_ids' => 'com.blulavelle.app']);
+    $existing = User::factory()->create([
+        'name' => 'ada@privaterelay.appleid.com',
+        'email' => 'ada@privaterelay.appleid.com',
+        'apple_id' => 'apple-subject-1',
+    ]);
+
+    $user = app(SocialIdentityVerifier::class)->findOrCreate(
+        app(SocialIdentityVerifier::class)->profile(
+            'apple',
+            appleIdentityToken('name-fix-nonce', ['sub' => 'apple-subject-1']),
+            '',
+            'name-fix-nonce',
+            'Ada Lovelace',
+        )
+    );
+
+    expect($user->id)->toBe($existing->id)
+        ->and($user->fresh()->name)->toBe('Ada Lovelace');
+});
+
 /**
  * @param  array<string, mixed>  $claims
  */

@@ -42,6 +42,10 @@ class SocialIdentityVerifier
             if ($user->email_verified_at === null) {
                 $user->email_verified_at = now();
             }
+            if ($this->isRealDisplayName($profile['name'], $profile['email'])
+                && ! $this->isRealDisplayName((string) $user->name, (string) $user->email)) {
+                $user->name = $profile['name'];
+            }
             $user->save();
 
             return $user;
@@ -175,10 +179,15 @@ class SocialIdentityVerifier
             throw new \InvalidArgumentException('Apple did not share a verified email address.');
         }
 
-        $display = trim($name);
-        if ($existing && trim((string) $existing->name) !== '') {
-            $display = (string) $existing->name;
-        } elseif ($display === '') {
+        $incoming = trim($name);
+        $stored = $existing ? trim((string) $existing->name) : '';
+        // Keep a real stored name (Apple only sends fullName once). Accept a new
+        // name only when the account still has an email placeholder or is empty.
+        if ($this->isRealDisplayName($stored, $email)) {
+            $display = $stored;
+        } elseif ($this->isRealDisplayName($incoming, $email)) {
+            $display = $incoming;
+        } else {
             $display = $email;
         }
 
@@ -189,6 +198,16 @@ class SocialIdentityVerifier
             'avatar' => null,
             'idColumn' => 'apple_id',
         ];
+    }
+
+    private function isRealDisplayName(string $name, string $email): bool
+    {
+        $name = trim($name);
+        if ($name === '') {
+            return false;
+        }
+
+        return strtolower($name) !== strtolower(trim($email));
     }
 
     /**

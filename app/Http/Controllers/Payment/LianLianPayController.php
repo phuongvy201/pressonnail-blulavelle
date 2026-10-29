@@ -1190,6 +1190,7 @@ class LianLianPayController extends Controller
                 'total_amount' => $totalAmount,
                 'currency' => $orderCurrency,
                 'payment_method' => 'lianlian_pay',
+                'sales_channel' => \App\Support\SalesChannel::WEBSITE,
                 'payment_status' => 'pending',
                 'status' => 'pending'
             ]);

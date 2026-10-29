@@ -6,11 +6,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
 class Order extends Model
 {
+    protected static function booted(): void
+    {
+        static::creating(function (Order $order) {
+            if (! is_string($order->lookup_token) || strlen($order->lookup_token) < 32) {
+                $order->lookup_token = self::generateLookupToken();
+            }
+        });
+    }
+
     protected $fillable = [
         'order_number',
+        'lookup_token',
         'user_id',
         'affiliate_id',
         'affiliate_attribution',
@@ -38,6 +49,7 @@ class Order extends Model
         'status',
         'payment_status',
         'payment_method',
+        'sales_channel',
         'payment_id',
         'payment_transaction_id',
         'paypal_capture_id',
@@ -97,6 +109,15 @@ class Order extends Model
         return $this->hasOne(AffiliateCommission::class);
     }
 
+    public function scopeFromChannel($query, ?string $channel)
+    {
+        if (in_array($channel, ['website', 'app'], true)) {
+            $query->where('sales_channel', $channel);
+        }
+
+        return $query;
+    }
+
     public function hasActivePaymentDispute(): bool
     {
         return in_array($this->dispute_status, ['open', 'lost'], true);
@@ -109,5 +130,23 @@ class Order extends Model
         } while (self::where('order_number', $orderNumber)->exists());
 
         return $orderNumber;
+    }
+
+    public static function generateLookupToken(): string
+    {
+        do {
+            $token = Str::lower(Str::random(48));
+        } while (self::where('lookup_token', $token)->exists());
+
+        return $token;
+    }
+
+    public function ensureLookupToken(): string
+    {
+        if (! is_string($this->lookup_token) || strlen($this->lookup_token) < 32) {
+            $this->forceFill(['lookup_token' => self::generateLookupToken()])->save();
+        }
+
+        return (string) $this->lookup_token;
     }
 }

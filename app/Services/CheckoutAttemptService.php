@@ -231,6 +231,7 @@ class CheckoutAttemptService
             'idempotencyKey' => $attempt->idempotency_key,
             'orderId' => $attempt->order_id,
             'orderNumber' => $order?->order_number,
+            'lookupToken' => $order ? $order->ensureLookupToken() : null,
             'paymentIntentId' => $attempt->payment_intent_id,
             'clientSecret' => data_get($attempt->response_body, 'client_secret'),
             'checkoutUrl' => data_get($attempt->response_body, 'checkout_url'),

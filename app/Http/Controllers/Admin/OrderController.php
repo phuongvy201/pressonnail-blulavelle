@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Mail\OrderTrackingNotification;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Services\OrderChannelStats;
+use App\Support\SalesChannel;
 use Illuminate\Support\Facades\Log;
 use App\Services\StripeService;
 use Illuminate\Http\Request;
@@ -63,6 +65,8 @@ class OrderController extends Controller
             $query->where('payment_status', $request->payment_status);
         }
 
+        $query->fromChannel($request->input('sales_channel'));
+
         // Date range filter
         if ($request->has('date_from') && $request->date_from) {
             $query->whereDate('created_at', '>=', $request->date_from);
@@ -83,8 +87,9 @@ class OrderController extends Controller
             'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount'),
             'today_orders' => Order::whereDate('created_at', today())->count(),
         ];
+        $channelStats = OrderChannelStats::summary();
 
-        return view('admin.orders.index', compact('orders', 'stats'));
+        return view('admin.orders.index', compact('orders', 'stats', 'channelStats'));
     }
 
     public function show(Order $order)
@@ -248,6 +253,8 @@ class OrderController extends Controller
             $query->where('payment_status', $request->payment_status);
         }
 
+        $query->fromChannel($request->input('sales_channel'));
+
         if ($request->has('date_from') && $request->date_from) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
@@ -284,6 +291,7 @@ class OrderController extends Controller
                 'Customer Phone',
                 'Status',
                 'Payment Status',
+                'Sales Channel',
                 'Total Amount (USD)',
                 'Tax Amount (USD)',
                 'Shipping Amount (USD)',
@@ -322,6 +330,7 @@ class OrderController extends Controller
                     $order->customer_phone ?? '',
                     ucfirst($order->status ?? ''),
                     ucfirst($order->payment_status ?? ''),
+                    SalesChannel::label($order->sales_channel),
                     number_format($order->total_amount ?? 0, 2),
                     number_format($order->tax_amount ?? 0, 2),
                     number_format($order->shipping_amount ?? 0, 2),

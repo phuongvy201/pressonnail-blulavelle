@@ -926,6 +926,7 @@ class CheckoutController extends Controller
                 'status' => 'pending',
                 'payment_status' => 'pending',
                 'payment_method' => $request->payment_method,
+                'sales_channel' => \App\Support\SalesChannel::fromCheckoutRequest($request),
                 'notes' => $request->notes,
             ]);
 

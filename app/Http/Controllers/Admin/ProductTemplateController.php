@@ -9,6 +9,7 @@ use App\Models\TemplateAttribute;
 use App\Models\TemplateVariant;
 use App\Services\VideoThumbnailService;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
@@ -21,6 +22,62 @@ class ProductTemplateController extends Controller
     }
 
     /**
+     * Đường dẫn file tạm an toàn (Windows đôi khi getRealPath() rỗng với UploadedFile).
+     */
+    protected function localPathForUploadedMedia(UploadedFile $file): ?string
+    {
+        if (! $file->isValid()) {
+            return null;
+        }
+
+        $realPath = $file->getRealPath();
+        if (is_string($realPath) && $realPath !== '' && is_readable($realPath)) {
+            return $realPath;
+        }
+
+        $pathname = $file->getPathname();
+        if (is_string($pathname) && $pathname !== '' && is_readable($pathname)) {
+            return $pathname;
+        }
+
+        return null;
+    }
+
+    /**
+     * Đẩy một file upload lên S3 bằng đường dẫn local, không truyền UploadedFile
+     * vì putFileAs gọi getRealPath() và fopen('') khi path rỗng.
+     */
+    protected function storeUploadedTemplateFile(UploadedFile $file, string $directory): ?string
+    {
+        $localPath = $this->localPathForUploadedMedia($file);
+        if ($localPath === null) {
+            Log::warning('Skipping template media upload: missing or unreadable temp file', [
+                'original_name' => $file->getClientOriginalName(),
+                'error' => $file->getError(),
+            ]);
+
+            return null;
+        }
+
+        $ext = strtolower((string) $file->getClientOriginalExtension());
+        if ($ext === '') {
+            $ext = strtolower((string) ($file->guessExtension() ?: 'bin'));
+        }
+        $fileName = time().'_'.Str::random(10).'.'.$ext;
+        $stored = Storage::disk('s3')->putFileAs($directory, $localPath, $fileName);
+        if (! $stored) {
+            Log::error('Template media S3 upload failed', [
+                'directory' => $directory,
+                'file' => $fileName,
+            ]);
+
+            return null;
+        }
+
+        return $fileName;
+    }
+
+    /**
      * Upload media files (images + videos) to S3. Với video thì tạo poster bằng FFmpeg và lưu dạng ['type'=>'video','url'=>...,'poster'=>...].
      */
     protected function uploadTemplateMedia(Request $request): array
@@ -30,16 +87,19 @@ class ProductTemplateController extends Controller
         $baseUrl = $this->getS3BaseUrl();
 
         foreach ($request->file('media') as $file) {
-            if (!$file->isValid()) {
+            if (! $file instanceof UploadedFile) {
                 continue;
             }
-            $fileName = time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
-            Storage::disk('s3')->putFileAs('templates', $file, $fileName);
+            $localPath = $this->localPathForUploadedMedia($file);
+            $fileName = $this->storeUploadedTemplateFile($file, 'templates');
+            if ($fileName === null) {
+                continue;
+            }
             $fileUrl = $baseUrl . 'templates/' . $fileName;
 
             if (VideoThumbnailService::isVideoFile($file)) {
                 $posterUrl = null;
-                $posterPath = $thumbnailService->generatePoster($file, 1);
+                $posterPath = $localPath ? $thumbnailService->generatePoster($localPath, 1) : null;
                 if ($posterPath) {
                     $posterFileName = pathinfo($fileName, PATHINFO_FILENAME) . '_poster.jpg';
                     $contents = Storage::disk('local')->get($posterPath);
@@ -206,10 +266,11 @@ class ProductTemplateController extends Controller
                 $variantMediaUrls = [];
                 if ($request->hasFile("variants.{$index}.media")) {
                     $file = $request->file("variants.{$index}.media");
-                    if ($file->isValid()) {
-                        $fileName = time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
-                        Storage::disk('s3')->putFileAs('template-variants', $file, $fileName);
-                        $variantMediaUrls[] = 'https://s3.us-east-1.amazonaws.com/image.bluprinter/template-variants/' . $fileName;
+                    if ($file instanceof UploadedFile) {
+                        $fileName = $this->storeUploadedTemplateFile($file, 'template-variants');
+                        if ($fileName !== null) {
+                            $variantMediaUrls[] = $this->getS3BaseUrl().'template-variants/'.$fileName;
+                        }
                     }
                 }
 
@@ -444,10 +505,11 @@ class ProductTemplateController extends Controller
                     if ($request->hasFile("variants.{$index}.media")) {
                         $file = $request->file("variants.{$index}.media");
 
-                        if ($file->isValid()) {
-                            $fileName = time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
-                            $filePath = Storage::disk('s3')->putFileAs('template-variants', $file, $fileName);
-                            $variantMediaUrls[] = 'https://s3.us-east-1.amazonaws.com/image.bluprinter/template-variants/' . $fileName;
+                        if ($file instanceof UploadedFile) {
+                            $fileName = $this->storeUploadedTemplateFile($file, 'template-variants');
+                            if ($fileName !== null) {
+                                $variantMediaUrls[] = $this->getS3BaseUrl().'template-variants/'.$fileName;
+                            }
                         }
                     } else {
                         // Keep existing media if no new file uploaded

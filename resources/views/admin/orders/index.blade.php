@@ -111,7 +111,7 @@
                     <p class="text-blue-100 mt-2">Manage and track all customer orders across the platform</p>
                 </div>
                 <div class="flex space-x-3">
-                    <a href="{{ route('admin.orders.export', request()->only(['search', 'status', 'payment_status', 'date_from', 'date_to'])) }}" 
+                    <a href="{{ route('admin.orders.export', request()->only(['search', 'status', 'payment_status', 'sales_channel', 'date_from', 'date_to'])) }}" 
                        id="export-csv-btn"
                        class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-xl transition-all duration-200 border border-white border-opacity-30 backdrop-blur-sm inline-flex items-center">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -214,6 +214,11 @@
             </div>
         </div>
 
+        <div class="mb-8 space-y-3">
+            <h2 class="text-lg font-semibold text-gray-900">Purchases by channel</h2>
+            @include('admin.partials.sales-channel-stats')
+        </div>
+
         <!-- Filters -->
         <div class="filter-section p-6 mb-8">
             <div class="flex items-center mb-4">
@@ -223,7 +228,7 @@
                 <h3 class="text-lg font-semibold text-gray-900">Filter Orders</h3>
             </div>
             
-            <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Search Orders</label>
                     <div class="relative">
@@ -260,6 +265,15 @@
                 </div>
 
                 <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Sales channel</label>
+                    <select name="sales_channel" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200">
+                        <option value="">Website and app</option>
+                        <option value="website" {{ request('sales_channel') == 'website' ? 'selected' : '' }}>Website</option>
+                        <option value="app" {{ request('sales_channel') == 'app' ? 'selected' : '' }}>App</option>
+                    </select>
+                </div>
+
+                <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">From Date</label>
                     <input type="date" name="date_from" value="{{ request('date_from') }}" 
                            class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200">
@@ -271,7 +285,7 @@
                            class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200">
                 </div>
 
-                <div class="lg:col-span-5 flex justify-end space-x-3 pt-4">
+                <div class="lg:col-span-3 flex justify-end space-x-3 pt-4">
                     <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl transition-all duration-200 font-semibold shadow-lg hover:shadow-xl">
                         <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z"></path>
@@ -311,7 +325,12 @@
                                     <!-- Order Header -->
                                     <div class="flex items-center justify-between mb-4">
                                         <div>
-                                            <h4 class="text-xl font-bold text-gray-900">{{ $order->order_number }}</h4>
+                                            <div class="flex items-center gap-2">
+                                                <h4 class="text-xl font-bold text-gray-900">{{ $order->order_number }}</h4>
+                                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold {{ $order->sales_channel === 'app' ? 'bg-sky-100 text-sky-800' : 'bg-slate-100 text-slate-700' }}">
+                                                    {{ $order->sales_channel === 'app' ? 'App' : 'Website' }}
+                                                </span>
+                                            </div>
                                             <p class="text-sm text-gray-600 mt-1">{{ $order->customer_name }} • {{ $order->customer_email }}</p>
                                         </div>
                                         

@@ -709,10 +709,10 @@ $paths = [
     ],
     '/api/v1/orders/track' => [
         'post' => $ops(
-            'Track order by number + email',
+            'Legacy guest track (returns OTP_REQUIRED)',
             'Orders',
             false,
-            'Public tracking — no Bearer required.',
+            'No longer returns the order. Use track/otp then track/verify, or GET orders/lookup/{token}.',
             [],
             $jsonBody([
                 'type' => 'object',
@@ -723,6 +723,61 @@ $paths = [
                     'email' => ['type' => 'string', 'format' => 'email'],
                 ],
             ])
+        ),
+    ],
+    '/api/v1/orders/track/otp' => [
+        'post' => $ops(
+            'Request guest order email OTP',
+            'Orders',
+            false,
+            'Sends a 6-digit code to the email on the order. Throttled.',
+            [],
+            $jsonBody([
+                'type' => 'object',
+                'required' => ['email'],
+                'properties' => [
+                    'orderNumber' => ['type' => 'string', 'maxLength' => 64],
+                    'order_number' => ['type' => 'string', 'maxLength' => 64],
+                    'email' => ['type' => 'string', 'format' => 'email'],
+                ],
+            ])
+        ),
+    ],
+    '/api/v1/orders/track/verify' => [
+        'post' => $ops(
+            'Verify guest order OTP',
+            'Orders',
+            false,
+            'Returns a masked guest order payload plus lookupToken for later device opens.',
+            [],
+            $jsonBody([
+                'type' => 'object',
+                'required' => ['email', 'otp'],
+                'properties' => [
+                    'orderNumber' => ['type' => 'string', 'maxLength' => 64],
+                    'order_number' => ['type' => 'string', 'maxLength' => 64],
+                    'email' => ['type' => 'string', 'format' => 'email'],
+                    'otp' => ['type' => 'string', 'minLength' => 6, 'maxLength' => 6],
+                ],
+            ])
+        ),
+    ],
+    '/api/v1/orders/lookup/{token}' => [
+        'get' => $ops(
+            'Lookup guest order by token',
+            'Orders',
+            false,
+            'Public lookup using the random lookup_token from checkout/OTP verify. Token is 32–64 chars.',
+            [$path('token', ['type' => 'string', 'minLength' => 32, 'maxLength' => 64], 'Order lookup token')]
+        ),
+    ],
+    '/api/v1/orders/claim' => [
+        'post' => $ops(
+            'Claim guest orders for verified account',
+            'Orders',
+            true,
+            'Attaches orders with matching customer_email and null user_id when the Bearer user has a verified email.',
+            []
         ),
     ],
     '/api/v1/orders/{orderNumber}' => [

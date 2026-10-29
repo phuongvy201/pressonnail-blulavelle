@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\PushTokenController as V1PushTokenController;
 use App\Http\Controllers\Api\V1\SafetyController as V1SafetyController;
 use App\Http\Controllers\Api\V1\NailTryOnController as V1NailTryOnController;
 use App\Http\Controllers\Api\V1\NailTryOnJobController as V1NailTryOnJobController;
+use App\Http\Controllers\Api\V1\GuestOrderTrackingController as V1GuestOrderTrackingController;
 use App\Http\Controllers\Api\V1\OrderController as V1OrderController;
 use App\Http\Controllers\Api\V1\OrderReviewController as V1OrderReviewController;
 use App\Http\Controllers\Api\V1\PaymentController as V1PaymentController;
@@ -299,7 +300,17 @@ Route::prefix('v1')->name('api.v1.')->group(function () use ($v1Guest) {
                 ->name('try');
         });
 
-        Route::post('/orders/track', [V1OrderController::class, 'track'])->name('orders.track');
+        Route::post('/orders/track', [V1GuestOrderTrackingController::class, 'track'])->name('orders.track');
+        Route::post('/orders/track/otp', [V1GuestOrderTrackingController::class, 'requestOtp'])
+            ->middleware('throttle:10,1')
+            ->name('orders.track.otp');
+        Route::post('/orders/track/verify', [V1GuestOrderTrackingController::class, 'verifyOtp'])
+            ->middleware('throttle:20,1')
+            ->name('orders.track.verify');
+        Route::get('/orders/lookup/{token}', [V1GuestOrderTrackingController::class, 'lookup'])
+            ->middleware('throttle:30,1')
+            ->where('token', '[A-Za-z0-9]{32,64}')
+            ->name('orders.lookup');
 
         Route::prefix('live-chat')->name('live-chat.')->group(function () {
             Route::get('/', [V1LiveChatController::class, 'show'])->name('show');
@@ -399,6 +410,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () use ($v1Guest) {
 
         Route::prefix('orders')->name('orders.')->group(function () {
             Route::get('/', [V1OrderController::class, 'index'])->name('index');
+            Route::post('/claim', [V1GuestOrderTrackingController::class, 'claim'])
+                ->middleware('throttle:10,1')
+                ->name('claim');
             Route::get('/{orderNumber}', [V1OrderController::class, 'show'])->name('show');
             Route::get('/{orderNumber}/reviews', [V1OrderReviewController::class, 'index'])->name('reviews.index');
             Route::post('/{orderNumber}/reviews', [V1OrderReviewController::class, 'store'])->name('reviews.store');

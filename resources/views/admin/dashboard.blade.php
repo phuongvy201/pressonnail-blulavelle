@@ -156,6 +156,11 @@
         </div>
     </div>
 
+    <section class="space-y-3">
+        <h2 class="text-xl font-semibold text-gray-900">Purchases by channel</h2>
+        @include('admin.partials.sales-channel-stats')
+    </section>
+
     <!-- Quick Actions -->
     <div class="bg-white rounded-xl shadow-lg">
         <div class="p-6 border-b border-gray-200">
