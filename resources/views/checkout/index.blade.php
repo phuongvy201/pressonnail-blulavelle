@@ -658,37 +658,26 @@ function buildCheckoutCustomizationInputs(customizations) {
         @apply rounded-lg min-h-[48px];
     }
     
-    /* Stripe card element styles */
+    /* Host for Stripe's own Card Element iframe. Padding lives only here. */
     #stripe-card-container {
         @apply min-h-[200px] rounded-xl relative;
     }
-    
-    .stripe-field {
-        min-height: 48px;
-        padding: 14px 14px 12px;
+
+    #stripe-card-element {
+        box-sizing: border-box;
+        height: 44px;
+        padding: 12px 14px;
         background: #fff;
         border: 2px solid rgb(240 66 124 / 0.2);
         border-radius: 0.75rem;
     }
 
-    .stripe-field iframe {
-        width: 100% !important;
-    }
-
-    #stripe-card-container .StripeElement {
-        background: transparent;
-        padding: 0;
-        border: 0;
-        box-shadow: none;
-        min-height: 22px;
-    }
-
-    #stripe-card-container .stripe-field.StripeElement--focus {
+    #stripe-card-element.StripeElement--focus {
         border-color: #f0427c;
         box-shadow: 0 0 0 3px rgb(240 66 124 / 0.2);
     }
 
-    #stripe-card-container .stripe-field.StripeElement--invalid {
+    #stripe-card-element.StripeElement--invalid {
         border-color: #ef4444;
         box-shadow: 0 0 0 3px rgb(239 68 68 / 0.2);
     }
@@ -1201,22 +1190,7 @@ function buildCheckoutCustomizationInputs(customizations) {
                                             <div class="w-12 h-8 bg-slate-600 rounded text-white text-xs font-bold flex items-center justify-center">DISC</div>
                                         </div>
 
-                                        <div class="space-y-3">
-                                            <div>
-                                                <label for="stripe-card-number" class="block text-sm font-semibold text-slate-700 mb-1.5">Card number</label>
-                                                <div id="stripe-card-number" class="stripe-field"></div>
-                                            </div>
-                                            <div class="grid grid-cols-2 gap-3">
-                                                <div>
-                                                    <label for="stripe-card-expiry" class="block text-sm font-semibold text-slate-700 mb-1.5">Expiration</label>
-                                                    <div id="stripe-card-expiry" class="stripe-field"></div>
-                                                </div>
-                                                <div>
-                                                    <label for="stripe-card-cvc" class="block text-sm font-semibold text-slate-700 mb-1.5">CVC</label>
-                                                    <div id="stripe-card-cvc" class="stripe-field"></div>
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <div id="stripe-card-element"></div>
                                         <div id="stripe-card-errors" class="text-red-500 text-sm mt-2" role="alert"></div>
 
                                         <!-- Security Notice -->
@@ -2466,9 +2440,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Stripe integration
     let stripeInstance = null;
     let stripeCardElement = null;
-    let stripeCardExpiryComplete = false;
-    let stripeCardCvcComplete = false;
-    let stripeCardNumberComplete = false;
+    let stripeCardComplete = false;
     let stripePaymentIntent = null;
     
     // Payment method change handler
@@ -2604,9 +2576,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             stripeInstance = window.Stripe(stripeKey);
             
-            // Create Elements instance
             const elements = stripeInstance.elements();
-            const elementStyle = {
+            stripeCardElement = elements.create('card', {
+                hidePostalCode: true,
                 style: {
                     base: {
                         fontSize: '16px',
@@ -2622,42 +2594,22 @@ document.addEventListener('DOMContentLoaded', function() {
                         iconColor: '#fa755a',
                     },
                 },
-            };
+            });
 
-            // Separate fields so expiry and CVC are not squeezed off a single iframe row.
-            stripeCardElement = elements.create('cardNumber', elementStyle);
-            const cardExpiryElement = elements.create('cardExpiry', elementStyle);
-            const cardCvcElement = elements.create('cardCvc', elementStyle);
-
-            const showStripeFieldError = (message) => {
+            stripeCardElement.mount('#stripe-card-element');
+            stripeCardElement.on('change', function(event) {
+                stripeCardComplete = !!event.complete;
                 const displayError = document.getElementById('stripe-card-errors');
-                if (displayError) {
-                    displayError.textContent = message || '';
+                if (!displayError) {
+                    return;
                 }
-            };
-
-            const bindStripeField = (element, markComplete) => {
-                element.on('change', function(event) {
-                    markComplete(!!event.complete);
-                    const code = event.error && event.error.code ? String(event.error.code) : '';
-                    if (event.error && code.indexOf('incomplete_') !== 0) {
-                        showStripeFieldError(event.error.message);
-                        return;
-                    }
-                    if (stripeCardNumberComplete && stripeCardExpiryComplete && stripeCardCvcComplete) {
-                        showStripeFieldError('');
-                    } else if (!event.error) {
-                        showStripeFieldError('');
-                    }
-                });
-            };
-
-            stripeCardElement.mount('#stripe-card-number');
-            cardExpiryElement.mount('#stripe-card-expiry');
-            cardCvcElement.mount('#stripe-card-cvc');
-            bindStripeField(stripeCardElement, (complete) => { stripeCardNumberComplete = complete; });
-            bindStripeField(cardExpiryElement, (complete) => { stripeCardExpiryComplete = complete; });
-            bindStripeField(cardCvcElement, (complete) => { stripeCardCvcComplete = complete; });
+                const code = event.error && event.error.code ? String(event.error.code) : '';
+                if (event.error && code.indexOf('incomplete_') !== 0) {
+                    displayError.textContent = event.error.message;
+                } else {
+                    displayError.textContent = '';
+                }
+            });
             
             console.log('✅ Stripe Elements initialized successfully');
             
@@ -2676,13 +2628,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error('Stripe not initialized. Please refresh and try again.');
             }
 
-            const stripeFieldError = document.getElementById('stripe-card-errors');
-            if (!stripeCardNumberComplete || !stripeCardExpiryComplete || !stripeCardCvcComplete) {
-                const missingMessage = !stripeCardNumberComplete
-                    ? 'Your card number is incomplete.'
-                    : (!stripeCardExpiryComplete
-                        ? 'Your expiration date is incomplete.'
-                        : 'Your card security code is incomplete.');
+            if (!stripeCardComplete) {
+                const missingMessage = 'Enter the full card number, expiration date, and CVC.';
+                const stripeFieldError = document.getElementById('stripe-card-errors');
                 if (stripeFieldError) {
                     stripeFieldError.textContent = missingMessage;
                 }
