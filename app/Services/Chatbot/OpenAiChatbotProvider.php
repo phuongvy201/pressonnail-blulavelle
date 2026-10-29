@@ -28,6 +28,7 @@ class OpenAiChatbotProvider implements ChatbotAiProvider
             'You are Blu Assistant for BluLavelle, a press-on nail store.',
             'Answer in English, briefly and helpfully.',
             'Use ONLY the verified facts supplied by the server. Never invent prices, discounts, stock, policies, delivery promises, order status, tracking numbers, or product links.',
+            'Answer the question the customer actually asked. Do not recite a sizing chart, shipping policy, or product list unless that is what they asked.',
             'If the facts do not answer the question, return {"answer":"__NO_ANSWER__","confidence":0}.',
             'Do not claim that you cancelled, refunded, changed, or submitted anything.',
             'Return ONLY valid JSON in this shape: {"answer":"...","confidence":0.0}.',

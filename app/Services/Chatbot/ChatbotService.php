@@ -235,6 +235,10 @@ class ChatbotService
      */
     private function factsFor(ChatConversation $conversation, string $question): array
     {
+        if ($this->knowledge->isPreviousSizeQuestion($question)) {
+            return $this->previousSizeFacts($conversation);
+        }
+
         $orderNumber = $this->knowledge->extractOrderNumber($question);
         $isOrderQuestion = $orderNumber !== null
             || preg_match('/\b(order|track|tracking|delivery status)\b/i', $question) === 1;
@@ -332,6 +336,66 @@ class ChatbotService
     /**
      * @return array{0: string, 1: array<string, mixed>, 2: array<string, mixed>}
      */
+    private function previousSizeFacts(ChatConversation $conversation): array
+    {
+        $sizingUrl = route('sizing-kit.index');
+        $email = $conversation->customer_email;
+        $measureAgain = ' To measure again, use the Sizing Kit: '.$sizingUrl;
+
+        if (! $conversation->customer_user_id && ! filled($conversation->guest_email)) {
+            return [
+                'previous_size',
+                ['summary' => 'I can’t look up a size you chose before because this chat has no account or email yet. Send your order number, or the email you used at checkout, and I’ll read the size saved on that order.'.$measureAgain],
+                ['quick_replies' => ['Talk to support']],
+            ];
+        }
+
+        $order = $this->knowledge->recentOrdersForConversation($conversation)->first();
+        if ($order === null) {
+            $who = filled($email) ? ' for '.$email : '';
+
+            return [
+                'previous_size',
+                ['summary' => 'I don’t see a past order'.$who.', so I can’t tell which nail size you chose last time. Send your order number and I’ll read the size from it.'.$measureAgain],
+                ['quick_replies' => ['Talk to support']],
+            ];
+        }
+
+        $lines = [];
+        foreach ($order->items as $item) {
+            $size = $this->knowledge->sizeLabelFromOptions($item->product_options);
+            if ($size === null) {
+                continue;
+            }
+            $lines[] = trim((string) $item->product_name).' — '.$size;
+        }
+
+        if ($lines === []) {
+            return [
+                'previous_size',
+                [
+                    'summary' => 'Your latest order '.$order->order_number.' doesn’t list a nail size on the items, so I can’t tell which size you picked. Send another order number if you ordered more than once.'.$measureAgain,
+                    'order_number' => $order->order_number,
+                    'sources' => [['title' => 'Your orders', 'source' => 'previous_size']],
+                ],
+                ['quick_replies' => ['Talk to support']],
+            ];
+        }
+
+        return [
+            'previous_size',
+            [
+                'summary' => 'On your latest order '.$order->order_number.', the size saved at checkout was: '.implode('; ', $lines).'. That is the size you chose last time.'.$measureAgain,
+                'order_number' => $order->order_number,
+                'sources' => [['title' => 'Your orders', 'source' => 'previous_size']],
+            ],
+            ['quick_replies' => ['Talk to support']],
+        ];
+    }
+
+    /**
+     * @return array{0: string, 1: array<string, mixed>, 2: array<string, mixed>}
+     */
     private function orderFacts(ChatConversation $conversation, string $question, ?string $orderNumber): array
     {
         if ($orderNumber === null) {
@@ -417,6 +481,20 @@ class ChatbotService
                 if (! str_contains($body, (string) $product['name'])) {
                     return null;
                 }
+            }
+        }
+
+        if ($intent === 'previous_size') {
+            $savedOrderNumber = (string) ($facts['order_number'] ?? '');
+            $recitesMeasuringGuide = str_contains($body, '14-10-11') || str_contains($body, 'thumb to pinky');
+            $dropsSavedOrder = $savedOrderNumber !== '' && ! str_contains($body, $savedOrderNumber);
+            if ($recitesMeasuringGuide || $dropsSavedOrder) {
+                return [
+                    'body' => $summary,
+                    'confidence' => 0.9,
+                    'model' => $composed['model'] ?? null,
+                    'usage' => $composed['usage'] ?? [],
+                ];
             }
         }
 

@@ -4,6 +4,7 @@ use App\Models\Category;
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Page;
 use App\Models\Product;
 use App\Models\ProductTemplate;
@@ -188,6 +189,80 @@ test('chatbot returns order status only for the conversation owner', function ()
     );
     expect($otherReply->body)->not->toContain('TRACK-OTHER-2')
         ->and($otherReply->body)->toContain('could not verify');
+});
+
+test('chatbot answers a past size from the latest order instead of the measuring guide', function () {
+    $category = Category::query()->create(['name' => 'Nails', 'slug' => 'nails-'.uniqid()]);
+    $template = ProductTemplate::query()->create([
+        'name' => 'Press-on template',
+        'category_id' => $category->id,
+        'base_price' => 20,
+    ]);
+    $product = Product::withoutEvents(fn () => Product::query()->create([
+        'template_id' => $template->id,
+        'name' => 'Glazed Almond Set',
+        'slug' => 'glazed-almond-'.uniqid(),
+        'price' => 24,
+        'description' => 'Almond press-on nails.',
+        'color' => 'glazed',
+        'media' => ['/images/glazed.jpg'],
+        'quantity' => 5,
+        'status' => 'active',
+    ]));
+
+    $order = Order::query()->create([
+        'order_number' => 'ORD-SIZE-4404',
+        'customer_name' => 'Guest Customer',
+        'customer_email' => 'guest@example.com',
+        'shipping_address' => '123 Main',
+        'city' => 'Austin',
+        'postal_code' => '78701',
+        'country' => 'US',
+        'subtotal' => 24,
+        'total_amount' => 29,
+        'status' => 'delivered',
+        'payment_status' => 'paid',
+    ]);
+    OrderItem::query()->create([
+        'order_id' => $order->id,
+        'product_id' => $product->id,
+        'product_name' => 'Glazed Almond Set',
+        'unit_price' => 24,
+        'quantity' => 1,
+        'total_price' => 24,
+        'product_options' => [
+            'selected_variant' => [
+                'attributes' => ['Size' => 'M'],
+            ],
+        ],
+    ]);
+
+    $conversation = hybridChatConversation();
+    $reply = app(ChatbotService::class)->handleMessage(
+        $conversation,
+        hybridCustomerMessage($conversation, 'how can i tell what size i preferred last'),
+    );
+
+    expect($reply)->not->toBeNull()
+        ->and($reply->intent)->toBe('previous_size')
+        ->and($reply->body)->toContain('ORD-SIZE-4404')
+        ->and($reply->body)->toContain('Glazed Almond Set')
+        ->and($reply->body)->toContain('Size: M')
+        ->and($reply->body)->not->toContain('14-10-11-10-8');
+});
+
+test('chatbot does not recite the sizing chart when no past size is on file', function () {
+    $conversation = hybridChatConversation();
+    $reply = app(ChatbotService::class)->handleMessage(
+        $conversation,
+        hybridCustomerMessage($conversation, 'how can i tell what size i preferred last'),
+    );
+
+    expect($reply)->not->toBeNull()
+        ->and($reply->intent)->toBe('previous_size')
+        ->and($reply->body)->toContain('order number')
+        ->and($reply->body)->not->toContain('14-10-11-10-8')
+        ->and($reply->body)->not->toContain('thumb to pinky');
 });
 
 test('chatbot hands sensitive requests to a human without changing the order', function () {

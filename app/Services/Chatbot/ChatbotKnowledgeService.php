@@ -6,6 +6,7 @@ use App\Models\ChatConversation;
 use App\Models\Order;
 use App\Models\Page;
 use App\Models\Product;
+use Illuminate\Support\Collection;
 use App\Services\SearchService;
 use App\Support\ReferenceNailSizeChart;
 use Illuminate\Support\Str;
@@ -175,6 +176,98 @@ class ChatbotKnowledgeService
     }
 
     /**
+     * Recent orders that belong to the person in this chat.
+     *
+     * @return Collection<int, Order>
+     */
+    public function recentOrdersForConversation(ChatConversation $conversation, int $limit = 1): Collection
+    {
+        $query = Order::query()->with('items')->latest('id');
+
+        if ($conversation->customer_user_id) {
+            $customerEmail = $conversation->customer?->email;
+            $query->where(function ($ownerQuery) use ($conversation, $customerEmail) {
+                $ownerQuery->where('user_id', $conversation->customer_user_id);
+                if (filled($customerEmail)) {
+                    $ownerQuery->orWhereRaw('LOWER(customer_email) = ?', [mb_strtolower((string) $customerEmail)]);
+                }
+            });
+        } elseif (filled($conversation->guest_email)) {
+            $query->whereRaw('LOWER(customer_email) = ?', [mb_strtolower((string) $conversation->guest_email)]);
+        } else {
+            return collect();
+        }
+
+        return $query->limit(max(1, $limit))->get();
+    }
+
+    /**
+     * Nail size saved on an order line, when checkout stored a variant.
+     */
+    public function sizeLabelFromOptions(mixed $options): ?string
+    {
+        if (! is_array($options)) {
+            return null;
+        }
+
+        $variant = $options['selected_variant'] ?? null;
+        if (! is_array($variant)) {
+            return null;
+        }
+
+        $attributes = $variant['attributes'] ?? null;
+        if (is_array($attributes) && $attributes !== []) {
+            return $this->formatVariantAttributes($attributes);
+        }
+
+        foreach (['variant_name', 'name', 'size'] as $key) {
+            if (isset($variant[$key]) && is_scalar($variant[$key]) && trim((string) $variant[$key]) !== '') {
+                $label = trim((string) $variant[$key]);
+
+                return $key === 'size' ? 'Size: '.$label : $label;
+            }
+        }
+
+        return $this->formatVariantAttributes($variant);
+    }
+
+    /**
+     * A question about a size the customer already chose, not how to measure.
+     */
+    public function isPreviousSizeQuestion(string $question): bool
+    {
+        $question = mb_strtolower(trim($question));
+        if (! preg_match('/\b(size|sizing|fit)\b/', $question)) {
+            return false;
+        }
+
+        if (preg_match('/\b(how (?:do|can|should) i (?:choose|pick|measure|find)|sizing kit|size chart|right size|correct size)\b/', $question) === 1) {
+            return false;
+        }
+
+        return preg_match('/\b(last|previous(?:ly)?|preferred|preference|usual(?:ly)?|ordered|bought|wore|did i)\b/', $question) === 1;
+    }
+
+    /**
+     * @param  array<mixed>  $attributes
+     */
+    private function formatVariantAttributes(array $attributes): ?string
+    {
+        $parts = [];
+        foreach ($attributes as $key => $value) {
+            if (! is_scalar($value) || trim((string) $value) === '') {
+                continue;
+            }
+            if (in_array($key, ['id', 'variant_id', 'sku', 'price', 'image', 'customizations'], true)) {
+                continue;
+            }
+            $parts[] = (is_string($key) ? ucfirst($key).': ' : '').trim((string) $value);
+        }
+
+        return $parts === [] ? null : implode(', ', $parts);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function orderFacts(Order $order): array
@@ -235,6 +328,10 @@ class ChatbotKnowledgeService
 
     private function isSizingQuestion(string $question): bool
     {
+        if ($this->isPreviousSizeQuestion($question)) {
+            return false;
+        }
+
         return preg_match('/\b(size|sizing|fit|fits|measure|measurement|measurements|mm|chart)\b/i', $question) === 1
             || str_contains(mb_strtolower($question), 'sizing kit');
     }
