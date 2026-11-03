@@ -709,171 +709,54 @@ class ProductsImport implements
                     // Get attributes from template variant (same as ProductController - query fresh from database)
                     $attributes = [];
 
-                    // Query template variant from database to get fresh attributes
-                    Log::info("DEBUG: Querying TemplateVariant", [
-                        'template_id' => $productInfo['template_id'],
-                        'variant_name' => $variantName,
-                    ]);
-
                     $templateVariant = \App\Models\TemplateVariant::where('template_id', $productInfo['template_id'])
                         ->where('variant_name', $variantName)
                         ->first();
 
                     if ($templateVariant) {
-                        Log::info("DEBUG: TemplateVariant found", [
-                            'template_variant_id' => $templateVariant->id,
-                            'template_variant_exists' => true,
-                        ]);
-
-                        // Log all ways to get attributes
-                        Log::info("DEBUG: Getting attributes - Method 1: \$templateVariant->attributes", [
-                            'value' => $templateVariant->attributes,
-                            'type' => gettype($templateVariant->attributes),
-                        ]);
-
-                        Log::info("DEBUG: Getting attributes - Method 2: getAttribute('attributes')", [
-                            'value' => $templateVariant->getAttribute('attributes'),
-                            'type' => gettype($templateVariant->getAttribute('attributes')),
-                        ]);
-
-                        Log::info("DEBUG: Getting attributes - Method 3: getRawOriginal('attributes')", [
-                            'value' => $templateVariant->getRawOriginal('attributes'),
-                            'type' => gettype($templateVariant->getRawOriginal('attributes')),
-                        ]);
-
-                        Log::info("DEBUG: Getting attributes - Method 4: getOriginal('attributes')", [
-                            'value' => $templateVariant->getOriginal('attributes'),
-                            'type' => gettype($templateVariant->getOriginal('attributes')),
-                        ]);
-
-                        Log::info("DEBUG: TemplateVariant full model", [
-                            'id' => $templateVariant->id,
-                            'template_id' => $templateVariant->template_id,
-                            'variant_name' => $templateVariant->variant_name,
-                            'attributes_column' => $templateVariant->attributes,
-                            'attributes_column_type' => gettype($templateVariant->attributes),
-                            'price' => $templateVariant->price,
-                            'quantity' => $templateVariant->quantity,
-                            'media' => $templateVariant->media,
-                        ]);
-
                         if (!empty($templateVariant->attributes)) {
-                            // Get attributes directly from template variant (same as ProductController line 304)
                             $attributes = $templateVariant->attributes;
 
-                            Log::info("DEBUG: Attributes from templateVariant->attributes", [
-                                'attributes' => $attributes,
-                                'attributes_type' => gettype($attributes),
-                                'is_array' => is_array($attributes),
-                                'is_string' => is_string($attributes),
-                            ]);
-
-                            // Ensure it's an array
                             if (!is_array($attributes)) {
                                 if (is_string($attributes)) {
-                                    Log::info("DEBUG: Attributes is string, decoding JSON", [
-                                        'string_value' => $attributes,
-                                    ]);
                                     $decoded = json_decode($attributes, true);
                                     $attributes = is_array($decoded) ? $decoded : [];
-                                    Log::info("DEBUG: After JSON decode", [
-                                        'decoded' => $decoded,
-                                        'final_attributes' => $attributes,
-                                    ]);
                                 } else {
-                                    Log::warning("DEBUG: Attributes is neither array nor string", [
+                                    Log::warning('TemplateVariant attributes has unexpected type', [
+                                        'template_variant_id' => $templateVariant->id,
                                         'type' => gettype($attributes),
-                                        'value' => $attributes,
                                     ]);
                                     $attributes = [];
                                 }
                             }
-                        } else {
-                            Log::warning("DEBUG: TemplateVariant attributes is empty", [
-                                'template_variant_id' => $templateVariant->id,
-                            ]);
                         }
                     } else {
-                        Log::warning("DEBUG: TemplateVariant not found", [
+                        Log::warning('TemplateVariant not found while creating product variants', [
                             'template_id' => $productInfo['template_id'],
                             'variant_name' => $variantName,
                         ]);
                     }
 
-                    // If no attributes from template, try to parse from variant_name (same as ProductController)
                     if (empty($attributes)) {
-                        Log::info("DEBUG: No attributes from template, parsing from variant_name", [
-                            'variant_name' => $variantName,
-                        ]);
                         $attributes = $this->parseAttributesFromVariantName($variantName);
-                        Log::info("DEBUG: Parsed attributes from variant_name", [
-                            'attributes' => $attributes,
-                        ]);
                     }
 
-                    // If still no attributes, create a generic one (same as ProductController)
                     if (empty($attributes)) {
-                        Log::info("DEBUG: Still no attributes, creating generic one", [
-                            'variant_name' => $variantName,
-                        ]);
                         $attributes = ['Variant' => $variantName];
                     }
 
-                    // Final log before saving
-                    Log::info("DEBUG: Final attributes before saving to ProductVariant", [
-                        'variant_name' => $variantName,
-                        'attributes' => $attributes,
-                        'attributes_type' => gettype($attributes),
-                        'attributes_is_array' => is_array($attributes),
-                        'attributes_count' => is_array($attributes) ? count($attributes) : 0,
-                        'attributes_keys' => is_array($attributes) ? array_keys($attributes) : [],
-                    ]);
-
                     try {
-                        // Generate unique SKU (required field)
                         $sku = 'SKU-' . strtoupper(Str::random(8));
-                        // Ensure SKU is unique
                         while (ProductVariant::where('sku', $sku)->exists()) {
                             $sku = 'SKU-' . strtoupper(Str::random(8));
                         }
 
-                        // Log data before creating
-                        $dataToSave = [
+                        ProductVariant::create([
                             'product_id' => $product->id,
                             'template_id' => $productInfo['template_id'],
                             'variant_name' => $variantName,
                             'attributes' => $attributes,
                             'sku' => $sku,
-                        ];
-
-                        Log::info("DEBUG: Data to save to ProductVariant", [
-                            'data' => $dataToSave,
-                            'attributes_value' => $attributes,
-                            'attributes_type' => gettype($attributes),
-                            'attributes_json' => json_encode($attributes),
-                        ]);
-
-                        // Only save essential fields: product_id, template_id, variant_name, attributes, and sku (required)
-                        $variant = ProductVariant::create($dataToSave);
-
-                        // Log what was actually saved
-                        Log::info("DEBUG: ProductVariant created - checking what was saved", [
-                            'variant_id' => $variant->id,
-                            'saved_attributes' => $variant->attributes,
-                            'saved_attributes_type' => gettype($variant->attributes),
-                            'saved_attributes_raw' => $variant->getRawOriginal('attributes'),
-                            'saved_attributes_original' => $variant->getOriginal('attributes'),
-                        ]);
-
-                        Log::info("Variant created successfully", [
-                            'product_id' => $product->id,
-                            'variant_id' => $variant->id,
-                            'variant_name' => $variantName,
-                            'attributes' => $attributes, // Should only be {"Size": "Pack 1", "Color": "Black"}
-                            'attributes_type' => gettype($attributes),
-                            'saved_attributes' => $variant->attributes,
-                            'saved_attributes_type' => gettype($variant->attributes),
-                            'note' => 'Only attributes saved, other fields use defaults'
                         ]);
                     } catch (\Exception $e) {
                         Log::error("Failed to create variant", [

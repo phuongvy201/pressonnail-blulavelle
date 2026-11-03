@@ -5,8 +5,8 @@
         <div class="mb-8">
             <h1 class="text-3xl font-bold text-gray-900 mb-2">Cấu hình giảm giá theo số lượng</h1>
             <p class="text-gray-600">
-                Thiết lập các bậc giảm giá theo số lượng mua cho từng dòng sản phẩm trong giỏ hàng.
-                Ví dụ: mua từ 2 giảm 20%, từ 3 giảm 25%, từ 5 giảm 30%.
+                Một mức giảm cho cả giỏ. Hệ thống cộng số lượng mọi sản phẩm đủ điều kiện, kể cả sản phẩm khác nhau, rồi lấy bậc cao nhất.
+                Mặc định khi chưa lưu: 2 set giảm 15%, 3–4 set giảm 17%, từ 5 set giảm 18%. Bậc đã lưu được giữ nguyên.
             </p>
         </div>
 
@@ -81,8 +81,17 @@
                     <ul class="list-disc pl-5 space-y-1">
                         <li>Nếu có nhiều bậc trùng <code>min_qty</code>, hệ thống sẽ lấy % lớn nhất.</li>
                         <li>Bậc sẽ được tự động sắp xếp theo <code>min_qty</code> tăng dần.</li>
-                        <li>% giảm được áp dụng cho từng dòng sản phẩm dựa trên số lượng của dòng đó.</li>
+                        <li>Cùng một % áp dụng cho mọi dòng đủ điều kiện. Sản phẩm bị loại và gift card không cộng số lượng và không được giảm.</li>
                     </ul>
+                </div>
+
+                <div>
+                    <label for="excluded_product_ids" class="block text-sm font-bold text-gray-900 mb-1">Sản phẩm không tham gia</label>
+                    <textarea id="excluded_product_ids" name="excluded_product_ids" rows="2"
+                              class="w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200/50"
+                              placeholder="Ví dụ: 12, 48">{{ old('excluded_product_ids', $excludedProductIds ?? '') }}</textarea>
+                    <p class="mt-1 text-sm text-gray-600">Nhập ID sản phẩm, cách nhau bởi dấu phẩy. Gift card luôn bị loại.</p>
+                    @error('excluded_product_ids')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
 
                 <div class="flex items-center justify-end gap-3">

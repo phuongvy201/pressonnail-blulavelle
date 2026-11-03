@@ -1010,4 +1010,6 @@ require __DIR__ . '/auth.php';
 Route::get('/test-keywords', [TestController::class, 'test']);
 
 // Page routes - Must be at the end to avoid conflicts
-Route::get('/{slug}', [PageController::class, 'show'])->name('pages.show')->where('slug', '^(?!admin|api|dashboard|cart|checkout|wishlist|search|collections|products|category|shops|blog|login|register|password|email|verification|logout|seller|newsletter|verify-email).*$');
+Route::get('/{slug}', [PageController::class, 'show'])
+    ->name('pages.show')
+    ->where('slug', '(?!(?:admin|api|dashboard|cart|checkout|wishlist|search|collections|products|category|shops|blog|login|register|password|email|verification|logout|seller|newsletter|verify-email)$)[^/]+');

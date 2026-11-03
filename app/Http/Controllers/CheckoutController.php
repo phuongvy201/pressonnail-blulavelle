@@ -76,10 +76,11 @@ class CheckoutController extends Controller
         $discountEligibleItems = $cartItems->filter(function ($item) {
             return !((bool) optional($item->product)->is_gift_card);
         });
-        $discountEligibleQty = (int) $discountEligibleItems->sum('quantity');
         $discountEligibleSubtotal = (float) $discountEligibleItems->sum(function ($item) {
             return $item->getTotalPriceWithCustomizations();
         });
+        $volumeEligibleQty = Cart::eligibleQuantity($cartItems);
+        $volumeEligibleSubtotal = Cart::eligibleSubtotal($cartItems);
 
         $cartContainsGiftCardProduct = $cartItems->contains(fn($item) => (bool) optional($item->product)->is_gift_card);
         $cartHasPhysicalProduct = $discountEligibleSubtotal > 0;
@@ -98,14 +99,9 @@ class CheckoutController extends Controller
             $discountMode = 'volume';
         }
 
-        // Combo discount (quantity tiers) — không áp dụng khi giỏ có sản phẩm gift card (digital)
-        if (!$cartContainsGiftCardProduct && $discountMode === 'volume') {
-            $bulkDiscountPercent = Cart::getComboDiscountPercentForQty($discountEligibleQty);
-            $bulkDiscount = $bulkDiscountPercent > 0 ? round($discountEligibleSubtotal * ($bulkDiscountPercent / 100), 2) : 0.0;
-        } else {
-            $bulkDiscountPercent = 0.0;
-            $bulkDiscount = 0.0;
-        }
+        $volumeDiscount = Cart::volumeDiscountFor($volumeEligibleQty, $volumeEligibleSubtotal, $discountMode);
+        $bulkDiscountPercent = $volumeDiscount['percent'];
+        $bulkDiscount = $volumeDiscount['amount'];
         $subtotalAfterBulk = max(0, $subtotal - $bulkDiscount);
 
         // Get currency and rate first for shipping conversion
@@ -733,10 +729,11 @@ class CheckoutController extends Controller
             $discountEligibleItems = $cartItems->filter(function ($item) {
                 return !((bool) optional($item->product)->is_gift_card);
             });
-            $discountEligibleQty = (int) $discountEligibleItems->sum('quantity');
             $discountEligibleSubtotal = (float) $discountEligibleItems->sum(function ($item) {
                 return $item->getTotalPriceWithCustomizations();
             });
+            $volumeEligibleQty = Cart::eligibleQuantity($cartItems);
+            $volumeEligibleSubtotal = Cart::eligibleSubtotal($cartItems);
 
             $cartContainsGiftCardProduct = $cartItems->contains(fn($cartItem) => (bool) optional($cartItem->product)->is_gift_card);
             $cartHasPhysicalProduct = $discountEligibleSubtotal > 0;
@@ -750,14 +747,9 @@ class CheckoutController extends Controller
                 $discountMode = 'volume';
             }
 
-            $bulkDiscountPercent = 0.0;
-            $bulkDiscountAmount = 0.0;
-            if (!$cartContainsGiftCardProduct && $discountMode === 'volume') {
-                $bulkDiscountPercent = Cart::getComboDiscountPercentForQty($discountEligibleQty);
-                $bulkDiscountAmount = $bulkDiscountPercent > 0
-                    ? round($discountEligibleSubtotal * ($bulkDiscountPercent / 100), 2)
-                    : 0.0;
-            }
+            $volumeDiscount = Cart::volumeDiscountFor($volumeEligibleQty, $volumeEligibleSubtotal, $discountMode);
+            $bulkDiscountPercent = $volumeDiscount['percent'];
+            $bulkDiscountAmount = $volumeDiscount['amount'];
             $subtotalAfterBulk = max(0, $subtotal - $bulkDiscountAmount);
 
             // Free-ship threshold: physical goods only (exclude gift cards)

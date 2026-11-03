@@ -8,7 +8,6 @@ use App\Models\Page;
 use App\Models\Product;
 use Illuminate\Support\Collection;
 use App\Services\SearchService;
-use App\Support\ReferenceNailSizeChart;
 use Illuminate\Support\Str;
 
 class ChatbotKnowledgeService
@@ -344,28 +343,7 @@ class ChatbotKnowledgeService
      */
     private function sizingKitFact(): array
     {
-        $rows = collect(ReferenceNailSizeChart::table())
-            ->map(function (array $row) {
-                $mm = implode('-', [
-                    $row['thumb']['mm'],
-                    $row['index']['mm'],
-                    $row['middle']['mm'],
-                    $row['ring']['mm'],
-                    $row['pinky']['mm'],
-                ]);
-
-                return $row['preset'].' '.$mm.'mm';
-            })
-            ->implode('; ');
-
-        $body = implode(' ', [
-            'The most accurate way to choose your size is the Sizing Kit.',
-            'Place the numbered clear nail tips over your natural nails and press down firmly,',
-            'note the number that fits each finger from thumb to pinky for both hands,',
-            'then compare your numbers with the preset chart (thumb-index-middle-ring-pinky): '.$rows.'.',
-            'If you are between sizes, choose the larger size and gently file the sides for a perfect fit.',
-            'You can also measure the widest part of each natural nail in millimetres and match it to the same chart.',
-        ]);
+        $body = 'Use the Sizing Kit. Press a clear tip on each nail, note the number from thumb to pinky, then compare it with the size chart. Between sizes, choose the larger one and file the sides.';
 
         return [
             'title' => 'Sizing Kit',
@@ -444,10 +422,10 @@ class ChatbotKnowledgeService
         if ($bestIndex !== null && $bestScore > 0) {
             $picked = array_slice($sentences, $bestIndex, 3);
 
-            return Str::limit(implode(' ', $picked), 650, '');
+            return Str::limit(implode(' ', $picked), 280, '');
         }
 
-        return Str::limit($text, 650, '');
+        return Str::limit($text, 280, '');
     }
 
     private function plainText(string $html): string

@@ -877,7 +877,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                 <button type="button" id="live-chat-start-btn" class="w-full py-3 rounded-xl font-bold text-white mt-3 sm:mt-4 text-sm sm:text-base touch-manipulation min-h-[44px] sm:min-h-0" style="background: #0297FE;">Start chat</button>
             </div>
             <div id="live-chat-box" class="hidden flex-1 flex flex-col min-h-0 overflow-hidden">
-                <div id="live-chat-messages" class="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 min-h-0"></div>
+                <div id="live-chat-messages" class="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 space-y-2 sm:space-y-3 min-h-0"></div>
                 <div id="live-chat-bot-status" class="hidden px-3 py-2 text-xs text-slate-500 bg-sky-50 border-t border-sky-100 flex-shrink-0" role="status">Blu Assistant is typing…</div>
                 @if(config('chatbot.enabled'))
                     <div id="live-chat-quick-replies" class="px-2 pt-2 sm:px-3 flex gap-1.5 flex-wrap flex-shrink-0 bg-white" aria-label="Suggested questions">
@@ -992,7 +992,15 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                 localStorage.setItem('cart', JSON.stringify(cartItemsToLocalStorage(items)));
             } catch (e) {}
             updateStorefrontCartBadge(totalItems);
-            window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { totalItems: totalItems } }));
+            window.dispatchEvent(new CustomEvent('cartUpdated', {
+                detail: {
+                    totalItems: totalItems,
+                    summary: data.summary || null
+                }
+            }));
+            if (typeof window.syncProductVolumeDiscount === 'function') {
+                window.syncProductVolumeDiscount(data.summary || null);
+            }
             if (options.openDrawer || options.renderDrawer) {
                 renderCartDrawer(data);
             }
@@ -1329,9 +1337,8 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
             fetch(CART_GET_URL, { method: 'GET', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, credentials: 'same-origin' })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
-                    if (isStorefrontCartPayload(data)) {
-                        renderCartDrawer(data);
-                        openCartDrawer();
+                    if (isStorefrontCartPayload(data) && typeof window.applyStorefrontCartResponse === 'function') {
+                        window.applyStorefrontCartResponse(data, { openDrawer: true });
                     }
                 })
                 .catch(function() { openCartDrawer(); });
@@ -1754,7 +1761,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
         function renderMessages(messages) {
             if (!messages || !messages.length) {
                 messagesEl.innerHTML = chatbotEnabled && chatbotWelcome
-                    ? '<div class="flex justify-start"><div class="max-w-[85%] rounded-xl px-3 py-2 text-sm bg-sky-50 text-slate-900 border border-sky-100"><p class="text-xs font-semibold opacity-90 mb-1">Blu Assistant</p><p class="whitespace-pre-wrap">' + escapeChatHtml(chatbotWelcome) + '</p></div></div>'
+                    ? '<div class="flex justify-start min-w-0"><div class="max-w-[85%] min-w-0 overflow-hidden rounded-xl px-3 py-2 text-sm bg-sky-50 text-slate-900 border border-sky-100"><p class="text-xs font-semibold opacity-90 mb-1">Blu Assistant</p><p class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">' + escapeChatHtml(chatbotWelcome) + '</p></div></div>'
                     : '<p class="text-sm text-slate-500 text-center py-4">No messages yet.</p>';
                 return;
             }
@@ -1767,7 +1774,7 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                 var sender = isMe ? 'You' : (senderType === 'bot' ? 'Blu Assistant' : (senderType === 'system' ? 'BluLavelle' : 'Support team'));
                 var time = (function() { var d = new Date(m.created_at); return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }); })();
                 var products = renderProductCards(m.metadata && m.metadata.products ? m.metadata.products : []);
-                return '<div class="flex ' + align + '"><div class="max-w-[85%] rounded-xl px-3 py-2 text-sm ' + bg + '"' + style + '><p class="text-xs font-semibold opacity-90 mb-1">' + sender + '</p><p class="whitespace-pre-wrap">' + escapeChatHtml(m.body || '') + '</p>' + products + '<p class="text-xs mt-1 opacity-80">' + time + '</p></div></div>';
+                return '<div class="flex min-w-0 ' + align + '"><div class="max-w-[85%] min-w-0 overflow-hidden rounded-xl px-3 py-2 text-sm ' + bg + '"' + style + '><p class="text-xs font-semibold opacity-90 mb-1">' + sender + '</p><p class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">' + escapeChatHtml(m.body || '') + '</p>' + products + '<p class="text-xs mt-1 opacity-80">' + time + '</p></div></div>';
             }).join('');
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }

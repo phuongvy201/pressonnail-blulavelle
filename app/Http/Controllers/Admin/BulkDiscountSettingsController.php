@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Cart;
 use App\Support\Settings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,18 +16,16 @@ class BulkDiscountSettingsController extends Controller
      *
      * Stored at: settings key `pricing.bulk_discounts` as JSON:
      * [
-     *   {"min_qty":2,"percent":20},
-     *   {"min_qty":3,"percent":25},
-     *   {"min_qty":5,"percent":30}
+     *   {"min_qty":2,"percent":15},
+     *   {"min_qty":3,"percent":17},
+     *   {"min_qty":5,"percent":18}
      * ]
+     * The percent applies once to every eligible line, from the summed quantity.
+     * Excluded product ids: `pricing.volume_discount_excluded_product_ids`.
      */
     public function edit(): View
     {
-        $defaults = [
-            ['min_qty' => 2, 'percent' => 20],
-            ['min_qty' => 3, 'percent' => 25],
-            ['min_qty' => 5, 'percent' => 30],
-        ];
+        $defaults = Cart::defaultVolumeDiscountTiers();
 
         $raw = Settings::get('pricing.bulk_discounts');
         $rules = [];
@@ -38,8 +37,9 @@ class BulkDiscountSettingsController extends Controller
         }
 
         $rules = is_array($rules) && count($rules) > 0 ? $rules : $defaults;
+        $excludedProductIds = implode(', ', Cart::volumeDiscountExcludedProductIds());
 
-        return view('admin.settings.bulk-discounts', compact('rules', 'defaults'));
+        return view('admin.settings.bulk-discounts', compact('rules', 'defaults', 'excludedProductIds'));
     }
 
     public function update(Request $request): RedirectResponse
@@ -48,6 +48,7 @@ class BulkDiscountSettingsController extends Controller
             'rules' => ['nullable', 'array'],
             'rules.*.min_qty' => ['required_with:rules', 'integer', 'min:1', 'max:999'],
             'rules.*.percent' => ['required_with:rules', 'numeric', 'min:0', 'max:95'],
+            'excluded_product_ids' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $rules = $validated['rules'] ?? [];
@@ -74,6 +75,19 @@ class BulkDiscountSettingsController extends Controller
         }
 
         Settings::set('pricing.bulk_discounts', !empty($out) ? json_encode($out) : null);
+
+        $rawIds = preg_split('/[\s,]+/', (string) ($validated['excluded_product_ids'] ?? ''), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $excludedIds = [];
+        foreach ($rawIds as $id) {
+            if (ctype_digit((string) $id)) {
+                $excludedIds[(int) $id] = (int) $id;
+            }
+        }
+        $excludedIds = array_values(array_filter($excludedIds));
+        Settings::set(
+            'pricing.volume_discount_excluded_product_ids',
+            $excludedIds === [] ? null : json_encode($excludedIds)
+        );
 
         return redirect()
             ->route('admin.settings.bulk-discounts.edit')

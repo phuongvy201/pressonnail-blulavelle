@@ -37,8 +37,9 @@ test('chatbot answers a sizing question from the sizing page not the about page'
 
     expect($reply)->not->toBeNull()
         ->and($reply->body)->toContain('Sizing Kit')
-        ->and($reply->body)->toContain('14-10-11-10-8')
+        ->and($reply->body)->toContain('size chart')
         ->and($reply->body)->toContain('/sizing-kit')
+        ->and($reply->body)->not->toContain('14 10 11 10 8')
         ->and($reply->body)->not->toContain('Balcones')
         ->and($reply->body)->not->toContain('About');
 });

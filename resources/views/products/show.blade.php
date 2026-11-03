@@ -344,18 +344,10 @@
         $gtagPrimaryCategory = $product->collections->first()->name;
     }
 
-    // Combo (volume) discount rules for preview on this page.
-    // Real discount application happens in cart based on TOTAL quantity in cart.
-    $bulkDiscountRules = [];
-    $bulkDiscountRaw = \App\Support\Settings::get('pricing.bulk_discounts');
-    if (is_string($bulkDiscountRaw) && $bulkDiscountRaw !== '') {
-        $decoded = json_decode($bulkDiscountRaw, true);
-        $bulkDiscountRules = is_array($decoded) ? $decoded : [];
-    } elseif (is_array($bulkDiscountRaw)) {
-        $bulkDiscountRules = $bulkDiscountRaw;
-    }
-
-    $volumeDiscountPreviewPercent = \App\Models\Cart::getComboDiscountPercentForQty(1);
+    // Combo discount: cart-wide eligible quantity, plus the quantity selected on this page.
+    $bulkDiscountRules = \App\Models\Cart::getComboDiscountRules();
+    $productVolumeEligible = \App\Models\Cart::productIsVolumeEligible($product);
+    $volumeEligibleQuantity = \App\Models\Cart::eligibleQuantity(\App\Models\Cart::forCurrentShopper());
     $showSocialProof = (bool) \App\Support\Settings::get('gmc.show_product_social_proof', '1');
 @endphp
 
@@ -530,6 +522,9 @@
                             <div class="text-center text-xs font-extrabold text-[#0297FE]">
                                 Buy More, Save More
                             </div>
+                            <div class="mt-2 h-2 overflow-hidden rounded-full bg-white/70">
+                                <div id="volume-discount-progress" class="h-2 rounded-full bg-[#0297FE]" style="width: 0%"></div>
+                            </div>
                             <div class="mt-2 grid grid-cols-3 gap-1.5">
                                 @foreach($tiersUi as $tier)
                                     @php
@@ -537,7 +532,7 @@
                                         $percent = (float) ($tier['percent'] ?? 0);
                                     @endphp
                                     @if($minQty > 0 && $percent > 0)
-                                        <div class="bg-white/80 border border-[#0297FE]/20 rounded-xl px-2 py-2 flex flex-col items-center justify-center">
+                                        <div data-volume-tier="{{ $minQty }}" class="bg-white/80 border border-[#0297FE]/20 rounded-xl px-2 py-2 flex flex-col items-center justify-center">
                                             <div class="text-[10px] font-extrabold tracking-widest text-[#0297FE] uppercase">
                                                 BUY {{ $minQty }}
                                             </div>
@@ -1695,6 +1690,14 @@ document.addEventListener('DOMContentLoaded', function() {
     var CURRENCY_CODE = @json($currentCurrency);
     var CURRENCY_SYMBOL = @json($currencySymbol);
     var BULK_DISCOUNT_RULES = @json($bulkDiscountRules);
+    var CART_ELIGIBLE_QTY = @json((int) $volumeEligibleQuantity);
+    var PRODUCT_VOLUME_ELIGIBLE = @json((bool) $productVolumeEligible);
+    var volumeIncludeProposed = true;
+
+    function projectedVolumeQuantity(pageQty) {
+        var proposed = volumeIncludeProposed && PRODUCT_VOLUME_ELIGIBLE ? Math.max(0, parseInt(pageQty, 10) || 0) : 0;
+        return Math.max(0, parseInt(CART_ELIGIBLE_QTY, 10) || 0) + proposed;
+    }
 
     function getComboDiscountPercentPreview(qty) {
         var q = parseInt(qty, 10) || 0;
@@ -1738,7 +1741,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var el = document.getElementById('volume-discount-dynamic-message');
         if (!qtyEl || !el) return;
 
-        var qty = parseInt(qtyEl.value, 10) || 1;
+        var qty = projectedVolumeQuantity(parseInt(qtyEl.value, 10) || 1);
 
         if (!Array.isArray(BULK_DISCOUNT_RULES) || BULK_DISCOUNT_RULES.length === 0) {
             el.classList.add('hidden');
@@ -1747,13 +1750,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
         var nextTier = getNextDiscountTier(qty);
         var currentPercent = getComboDiscountPercentPreview(qty);
+        var sorted = BULK_DISCOUNT_RULES.slice().sort(function (a, b) {
+            return (parseInt(a.min_qty, 10) || 0) - (parseInt(b.min_qty, 10) || 0);
+        });
+        var topQty = sorted.length ? (parseInt(sorted[sorted.length - 1].min_qty, 10) || 0) : 0;
+        var progress = document.getElementById('volume-discount-progress');
+        if (progress && topQty > 0) {
+            progress.style.width = Math.min(100, Math.round((qty / topQty) * 100)) + '%';
+        }
+        var currentMin = 0;
+        sorted.forEach(function (rule) {
+            var minQty = parseInt(rule.min_qty, 10) || 0;
+            if (minQty > 0 && qty >= minQty) currentMin = minQty;
+        });
+        document.querySelectorAll('[data-volume-tier]').forEach(function (box) {
+            var minQty = parseInt(box.getAttribute('data-volume-tier'), 10) || 0;
+            var isCurrent = currentMin > 0 && minQty === currentMin;
+            box.classList.toggle('ring-2', isCurrent);
+            box.classList.toggle('ring-[#0297FE]', isCurrent);
+        });
 
         if (nextTier) {
             var more = nextTier.min_qty - qty;
             more = Math.max(1, more);
             var nextPercent = parseFloat(nextTier.percent) || 0;
 
-            el.textContent = 'Add ' + more + ' more to get ' + nextPercent.toFixed(0) + '% OFF';
+            el.textContent = currentPercent > 0
+                ? 'Saving ' + currentPercent.toFixed(0) + '%. Add ' + more + ' more to get ' + nextPercent.toFixed(0) + '% OFF'
+                : 'Add ' + more + ' more to get ' + nextPercent.toFixed(0) + '% OFF';
         } else if (currentPercent > 0) {
             el.textContent = 'You\'re currently getting ' + currentPercent.toFixed(0) + '% OFF';
         } else {
@@ -1762,6 +1786,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
         el.classList.remove('hidden');
     }
+
+    window.syncProductVolumeDiscount = function (summary) {
+        if (!summary || summary.bulk_discount_eligible_quantity == null) return;
+        CART_ELIGIBLE_QTY = parseInt(summary.bulk_discount_eligible_quantity, 10) || 0;
+        updateVolumeDiscountDynamicMessage();
+    };
+
+    window.addEventListener('pageshow', function (event) {
+        if (!event.persisted) return;
+        fetch('{{ route("api.cart.get") }}', { method: 'GET', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, credentials: 'same-origin' })
+            .then(function (response) { return response.json(); })
+            .then(function (cartData) { window.syncProductVolumeDiscount(cartData.summary); })
+            .catch(function () {});
+    });
 
     var toastTimeout = null;
     function showToast(message, type) {
@@ -2144,18 +2182,21 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('qty-minus') && document.getElementById('qty-minus').addEventListener('click', function() {
             var n = Math.max(1, parseInt(qtyEl.value, 10) - 1);
             qtyEl.value = n;
+            volumeIncludeProposed = true;
             updateVolumeDiscountDynamicMessage();
             updateDisplayedPrice();
         });
         document.getElementById('qty-plus') && document.getElementById('qty-plus').addEventListener('click', function() {
             var n = Math.min(99, (parseInt(qtyEl.value, 10) || 1) + 1);
             qtyEl.value = n;
+            volumeIncludeProposed = true;
             updateVolumeDiscountDynamicMessage();
             updateDisplayedPrice();
         });
         qtyEl.addEventListener('change', function() {
             var n = Math.min(99, Math.max(1, parseInt(qtyEl.value, 10) || 1));
             qtyEl.value = n;
+            volumeIncludeProposed = true;
             updateVolumeDiscountDynamicMessage();
             updateDisplayedPrice();
         });
@@ -2288,6 +2329,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         fetch('{{ route("api.cart.get") }}', { method: 'GET', headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
                             .then(function(res) { return res.json(); })
                             .then(function(cartData) {
+                                if (cartData.summary && cartData.summary.bulk_discount_eligible_quantity != null) {
+                                    CART_ELIGIBLE_QTY = parseInt(cartData.summary.bulk_discount_eligible_quantity, 10) || 0;
+                                    volumeIncludeProposed = false;
+                                    if (qtyEl) qtyEl.value = 1;
+                                    updateVolumeDiscountDynamicMessage();
+                                }
                                 if (typeof window.applyStorefrontCartResponse === 'function') {
                                     window.applyStorefrontCartResponse(cartData, { openDrawer: true });
                                 } else if (Array.isArray(cartData.cart_items)) {

@@ -170,10 +170,11 @@ class CartController extends Controller
             $discountEligibleItems = $cartItems->filter(function ($item) {
                 return !((bool) optional($item->product)->is_gift_card);
             });
-            $discountEligibleQty = (int) $discountEligibleItems->sum('quantity');
             $discountEligibleSubtotal = (float) $discountEligibleItems->sum(function ($item) {
                 return $item->getTotalPriceWithCustomizations();
             });
+            $volumeEligibleQty = Cart::eligibleQuantity($cartItems);
+            $volumeEligibleSubtotal = Cart::eligibleSubtotal($cartItems);
             $cartContainsGiftCardProduct = $cartItems->contains(fn ($item) => (bool) optional($item->product)->is_gift_card);
 
             // Choose ONE discount mode: volume OR promo (freeship can stack with either).
@@ -186,12 +187,9 @@ class CartController extends Controller
                 $discountMode = 'volume';
             }
 
-            $bulkDiscountPercent = 0.0;
-            $bulkDiscount = 0.0;
-            if (!$cartContainsGiftCardProduct && $discountMode === 'volume') {
-                $bulkDiscountPercent = (float) Cart::getComboDiscountPercentForQty($discountEligibleQty);
-                $bulkDiscount = $bulkDiscountPercent > 0 ? round($discountEligibleSubtotal * ($bulkDiscountPercent / 100), 2) : 0.0;
-            }
+            $volumeDiscount = Cart::volumeDiscountFor($volumeEligibleQty, $volumeEligibleSubtotal, $discountMode);
+            $bulkDiscountPercent = $volumeDiscount['percent'];
+            $bulkDiscount = $volumeDiscount['amount'];
 
             // Get currency and rate
             $currency = CurrencyService::getCurrencyForDomain() ?? 'USD';
@@ -316,8 +314,9 @@ class CartController extends Controller
                     'subtotal' => $subtotal,
                     'bulk_discount' => $bulkDiscount,
                     'bulk_discount_percent' => $bulkDiscountPercent,
-                    'bulk_discount_eligible_quantity' => $discountEligibleQty,
-                    'volume_discount_eligible' => ! $cartContainsGiftCardProduct,
+                    'bulk_discount_eligible_quantity' => $volumeEligibleQty,
+                    'volume_discount_eligible' => true,
+                    'volume_discount_excluded_product_ids' => Cart::volumeDiscountExcludedProductIds(),
                     'subtotal_after_bulk_discount' => $subtotalAfterBulk,
                     'shipping' => $shipping,
                     'discount' => $discount,
@@ -621,18 +620,13 @@ class CartController extends Controller
                 ], 404);
             }
 
-            $sessionId = session()->getId();
-            $userId = Auth::id();
-
-            $cartItem = Cart::where('id', $item_id)
-                ->where(function ($query) use ($sessionId, $userId) {
-                    if ($userId) {
-                        $query->where('user_id', $userId);
-                    } else {
-                        $query->where('session_id', $sessionId);
-                    }
-                })
-                ->firstOrFail();
+            $cartItem = $this->ownedCartItem($item_id);
+            if (! $cartItem) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cart item was not found.',
+                ], 404);
+            }
 
             $cartItem->delete();
 
@@ -877,6 +871,35 @@ class CartController extends Controller
     /**
      * @return array<int, string>
      */
+    private function ownedCartItem(int $itemId): ?Cart
+    {
+        $sessionId = session()->getId();
+        $userId = Auth::id();
+        $remembered = request()->attributes->get('cart_session_id');
+        $sessionIds = array_values(array_unique(array_filter([
+            $sessionId,
+            is_string($remembered) ? $remembered : null,
+        ])));
+
+        if ($sessionIds === [] && ! $userId) {
+            return null;
+        }
+
+        return Cart::query()
+            ->where('id', $itemId)
+            ->where(function ($query) use ($sessionIds, $userId) {
+                if ($sessionIds !== []) {
+                    $query->whereIn('session_id', $sessionIds);
+                }
+                if ($userId) {
+                    $sessionIds === []
+                        ? $query->where('user_id', $userId)
+                        : $query->orWhere('user_id', $userId);
+                }
+            })
+            ->first();
+    }
+
     private function cartItemRelations(): array
     {
         return [
@@ -1007,6 +1030,7 @@ class CartController extends Controller
             'bulk_discount_percent' => $bulkPercent,
             'bulk_discount_eligible_quantity' => (int) ($data['bulk_discount_eligible_quantity'] ?? 0),
             'volume_discount_eligible' => (bool) ($data['volume_discount_eligible'] ?? true),
+            'volume_discount_excluded_product_ids' => array_values(Cart::volumeDiscountExcludedProductIds()),
             'subtotal_after_bulk_discount' => $data['subtotal_after_bulk_discount'] ?? max(0, (float) $data['subtotal'] - $bulkDiscount),
             'shipping' => $useConvertedFields ? $data['shipping'] : $data['converted_shipping'],
             'discount' => $data['discount'], // promo-code discount amount

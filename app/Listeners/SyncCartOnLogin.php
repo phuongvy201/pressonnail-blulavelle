@@ -25,7 +25,12 @@ class SyncCartOnLogin
     {
         try {
             $user = $event->user;
-            $sessionId = session()->getId();
+            // Login regenerates the session id before this listener runs.
+            // RememberCartSession stored the id that still owns the guest cart.
+            $remembered = request()->attributes->get('cart_session_id');
+            $sessionId = is_string($remembered) && $remembered !== ''
+                ? $remembered
+                : session()->getId();
 
             // Move session-based cart items to user-based
             $sessionCartItems = Cart::where('session_id', $sessionId)->get();

@@ -48,7 +48,8 @@ class CartController extends Controller
         $discountEligibleSubtotal = (float) $discountEligibleItems->sum(function ($item) {
             return $item->getTotalPriceWithCustomizations();
         });
-        $discountEligibleQty = (int) $discountEligibleItems->sum('quantity');
+        $volumeEligibleQty = Cart::eligibleQuantity($cartItems);
+        $volumeEligibleSubtotal = Cart::eligibleSubtotal($cartItems);
 
         $cartContainsGiftCardProduct = $cartItems->contains(fn ($item) => (bool) optional($item->product)->is_gift_card);
 
@@ -62,15 +63,9 @@ class CartController extends Controller
             $discountMode = 'volume';
         }
 
-        $bulkDiscountPercent = 0.0;
-        $bulkDiscount = 0.0;
-        if (!$cartContainsGiftCardProduct && $discountMode === 'volume') {
-            // Combo discount: tier theo số lượng & subtotal hàng vật lý (có gift card trong giỏ — không áp volume)
-            $bulkDiscountPercent = Cart::getComboDiscountPercentForQty($discountEligibleQty);
-            $bulkDiscount = $bulkDiscountPercent > 0
-                ? round($discountEligibleSubtotal * ($bulkDiscountPercent / 100), 2)
-                : 0.0;
-        }
+        $volumeDiscount = Cart::volumeDiscountFor($volumeEligibleQty, $volumeEligibleSubtotal, $discountMode);
+        $bulkDiscountPercent = $volumeDiscount['percent'];
+        $bulkDiscount = $volumeDiscount['amount'];
 
         $subtotalAfterBulk = max(0, (float) $subtotal - (float) $bulkDiscount);
 

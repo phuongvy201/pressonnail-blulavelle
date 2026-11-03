@@ -9,9 +9,9 @@
     $currentCurrencyRate = currency_rate() ?? 1.0;
     $discount = $discount ?? 0;
     $appliedPromoCode = $appliedPromoCode ?? null;
-    // Combo discount: tier theo SL & subtotal hàng không phải gift card (đồng bộ CartController / checkout)
+    // Combo discount: một bậc theo tổng số lượng đủ điều kiện (đồng bộ CartController / checkout)
     $volumeEligibleItems = ($cartItems ?? collect())->filter(function ($item) {
-        return !((bool) optional($item->product)->is_gift_card);
+        return \App\Models\Cart::lineIsVolumeEligible($item);
     });
     $volumeEligibleQty = (int) $volumeEligibleItems->sum('quantity');
     $volumeEligibleSubtotal = (float) $volumeEligibleItems->sum(fn ($item) => $item->getTotalPriceWithCustomizations());

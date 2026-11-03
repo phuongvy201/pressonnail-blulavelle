@@ -68,15 +68,6 @@ class Product extends Model
                             // getRawOriginal() returns the raw value before casting
                             $rawAttributes = $freshTemplateVariant->getRawOriginal('attributes');
 
-                            // Log for debugging
-                            \Illuminate\Support\Facades\Log::info("DEBUG Product Model: Getting attributes from TemplateVariant", [
-                                'variant_name' => $variantName,
-                                'getRawOriginal_attributes' => $rawAttributes,
-                                'getRawOriginal_attributes_type' => gettype($rawAttributes),
-                                'getAttribute_attributes' => $freshTemplateVariant->getAttribute('attributes'),
-                                'getAttribute_attributes_type' => gettype($freshTemplateVariant->getAttribute('attributes')),
-                            ]);
-
                             if (!empty($rawAttributes)) {
                                 // getRawOriginal returns raw value from database (JSON string)
                                 if (is_string($rawAttributes)) {
@@ -104,14 +95,6 @@ class Product extends Model
                             $attributes = ['Variant' => $variantName];
                         }
 
-                        // Log for debugging
-                        \Illuminate\Support\Facades\Log::info("DEBUG Product Model: Attributes before saving", [
-                            'variant_name' => $variantName,
-                            'attributes' => $attributes,
-                            'attributes_type' => gettype($attributes),
-                            'attributes_is_array' => is_array($attributes),
-                        ]);
-
                         try {
                             // Generate unique SKU (required field)
                             $sku = 'SKU-' . strtoupper(\Illuminate\Support\Str::random(8));
@@ -133,8 +116,7 @@ class Product extends Model
                                 $variantMedia = $freshTemplateVariant->media;
                             }
 
-                            // Create variant with all fields from TemplateVariant
-                            $variant = \App\Models\ProductVariant::create([
+                            \App\Models\ProductVariant::create([
                                 'product_id' => $product->id,
                                 'template_id' => $product->template_id,
                                 'variant_name' => $variantName,
@@ -144,25 +126,6 @@ class Product extends Model
                                 'list_price' => $variantListPrice, // From TemplateVariant
                                 'quantity' => $variantQuantity, // From TemplateVariant
                                 'media' => $variantMedia, // From TemplateVariant
-                            ]);
-
-                            // Log what was actually saved
-                            \Illuminate\Support\Facades\Log::info("DEBUG Product Model: ProductVariant created - checking what was saved", [
-                                'variant_id' => $variant->id,
-                                'saved_attributes' => $variant->attributes,
-                                'saved_attributes_type' => gettype($variant->attributes),
-                                'saved_attributes_raw' => $variant->getRawOriginal('attributes'),
-                                'saved_attributes_original' => $variant->getOriginal('attributes'),
-                            ]);
-
-                            \Illuminate\Support\Facades\Log::info("Variant created successfully", [
-                                'product_id' => $product->id,
-                                'variant_id' => $variant->id,
-                                'variant_name' => $variantName,
-                                'attributes' => $attributes,
-                                'saved_attributes' => $variant->attributes,
-                                'saved_attributes_type' => gettype($variant->attributes),
-                                'note' => 'Only attributes saved, other fields use defaults'
                             ]);
                         } catch (\Exception $e) {
                             \Illuminate\Support\Facades\Log::error("Failed to create variant", [

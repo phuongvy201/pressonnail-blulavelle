@@ -620,6 +620,7 @@ class ProductController extends Controller
             'reviews_count' => $product->getTotalReviews(),
             'sales_count' => (int) ($product->catalog_units_sold ?? 0),
             'in_stock' => $product->hasStock(),
+            'is_gift_card' => (bool) $product->is_gift_card,
             'url' => route('products.show', ['slug' => $product->slug]),
             'shop' => $product->shop ? [
                 'id' => $product->shop->id,

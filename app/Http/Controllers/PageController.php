@@ -10,8 +10,13 @@ class PageController extends Controller
     /**
      * Display the specified page
      */
-    public function show(string $slug)
+    public function show(?string $slug = null)
     {
+        $slug = trim((string) $slug);
+        if ($slug === '' || str_contains($slug, '/')) {
+            abort(404);
+        }
+
         // Redirect to dedicated routes
         if ($slug === 'shipping-delivery') {
             return redirect()->route('shipping-delivery.index');

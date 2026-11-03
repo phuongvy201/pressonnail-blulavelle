@@ -500,7 +500,7 @@ class ChatbotService
 
         $sources = collect($facts['sources'] ?? [])->pluck('source')->all();
         if (in_array('sizing_kit', $sources, true)
-            && ! (str_contains($body, 'XS') && str_contains($body, 'mm'))) {
+            && (! str_contains($body, 'Sizing Kit') || preg_match('/\bX{0,1}S\b|\b\d+\s*mm\b/i', $body) === 1)) {
             return [
                 'body' => $summary,
                 'confidence' => 0.9,
