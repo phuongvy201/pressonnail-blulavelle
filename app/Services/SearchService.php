@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Product;
 use App\Models\ProductEmbedding;
 use App\Services\Search\EmbeddingService;
+use App\Services\Search\QueryRewriter;
 use App\Services\Search\SearchText;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -17,6 +18,7 @@ class SearchService
     public function __construct(
         private readonly SearchText $text,
         private readonly EmbeddingService $embeddings,
+        private readonly QueryRewriter $rewriter,
     ) {}
 
     /**
@@ -57,6 +59,7 @@ class SearchService
      */
     public function searchProducts(string $query, array $filters = [], int $limit = 6, string $scope = 'all'): Collection
     {
+        $query = $this->rewriter->expand($query);
         $concepts = $this->text->concepts($query);
         if ($concepts === []) {
             return collect();

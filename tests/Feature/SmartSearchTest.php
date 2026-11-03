@@ -7,6 +7,8 @@ use App\Models\ProductTemplate;
 use App\Services\Chatbot\ChatbotKnowledgeService;
 use App\Services\Search\EmbeddingService;
 use App\Services\SearchService;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 function smartSearchProduct(string $name, array $attributes = []): Product
 {
@@ -150,4 +152,55 @@ test('mobile catalog search finds products from a Vietnamese query', function ()
         ->pluck('id')
         ->all();
     expect($ids)->toContain($match->id);
+});
+
+test('a natural language search uses chatbot keywords when no phrase matches', function () {
+    config([
+        'search.query_rewrite_enabled' => true,
+        'search.query_rewrite_in_tests' => true,
+        'search.embedding_enabled' => false,
+        'chatbot.ai_enabled' => true,
+        'chatbot.ai.api_key' => 'test-key',
+        'chatbot.ai.base_url' => 'https://chat.test/v1',
+        'chatbot.ai.model' => 'test-model',
+    ]);
+    Cache::flush();
+    Http::fake([
+        'https://chat.test/v1/responses' => Http::response([
+            'output_text' => 'bridal wedding elegant',
+        ], 200),
+    ]);
+
+    $match = smartSearchProduct('Ivory Pearl Bridal Press On Nails', [
+        'color' => 'ivory',
+        'description' => 'Pearl accents for a formal celebration.',
+    ]);
+    smartSearchProduct('Neon Green Stiletto Press On Nails', ['color' => 'green']);
+
+    $results = app(SearchService::class)->buildProductSearchQuery('help me pick a set for my sisters big day', [], false, 12, 6);
+    $again = app(SearchService::class)->buildProductSearchQuery('help me pick a set for my sisters big day', [], false, 12, 6);
+
+    expect($results->first()?->id)->toBe($match->id)
+        ->and($again->first()?->id)->toBe($match->id);
+    Http::assertSentCount(1);
+});
+
+test('a failed embedding provider pauses further embedding requests', function () {
+    config([
+        'search.embedding_enabled' => true,
+        'search.embedding_api_key' => 'test-key',
+        'search.embedding_base_url' => 'https://embeddings.test/v1',
+        'search.embedding_model' => 'text-embedding-3-small',
+    ]);
+    Cache::flush();
+    Http::fake([
+        'https://embeddings.test/v1/embeddings' => Http::response('<html>502</html>', 502),
+    ]);
+
+    $service = app(EmbeddingService::class);
+
+    expect($service->embed('pink nails'))->toBeNull()
+        ->and($service->embed('blue nails'))->toBeNull();
+
+    Http::assertSentCount(1);
 });

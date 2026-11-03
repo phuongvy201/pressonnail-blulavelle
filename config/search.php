@@ -6,12 +6,14 @@ return [
     | Hybrid smart product search
     |--------------------------------------------------------------------------
     |
-    | Keyword/fuzzy matching always works locally. Semantic ranking is an
-    | optional rerank layer: when embeddings are unavailable or the provider
-    | fails, search silently falls back to the keyword score.
+    | Keyword/fuzzy matching always works locally. A natural-language sentence
+    | is rewritten into catalogue keywords by the chatbot model. Embeddings
+    | stay off unless a provider actually serves /v1/embeddings.
     |
     */
-    'embedding_enabled' => filter_var(env('SEARCH_EMBEDDING_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+    'embedding_enabled' => filter_var(env('SEARCH_EMBEDDING_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
+    'query_rewrite_enabled' => filter_var(env('SEARCH_QUERY_REWRITE_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+    'query_rewrite_timeout' => max(2, (int) env('SEARCH_QUERY_REWRITE_TIMEOUT', 4)),
     'embedding_api_key' => env('SEARCH_EMBEDDING_API_KEY') ?: env('CHATBOT_API_KEY') ?: env('OPENAI_API_KEY', ''),
     'embedding_base_url' => rtrim((string) (env('SEARCH_EMBEDDING_BASE_URL') ?: env('CHATBOT_BASE_URL') ?: env('OPENAI_BASE_URL', 'https://api.openai.com/v1')), '/'),
     'embedding_model' => env('SEARCH_EMBEDDING_MODEL', 'text-embedding-3-small'),

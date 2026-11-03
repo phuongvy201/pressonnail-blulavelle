@@ -625,6 +625,55 @@ document.addEventListener('DOMContentLoaded', function() {
         @apply rounded-2xl;
     }
 
+    /* Mobile: items, then contact, then promo, then payment.
+       Desktop: form on the left, order + promo sticky on the right. */
+    .checkout-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .checkout-layout > form,
+    .checkout-summary-aside {
+        display: contents;
+    }
+
+    .checkout-items { order: 1; }
+    .checkout-details { order: 2; }
+    .checkout-discounts { order: 3; }
+    .checkout-payment { order: 4; }
+
+    @media (min-width: 1024px) {
+        .checkout-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr);
+            grid-template-areas:
+                "details summary"
+                "payment summary";
+            align-items: start;
+            gap: 2rem;
+        }
+
+        .checkout-layout > form {
+            display: contents;
+        }
+
+        .checkout-summary-aside {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            grid-area: summary;
+            position: sticky;
+            top: 2rem;
+            align-self: start;
+        }
+
+        .checkout-details { order: 0; grid-area: details; }
+        .checkout-payment { order: 0; grid-area: payment; }
+        .checkout-items,
+        .checkout-discounts { order: 0; }
+    }
+
     .order-summary-container {
         @apply rounded-2xl;
     }
@@ -786,28 +835,25 @@ document.addEventListener('DOMContentLoaded', function() {
             </nav>
         </div>
 
-        <div class="flex flex-col lg:grid lg:grid-cols-3 gap-8">
-            <!-- Checkout Form -->
-            <div class="order-2 lg:order-1 lg:col-span-2">
+        <div class="checkout-layout">
+            <form id="checkout-form" method="POST" action="{{ route('checkout.process') }}">
+                <section class="checkout-details">
                 <div class="bg-white rounded-2xl shadow-lg overflow-hidden checkout-container">
-                    <!-- Header - match cart primary (pink) -->
                     <div class="bg-primary p-6">
                         <div class="flex items-center text-white">
                             <div class="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center mr-4">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                                 </svg>
                             </div>
                             <div>
-                                <h2 class="text-2xl font-bold">Shipping Information</h2>
-                                <p class="text-white/90 text-sm">Please provide your delivery details</p>
+                                <h2 class="text-2xl font-bold">Contact & delivery</h2>
+                                <p class="text-white/90 text-sm">Where should we send this order?</p>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="p-8">
-                    
-                    <form id="checkout-form" method="POST" action="{{ route('checkout.process') }}" class="space-y-8">
+                    <div class="p-8 space-y-8">
                         @csrf
                         <input type="hidden" id="tip_amount" name="tip_amount" value="0">
                         <input type="hidden" id="currency" name="currency" value="{{ $currency ?? 'USD' }}">
@@ -910,6 +956,95 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             
                             <div class="relative">
+                                <label for="country" class="block text-sm font-semibold text-slate-700 mb-2">
+                                    <span class="flex items-center">
+                                        <svg class="w-4 h-4 mr-1.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        Country *
+                                    </span>
+                                </label>
+                                <select id="country" name="country" class="w-full px-4 py-3 bg-white border-2 border-primary/20 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5 cursor-pointer" required>
+                                    <option value="">Select Country</option>
+                                    @if(count($zonesWithCountries) > 0)
+                                        @foreach($zonesWithCountries as $zone)
+                                            <optgroup label="{{ $zone['name'] }}">
+                                                @foreach($zone['country_options'] as $country)
+                                                    <option value="{{ $country['value'] }}" data-zone-id="{{ $country['zone_id'] }}" @selected($prefillCountry === $country['value'])>
+                                                        {{ $country['label'] }}
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
+                                        @endforeach
+                                    @else
+                                        {{-- Fallback: show all countries if no shipping rates configured --}}
+                                        <option value="US" @selected($prefillCountry === 'US')>🇺🇸 United States</option>
+                                        <option value="GB" @selected($prefillCountry === 'GB')>🇬🇧 United Kingdom</option>
+                                        <option value="CA" @selected($prefillCountry === 'CA')>🇨🇦 Canada</option>
+                                        <option value="AU" @selected($prefillCountry === 'AU')>🇦🇺 Australia</option>
+                                        <option value="DE" @selected($prefillCountry === 'DE')>🇩🇪 Germany</option>
+                                        <option value="FR" @selected($prefillCountry === 'FR')>🇫🇷 France</option>
+                                        <option value="IT" @selected($prefillCountry === 'IT')>🇮🇹 Italy</option>
+                                        <option value="ES" @selected($prefillCountry === 'ES')>🇪🇸 Spain</option>
+                                        <option value="NL" @selected($prefillCountry === 'NL')>🇳🇱 Netherlands</option>
+                                        <option value="BE" @selected($prefillCountry === 'BE')>🇧🇪 Belgium</option>
+                                        <option value="CH" @selected($prefillCountry === 'CH')>🇨🇭 Switzerland</option>
+                                        <option value="AT" @selected($prefillCountry === 'AT')>🇦🇹 Austria</option>
+                                        <option value="SE" @selected($prefillCountry === 'SE')>🇸🇪 Sweden</option>
+                                        <option value="NO" @selected($prefillCountry === 'NO')>🇳🇴 Norway</option>
+                                        <option value="DK" @selected($prefillCountry === 'DK')>🇩🇰 Denmark</option>
+                                        <option value="FI" @selected($prefillCountry === 'FI')>🇫🇮 Finland</option>
+                                        <option value="IE">🇮🇪 Ireland</option>
+                                        <option value="PT">🇵🇹 Portugal</option>
+                                        <option value="GR">🇬🇷 Greece</option>
+                                        <option value="PL">🇵🇱 Poland</option>
+                                        <option value="CZ">🇨🇿 Czech Republic</option>
+                                        <option value="HU">🇭🇺 Hungary</option>
+                                        <option value="RO">🇷🇴 Romania</option>
+                                        <option value="BG">🇧🇬 Bulgaria</option>
+                                        <option value="HR">🇭🇷 Croatia</option>
+                                        <option value="SK">🇸🇰 Slovakia</option>
+                                        <option value="SI">🇸🇮 Slovenia</option>
+                                        <option value="EE">🇪🇪 Estonia</option>
+                                        <option value="LV">🇱🇻 Latvia</option>
+                                        <option value="LT">🇱🇹 Lithuania</option>
+                                        <option value="JP">🇯🇵 Japan</option>
+                                        <option value="CN">🇨🇳 China</option>
+                                        <option value="KR">🇰🇷 South Korea</option>
+                                        <option value="SG">🇸🇬 Singapore</option>
+                                        <option value="MY">🇲🇾 Malaysia</option>
+                                        <option value="TH">🇹🇭 Thailand</option>
+                                        <option value="ID">🇮🇩 Indonesia</option>
+                                        <option value="PH">🇵🇭 Philippines</option>
+                                        <option value="VN">🇻🇳 Vietnam</option>
+                                        <option value="IN">🇮🇳 India</option>
+                                        <option value="NZ">🇳🇿 New Zealand</option>
+                                        <option value="BR">🇧🇷 Brazil</option>
+                                        <option value="MX">🇲🇽 Mexico</option>
+                                        <option value="AR">🇦🇷 Argentina</option>
+                                        <option value="CL">🇨🇱 Chile</option>
+                                        <option value="CO">🇨🇴 Colombia</option>
+                                        <option value="PE">🇵🇪 Peru</option>
+                                        <option value="ZA">🇿🇦 South Africa</option>
+                                        <option value="EG">🇪🇬 Egypt</option>
+                                        <option value="AE">🇦🇪 United Arab Emirates</option>
+                                        <option value="SA">🇸🇦 Saudi Arabia</option>
+                                        <option value="IL">🇮🇱 Israel</option>
+                                        <option value="TR">🇹🇷 Turkey</option>
+                                        <option value="RU">🇷🇺 Russia</option>
+                                        <option value="UA">🇺🇦 Ukraine</option>
+                                    @endif
+                                </select>
+                                @error('country')
+                                    <p class="text-red-500 text-xs mt-1.5 flex items-center">
+                                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        {{ $message }}
+                                    </p>
+                                @enderror
+                            </div>
+                            <div class="relative">
                                 <label for="shipping_address" class="block text-sm font-semibold text-slate-700 mb-2">
                                     <span class="flex items-center">
                                         <svg class="w-4 h-4 mr-1.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1002,123 +1137,21 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                             </div>
 
-                            <div class="relative">
-                                <label for="country" class="block text-sm font-semibold text-slate-700 mb-2">
-                                    <span class="flex items-center">
-                                        <svg class="w-4 h-4 mr-1.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                        Country *
-                                    </span>
-                                </label>
-                                <select id="country" name="country" class="w-full px-4 py-3 bg-white border-2 border-primary/20 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5 cursor-pointer" required>
-                                    <option value="">Select Country</option>
-                                    @if(count($zonesWithCountries) > 0)
-                                        @foreach($zonesWithCountries as $zone)
-                                            <optgroup label="{{ $zone['name'] }}">
-                                                @foreach($zone['country_options'] as $country)
-                                                    <option value="{{ $country['value'] }}" data-zone-id="{{ $country['zone_id'] }}" @selected($prefillCountry === $country['value'])>
-                                                        {{ $country['label'] }}
-                                                    </option>
-                                                @endforeach
-                                            </optgroup>
-                                        @endforeach
-                                    @else
-                                        {{-- Fallback: show all countries if no shipping rates configured --}}
-                                        <option value="US" @selected($prefillCountry === 'US')>🇺🇸 United States</option>
-                                        <option value="GB" @selected($prefillCountry === 'GB')>🇬🇧 United Kingdom</option>
-                                        <option value="CA" @selected($prefillCountry === 'CA')>🇨🇦 Canada</option>
-                                        <option value="AU" @selected($prefillCountry === 'AU')>🇦🇺 Australia</option>
-                                        <option value="DE" @selected($prefillCountry === 'DE')>🇩🇪 Germany</option>
-                                        <option value="FR" @selected($prefillCountry === 'FR')>🇫🇷 France</option>
-                                        <option value="IT" @selected($prefillCountry === 'IT')>🇮🇹 Italy</option>
-                                        <option value="ES" @selected($prefillCountry === 'ES')>🇪🇸 Spain</option>
-                                        <option value="NL" @selected($prefillCountry === 'NL')>🇳🇱 Netherlands</option>
-                                        <option value="BE" @selected($prefillCountry === 'BE')>🇧🇪 Belgium</option>
-                                        <option value="CH" @selected($prefillCountry === 'CH')>🇨🇭 Switzerland</option>
-                                        <option value="AT" @selected($prefillCountry === 'AT')>🇦🇹 Austria</option>
-                                        <option value="SE" @selected($prefillCountry === 'SE')>🇸🇪 Sweden</option>
-                                        <option value="NO" @selected($prefillCountry === 'NO')>🇳🇴 Norway</option>
-                                        <option value="DK" @selected($prefillCountry === 'DK')>🇩🇰 Denmark</option>
-                                        <option value="FI" @selected($prefillCountry === 'FI')>🇫🇮 Finland</option>
-                                        <option value="IE">🇮🇪 Ireland</option>
-                                        <option value="PT">🇵🇹 Portugal</option>
-                                        <option value="GR">🇬🇷 Greece</option>
-                                        <option value="PL">🇵🇱 Poland</option>
-                                        <option value="CZ">🇨🇿 Czech Republic</option>
-                                        <option value="HU">🇭🇺 Hungary</option>
-                                        <option value="RO">🇷🇴 Romania</option>
-                                        <option value="BG">🇧🇬 Bulgaria</option>
-                                        <option value="HR">🇭🇷 Croatia</option>
-                                        <option value="SK">🇸🇰 Slovakia</option>
-                                        <option value="SI">🇸🇮 Slovenia</option>
-                                        <option value="EE">🇪🇪 Estonia</option>
-                                        <option value="LV">🇱🇻 Latvia</option>
-                                        <option value="LT">🇱🇹 Lithuania</option>
-                                        <option value="JP">🇯🇵 Japan</option>
-                                        <option value="CN">🇨🇳 China</option>
-                                        <option value="KR">🇰🇷 South Korea</option>
-                                        <option value="SG">🇸🇬 Singapore</option>
-                                        <option value="MY">🇲🇾 Malaysia</option>
-                                        <option value="TH">🇹🇭 Thailand</option>
-                                        <option value="ID">🇮🇩 Indonesia</option>
-                                        <option value="PH">🇵🇭 Philippines</option>
-                                        <option value="VN">🇻🇳 Vietnam</option>
-                                        <option value="IN">🇮🇳 India</option>
-                                        <option value="NZ">🇳🇿 New Zealand</option>
-                                        <option value="BR">🇧🇷 Brazil</option>
-                                        <option value="MX">🇲🇽 Mexico</option>
-                                        <option value="AR">🇦🇷 Argentina</option>
-                                        <option value="CL">🇨🇱 Chile</option>
-                                        <option value="CO">🇨🇴 Colombia</option>
-                                        <option value="PE">🇵🇪 Peru</option>
-                                        <option value="ZA">🇿🇦 South Africa</option>
-                                        <option value="EG">🇪🇬 Egypt</option>
-                                        <option value="AE">🇦🇪 United Arab Emirates</option>
-                                        <option value="SA">🇸🇦 Saudi Arabia</option>
-                                        <option value="IL">🇮🇱 Israel</option>
-                                        <option value="TR">🇹🇷 Turkey</option>
-                                        <option value="RU">🇷🇺 Russia</option>
-                                        <option value="UA">🇺🇦 Ukraine</option>
-                                    @endif
-                                </select>
-                                @error('country')
-                                    <p class="text-red-500 text-xs mt-1.5 flex items-center">
-                                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                                        </svg>
-                                        {{ $message }}
-                                    </p>
-                                @enderror
-                            </div>
                         </div>
 
-                        <!-- Notes -->
-                        <div class="space-y-5">
-                            <div class="flex items-center space-x-3 pb-3 border-b-2 border-primary/10">
-                                <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                    </svg>
-                                </div>
-                                <h3 class="text-lg font-bold text-slate-900">Additional Notes</h3>
-                            </div>
-                            <div class="relative">
-                                <label for="notes" class="block text-sm font-semibold text-slate-700 mb-2">
-                                    <span class="flex items-center">
-                                        <svg class="w-4 h-4 mr-1.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
-                                        </svg>
-                                        Order Notes (Optional)
-                                    </span>
-                                </label>
-                                <textarea id="notes" name="notes" 
-                                          class="w-full px-4 py-3 bg-white border-2 border-primary/20 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg focus:-translate-y-0.5 resize-vertical min-h-[100px]" rows="3"
-                                          placeholder="Any special instructions for your order..."></textarea>
-                            </div>
-                        </div>
+                        <details class="rounded-xl border border-primary/15 bg-slate-50 px-4 py-3">
+                            <summary class="cursor-pointer text-sm font-semibold text-slate-800">Order notes (optional)</summary>
+                            <textarea id="notes" name="notes"
+                                      class="mt-3 w-full px-4 py-3 bg-white border-2 border-primary/20 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 resize-vertical min-h-[80px]" rows="2"
+                                      placeholder="Any special instructions for your order..."></textarea>
+                        </details>
+                    </div>
+                </div>
+                </section>
 
-                        <!-- Payment Method -->
+                <section class="checkout-payment">
+                <div class="bg-white rounded-2xl shadow-lg checkout-container">
+                    <div class="p-8">
                         <div class="space-y-5">
                             <div class="flex items-center space-x-3 pb-3 border-b-2 border-primary/10">
                                 <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
@@ -1126,7 +1159,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
                                     </svg>
                                 </div>
-                                <h3 class="text-lg font-bold text-slate-900">Payment Method</h3>
+                                <div>
+                                    <h3 class="text-lg font-bold text-slate-900">Payment</h3>
+                                </div>
                             </div>
                             <div class="space-y-4">
                                 <!-- Stripe -->
@@ -1273,21 +1308,22 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 -translate-x-full group-hover:translate-x-full transition-transform duration-700 z-10"></div>
                             </button>
                         </div>
-                    </form>
                     </div>
                 </div>
-            </div>
+                </section>
+            </form>
 
-            <!-- Order Summary - match cart -->
-            <div class="order-1 lg:order-2 animate-slideInRight">
-                <div class="bg-white rounded-2xl border border-primary/10 shadow-sm p-6 lg:sticky lg:top-8 order-summary-container">
+            <aside class="checkout-summary-aside">
+            <div class="checkout-items bg-white rounded-2xl border border-primary/10 shadow-sm p-6 order-summary-container">
                     <div class="flex items-center mb-6">
                         <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white mr-3">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
                             </svg>
                         </div>
-                        <h2 class="text-xl font-bold text-slate-900">Order Summary</h2>
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">Your order</h2>
+                        </div>
                     </div>
 
                     <div class="mb-4 flex items-start gap-3 text-base text-slate-700 bg-primary/5 border border-primary/10 rounded-xl px-3 py-2.5">
@@ -1403,7 +1439,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <button type="button" id="checkout-cross-sell-prev" class="h-7 w-7 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-100">&larr;</button>
                                     <button type="button" id="checkout-cross-sell-next" class="h-7 w-7 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-100">&rarr;</button>
                                 @endif
-                                <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold">Funnel step: Checkout</span>
                             </div>
                         </div>
                         <div id="checkout-cross-sell-slider" class="flex gap-2 overflow-x-hidden scroll-smooth">
@@ -1443,47 +1478,20 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
                     @endif
+            </div>
 
-                    <!-- Tip Selection - primary pink -->
-                    <div class="border-t border-primary/10 pt-4 mb-4">
-                        <div class="flex items-center mb-3">
-                            <svg class="w-5 h-5 text-primary mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+            <div class="checkout-discounts bg-white rounded-2xl border border-primary/10 shadow-sm p-6 order-summary-container">
+                    <div class="flex items-center mb-4">
+                        <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white mr-3">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
                             </svg>
-                            <h3 class="text-sm font-semibold text-slate-700">Love your items? Please support our designers. Thank you! ❤️</h3>
                         </div>
-                        
-                        <div class="grid grid-cols-2 gap-2 mb-3">
-                            <button type="button" onclick="selectTip(0)" class="tip-option p-3 border-2 border-primary/20 rounded-lg text-center hover:border-primary transition-all duration-200" data-tip="0">
-                                <span class="text-sm font-medium text-slate-700">No tips</span>
-                            </button>
-                            <button type="button" onclick="selectTip(5)" class="tip-option p-3 border-2 border-primary/20 rounded-lg text-center hover:border-primary transition-all duration-200" data-tip="5">
-                                <span class="text-sm font-medium text-slate-700 tip-amount-5">
-                                    {{ \App\Services\CurrencyService::formatPrice(($currency ?? 'USD') !== 'USD' && isset($currencyRate) ? 5 * $currencyRate : 5, $currency ?? 'USD') }}
-                                </span>
-                            </button>
-                            <button type="button" onclick="selectTip(3)" class="tip-option p-3 border-2 border-primary/20 rounded-lg text-center hover:border-primary transition-all duration-200" data-tip="3">
-                                <span class="text-sm font-medium text-slate-700 tip-amount-3">
-                                    {{ \App\Services\CurrencyService::formatPrice(($currency ?? 'USD') !== 'USD' && isset($currencyRate) ? 3 * $currencyRate : 3, $currency ?? 'USD') }}
-                                </span>
-                            </button>
-                            <button type="button" onclick="selectTip(3.15)" class="tip-option p-3 border-2 border-primary/20 rounded-lg text-center hover:border-primary transition-all duration-200" data-tip="3.15">
-                                <span class="text-sm font-medium text-slate-700 tip-amount-3.15">
-                                    {{ \App\Services\CurrencyService::formatPrice(($currency ?? 'USD') !== 'USD' && isset($currencyRate) ? 3.15 * $currencyRate : 3.15, $currency ?? 'USD') }}
-                                </span>
-                            </button>
-                        </div>
-                        
-                        <div class="flex gap-2">
-                            <button type="button" onclick="selectTip('custom')" class="tip-option flex-1 p-3 border-2 border-primary/20 rounded-lg text-center hover:border-primary transition-all duration-200" data-tip="custom">
-                                <span class="text-sm font-medium text-slate-700">Other</span>
-                            </button>
-                            <input type="number" id="custom-tip-amount" placeholder="Custom amount" min="0" step="0.01" class="hidden w-32 px-3 py-2 border-2 border-primary/20 rounded-lg text-sm focus:border-primary focus:outline-none" onchange="updateCustomTip(this.value)">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">Promo code</h2>
                         </div>
                     </div>
-
-                    <!-- Order Totals -->
-                    <div class="border-t border-primary/10 pt-4 space-y-3">
+                    <div class="space-y-3">
                         <div class="flex gap-2">
                             <button type="button" id="checkout-mode-volume" title="{{ $checkoutCartHasGiftCard ? 'Not available when purchasing a gift card' : '' }}" @if($checkoutCartHasGiftCard) disabled @endif class="flex-1 px-3 py-2 rounded-lg border text-xs font-bold transition-colors {{ $checkoutCartHasGiftCard ? 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' : (($discountMode ?? 'volume') === 'volume' ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-primary/20 hover:bg-primary/5') }}">
                                 Volume
@@ -1563,6 +1571,35 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <p id="checkout-gift-card-message" class="text-xs hidden"></p>
                         </div>
+                        <div class="border-t border-primary/10 pt-4">
+                            <h3 class="text-sm font-semibold text-slate-700 mb-3">Tip for the designer (optional)</h3>
+                            <div class="grid grid-cols-2 gap-2 mb-3">
+                                <button type="button" onclick="selectTip(0)" class="tip-option p-3 border-2 border-primary/20 rounded-lg text-center hover:border-primary transition-all duration-200" data-tip="0">
+                                    <span class="text-sm font-medium text-slate-700">No tips</span>
+                                </button>
+                                <button type="button" onclick="selectTip(5)" class="tip-option p-3 border-2 border-primary/20 rounded-lg text-center hover:border-primary transition-all duration-200" data-tip="5">
+                                    <span class="text-sm font-medium text-slate-700 tip-amount-5">
+                                        {{ \App\Services\CurrencyService::formatPrice(($currency ?? 'USD') !== 'USD' && isset($currencyRate) ? 5 * $currencyRate : 5, $currency ?? 'USD') }}
+                                    </span>
+                                </button>
+                                <button type="button" onclick="selectTip(3)" class="tip-option p-3 border-2 border-primary/20 rounded-lg text-center hover:border-primary transition-all duration-200" data-tip="3">
+                                    <span class="text-sm font-medium text-slate-700 tip-amount-3">
+                                        {{ \App\Services\CurrencyService::formatPrice(($currency ?? 'USD') !== 'USD' && isset($currencyRate) ? 3 * $currencyRate : 3, $currency ?? 'USD') }}
+                                    </span>
+                                </button>
+                                <button type="button" onclick="selectTip(3.15)" class="tip-option p-3 border-2 border-primary/20 rounded-lg text-center hover:border-primary transition-all duration-200" data-tip="3.15">
+                                    <span class="text-sm font-medium text-slate-700 tip-amount-3.15">
+                                        {{ \App\Services\CurrencyService::formatPrice(($currency ?? 'USD') !== 'USD' && isset($currencyRate) ? 3.15 * $currencyRate : 3.15, $currency ?? 'USD') }}
+                                    </span>
+                                </button>
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="selectTip('custom')" class="tip-option flex-1 p-3 border-2 border-primary/20 rounded-lg text-center hover:border-primary transition-all duration-200" data-tip="custom">
+                                    <span class="text-sm font-medium text-slate-700">Other</span>
+                                </button>
+                                <input type="number" id="custom-tip-amount" placeholder="Custom amount" min="0" step="0.01" class="hidden w-32 px-3 py-2 border-2 border-primary/20 rounded-lg text-sm focus:border-primary focus:outline-none" onchange="updateCustomTip(this.value)">
+                            </div>
+                        </div>
                         <div class="flex justify-between text-slate-600">
                             <span>Subtotal</span>
                             <span class="subtotal-display" id="checkout-subtotal">
@@ -1634,33 +1671,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
 
-                    <!-- Security Badge - sidebar Order Summary -->
-                    <div class="mt-6 p-6 bg-primary/5 border border-primary/10 rounded-2xl">
-                        <div class="text-center">
-                            <div class="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                                </svg>
-                            </div>
-                            <h3 class="font-bold text-xl mb-2 text-slate-900">🔒 100% Secure Checkout</h3>
-                            <div class="space-y-1 text-slate-600 text-sm">
-                                <div class="flex items-center justify-center">
-                                    <span class="mr-2">🔒</span>
-                                    <span>SSL Encrypted</span>
-                                </div>
-                                <div class="flex items-center justify-center">
-                                    <span class="mr-2">🛡️</span>
-                                    <span>PCI Compliant</span>
-                                </div>
-                                <div class="flex items-center justify-center">
-                                    <span class="mr-2">💳</span>
-                                    <span>Safe Payments</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                    <p class="text-xs text-slate-500 text-center">Secure checkout · SSL encrypted · Card details stay with Stripe</p>
             </div>
+            </aside>
         </div>
     </div>
 </div>

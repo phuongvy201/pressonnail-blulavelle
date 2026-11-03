@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Log;
 
 class EmbeddingService
 {
+    private const CIRCUIT_KEY = 'search-embedding:circuit-open';
+
     /**
      * @return list<float>|null
      */
@@ -25,7 +27,7 @@ class EmbeddingService
         }
 
         $apiKey = trim((string) config('search.embedding_api_key', ''));
-        if ($apiKey === '') {
+        if ($apiKey === '' || Cache::has(self::CIRCUIT_KEY)) {
             return null;
         }
 
@@ -38,7 +40,7 @@ class EmbeddingService
                     'input' => $text,
                 ]);
         } catch (\Throwable $exception) {
-            Log::warning('Search embedding request failed.', ['exception' => $exception::class]);
+            $this->pauseProvider(0);
             Cache::put($cacheKey, [], now()->addMinutes(10));
 
             return null;
@@ -46,9 +48,7 @@ class EmbeddingService
 
         $vector = $response->json('data.0.embedding');
         if (! $response->successful() || ! is_array($vector) || $vector === []) {
-            Log::warning('Search embedding provider returned no vector.', [
-                'status' => $response->status(),
-            ]);
+            $this->pauseProvider($response->status());
             Cache::put($cacheKey, [], now()->addMinutes(10));
 
             return null;
@@ -58,6 +58,18 @@ class EmbeddingService
         Cache::put($cacheKey, $vector, now()->addDay());
 
         return $vector;
+    }
+
+    private function pauseProvider(int $status): void
+    {
+        $opened = Cache::add(self::CIRCUIT_KEY, $status, now()->addMinutes(15));
+        if (! $opened) {
+            return;
+        }
+
+        Log::warning('Search embedding provider unavailable. Semantic ranking paused.', [
+            'status' => $status,
+        ]);
     }
 
     public function enabled(): bool

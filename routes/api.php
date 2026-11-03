@@ -218,6 +218,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () use ($v1Guest) {
     Route::get('/home/customer-favorites', [\App\Http\Controllers\Api\V1\HomeCustomerFavoritesController::class, 'show'])
         ->name('home.customer-favorites');
 
+    Route::get('/home/reviews', [\App\Http\Controllers\Api\V1\HomeReviewsController::class, 'show'])
+        ->name('home.reviews');
+
     Route::prefix('auth')->name('auth.')->group(function () {
         Route::get('/csrf', [V1AuthController::class, 'csrf'])->name('csrf');
         Route::get('/captcha', [V1AuthController::class, 'captcha'])->name('captcha');
