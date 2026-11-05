@@ -265,6 +265,62 @@ test('chatbot does not recite the sizing chart when no past size is on file', fu
         ->and($reply->body)->not->toContain('thumb to pinky');
 });
 
+test('chatbot hands off a specific product question when nothing matches, instead of About Us', function () {
+    $admin = User::factory()->create();
+    Page::query()->create([
+        'user_id' => $admin->id,
+        'title' => 'About Us',
+        'slug' => 'about-us',
+        'content' => '<p>Welcome to Blu Lavelle Press-on Nails for Every Style. Discover premium press-on nail sets designed to elevate your look—anytime, anywhere.</p>',
+        'status' => 'published',
+        'published_at' => now()->subDay(),
+    ]);
+
+    $conversation = hybridChatConversation();
+    $reply = app(ChatbotService::class)->handleMessage(
+        $conversation,
+        hybridCustomerMessage($conversation, 'What about the pet portrait press-on nails'),
+    );
+
+    expect($reply)->not->toBeNull()
+        ->and($reply->intent)->toBe('handoff')
+        ->and($reply->body)->not->toContain('About Us')
+        ->and($reply->body)->not->toContain('blulavelle.com/page/about-us')
+        ->and($conversation->refresh()->handling_mode)->toBe(ChatConversation::HANDLING_HUMAN);
+});
+
+test('chatbot finds a named press-on set when it exists in the catalog', function () {
+    $category = Category::query()->create(['name' => 'Nails', 'slug' => 'nails-'.uniqid()]);
+    $template = ProductTemplate::query()->create([
+        'name' => 'Press-on template',
+        'category_id' => $category->id,
+        'base_price' => 28,
+    ]);
+    $product = Product::withoutEvents(fn () => Product::query()->create([
+        'template_id' => $template->id,
+        'name' => 'Pet Portrait Press-On Set',
+        'slug' => 'pet-portrait-'.uniqid(),
+        'price' => 32,
+        'description' => 'Custom pet portrait press-on nails.',
+        'color' => 'multi',
+        'media' => ['/images/pet.jpg'],
+        'quantity' => 3,
+        'status' => 'active',
+    ]));
+
+    $conversation = hybridChatConversation();
+    $reply = app(ChatbotService::class)->handleMessage(
+        $conversation,
+        hybridCustomerMessage($conversation, 'What about the pet portrait press-on nails'),
+    );
+
+    expect($reply)->not->toBeNull()
+        ->and($reply->intent)->toBe('product_search')
+        ->and($reply->body)->toContain('Pet Portrait Press-On Set')
+        ->and($reply->metadata['products'][0]['id'])->toBe($product->id)
+        ->and($conversation->refresh()->handling_mode)->toBe(ChatConversation::HANDLING_BOT);
+});
+
 test('chatbot hands sensitive requests to a human without changing the order', function () {
     $owner = User::factory()->create(['email' => 'cancel@example.com']);
     $order = Order::query()->create([

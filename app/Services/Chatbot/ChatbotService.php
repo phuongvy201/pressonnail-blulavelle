@@ -38,17 +38,54 @@ class ChatbotService
             return $this->handoff($conversation, $handoffReason, $customerMessage);
         }
 
+        $offTopicReason = $this->offTopicReason($question);
+        if ($offTopicReason !== null) {
+            return $this->handoff($conversation, $offTopicReason, $customerMessage);
+        }
+
         $conversation->forceFill(['bot_processing_at' => now()])->save();
 
         try {
             [$intent, $facts, $metadata] = $this->factsFor($conversation, $question);
+
+            if ($this->shouldHandoffUnknown($intent, $facts)) {
+                $reason = (string) ($facts['handoff_reason'] ?? 'Bot could not answer with verified store data.');
+
+                return $this->handoff($conversation, $reason, $customerMessage);
+            }
+
+            if ($intent === 'faq' && ! $this->faqFactsOnTopic($question, $facts)) {
+                return $this->handoff(
+                    $conversation,
+                    'FAQ match was off-topic for the customer question.',
+                    $customerMessage,
+                );
+            }
+
             $summary = trim((string) ($facts['summary'] ?? ''));
             $composed = $this->compose($question, $facts, $conversation, $intent);
 
             $body = $composed['body'] ?? $summary;
             if ($body === '') {
+                if ((bool) config('chatbot.handoff_on_unknown', true)) {
+                    return $this->handoff(
+                        $conversation,
+                        'Bot generated an empty answer.',
+                        $customerMessage,
+                    );
+                }
                 $body = (string) config('chatbot.fallback');
                 $intent = 'fallback';
+            }
+
+            $confidence = $composed['confidence'] ?? ($intent === 'fallback' ? 0.2 : 0.86);
+            if ((bool) config('chatbot.handoff_on_unknown', true)
+                && ($intent === 'fallback' || (float) $confidence < 0.5)) {
+                return $this->handoff(
+                    $conversation,
+                    'Bot confidence too low to answer reliably.',
+                    $customerMessage,
+                );
             }
 
             $metadata = array_merge($metadata, [
@@ -67,17 +104,13 @@ class ChatbotService
                 'body' => $body,
                 'metadata' => $metadata,
                 'intent' => $intent,
-                'confidence' => $composed['confidence'] ?? ($intent === 'fallback' ? 0.2 : 0.86),
+                'confidence' => $confidence,
             ]);
 
             $conversation->forceFill([
                 'last_bot_intent' => $intent,
                 'bot_processing_at' => null,
             ])->save();
-
-            if ($intent === 'fallback' || (float) $reply->confidence < 0.5) {
-                $this->telegram->notifyBotReply($conversation, $reply);
-            }
 
             return $reply;
         } catch (Throwable $exception) {
@@ -87,6 +120,14 @@ class ChatbotService
                 'exception' => $exception::class,
             ]);
             $conversation->forceFill(['bot_processing_at' => null])->save();
+
+            if ((bool) config('chatbot.handoff_on_unknown', true)) {
+                return $this->handoff(
+                    $conversation,
+                    'Bot error while generating a reply.',
+                    $customerMessage,
+                );
+            }
 
             $fallback = ChatMessage::query()->create([
                 'conversation_id' => $conversation->id,
@@ -247,10 +288,7 @@ class ChatbotService
             return $this->orderFacts($conversation, $question, $orderNumber);
         }
 
-        $isProductRequest = preg_match(
-            '/\b(show|find|recommend|suggest|looking for|buy|shop|almond|coffin|square|oval|stiletto|french)\b|\bunder\s*\$?\d/i',
-            $question,
-        ) === 1;
+        $isProductRequest = $this->knowledge->isProductInquiry($question);
 
         if ($isProductRequest) {
             $products = $this->knowledge->searchProducts(
@@ -280,6 +318,16 @@ class ChatbotService
                     ],
                 ];
             }
+
+            // Named / specific set with no catalog match — do not dump About Us.
+            return [
+                'unknown',
+                [
+                    'summary' => '',
+                    'handoff_reason' => 'No matching product found for the customer’s request.',
+                ],
+                ['quick_replies' => []],
+            ];
         }
 
         $faq = $this->knowledge->faqMatches($question);
@@ -303,34 +351,43 @@ class ChatbotService
             ];
         }
 
-        if (! $isProductRequest && preg_match('/\b(nails?|sets?|styles?|colou?rs?)\b/i', $question) === 1) {
-            $products = $this->knowledge->searchProducts(
-                $question,
-                max(1, (int) config('chatbot.max_products', 3)),
-            );
-            if ($products !== []) {
-                $lines = collect($products)->map(fn (array $product) => sprintf(
-                    '%s — $%s — %s',
-                    $product['name'],
-                    number_format((float) $product['price'], 2),
-                    $product['url'],
-                ))->implode("\n");
+        // Stay focused: no loose “any nails/styles” product dump without a clear product ask.
+        return [
+            'unknown',
+            [
+                'summary' => '',
+                'handoff_reason' => 'No verified FAQ or product facts for this question.',
+            ],
+            ['quick_replies' => []],
+        ];
+    }
 
-                return [
-                    'product_search',
-                    ['summary' => "Here are available sets that match your request:\n".$lines, 'products' => $products],
-                    ['products' => $products, 'quick_replies' => $this->quickReplies()],
-                ];
-            }
+    /**
+     * Clearly unrelated to BluLavelle store support — hand off immediately.
+     */
+    private function offTopicReason(string $question): ?string
+    {
+        if (preg_match(
+            '/\b(weather|forecast|temperature|joke|riddle|poem|recipe|cook(?:ing)?|bitcoin|crypto|stock market|politics|election|homework|write (?:me )?(?:a |some )?code|programming)\b/i',
+            $question,
+        ) === 1) {
+            return 'Question is outside BluLavelle store support topics.';
         }
 
-        return [
-            'fallback',
-            [
-                'summary' => 'No verified store-specific facts were retrieved. Answer only general press-on nail guidance that does not depend on BluLavelle prices, stock, policies, delivery promises, or a customer order. If the question needs store-specific facts, say that you do not have confirmed information and offer support.',
-            ],
-            ['quick_replies' => $this->quickReplies()],
-        ];
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    private function shouldHandoffUnknown(string $intent, array $facts): bool
+    {
+        if (! (bool) config('chatbot.handoff_on_unknown', true)) {
+            return false;
+        }
+
+        return in_array($intent, ['unknown', 'fallback'], true)
+            || filled($facts['handoff_reason'] ?? null);
     }
 
     /**
@@ -475,6 +532,8 @@ class ChatbotService
 
         $body = trim((string) $composed['body']);
         $summary = trim((string) ($facts['summary'] ?? ''));
+        $model = $composed['model'] ?? null;
+        $usage = $composed['usage'] ?? [];
 
         if ($intent === 'product_search') {
             foreach (($facts['products'] ?? []) as $product) {
@@ -492,8 +551,8 @@ class ChatbotService
                 return [
                     'body' => $summary,
                     'confidence' => 0.9,
-                    'model' => $composed['model'] ?? null,
-                    'usage' => $composed['usage'] ?? [],
+                    'model' => $model,
+                    'usage' => $usage,
                 ];
             }
         }
@@ -504,8 +563,8 @@ class ChatbotService
             return [
                 'body' => $summary,
                 'confidence' => 0.9,
-                'model' => $composed['model'] ?? null,
-                'usage' => $composed['usage'] ?? [],
+                'model' => $model,
+                'usage' => $usage,
             ];
         }
 
@@ -514,18 +573,169 @@ class ChatbotService
                 return [
                     'body' => $summary,
                     'confidence' => 0.9,
-                    'model' => $composed['model'] ?? null,
-                    'usage' => $composed['usage'] ?? [],
+                    'model' => $model,
+                    'usage' => $usage,
                 ];
             }
+        }
+
+        // FAQ / general: if AI drifts off the verified summary, serve the summary.
+        if ($summary !== '' && in_array($intent, ['faq', 'order_lookup', 'previous_size'], true)
+            && ! $this->aiAnswerGrounded($body, $summary, $facts)) {
+            return [
+                'body' => $summary,
+                'confidence' => 0.88,
+                'model' => $model,
+                'usage' => $usage,
+            ];
+        }
+
+        if ($this->looksLikeBrandDump($body) && ! $this->isBrandQuestion($question)) {
+            return $summary !== '' ? [
+                'body' => $summary,
+                'confidence' => 0.85,
+                'model' => $model,
+                'usage' => $usage,
+            ] : null;
         }
 
         return [
             'body' => $body,
             'confidence' => max(0, min(1, (float) ($composed['confidence'] ?? 0.8))),
-            'model' => $composed['model'] ?? null,
-            'usage' => $composed['usage'] ?? [],
+            'model' => $model,
+            'usage' => $usage,
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    private function faqFactsOnTopic(string $question, array $facts): bool
+    {
+        if ($this->isBrandQuestion($question)) {
+            return true;
+        }
+
+        $sources = collect($facts['sources'] ?? []);
+        if ($sources->contains(fn ($source) => str_starts_with((string) ($source['source'] ?? ''), 'page:about'))) {
+            return false;
+        }
+
+        $summary = mb_strtolower(trim((string) ($facts['summary'] ?? '')));
+        if ($summary === '') {
+            return false;
+        }
+
+        if ($this->looksLikeBrandDump($summary) && ! $this->isBrandQuestion($question)) {
+            return false;
+        }
+
+        $questionTerms = $this->contentTerms($question);
+        if ($questionTerms === []) {
+            return true;
+        }
+
+        $hit = 0;
+        foreach ($questionTerms as $term) {
+            if (str_contains($summary, $term)) {
+                $hit++;
+            }
+        }
+
+        // At least one meaningful question term must appear in the verified facts,
+        // or the source must be an allowlisted policy/sizing page for that topic.
+        if ($hit > 0) {
+            return true;
+        }
+
+        foreach ($sources as $source) {
+            $key = (string) ($source['source'] ?? '');
+            $title = mb_strtolower((string) ($source['title'] ?? ''));
+            if ($key === 'sizing_kit' && preg_match('/\b(size|sizing|fit)\b/i', $question) === 1) {
+                return true;
+            }
+            if (str_contains($key, 'shipping') && preg_match('/\b(ship|deliver)\b/i', $question) === 1) {
+                return true;
+            }
+            if ((str_contains($key, 'return') || str_contains($key, 'refund') || str_contains($title, 'return'))
+                && preg_match('/\b(return|exchange|refund)\b/i', $question) === 1) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    private function aiAnswerGrounded(string $body, string $summary, array $facts): bool
+    {
+        $bodyLower = mb_strtolower($body);
+        $summaryTerms = $this->contentTerms($summary);
+        if ($summaryTerms === []) {
+            return true;
+        }
+
+        $hit = 0;
+        foreach ($summaryTerms as $term) {
+            if (str_contains($bodyLower, $term)) {
+                $hit++;
+            }
+        }
+
+        $needed = min(3, max(1, (int) ceil(count($summaryTerms) * 0.25)));
+        if ($hit >= $needed) {
+            return true;
+        }
+
+        foreach (($facts['sources'] ?? []) as $source) {
+            $url = (string) ($source['url'] ?? '');
+            if ($url !== '' && str_contains($body, $url)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function looksLikeBrandDump(string $text): bool
+    {
+        return preg_match(
+            '/welcome to blu\s*lavelle|press-on nails for every style|discover premium press-on|elevate your look|craft and curate press-on/i',
+            $text,
+        ) === 1;
+    }
+
+    private function isBrandQuestion(string $question): bool
+    {
+        return preg_match(
+            '/\b(about (you|blulavelle|blu lavelle)|who (are|is) (you|blulavelle)|your story|company)\b/i',
+            $question,
+        ) === 1;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function contentTerms(string $text): array
+    {
+        $stop = [
+            'a', 'an', 'and', 'are', 'can', 'do', 'for', 'from', 'have', 'how', 'i', 'is', 'it',
+            'me', 'my', 'of', 'please', 'the', 'to', 'what', 'when', 'where', 'with', 'you', 'your',
+            'more', 'details', 'http', 'https', 'www', 'com', 'page',
+        ];
+        $words = preg_split('/[^a-z0-9]+/i', mb_strtolower($text)) ?: [];
+        $terms = [];
+        foreach ($words as $word) {
+            $word = trim($word);
+            if ($word === '' || strlen($word) < 3 || in_array($word, $stop, true) || is_numeric($word)) {
+                continue;
+            }
+            $terms[] = $word;
+        }
+
+        return array_values(array_unique($terms));
     }
 
     private function handoffReason(string $question): ?string

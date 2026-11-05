@@ -59,7 +59,7 @@ test('successful bot replies are not notified to telegram', function () {
     Http::assertNothingSent();
 });
 
-test('bot fallback replies alert staff on telegram', function () {
+test('unanswerable questions hand off to support and alert staff on telegram', function () {
     $conversation = telegramChatConversation();
     $reply = app(ChatbotService::class)->handleMessage(
         $conversation,
@@ -67,13 +67,14 @@ test('bot fallback replies alert staff on telegram', function () {
     );
 
     expect($reply)->not->toBeNull()
-        ->and($reply->intent)->toBe('fallback');
+        ->and($reply->intent)->toBe('handoff')
+        ->and($conversation->refresh()->handling_mode)->toBe(ChatConversation::HANDLING_HUMAN);
     Http::assertSent(function ($request) use ($conversation) {
         $text = (string) ($request->data()['text'] ?? '');
 
         return str_contains($request->url(), 'api.telegram.org')
-            && str_contains($text, 'could not answer')
-            && str_contains($text, 'CID: #'.$conversation->id);
+            && str_contains($text, 'Chatbot handoff to support')
+            && str_contains($text, 'Conversation: #'.$conversation->id);
     });
 });
 

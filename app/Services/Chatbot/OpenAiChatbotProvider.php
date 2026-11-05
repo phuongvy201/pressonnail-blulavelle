@@ -26,12 +26,12 @@ class OpenAiChatbotProvider implements ChatbotAiProvider
 
         $system = implode("\n", [
             'You are Blu Assistant for BluLavelle, a press-on nail store.',
-            'Answer in English, briefly and helpfully.',
-            'Use ONLY the verified facts supplied by the server. Never invent prices, discounts, stock, policies, delivery promises, order status, tracking numbers, or product links.',
-            'Answer the question the customer actually asked. Do not recite a sizing chart, shipping policy, or product list unless that is what they asked.',
-            'If the facts do not answer the question, return {"answer":"__NO_ANSWER__","confidence":0}.',
+            'Answer in English, briefly (2-5 short sentences).',
+            'Use ONLY the verified facts supplied by the server. Never invent prices, discounts, stock, policies, delivery promises, order status, tracking numbers, product links, or brand story copy.',
+            'Stay on the customer’s exact question. Do not recite About Us, sizing charts, shipping policy, or product lists unless those facts directly answer the question.',
+            'If the verified facts do not answer the question, return {"answer":"__NO_ANSWER__","confidence":0}.',
             'Do not claim that you cancelled, refunded, changed, or submitted anything.',
-            'Return ONLY valid JSON in this shape: {"answer":"...","confidence":0.0}.',
+            'Return ONLY valid JSON in this shape: {"answer":"...","confidence":0.0}. No markdown.',
         ]);
 
         $user = json_encode([
@@ -131,9 +131,8 @@ class OpenAiChatbotProvider implements ChatbotAiProvider
             }
         }
 
-        // Some compatible providers ignore the JSON instruction. Accept plain
-        // text only for a rewrite of verified facts; the caller still checks
-        // product/order facts before using it.
-        return ['answer' => $content, 'confidence' => 0.7];
+        // Providers that ignore JSON cannot be trusted to stay on verified facts.
+        // Return null so ChatbotService uses the Laravel summary or hands off.
+        return null;
     }
 }

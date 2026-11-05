@@ -32,6 +32,10 @@ return [
     'reply_email_enabled' => filter_var(env('LIVE_CHAT_REPLY_EMAIL_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
     'reply_email_delay_minutes' => max(1, (int) env('LIVE_CHAT_REPLY_EMAIL_DELAY_MINUTES', 5)),
 
+    // When the bot has no verified answer (empty product search, weak FAQ, etc.),
+    // hand the conversation to Live Chat support instead of guessing.
+    'handoff_on_unknown' => filter_var(env('CHATBOT_HANDOFF_ON_UNKNOWN', true), FILTER_VALIDATE_BOOLEAN),
+
     'welcome' => env('CHATBOT_WELCOME', 'Hi! I can help you find nails, check sizing or shipping, and track an order.'),
     'fallback' => env('CHATBOT_FALLBACK', 'I don’t have confirmed information for that yet. You can rephrase your question or choose “Talk to support” and our team will help.'),
     'handoff' => env('CHATBOT_HANDOFF', 'I’ve passed this conversation to our support team. They’ll reply here as soon as they can.'),

@@ -19,7 +19,19 @@ class ChatbotKnowledgeService
         'i', 'is', 'it', 'long', 'me', 'my', 'of', 'please', 'show', 'take', 'the',
         'to', 'under', 'want', 'what', 'when', 'where', 'with', 'you', 'your',
         'find', 'looking', 'need', 'buy', 'shop', 'get', 'give', 'nail', 'nails',
-        'set', 'sets', 'product', 'products',
+        'set', 'sets', 'product', 'products', 'about', 'press', 'presson',
+    ];
+
+    /** Brand/marketing pages that must not answer product or policy questions. */
+    private const BRAND_PAGE_SLUGS = [
+        'about-us',
+        'about',
+        'our-story',
+        'blulavelle-story',
+        'welcome',
+        'home',
+        'contact',
+        'contact-us',
     ];
 
     /**
@@ -48,7 +60,8 @@ class ChatbotKnowledgeService
             }
 
             $score = $this->score($title, $terms) * 3 + $this->score($body, $terms);
-            if ($score > 0) {
+            // Require a real topical hit — a single shared filler word is not enough.
+            if ($score >= 3) {
                 $matches[] = [
                     'title' => $title,
                     'body' => $body,
@@ -81,28 +94,46 @@ class ChatbotKnowledgeService
             ->limit(12)
             ->get();
 
+        $productInquiry = $this->isProductInquiry($question);
+        $asksAboutBrand = preg_match('/\b(about (you|blulavelle|blu lavelle)|who (are|is) (you|blulavelle)|your story|company)\b/i', $question) === 1;
+
         foreach ($pages as $page) {
+            $slug = (string) $page->slug;
+            if ($productInquiry && in_array($slug, self::BRAND_PAGE_SLUGS, true)) {
+                continue;
+            }
+            if (! $asksAboutBrand && in_array($slug, self::BRAND_PAGE_SLUGS, true)) {
+                continue;
+            }
+
             $plain = $this->plainText((string) $page->content);
-            $score = $this->score((string) $page->title, $terms) * 4
-                + $this->score((string) $page->slug, $terms) * 3
-                + $this->score($plain, $terms);
+            $titleSlugScore = $this->score((string) $page->title, $terms) * 4
+                + $this->score((string) $page->slug, $terms) * 3;
+            $contentScore = $this->score($plain, $terms);
+            $score = $titleSlugScore + $contentScore;
 
             // A page whose title/slug matches the question topic (for
             // example a sizing guide) outranks generic pages that merely
             // contain one shared word such as "choose".
-            if ($this->topicMatchesPage($question, (string) $page->slug, (string) $page->title)) {
+            $topicHit = $this->topicMatchesPage($question, $slug, (string) $page->title);
+            if ($topicHit) {
                 $score += 10;
             }
 
-            if ($score < 2 && ! in_array($page->slug, $this->relevantSlugs($question), true)) {
+            $allowlisted = in_array($slug, $this->relevantSlugs($question), true);
+            // Reject content-only hits on long pages (the old About Us failure mode).
+            if (! $allowlisted && ! $topicHit && $titleSlugScore < 4) {
+                continue;
+            }
+            if ($score < 4 && ! $allowlisted) {
                 continue;
             }
 
             $matches[] = [
                 'title' => (string) $page->title,
                 'body' => $this->excerpt($plain, $terms),
-                'url' => route('page.show', $page->slug),
-                'source' => 'page:'.$page->slug,
+                'url' => route('page.show', $slug),
+                'source' => 'page:'.$slug,
                 'score' => max(1, $score),
             ];
         }
@@ -228,6 +259,44 @@ class ChatbotKnowledgeService
         }
 
         return $this->formatVariantAttributes($variant);
+    }
+
+    /**
+     * Customer is asking about a specific set / style, not a policy FAQ.
+     */
+    public function isProductInquiry(string $question): bool
+    {
+        $question = trim($question);
+        if ($question === '') {
+            return false;
+        }
+
+        if (preg_match('/\b(ship|deliver|return|refund|cancel|track|tracking|sizing kit|size chart|how long (do|does)|policy)\b/i', $question) === 1
+            && preg_match('/\b(show|find|recommend|suggest|looking for|buy|shop)\b/i', $question) !== 1) {
+            return false;
+        }
+
+        if (preg_match('/\b(show|find|recommend|suggest|looking for|buy|shop|almond|coffin|square|oval|stiletto|french)\b|\bunder\s*\$?\d/i', $question) === 1) {
+            return true;
+        }
+
+        // “What about the pet portrait press-on nails” / named set questions.
+        if (preg_match('/\bwhat about\b/i', $question) === 1) {
+            return true;
+        }
+
+        // “What colours / styles / shapes do you have?”
+        if (preg_match('/\b(what|which|any)\b.+\b(colou?rs?|styles?|designs?|shapes?|sets?)\b/i', $question) === 1) {
+            return true;
+        }
+
+        if (preg_match('/press[- ]?on/i', $question) === 1
+            && preg_match('/\b(nails?|sets?)\b/i', $question) === 1
+            && count($this->terms($question)) >= 2) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
