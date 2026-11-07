@@ -4239,92 +4239,205 @@ class PageSeeder extends Seeder
                 'meta_title' => 'Sitemap - Blu Lavelle',
                 'meta_description' => 'Sitemap of Blu Lavelle including help, tracking, policies, and contact pages.',
             ],
-            [
-                'user_id' => $admin->id,
-                'title' => 'Privacy Policy',
-                'slug' => 'privacy-policy',
-                'content' => '<div class="max-w-6xl mx-auto py-8 px-4">
+            $this->privacyPolicyPage($admin->id),
+        ];
+
+        // Create pages
+        foreach ($pages as $page) {
+            $page = $this->normalizePagePresentation($page);
+            Page::create($page);
+            $this->command->info("✓ Created page: {$page['title']}");
+        }
+
+        $this->command->info('Done! Created ' . count($pages) . ' pages.');
+    }
+
+    /**
+     * Full Blu Lavelle Privacy Policy for website + mobile app (Apple / GDPR / CCPA ready).
+     *
+     * @return array<string, mixed>
+     */
+    public function privacyPolicyPage(int $userId): array
+    {
+        $lastUpdated = 'November 7, 2026';
+
+        return [
+            'user_id' => $userId,
+            'title' => 'Privacy Policy',
+            'slug' => 'privacy-policy',
+            'content' => '<div class="max-w-6xl mx-auto py-8 px-4">
                     <div class="bg-white rounded-lg shadow-2xl overflow-hidden">
-                        <!-- Hero Header -->
                         <div class="bg-gradient-to-r from-[#0297FE] via-[#f89192] to-[#d6386a] text-white px-8 py-12">
                             <h1 class="text-5xl font-bold mb-4">Privacy Policy</h1>
-                            <p class="text-pink-100 text-xl mb-2">How Blu Lavelle collects, uses, and protects your information</p>
-                            <p class="text-pink-200 text-sm">Last updated: ' . now()->format('F d, Y') . '</p>
+                            <p class="text-pink-100 text-xl mb-2">How Blu Lavelle collects, uses, and protects your information on our website and mobile app</p>
+                            <p class="text-pink-200 text-sm">Last updated: '.$lastUpdated.'</p>
                         </div>
 
                         <div class="px-8 py-8 space-y-8">
-                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-l-4 border-[#0297FE] rounded-r-lg p-6">
+                            <div class="bg-gradient-to-br from-pink-50 to-pink-100 border-l-4 border-[#0297FE] rounded-r-lg p-6 space-y-4">
                                 <p class="text-gray-800 leading-relaxed text-lg">
-                                    This Privacy Policy explains how <strong>Blu Lavelle</strong> (the “Site”, “we”, “us”) collects, uses, and shares your personal information when you visit
-                                    or make a purchase from the Site, create an account, contact support, or use any related services.
+                                    This Privacy Policy explains how <strong>Blu Lavelle</strong> (“Blu Lavelle”, “we”, “us”, or “our”) collects, uses, shares, and protects personal information when you use our website at blulavelle.com, our mobile application (the “App”), and related services (together, the “Services”).
+                                </p>
+                                <p class="text-gray-800 leading-relaxed">
+                                    Blu Lavelle is operated by:
+                                </p>
+                                <ul class="list-disc list-inside text-gray-800 space-y-2">
+                                    <li><strong>Bluprinter LLC (US)</strong> — 5900 Balcones Dr Ste 100, Austin, TX 78731, USA</li>
+                                    <li><strong>Bluprinter LTD (UK)</strong> — Company Number 16342015, 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom</li>
+                                </ul>
+                                <p class="text-gray-700 leading-relaxed text-sm">
+                                    The Blu Lavelle customer experience is our own press-on nail shop. Product listings and fulfillment are operated by Blu Lavelle / Bluprinter. If you see marketplace-style language elsewhere on the website, it does not change who controls customer personal data for purchases made through Blu Lavelle.
+                                </p>
+                            </div>
+
+                            <div class="bg-white border border-pink-200 rounded-xl p-6">
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3">1. Information we collect</h2>
+                                <ul class="list-disc list-inside text-gray-700 space-y-2">
+                                    <li><strong>Account information:</strong> name, email address, phone number, password (stored in hashed form), and profile details you provide.</li>
+                                    <li><strong>Order and shipping information:</strong> shipping and billing addresses, items purchased, order history, and delivery details.</li>
+                                    <li><strong>Payment information:</strong> processed by payment providers (for example Stripe or other processors we use). We do not store full card numbers on our servers.</li>
+                                    <li><strong>Marketing and newsletter data:</strong> email address and preferences when you subscribe for news, offers, or a promotional discount (such as a first-order discount). You can unsubscribe at any time.</li>
+                                    <li><strong>Live chat / Blu Assistant:</strong> messages you send in Live Chat, your guest name/email if you chat as a guest, conversation metadata, and bot or human replies. Some replies may be generated by an AI assistant using verified store information; sensitive or unanswered chats may be handed to our support team.</li>
+                                    <li><strong>Virtual Try-On media:</strong> photos of your hand (camera or uploaded image) and generated try-on preview images when you use Virtual Try-On. See Section 3.</li>
+                                    <li><strong>Device and app data:</strong> IP address, browser or app type/version, device identifiers, approximate location derived from IP, crash/diagnostics data, and push notification tokens when you enable notifications in the App.</li>
+                                    <li><strong>Support communications:</strong> emails and messages you send to support@blulavelle.com or through in-app / website contact forms.</li>
+                                    <li><strong>Usage and advertising data:</strong> pages viewed, products viewed, cart events, and similar interactions collected through cookies, pixels, and SDKs described in Section 4.</li>
+                                </ul>
+                            </div>
+
+                            <div class="bg-white border border-pink-200 rounded-xl p-6">
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3">2. How we use your information</h2>
+                                <ul class="list-disc list-inside text-gray-700 space-y-2">
+                                    <li>Process orders, payments, delivery, returns, and customer support.</li>
+                                    <li>Create and manage your account, and send transactional messages about orders and the Services.</li>
+                                    <li>Operate Live Chat / Blu Assistant and connect you with human support when needed.</li>
+                                    <li>Provide Virtual Try-On previews and improve that feature’s reliability and safety.</li>
+                                    <li>Send marketing emails or push notifications when you opt in; you can opt out anytime.</li>
+                                    <li>Measure performance, prevent fraud/abuse, secure the Services, and improve products and UX.</li>
+                                    <li>Run advertising measurement and remarketing as described in Section 4, subject to your choices and applicable law.</li>
+                                    <li>Comply with legal obligations and enforce our terms.</li>
+                                </ul>
+                            </div>
+
+                            <div class="bg-white border border-pink-200 rounded-xl p-6">
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3">3. Virtual Try-On (camera and photos)</h2>
+                                <p class="text-gray-700 leading-relaxed mb-3">
+                                    Virtual Try-On lets you preview a Blu Lavelle nail design on a photo of your hand. To do this, the Services may access your device camera or accept an image you upload.
+                                </p>
+                                <ul class="list-disc list-inside text-gray-700 space-y-2">
+                                    <li>Hand photos and try-on result images are used <strong>only to generate and show your preview</strong> and to operate/support that feature.</li>
+                                    <li>Images are stored in private storage associated with your try-on session or account.</li>
+                                    <li>To create the preview, images are sent to our AI processing provider(s). We instruct providers to process images for try-on only. We do <strong>not</strong> use your hand photos to train AI models without your explicit opt-in.</li>
+                                    <li>Try-on media is retained for a limited period (typically up to about 72 hours, or sooner if you delete related data / your account) and then purged, unless we must keep a record longer for security, abuse prevention, or legal reasons.</li>
+                                    <li>Virtual Try-On is an AI preview only. It is not a sizing measurement and not a production file.</li>
+                                </ul>
+                                <p class="text-gray-700 leading-relaxed mt-3">
+                                    If you use the App, Apple App Privacy / similar store disclosures may list Photos or Camera for this feature. You can deny camera/photo permission in your device settings; Try-On will then be limited or unavailable.
+                                </p>
+                            </div>
+
+                            <div class="bg-white border border-pink-200 rounded-xl p-6">
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3">4. Cookies, analytics, and advertising</h2>
+                                <p class="text-gray-700 leading-relaxed mb-3">
+                                    We use cookies, pixels, tags, and similar technologies on the website (and, where enabled, comparable SDKs in the App) to operate the Services, remember preferences, measure traffic, and understand marketing performance.
+                                </p>
+                                <p class="text-gray-700 leading-relaxed mb-3">
+                                    Depending on configuration, this may include tools from:
+                                </p>
+                                <ul class="list-disc list-inside text-gray-700 space-y-2 mb-3">
+                                    <li><strong>Google</strong> (including Google Tag Manager and related Google measurement/ads tags)</li>
+                                    <li><strong>Meta (Facebook)</strong> Pixel and related events</li>
+                                    <li><strong>Pinterest</strong> Tag</li>
+                                    <li><strong>TikTok</strong> Pixel (when enabled)</li>
+                                    <li>Other measurement partners we may enable from time to time for advertising or analytics</li>
+                                </ul>
+                                <p class="text-gray-700 leading-relaxed mb-3">
+                                    These tools may collect device identifiers, IP address, page or screen views, and shopping events (for example view product, add to cart, purchase). Advertising partners may use this information to measure campaigns and, where permitted, to show more relevant ads on their platforms.
+                                </p>
+                                <p class="text-gray-700 leading-relaxed">
+                                    You can control cookies through your browser settings and, where offered, our cookie/consent tools. On iOS, if the App uses tracking for advertising across other companies’ apps or websites, we will request permission through Apple’s App Tracking Transparency prompt. Blocking some cookies or declining tracking may limit analytics or personalized ads but should not stop basic checkout.
+                                </p>
+                            </div>
+
+                            <div class="bg-white border border-pink-200 rounded-xl p-6">
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3">5. How we share information</h2>
+                                <p class="text-gray-700 leading-relaxed mb-3">
+                                    We share personal information with service providers that help us operate the Services, including payment processors, shipping and fulfillment partners, cloud hosting and storage providers, email and notification providers, customer support tools, AI providers used for Try-On or chat phrasing, and analytics/advertising partners listed above.
+                                </p>
+                                <p class="text-gray-700 leading-relaxed mb-3">
+                                    We may disclose information if required by law, to respond to lawful requests, or to protect the rights, safety, and security of Blu Lavelle, our users, or the public.
+                                </p>
+                                <p class="text-gray-700 leading-relaxed">
+                                    We do not sell your personal information for money. Under California law (CCPA/CPRA), “sharing” can include disclosing identifiers to advertising partners for cross-context behavioral advertising. Where that applies, you can opt out by adjusting cookie/tracking settings, using platform ad controls, or emailing <a class="text-[#0297FE] font-semibold underline hover:text-[#d6386a]" href="mailto:support@blulavelle.com">support@blulavelle.com</a> with the subject “Do Not Sell or Share My Personal Information”.
+                                </p>
+                            </div>
+
+                            <div class="bg-white border border-pink-200 rounded-xl p-6">
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3">6. International transfers</h2>
+                                <p class="text-gray-700 leading-relaxed">
+                                    We operate in the United States and the United Kingdom and may process data in those countries and other locations where our providers operate. If you are in the UK or European Economic Area, this may involve transferring personal data outside your country. Where required, we use appropriate safeguards (such as standard contractual clauses or equivalent mechanisms) for those transfers.
                                 </p>
                             </div>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="bg-white border border-pink-200 rounded-xl p-6">
-                                    <h2 class="text-2xl font-bold text-gray-900 mb-3">1. Information we collect</h2>
-                                    <ul class="list-disc list-inside text-gray-700 space-y-2">
-                                        <li><strong>Account info:</strong> name, email, phone number, password (stored in hashed form).</li>
-                                        <li><strong>Order info:</strong> shipping address, billing address, items purchased, and order history.</li>
-                                        <li><strong>Payment info:</strong> handled by payment providers; we don’t store full card numbers.</li>
-                                        <li><strong>Device data:</strong> IP address, browser type, and basic analytics about how you use the Site.</li>
-                                        <li><strong>Support messages:</strong> emails and messages you send to our support team.</li>
-                                    </ul>
-                                </div>
-
-                                <div class="bg-white border border-pink-200 rounded-xl p-6">
-                                    <h2 class="text-2xl font-bold text-gray-900 mb-3">2. How we use your information</h2>
-                                    <ul class="list-disc list-inside text-gray-700 space-y-2">
-                                        <li>To process orders, deliver products, and provide customer support.</li>
-                                        <li>To communicate with you about your order, account, or service updates.</li>
-                                        <li>To prevent fraud, abuse, and protect the security of our users and the Site.</li>
-                                        <li>To improve the Site experience, products, and services.</li>
-                                    </ul>
-                                </div>
-                            </div>
-
-                            <div class="bg-white border border-pink-200 rounded-xl p-6">
-                                <h2 class="text-2xl font-bold text-gray-900 mb-3">3. Cookies & analytics</h2>
-                                <p class="text-gray-700 leading-relaxed mb-3">
-                                    We use cookies and similar technologies to keep the Site working, remember preferences, and understand usage patterns (e.g., analytics).
-                                </p>
-                                <p class="text-gray-700 leading-relaxed">
-                                    You can control cookies through your browser settings. Blocking some cookies may affect Site functionality.
-                                </p>
-                            </div>
-
-                            <div class="bg-white border border-pink-200 rounded-xl p-6">
-                                <h2 class="text-2xl font-bold text-gray-900 mb-3">4. Sharing your information</h2>
-                                <p class="text-gray-700 leading-relaxed mb-3">
-                                    We may share information with trusted service providers (e.g., payment processors, shipping carriers, email/analytics providers) to operate the Site and fulfill orders.
-                                </p>
-                                <p class="text-gray-700 leading-relaxed">
-                                    We may also disclose information if required by law, to respond to legal requests, or to protect our rights and users.
-                                </p>
-                            </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="bg-white border border-pink-200 rounded-xl p-6">
-                                    <h2 class="text-2xl font-bold text-gray-900 mb-3">5. Data retention</h2>
-                                    <p class="text-gray-700 leading-relaxed">
-                                        We retain personal information as long as necessary to provide services, comply with legal obligations, resolve disputes, and enforce our agreements.
-                                    </p>
-                                </div>
-
-                                <div class="bg-white border border-pink-200 rounded-xl p-6">
-                                    <h2 class="text-2xl font-bold text-gray-900 mb-3">6. Your rights</h2>
+                                    <h2 class="text-2xl font-bold text-gray-900 mb-3">7. Data retention</h2>
                                     <p class="text-gray-700 leading-relaxed mb-3">
-                                        Depending on your location, you may have rights to access, correct, delete, or restrict certain processing of your personal information.
+                                        We keep personal information only as long as needed for the purposes described in this Policy, including providing the Services, resolving disputes, preventing fraud, and meeting legal, tax, and accounting requirements.
                                     </p>
                                     <p class="text-gray-700 leading-relaxed">
-                                        To request changes, contact us at <a class="text-[#0297FE] font-semibold underline hover:text-[#d6386a]" href="mailto:support@blulavelle.com">support@blulavelle.com</a>.
+                                        Order records and related financial records may be retained longer when the law requires. Try-On images follow the shorter retention described in Section 3. Chat transcripts may be retained to support your conversation and improve support quality, then deleted or anonymized when no longer needed.
                                     </p>
                                 </div>
+
+                                <div class="bg-white border border-pink-200 rounded-xl p-6">
+                                    <h2 class="text-2xl font-bold text-gray-900 mb-3">8. Account deletion &amp; your rights</h2>
+                                    <p class="text-gray-700 leading-relaxed mb-3">
+                                        <strong>You can delete your account in the App under Account → Delete Account</strong>, or by emailing <a class="text-[#0297FE] font-semibold underline hover:text-[#d6386a]" href="mailto:support@blulavelle.com">support@blulavelle.com</a>. We delete or anonymize your account data within <strong>30 days</strong>, except data we must keep by law (for example certain order, payment, or tax records).
+                                    </p>
+                                    <p class="text-gray-700 leading-relaxed mb-3">
+                                        Depending on where you live, you may also have rights to access, correct, delete, restrict, or object to certain processing, and to data portability.
+                                    </p>
+                                    <p class="text-gray-700 leading-relaxed">
+                                        UK/EU users may have rights under UK GDPR / GDPR and can complain to a supervisory authority (in the UK, the Information Commissioner’s Office at <a class="text-[#0297FE] font-semibold underline" href="https://ico.org.uk" target="_blank" rel="noopener">ico.org.uk</a>). California residents may have additional rights under the CCPA/CPRA, including the right to know, delete, correct, and opt out of sale/sharing as described above. We will not discriminate against you for exercising privacy rights.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="bg-white border border-pink-200 rounded-xl p-6">
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3">9. Legal bases (UK / EU)</h2>
+                                <p class="text-gray-700 leading-relaxed mb-3">
+                                    Where UK GDPR / GDPR applies, we process personal data on one or more of these bases:
+                                </p>
+                                <ul class="list-disc list-inside text-gray-700 space-y-2">
+                                    <li><strong>Contract:</strong> to take steps at your request and to perform a contract (for example checkout, delivery, account services).</li>
+                                    <li><strong>Legitimate interests:</strong> to secure and improve the Services, prevent fraud, and understand aggregated usage, where those interests are not overridden by your rights.</li>
+                                    <li><strong>Consent:</strong> for optional marketing emails, certain cookies/advertising technologies, camera/photo access, and push notifications where consent is required.</li>
+                                    <li><strong>Legal obligation:</strong> to meet tax, accounting, consumer, and other legal requirements.</li>
+                                </ul>
+                            </div>
+
+                            <div class="bg-white border border-pink-200 rounded-xl p-6">
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3">10. Children</h2>
+                                <p class="text-gray-700 leading-relaxed">
+                                    Our Services are not directed to children under 13, and we do not knowingly collect personal information from children under 13. If you believe a child has provided personal information, contact us and we will take appropriate steps to delete it.
+                                </p>
+                            </div>
+
+                            <div class="bg-white border border-pink-200 rounded-xl p-6">
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3">11. Changes to this Policy</h2>
+                                <p class="text-gray-700 leading-relaxed">
+                                    We may update this Privacy Policy from time to time. The “Last updated” date at the top will change when we do. Continued use of the website or App after an update means you acknowledge the revised Policy. For material changes, we may provide additional notice (for example by email or in-app message).
+                                </p>
                             </div>
 
                             <div class="bg-gradient-to-r from-[#0297FE] to-[#d6386a] rounded-lg p-8 text-center text-white">
                                 <h3 class="text-2xl font-bold mb-2">Contact</h3>
-                                <p class="text-pink-100 mb-4">Questions about privacy? We’re here to help.</p>
+                                <p class="text-pink-100 mb-4">Privacy questions for the Blu Lavelle website or mobile app? Email us and we will help.</p>
+                                <div class="text-pink-100 text-sm mb-4 space-y-1">
+                                    <p>Bluprinter LLC — 5900 Balcones Dr Ste 100, Austin, TX 78731, USA</p>
+                                    <p>Bluprinter LTD — 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom</p>
+                                </div>
                                 <div class="flex flex-col sm:flex-row justify-center items-center gap-3">
                                     <a href="mailto:support@blulavelle.com" class="inline-flex items-center px-8 py-3 bg-white text-[#0297FE] font-bold rounded-lg shadow-lg hover:shadow-xl transition duration-200">
                                         support@blulavelle.com
@@ -4337,73 +4450,70 @@ class PageSeeder extends Seeder
                         </div>
                     </div>
                 </div>',
-                'excerpt' => 'Privacy policy explaining how Blu Lavelle collects, uses, and protects customer information.',
-                'status' => 'published',
-                'published_at' => now(),
-                'template' => 'default',
-                'show_in_menu' => true,
-                'menu_title' => 'Privacy Policy',
-                'sort_order' => 18,
-                'meta_title' => 'Privacy Policy - Blu Lavelle',
-                'meta_description' => 'Read Blu Lavelle Privacy Policy: what data we collect, how we use it, cookies, sharing, retention, and your rights.',
-            ],
+            'excerpt' => 'Privacy policy for the Blu Lavelle website and mobile app: account deletion, Virtual Try-On photos, chat, marketing, cookies/ads, GDPR and CCPA rights.',
+            'status' => 'published',
+            'published_at' => now(),
+            'template' => 'default',
+            'show_in_menu' => true,
+            'menu_title' => 'Privacy Policy',
+            'sort_order' => 18,
+            'meta_title' => 'Privacy Policy - Blu Lavelle',
+            'meta_description' => 'Blu Lavelle Privacy Policy for website and app: data we collect, Virtual Try-On, Live Chat, cookies and ads (Meta, Pinterest, Google), account deletion, GDPR and CCPA rights.',
         ];
+    }
 
-        // Create pages
-        foreach ($pages as $page) {
-            // Normalize brand color: replace all pink accents to primary blue (#0195FE)
-            if (!empty($page['content']) && is_string($page['content'])) {
-                $page['content'] = str_replace(
-                    [
-                        // Hex codes (legacy + current)
-                        '#F0427C',
-                        '#f0427c',
-                        '#d6386a',
-                        '#D6386A',
-                        '#f89192',
-                        '#F89192',
-                        '#0297FE',
-                        '#0195FE',
-                        // Layout widths (make pages wider)
-                        'max-w-4xl',
-                        'max-w-5xl',
-                        'max-w-6xl',
-                        'max-w-7xl',
-                        'text-pink-',
-                        'bg-pink-',
-                        'border-pink-',
-                        'from-pink-',
-                        'to-pink-',
-                        'via-pink-',
-                    ],
-                    [
-                        '#0195FE',
-                        '#0195FE',
-                        '#0195FE',
-                        '#0195FE',
-                        '#0195FE',
-                        '#0195FE',
-                        '#0195FE',
-                        '#0195FE',
-                        'max-w-screen-2xl',
-                        'max-w-screen-2xl',
-                        'max-w-screen-2xl',
-                        'max-w-screen-2xl',
-                        'text-sky-',
-                        'bg-sky-',
-                        'border-sky-',
-                        'from-sky-',
-                        'to-sky-',
-                        'via-sky-',
-                    ],
-                    $page['content']
-                );
-            }
-
-            Page::create($page);
-            $this->command->info("✓ Created page: {$page['title']}");
+    /**
+     * @param  array<string, mixed>  $page
+     * @return array<string, mixed>
+     */
+    public function normalizePagePresentation(array $page): array
+    {
+        if (! empty($page['content']) && is_string($page['content'])) {
+            $page['content'] = str_replace(
+                [
+                    '#F0427C',
+                    '#f0427c',
+                    '#d6386a',
+                    '#D6386A',
+                    '#f89192',
+                    '#F89192',
+                    '#0297FE',
+                    '#0195FE',
+                    'max-w-4xl',
+                    'max-w-5xl',
+                    'max-w-6xl',
+                    'max-w-7xl',
+                    'text-pink-',
+                    'bg-pink-',
+                    'border-pink-',
+                    'from-pink-',
+                    'to-pink-',
+                    'via-pink-',
+                ],
+                [
+                    '#0195FE',
+                    '#0195FE',
+                    '#0195FE',
+                    '#0195FE',
+                    '#0195FE',
+                    '#0195FE',
+                    '#0195FE',
+                    '#0195FE',
+                    'max-w-screen-2xl',
+                    'max-w-screen-2xl',
+                    'max-w-screen-2xl',
+                    'max-w-screen-2xl',
+                    'text-sky-',
+                    'bg-sky-',
+                    'border-sky-',
+                    'from-sky-',
+                    'to-sky-',
+                    'via-sky-',
+                ],
+                $page['content']
+            );
         }
 
-        $this->command->info('Done! Created ' . count($pages) . ' pages.');
+        return $page;
     }
 }
