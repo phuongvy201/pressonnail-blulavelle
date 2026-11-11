@@ -42,6 +42,14 @@
             <p class="vnt-async-tip__text"><strong>Tip:</strong> Generation can take 1–3 minutes. You can browse the store while you wait — we’ll notify you when your preview is ready.</p>
         </div>
 
+        <div class="mb-6">
+            <x-app-download-inline
+                campaign="website_tryon"
+                title="Better results with your phone camera"
+                text="Get the BluLavelle app for Virtual Try-On, order tracking, and new drop alerts."
+            />
+        </div>
+
         <div id="vnt-tryon-unavailable" class="vnt-tryon-banner vnt-tryon-banner--unavailable is-hidden" role="alert" aria-live="polite">
             <div class="vnt-tryon-banner__icon" aria-hidden="true">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>

@@ -98,9 +98,28 @@
                         </td>
                     </tr>
                     <tr>
-                        <td style="padding:20px 24px 26px 24px;border-top:1px solid #e5e7eb;text-align:center;">
+                        <td style="padding:20px 24px 8px 24px;border-top:1px solid #e5e7eb;text-align:center;">
                             <p style="margin:0;color:#334155;">Your order is currently being prepared. We’ll send you another email once it has been shipped.</p>
                             <p style="margin:12px 0 0 0;color:#334155;">If you have any questions, feel free to contact us.</p>
+                        </td>
+                    </tr>
+                    @php
+                        $appStoreUrl = \App\Support\MobileAppLinks::iosUrl('order_confirmation_email');
+                        $appStoreBadge = rtrim((string) config('app.url'), '/').'/images/app-badges/app-store-black.svg';
+                    @endphp
+                    @if($appStoreUrl !== '')
+                    <tr>
+                        <td style="padding:16px 24px 8px 24px;text-align:center;">
+                            <p style="margin:0 0 10px 0;color:#0f172a;font-size:16px;font-weight:700;">Track your order in the app</p>
+                            <p style="margin:0 0 14px 0;color:#64748b;font-size:14px;">Download BluLavelle for shipping updates and faster reorders.</p>
+                            <a href="{{ $appStoreUrl }}" target="_blank" rel="noopener noreferrer" style="display:inline-block;">
+                                <img src="{{ $appStoreBadge }}" alt="Download on the App Store" height="40" style="height:40px;width:auto;border:0;">
+                            </a>
+                        </td>
+                    </tr>
+                    @endif
+                    <tr>
+                        <td style="padding:12px 24px 26px 24px;text-align:center;">
                             <p style="margin:18px 0 0 0;font-size:30px;color:#0f172a;">We hope to see you again,</p>
                             <p style="margin:4px 0 0 0;color:#0195FE;font-size:28px;font-weight:700;">Blu Lavelle Team</p>
                         </td>

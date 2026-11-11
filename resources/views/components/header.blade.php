@@ -273,6 +273,15 @@
                 </a>
             </nav>
         </div>
+
+        {{-- Get the app --}}
+        <div>
+            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-600 px-2 mb-2">Get the app</p>
+            <div class="rounded-xl border border-slate-200/80 bg-white p-3">
+                <p class="text-xs text-slate-600 mb-3 leading-relaxed">Try nails on virtually, track orders, and get new drops first.</p>
+                <x-app-download-badges campaign="website_mobile_menu" layout="stack" />
+            </div>
+        </div>
     </div>
 </div>
 

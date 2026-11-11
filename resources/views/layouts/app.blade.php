@@ -340,6 +340,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="{{ config('app.name', 'Blulavelle') }}">
+    @if($__itunesBanner = \App\Support\MobileAppLinks::itunesSmartBannerContent())
+    <meta name="apple-itunes-app" content="{{ $__itunesBanner }}">
+    @endif
 
     <title>{{ config('app.name', 'Blulavelle') }} - {{ $title ?? 'Home' }}</title>
 
@@ -419,6 +422,18 @@
     .promo-banner-animate {
         animation: promo-banner-shift 6s ease-in-out infinite;
     }
+    .promo-banner-animate:has(.group\/promo-app:hover),
+    .promo-banner-animate:has(.group\/promo-app:focus-within) {
+        animation-play-state: paused;
+    }
+    /* Override banner text-white so the white pill CTA stays readable */
+    .promo-app-cta,
+    .promo-app-cta span {
+        color: #111827 !important;
+    }
+    .promo-app-cta .promo-app-cta-icon {
+        color: #fff !important;
+    }
     </style>
     @stack('styles')
 </head>
@@ -439,13 +454,38 @@
         $footerFaqBgCustom = (is_string($footerFaqBg) && (str_starts_with(trim($footerFaqBg), '#') || str_starts_with(trim($footerFaqBg), 'rgb'))) ? trim($footerFaqBg) : null;
         $footerBgCustom = (is_string($footerBg) && (str_starts_with(trim($footerBg), '#') || str_starts_with(trim($footerBg), 'rgb'))) ? trim($footerBg) : null;
         $footerFaq = content_block('layout.footer_faq', footer_faq_block_defaults());
+        $promoAppUrl = \App\Support\MobileAppLinks::iosUrl('website_header');
+        $promoBannerText = \App\Support\Settings::get('site.promo_banner', config('theme.promo_banner', 'Free Shipping on Orders Over $150 • Premium Press-on Nails'));
     @endphp
 <div
-class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text-white text-center px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold tracking-wide promo-banner-animate"
+    class="relative w-full promo-banner-animate z-[60] text-white"
+    @if($promoBannerCustom) style="animation: none; background-color: {{ $promoBannerCustom }};" @endif
 >
-<span class="block leading-tight">
-    {{ \App\Support\Settings::get('site.promo_banner', config('theme.promo_banner', 'Free Shipping on Orders Over $150 â€¢ Premium Press-on Nails')) }}
-</span>
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-10 py-2 sm:py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4">
+        <p class="text-[11px] sm:text-sm font-semibold tracking-wide text-center sm:text-left leading-snug text-white/95">
+            {{ $promoBannerText }}
+        </p>
+
+        @if($promoAppUrl !== '')
+        <div class="relative group/promo-app shrink-0">
+            <a href="{{ $promoAppUrl }}" target="_blank" rel="noopener noreferrer" class="promo-app-cta inline-flex items-center gap-2 rounded-full bg-white pl-2.5 pr-3.5 py-1.5 shadow-md shadow-black/10 ring-1 ring-black/5 hover:bg-white hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white">
+                <span class="promo-app-cta-icon inline-flex h-6 w-6 items-center justify-center rounded-full bg-black">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5C17.88 20.74 17 21.95 15.66 21.97C14.32 22 13.89 21.18 12.37 21.18C10.84 21.18 10.37 21.95 9.1 22C7.79 22.05 6.8 20.68 5.96 19.47C4.25 16.76 2.93 11.82 4.7 8.55C5.58 6.92 7.25 5.9 9.07 5.86C10.34 5.83 11.54 6.72 12.32 6.72C13.09 6.72 14.55 5.66 16.08 5.83C16.74 5.86 18.56 6.1 19.72 7.84C19.62 7.9 17.42 9.2 17.45 11.9C17.49 15.14 20.23 16.2 20.26 16.21C20.23 16.29 19.82 17.67 18.71 19.5ZM13 3.5C13.73 2.67 14.94 2.04 15.94 2C16.07 3.17 15.6 4.35 14.9 5.19C14.21 6.04 13.07 6.7 11.95 6.61C11.8 5.46 12.36 4.26 13 3.5Z"/></svg>
+                </span>
+                <span class="text-xs sm:text-[13px] font-bold tracking-tight">Get the App</span>
+            </a>
+            <div class="absolute right-0 left-1/2 sm:left-auto top-full mt-2.5 w-[min(17rem,calc(100vw-1.5rem))] -translate-x-1/2 sm:translate-x-0 rounded-2xl bg-white text-slate-900 shadow-2xl shadow-black/20 ring-1 ring-black/5 opacity-0 invisible translate-y-1 group-hover/promo-app:opacity-100 group-hover/promo-app:visible group-hover/promo-app:translate-y-0 group-focus-within/promo-app:opacity-100 group-focus-within/promo-app:visible group-focus-within/promo-app:translate-y-0 transition-all duration-200 z-[70] overflow-hidden">
+                <div class="px-4 py-3 border-b border-slate-100">
+                    <p class="text-sm font-bold text-slate-900">Download BluLavelle</p>
+                    <p class="text-[11px] text-slate-500 mt-0.5">iPhone &amp; iPad · App Store</p>
+                </div>
+                <div class="p-3 bg-slate-50 flex justify-center">
+                    <x-app-store-badge campaign="website_header" :height="44" />
+                </div>
+            </div>
+        </div>
+        @endif
+    </div>
 </div>
     
     <div class="min-h-screen">
@@ -602,6 +642,13 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                                 </a>
                             </div>
                         </div>
+                        <div>
+                            <p class="text-sm font-bold text-white mb-2">Get the BluLavelle app</p>
+                            <p class="text-xs text-slate-400 mb-3 leading-relaxed max-w-md">
+                                Try nails on virtually, track orders, and get new drops first — on iPhone &amp; iPad.
+                            </p>
+                            <x-app-download-badges campaign="website_footer" layout="row" />
+                        </div>
                         <div class="flex flex-wrap gap-2">
                             <a href="{{ route('support.ticket.create') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800/80 border border-primary/50 text-white text-sm font-medium rounded-lg hover:bg-slate-700/80 transition-colors">
                                 <span class="material-symbols-outlined text-base">confirmation_number</span>
@@ -682,6 +729,13 @@ class="w-full min-h-[32px] sm:min-h-[40px] flex items-center justify-center text
                                 <li><a href="{{ route('bulk.order.create') }}" class="text-slate-300 hover:text-primary transition-colors">Bulk Order</a></li>
                                 <li><a href="{{ route('promo.code.create') }}" class="text-slate-300 hover:text-primary transition-colors">Promo Code</a></li>
                                 <li><a href="/become-a-seller" class="text-slate-300 hover:text-primary transition-colors">Sell on Blulavelle</a></li>
+                                <li>
+                                    @if($promoAppUrl !== '')
+                                        <a href="{{ \App\Support\MobileAppLinks::iosUrl('website_footer') }}" target="_blank" rel="noopener noreferrer" class="text-slate-300 hover:text-primary transition-colors">Mobile App</a>
+                                    @else
+                                        <span class="text-slate-500" title="Coming soon">Mobile App</span>
+                                    @endif
+                                </li>
                             </ul>
                         </div>
                     </div>

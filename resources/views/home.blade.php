@@ -448,6 +448,14 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
 </section>
+
+<x-app-download-strip
+    campaign="website_hero"
+    qr-campaign="website_hero_qr"
+    headline="BluLavelle in your pocket"
+    body="Try nails on virtually, track orders, and get new drops first."
+/>
+
 <style>
 .hero-heading-font { font-family: 'Fraunces', Georgia, serif; font-weight: 400; }
 .hero-glass-left, .hero-glass-left p, .hero-glass-left span, .hero-glass-left a { font-family: 'Manrope', sans-serif; }

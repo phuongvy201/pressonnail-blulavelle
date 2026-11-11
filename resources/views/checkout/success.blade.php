@@ -308,6 +308,13 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>
             <h1 class="text-slate-900 tracking-tight text-3xl md:text-4xl font-extrabold leading-tight mb-2">Thank You for Your Order!</h1>
             <p class="text-slate-500 text-lg">Your order <span class="font-bold" style="color: {{ $primary }};">#{{ $order->order_number }}</span> has been placed successfully.</p>
+            <div class="mt-6 w-full max-w-xl">
+                <x-app-download-inline
+                    campaign="order_confirmation"
+                    title="Track your order in the app"
+                    text="Download BluLavelle to follow shipping updates and reorder your favorite sets."
+                />
+            </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
