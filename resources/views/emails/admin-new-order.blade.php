@@ -31,6 +31,7 @@
                         <td style="padding:10px 24px;">
                             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#f8fafc;border:1px solid #e5e7eb;">
                                 <tr><td style="padding:9px 12px;color:#64748b;">Order ID</td><td style="padding:9px 12px;text-align:right;color:#0f172a;">#{{ $order->order_number }}</td></tr>
+                                <tr><td style="padding:9px 12px;color:#64748b;">Channel</td><td style="padding:9px 12px;text-align:right;color:#0f172a;">{{ \App\Support\SalesChannel::placedPhrase($order->sales_channel) }}</td></tr>
                                 <tr><td style="padding:9px 12px;color:#64748b;">Order Date</td><td style="padding:9px 12px;text-align:right;color:#0f172a;">{{ $order->created_at->format('M d, Y H:i') }}</td></tr>
                                 <tr><td style="padding:9px 12px;color:#64748b;">Total</td><td style="padding:9px 12px;text-align:right;color:#0f172a;">${{ number_format($order->total_amount, 2) }}</td></tr>
                                 <tr><td style="padding:9px 12px;color:#64748b;">Payment Status</td><td style="padding:9px 12px;text-align:right;color:#0f172a;">{{ ucfirst($order->payment_status) }}</td></tr>

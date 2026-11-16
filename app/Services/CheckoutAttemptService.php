@@ -5,7 +5,9 @@ namespace App\Services;
 use App\Http\Controllers\CheckoutController;
 use App\Models\CheckoutAttempt;
 use App\Models\Order;
+use App\Services\Orders\OrderPaidMailer;
 use App\Support\ApiV1\ApiResponse;
+use App\Support\SalesChannel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Stripe\Checkout\Session as StripeCheckoutSession;
@@ -432,6 +434,17 @@ class CheckoutAttemptService
             'payment_intent_id' => $paymentIntentId,
             'error_code' => null,
         ]);
+
+        $this->sendAppOrderConfirmation($order);
+    }
+
+    private function sendAppOrderConfirmation(?Order $order): void
+    {
+        if (! $order || $order->sales_channel !== SalesChannel::APP || $order->payment_status !== 'paid') {
+            return;
+        }
+
+        app(OrderPaidMailer::class)->send($order);
     }
 
     private function normalizeResult(CheckoutAttempt $attempt, ?Order $order): ?array

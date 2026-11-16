@@ -1,6 +1,11 @@
 @extends('layouts.app')
 
 @section('title', $product->name)
+@section('meta_title', \App\Support\Seo::productTitle($product))
+@section('meta_description', \App\Support\Seo::productDescription($product))
+@section('canonical', \App\Support\Seo::canonicalPath('/products/'.$product->slug))
+@section('og_type', 'product')
+@section('og_image', \App\Support\Seo::productImageUrl($product) ?? \App\Support\Seo::defaultShareImage())
 
 @section('content')
 @php

@@ -1,5 +1,8 @@
 @extends('layouts.app')
 
+@section('meta_title', 'BluLavelle | Handcrafted Stained Glass Press-On Nails')
+@section('meta_description', 'Shop handmade stained glass and custom-sized press-on nails from independent artists. Reusable sets with a sizing kit, ready in about 10 minutes.')
+
 @section('content')
 @php
     // Nội dung các block bên dưới lưu trong DB (bảng content_blocks). Khi chỉnh qua admin inline-edit sẽ ghi đè; default ở đây chỉ dùng khi chưa có bản ghi.

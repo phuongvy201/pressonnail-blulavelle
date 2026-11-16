@@ -19,10 +19,10 @@ class PageController extends Controller
 
         // Redirect to dedicated routes
         if ($slug === 'shipping-delivery') {
-            return redirect()->route('shipping-delivery.index');
+            return redirect()->route('shipping-delivery.index', status: 301);
         }
         if ($slug === 'sizing-kit') {
-            return redirect()->route('sizing-kit.index');
+            return redirect()->route('sizing-kit.index', status: 301);
         }
 
         $page = Page::where('slug', $slug)

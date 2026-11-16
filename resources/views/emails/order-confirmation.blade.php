@@ -19,6 +19,7 @@
                         <td style="padding:4px 24px 16px 24px;text-align:center;border-bottom:1px solid #e5e7eb;">
                             <p style="margin:0;font-size:46px;line-height:1;color:#0195FE;font-weight:700;">Order Confirmation</p>
                             <p style="margin:10px 0 0 0;color:#64748b;">Order #{{ $order->order_number }}</p>
+                            <p style="margin:6px 0 0 0;color:#0f172a;font-weight:700;">{{ \App\Support\SalesChannel::placedPhrase($order->sales_channel) }}</p>
                         </td>
                     </tr>
                     <tr>

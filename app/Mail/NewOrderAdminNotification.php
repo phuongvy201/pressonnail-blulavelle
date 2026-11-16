@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Order;
+use App\Support\SalesChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -23,7 +24,7 @@ class NewOrderAdminNotification extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'New Order Placed - ' . $this->order->order_number,
+            subject: 'New Order Placed - ' . $this->order->order_number . ' (' . SalesChannel::label($this->order->sales_channel) . ')',
             from: config('mail.from.address'),
         );
     }

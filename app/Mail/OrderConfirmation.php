@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Order;
+use App\Support\SalesChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -30,7 +31,7 @@ class OrderConfirmation extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Order Confirmation - ' . $this->order->order_number,
+            subject: 'Order Confirmation - ' . $this->order->order_number . ' (' . SalesChannel::label($this->order->sales_channel) . ')',
             from: config('mail.from.address'),
         );
     }

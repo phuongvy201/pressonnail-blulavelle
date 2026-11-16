@@ -70,6 +70,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhooks/stripe',
         ]);
 
+        $middleware->web(prepend: [
+            \App\Http\Middleware\CanonicalUrl::class,
+        ]);
+
         $middleware->web(append: [
             \App\Http\Middleware\RememberCartSession::class,
             \App\Http\Middleware\TrackAffiliateReferral::class,

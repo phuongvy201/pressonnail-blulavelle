@@ -319,18 +319,38 @@
     <meta name="google-site-verification" content="gGIR-fmeNV2oZz1duWvcwwKqTbqtvKM2OsiaTUyiLZc" />
     @php
         $defaultSiteDescription = 'Premium press-on nails with free shipping. Discover reusable, salon-quality nails at Blulavelle.';
-        $metaDescription = trim((string) $__env->yieldContent('meta_description', $defaultSiteDescription));
-        $metaTitle = trim((string) $__env->yieldContent('meta_title', config('app.name', 'Blulavelle') . ' - ' . ($title ?? 'Home')));
+        $metaDescription = trim((string) $__env->yieldContent('meta_description'));
+        if ($metaDescription === '') {
+            $metaDescription = $defaultSiteDescription;
+        }
+        $metaTitle = \App\Support\Seo::documentTitle(
+            trim((string) $__env->yieldContent('meta_title')),
+            trim((string) $__env->yieldContent('title')),
+            trim((string) ($title ?? ''))
+        );
         $ogType = trim((string) $__env->yieldContent('og_type', 'website'));
-        $ogUrl = trim((string) $__env->yieldContent('og_url', url()->current()));
-        $ogImage = trim((string) $__env->yieldContent('og_image', asset('favicon.png')));
+        if ($ogType === '') {
+            $ogType = 'website';
+        }
+        $canonical = trim((string) $__env->yieldContent('canonical'));
+        if ($canonical === '') {
+            $canonical = \App\Support\Seo::canonicalFromRequest();
+        }
+        $ogImage = trim((string) $__env->yieldContent('og_image'));
+        if ($ogImage === '' || str_ends_with((string) (parse_url($ogImage, PHP_URL_PATH) ?: $ogImage), 'favicon.png')) {
+            $ogImage = \App\Support\Seo::defaultShareImage();
+        } else {
+            $ogImage = \App\Support\Seo::publicAsset($ogImage);
+        }
     @endphp
+    <title>{{ $metaTitle }}</title>
+    <link rel="canonical" href="{{ $canonical }}">
     <meta name="description" content="{{ $metaDescription }}">
     <meta property="og:type" content="{{ $ogType }}">
     <meta property="og:title" content="{{ $metaTitle }}">
     <meta property="og:description" content="{{ $metaDescription }}">
     <meta property="og:image" content="{{ $ogImage }}">
-    <meta property="og:url" content="{{ $ogUrl }}">
+    <meta property="og:url" content="{{ $canonical }}">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $metaTitle }}">
     <meta name="twitter:description" content="{{ $metaDescription }}">
@@ -343,8 +363,6 @@
     @if($__itunesBanner = \App\Support\MobileAppLinks::itunesSmartBannerContent())
     <meta name="apple-itunes-app" content="{{ $__itunesBanner }}">
     @endif
-
-    <title>{{ config('app.name', 'Blulavelle') }} - {{ $title ?? 'Home' }}</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">

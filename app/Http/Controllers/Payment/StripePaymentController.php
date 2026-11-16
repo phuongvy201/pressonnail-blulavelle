@@ -7,8 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Models\CheckoutAttempt;
 use App\Models\Order;
 use App\Models\StripeWebhookEvent;
+use App\Services\Orders\OrderPaidMailer;
 use App\Services\ShippingCalculator;
 use App\Services\CrossSellService;
+use App\Support\SalesChannel;
 use App\Services\TikTokEventsService;
 use App\Services\CurrencyService;
 use App\Mail\OrderConfirmation;
@@ -493,6 +495,9 @@ class StripePaymentController extends Controller
 
         if ($order) {
             $this->sendCrossSellEmail($order);
+            if ($order->sales_channel === SalesChannel::APP && $order->payment_status === 'paid') {
+                app(OrderPaidMailer::class)->send($order);
+            }
         }
     }
 

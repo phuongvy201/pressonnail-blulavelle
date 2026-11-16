@@ -23,4 +23,11 @@ class SalesChannel
     {
         return $channel === self::APP ? 'App' : 'Website';
     }
+
+    public static function placedPhrase(?string $channel): string
+    {
+        return $channel === self::APP
+            ? 'Placed in the BluLavelle app'
+            : 'Placed on the BluLavelle website';
+    }
 }
