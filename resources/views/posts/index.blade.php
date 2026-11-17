@@ -4,7 +4,7 @@
 
 @section('content')
 <!-- Blog Header -->
-<div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white">
+<div class="bg-gradient-to-r from-[#0195FE] to-[#0180d9] text-white">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div class="text-center">
             <h1 class="text-4xl md:text-5xl font-bold mb-4">Our Blog</h1>
@@ -27,15 +27,15 @@
                                name="search" 
                                value="{{ request('search') }}"
                                placeholder="Search articles..." 
-                               class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#005366]">
+                               class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0195FE]">
                         <select name="sort" 
                                 onchange="this.form.submit()"
-                                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#005366]">
+                                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0195FE]">
                             <option value="latest" {{ request('sort') == 'latest' ? 'selected' : '' }}>Latest</option>
                             <option value="popular" {{ request('sort') == 'popular' ? 'selected' : '' }}>Most Viewed</option>
                             <option value="trending" {{ request('sort') == 'trending' ? 'selected' : '' }}>Trending</option>
                         </select>
-                        <button type="submit" class="px-6 py-2 bg-[#F0427C] text-white rounded-lg hover:bg-[#d6386a] transition">
+                        <button type="submit" class="px-6 py-2 bg-[#0195FE] text-white rounded-lg hover:bg-[#0180d9] transition">
                             Apply
                         </button>
                     </form>
@@ -76,7 +76,7 @@
 
                                         <div class="flex items-center space-x-3 text-sm text-gray-500 mb-3">
                                             @if($post->category)
-                                                <a href="{{ route('blog.category', $post->category->slug) }}" class="text-[#F0427C] hover:text-[#d6386a] font-semibold">
+                                                <a href="{{ route('blog.category', $post->category->slug) }}" class="text-[#0195FE] hover:text-[#0180d9] font-semibold">
                                                     {{ $post->category->name }}
                                                 </a>
                                             @endif
@@ -88,7 +88,7 @@
                                             <span>{{ $post->reading_time ?? 1 }} min read</span>
                                         </div>
 
-                                        <h2 class="text-2xl font-bold text-gray-900 mb-3 hover:text-[#005366] transition">
+                                        <h2 class="text-2xl font-bold text-gray-900 mb-3 hover:text-[#0195FE] transition">
                                             <a href="{{ route('blog.show', $post->slug) }}">{{ $post->title }}</a>
                                         </h2>
 
@@ -99,7 +99,7 @@
                                         <div class="flex items-center justify-between">
                                             <div class="flex items-center space-x-4 text-sm text-gray-500">
                                                 @if($post->shop)
-                                                    <a href="{{ route('shops.show', $post->shop->shop_slug) }}" class="flex items-center hover:text-[#005366]">
+                                                    <a href="{{ route('shops.show', $post->shop->shop_slug) }}" class="flex items-center hover:text-[#0195FE]">
                                                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                                                         </svg>
@@ -115,7 +115,7 @@
                                                 </span>
                                             </div>
 
-                                            <a href="{{ route('blog.show', $post->slug) }}" class="text-[#F0427C] hover:text-[#d6386a] font-semibold text-sm flex items-center">
+                                            <a href="{{ route('blog.show', $post->slug) }}" class="text-[#0195FE] hover:text-[#0180d9] font-semibold text-sm flex items-center">
                                                 Read More
                                                 <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -149,7 +149,7 @@
                         <div class="space-y-4">
                             @foreach($featuredPosts as $featured)
                                 <a href="{{ route('blog.show', $featured->slug) }}" class="block group">
-                                    <h4 class="font-semibold text-gray-900 group-hover:text-[#005366] mb-1 line-clamp-2">
+                                    <h4 class="font-semibold text-gray-900 group-hover:text-[#0195FE] mb-1 line-clamp-2">
                                         {{ $featured->title }}
                                     </h4>
                                     <p class="text-xs text-gray-500">{{ $featured->published_at ? $featured->published_at->format('M d, Y') : 'Draft' }}</p>
@@ -165,7 +165,7 @@
                         <h3 class="text-xl font-bold text-gray-900 mb-4">Categories</h3>
                         <div class="space-y-2">
                             @foreach($categories as $category)
-                                <a href="{{ route('blog.category', $category->slug) }}" class="flex items-center justify-between text-gray-700 hover:text-[#005366] transition">
+                                <a href="{{ route('blog.category', $category->slug) }}" class="flex items-center justify-between text-gray-700 hover:text-[#0195FE] transition">
                                     <span>{{ $category->name }}</span>
                                     <span class="text-sm text-gray-500">({{ $category->posts_count }})</span>
                                 </a>
@@ -180,7 +180,7 @@
                         <h3 class="text-xl font-bold text-gray-900 mb-4">Popular Tags</h3>
                         <div class="flex flex-wrap gap-2">
                             @foreach($popularTags as $tag)
-                                <a href="{{ route('blog.tag', $tag->slug) }}" class="inline-block px-3 py-1 bg-gray-100 hover:bg-[#005366] hover:text-white text-gray-700 text-sm rounded-full transition">
+                                <a href="{{ route('blog.tag', $tag->slug) }}" class="inline-block px-3 py-1 bg-gray-100 hover:bg-[#0195FE] hover:text-white text-gray-700 text-sm rounded-full transition">
                                     #{{ $tag->name }}
                                 </a>
                             @endforeach

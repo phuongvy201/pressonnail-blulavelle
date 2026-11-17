@@ -1843,7 +1843,7 @@ class PageSeeder extends Seeder
                                                 </div>
                                             </div>
                                             <h3 class="text-xl font-bold text-gray-800 mb-2">Phone</h3>
-                                            <a href="tel:0767383676" class="text-[#0297FE] hover:text-pink-800 font-semibold text-lg">+12053899573</a>
+                                            <a href="tel:+12053899573" class="text-[#0297FE] hover:text-pink-800 font-semibold text-lg">+12053899573</a>
                                         </div>
 
                                         <div class="bg-white rounded-lg p-6 shadow-lg text-center border-2 border-pink-200 hover:border-purple-400 transition duration-200">
@@ -4283,7 +4283,7 @@ class PageSeeder extends Seeder
                                 </p>
                                 <ul class="list-disc list-inside text-gray-800 space-y-2">
                                     <li><strong>Bluprinter LLC (US)</strong> — 5900 Balcones Dr Ste 100, Austin, TX 78731, USA</li>
-                                    <li><strong>Bluprinter LTD (UK)</strong> — Company Number 16342015, 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom</li>
+                                    <li><strong>Bluprinter LTD (UK)</strong> — Company Number 16342615, 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom</li>
                                 </ul>
                                 <p class="text-gray-700 leading-relaxed text-sm">
                                     The Blu Lavelle customer experience is our own press-on nail shop. Product listings and fulfillment are operated by Blu Lavelle / Bluprinter. If you see marketplace-style language elsewhere on the website, it does not change who controls customer personal data for purchases made through Blu Lavelle.

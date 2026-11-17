@@ -318,11 +318,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="google-site-verification" content="gGIR-fmeNV2oZz1duWvcwwKqTbqtvKM2OsiaTUyiLZc" />
     @php
-        $defaultSiteDescription = 'Premium press-on nails with free shipping. Discover reusable, salon-quality nails at Blulavelle.';
-        $metaDescription = trim((string) $__env->yieldContent('meta_description'));
-        if ($metaDescription === '') {
-            $metaDescription = $defaultSiteDescription;
-        }
+        $metaDescription = \App\Support\Seo::metaDescription(trim((string) $__env->yieldContent('meta_description')));
+        $robots = trim((string) $__env->yieldContent('robots'));
         $metaTitle = \App\Support\Seo::documentTitle(
             trim((string) $__env->yieldContent('meta_title')),
             trim((string) $__env->yieldContent('title')),
@@ -345,7 +342,12 @@
     @endphp
     <title>{{ $metaTitle }}</title>
     <link rel="canonical" href="{{ $canonical }}">
+    {!! \App\Support\Seo::jsonLdScript([\App\Support\Seo::organizationNode(), \App\Support\Seo::websiteNode()]) !!}
+    @stack('json-ld')
     <meta name="description" content="{{ $metaDescription }}">
+    @if($robots !== '')
+    <meta name="robots" content="{{ $robots }}">
+    @endif
     <meta property="og:type" content="{{ $ogType }}">
     <meta property="og:title" content="{{ $metaTitle }}">
     <meta property="og:description" content="{{ $metaDescription }}">
@@ -365,9 +367,10 @@
     @endif
 
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+    <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}" sizes="594x594">
     <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
-    <link rel="apple-touch-icon" href="{{ asset('images/logo/BABYBLUE.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('favicon.png') }}" sizes="594x594">
 
     @php
         // Chá»¯: swap. Icon: má»™t trá»¥c cá»‘ Ä‘á»‹nh khá»›p .material-symbols-outlined (opsz 24, wght 400) â€” Ã­t @font-face hÆ¡n, Lighthouse font-display á»•n Ä‘á»‹nh hÆ¡n so vá»›i range Ä‘áº§y Ä‘á»§.
@@ -627,17 +630,17 @@
                                  class="h-20 sm:h-24 lg:h-28 w-auto object-contain">
                         </div>
                         <p class="text-sm text-slate-300 leading-relaxed max-w-md">
-                            Blulavelle.com is a global online marketplace where people come together to make, sell, buy, and collect unique items. There's no Blulavelle warehouse &ndash; just independent sellers selling the things they love. We make the whole process easy, helping you connect directly with makers to find something extraordinary.
+                            BluLavelle sells handmade press-on nails from independent artists. Orders are fulfilled from the US and UK warehouses listed below. The website is operated by the companies named here.
                         </p>
                         <div>
                             <p class="text-sm font-bold text-white mb-2">The website is jointly operated by:</p>
                             <ul class="text-xs text-slate-300 space-y-1.5 leading-relaxed">
-                                <li><strong class="text-slate-300">Bluprinter LTD (UK)</strong> &mdash; Company Number 16342015, 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom</li>
+                                <li><strong class="text-slate-300">Bluprinter LTD (UK)</strong> &mdash; Company Number 16342615, 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom</li>
                                 <li><strong class="text-slate-300">Bluprinter LLC (US)</strong> &mdash; 5900 BALCONES DR STE 100, AUSTIN, TX 78731, USA</li>
                             </ul>
                         </div>
                         <div>
-                            <p class="text-xs text-slate-300"><strong class="text-slate-200">US Warehouse:</strong> 1301 S ARAPAHO RD, STE 101 RICHARDSON, TX 75081, USA</p>
+                            <p class="text-xs text-slate-300"><strong class="text-slate-200">US Warehouse:</strong> 1301 E ARAPAHO RD, STE 101 RICHARDSON, TX 75081, USA</p>
                             <p class="text-xs text-slate-300 mt-1"><strong class="text-slate-200">UK Warehouse:</strong> 3 Kincraig Rd, Blackpool FY2 0FY, United Kingdom</p>
                         </div>
                         <div>
@@ -648,15 +651,6 @@
                                 </a>
                                 <a class="w-9 h-9 rounded-full overflow-hidden bg-white flex items-center justify-center hover:opacity-90" href="https://www.instagram.com/blulavelle/" target="_blank" rel="noopener" aria-label="Instagram">
                                     <img src="{{ asset('images/icon/instagram.png') }}" alt="Instagram" class="w-full h-full object-cover">
-                                </a>
-                                <a class="w-9 h-9 rounded-full overflow-hidden bg-white flex items-center justify-center hover:opacity-90" href="https://www.youtube.com" target="_blank" rel="noopener" aria-label="YouTube">
-                                    <img src="{{ asset('images/icon/youtube.png') }}" alt="YouTube" class="w-full h-full object-cover">
-                                </a>
-                                <a class="w-9 h-9 rounded-full overflow-hidden bg-white flex items-center justify-center hover:opacity-90" href="https://www.tiktok.com/@nailbox.society.9?_r=1&_t=ZS-95240a3bFDU" target="_blank" rel="noopener" aria-label="TikTok">
-                                    <img src="{{ asset('images/icon/tiktok.png') }}" alt="TikTok" class="w-full h-full object-cover">
-                                </a>
-                                <a class="w-9 h-9 rounded-full overflow-hidden bg-white flex items-center justify-center hover:opacity-90" href="https://www.pinterest.com/depbim/" target="_blank" rel="noopener" aria-label="Pinterest">
-                                    <img src="{{ asset('images/icon/pinterest (1).png') }}" alt="Pinterest" class="w-full h-full object-cover">
                                 </a>
                             </div>
                         </div>
@@ -719,26 +713,29 @@
                         <div>
                             <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-4">Company</h3>
                             <ul class="space-y-2.5 text-sm">
-                                <li><a href="{{ route('page.show', 'about-us') }}" class="text-slate-300 hover:text-primary transition-colors">About Us</a></li>
-                                <li><a href="{{ route('page.show', 'privacy-policy') }}" class="text-slate-300 hover:text-primary transition-colors">Privacy Policy</a></li>
-                                <li><a href="{{ route('page.show', 'terms-of-service') }}" class="text-slate-300 hover:text-primary transition-colors">Terms of Service</a></li>
-                                <li><a href="{{ route('page.show', 'secure-payments') }}" class="text-slate-300 hover:text-primary transition-colors">Secure Payments</a></li>
-                                <li><a href="{{ route('page.show','contact-us') }}" class="text-slate-300 hover:text-primary transition-colors">Contact Us</a></li>
-                                <li><a href="{{ route('page.show', 'help-center') }}" class="text-slate-300 hover:text-primary transition-colors">Help Center</a></li>
-                                <li><a href="{{ route('page.show', 'sitemap') }}" class="text-slate-300 hover:text-primary transition-colors">Sitemap</a></li>
+                                <li><a href="{{ route('pages.show', 'about-us') }}" class="text-slate-300 hover:text-primary transition-colors">About Us</a></li>
+                                <li><a href="{{ route('pages.show', 'privacy-policy') }}" class="text-slate-300 hover:text-primary transition-colors">Privacy Policy</a></li>
+                                <li><a href="{{ route('pages.show', 'terms-of-service') }}" class="text-slate-300 hover:text-primary transition-colors">Terms of Service</a></li>
+                                <li><a href="{{ route('pages.show', 'secure-payments') }}" class="text-slate-300 hover:text-primary transition-colors">Secure Payments</a></li>
+                                <li><a href="{{ route('pages.show','contact-us') }}" class="text-slate-300 hover:text-primary transition-colors">Contact Us</a></li>
+                                <li><a href="{{ route('pages.show', 'help-center') }}" class="text-slate-300 hover:text-primary transition-colors">Help Center</a></li>
+                                <li><a href="{{ route('pages.show', 'sitemap') }}" class="text-slate-300 hover:text-primary transition-colors">Sitemap</a></li>
                             </ul>
                         </div>
                         <div>
                             <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-4">Get Help</h3>
                             <ul class="space-y-2.5 text-sm">
-                                <li><a href="{{ route('page.show', 'faqs') }}" class="text-slate-300 hover:text-primary transition-colors">FAQs</a></li>
+                                <li><a href="{{ route('pages.show', 'faqs') }}" class="text-slate-300 hover:text-primary transition-colors">FAQs</a></li>
                                 <li><a href="{{ route('orders.track') }}" class="text-slate-300 hover:text-primary transition-colors">Order Tracking</a></li>
-                                <li><a href="{{ route('page.show','shipping-delivery') }}" class="text-slate-300 hover:text-primary transition-colors">Shipping & Delivery</a></li>
-                                <li><a href="{{ route('page.show', 'cancelchange-order') }}" class="text-slate-300 hover:text-primary transition-colors">Cancel/Change Order</a></li>
-                                <li><a href="{{ route('page.show', 'refund-policy') }}" class="text-slate-300 hover:text-primary transition-colors">Refund Policy</a></li>
-                                <li><a href="{{ route('page.show', 'returns-exchanges-policy') }}" class="text-slate-300 hover:text-primary transition-colors">Returns & Exchanges Policy</a></li>
-                                <li><a href="{{ route('page.show', 'dmca') }}" class="text-slate-300 hover:text-primary transition-colors">DMCA</a></li>
-                                <li><a href="our-intellectual-property-policy" class="text-slate-300 hover:text-primary transition-colors">Our Intellectual Property Policy</a></li>
+                                <li><a href="{{ route('pages.show','shipping-delivery') }}" class="text-slate-300 hover:text-primary transition-colors">Shipping & Delivery</a></li>
+                                <li><a href="{{ route('pages.show', 'cancelchange-order') }}" class="text-slate-300 hover:text-primary transition-colors">Cancel/Change Order</a></li>
+                                <li><a href="{{ route('pages.show', 'refund-policy') }}" class="text-slate-300 hover:text-primary transition-colors">Refund Policy</a></li>
+                                <li><a href="{{ route('pages.show', 'returns-exchanges-policy') }}" class="text-slate-300 hover:text-primary transition-colors">Returns & Exchanges Policy</a></li>
+                                <li><a href="{{ route('pages.show', 'dmca') }}" class="text-slate-300 hover:text-primary transition-colors">DMCA</a></li>
+                                <li><a href="{{ route('pages.show', 'our-intellectual-property-policy') }}" class="text-slate-300 hover:text-primary transition-colors">Our Intellectual Property Policy</a></li>
+                                <li><a href="{{ route('pages.show', 'affiliate-privacy-policy') }}" class="text-slate-300 hover:text-primary transition-colors">Affiliate Privacy Policy</a></li>
+                                <li><a href="{{ route('pages.show', 'affiliate-commission-payout-policy') }}" class="text-slate-300 hover:text-primary transition-colors">Affiliate Commission Policy</a></li>
+                                <li><a href="{{ route('pages.show', 'affiliate-attribution-cookie-policy') }}" class="text-slate-300 hover:text-primary transition-colors">Affiliate Attribution Policy</a></li>
                             </ul>
                         </div>
                         <div>
@@ -776,7 +773,7 @@
                         </form>
                         <div id="newsletter-message" class="hidden mt-3 px-4 py-3 rounded-xl text-sm font-medium" role="alert"></div>
                         <p class="text-xs text-slate-200 leading-relaxed mt-2">
-                            By clicking Subscribe, you agree to our <a href="{{ route('page.show', 'privacy-policy') }}" class="text-white font-semibold underline decoration-2 underline-offset-2 hover:text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 rounded-sm">Privacy Policy</a> and to receive our promotional emails (opt out anytime).
+                            By clicking Subscribe, you agree to our <a href="{{ route('pages.show', 'privacy-policy') }}" class="text-white font-semibold underline decoration-2 underline-offset-2 hover:text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 rounded-sm">Privacy Policy</a> and to receive our promotional emails (opt out anytime).
                         </p>
                     </div>
                 </div>
@@ -1822,7 +1819,7 @@
         function renderProductCards(products) {
             if (!products || !products.length) return '';
             return '<div class="mt-2 space-y-2">' + products.map(function(product) {
-                var image = product.image ? '<img src="' + escapeChatHtml(product.image) + '" alt="" class="w-11 h-11 rounded-lg object-cover flex-shrink-0">' : '';
+                var image = product.image ? '<img src="' + escapeChatHtml(product.image) + '" alt="' + escapeChatHtml(product.name || 'Product') + '" width="44" height="44" class="w-11 h-11 rounded-lg object-cover flex-shrink-0">' : '';
                 return '<a href="' + escapeChatHtml(product.url) + '" class="flex items-center gap-2 bg-white border border-sky-100 rounded-xl p-2 text-slate-900 no-underline">'
                     + image
                     + '<span class="min-w-0 flex-1"><span class="block text-xs font-bold truncate">' + escapeChatHtml(product.name) + '</span><span class="block text-xs text-sky-700 font-bold">$' + Number(product.price || 0).toFixed(2) + '</span></span>'

@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
-@section('title', 'Search Results' . ($query ? ' for "' . $query . '"' : ''))
+@section('title', 'Search')
+@section('robots', 'noindex, follow')
+@section('meta_description', 'Search BluLavelle press-on nails, collections, and artists.')
 
 @section('content')
 @php
@@ -267,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="size-24 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-6">
                     <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 </div>
-                <h2 class="text-2xl font-bold text-slate-900 mb-2">No results found</h2>
+                <h1 class="text-2xl font-bold text-slate-900 mb-2">No results found</h1>
                 <p class="text-slate-500 mb-8 max-w-md">We couldn't find anything for "{{ $query }}". Try adjusting your search or browse below.</p>
                 <div class="flex gap-4 flex-wrap justify-center">
                     <a href="{{ route('search') }}" class="px-6 py-2.5 bg-primary text-white rounded-lg font-bold shadow-md shadow-primary/20 hover:opacity-90">Clear Search</a>
@@ -281,7 +283,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="size-24 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-6">
                 <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </div>
-            <h2 class="text-2xl font-bold text-slate-900 mb-2">Search Products & Collections</h2>
+            <h1 class="text-2xl font-bold text-slate-900 mb-2">Search Products & Collections</h1>
             <p class="text-slate-500 mb-8 max-w-md">Enter keywords to search for nails, collections, or shops. Use the search bar above or try a popular search.</p>
             <div class="flex gap-4 flex-wrap justify-center">
                 <a href="{{ route('products.index') }}" class="px-6 py-2.5 bg-primary text-white rounded-lg font-bold shadow-md shadow-primary/20 hover:opacity-90">View All Nails</a>

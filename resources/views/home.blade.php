@@ -17,16 +17,16 @@
         'cta_primary_label' => 'Shop the Collection',
         'cta_primary_url' => route('products.index'),
         'cta_secondary_label' => 'How it Works',
-        'cta_secondary_url' => route('page.show', 'about-us') ?? route('page.show', 'faqs') ?? '#',
+        'cta_secondary_url' => route('pages.show', 'about-us') ?? route('pages.show', 'faqs') ?? '#',
         'image' => asset('storage/images/44ad1fa40f4f3b0b55214cf29e1dd8a2.jpg'),
         // Optional colors (admin configurable)
         'bg_color' => null, // màu nền panel trái (HEX) — để trống dùng trắng mặc định
-        'badge_number' => '50k+',
-        'badge_label' => 'Happy Customers',
-        'meta1_value' => '50K+',
-        'meta1_label' => 'Happy Customers',
-        'meta2_value' => '4.9/5',
-        'meta2_label' => 'Average Rating',
+        'badge_number' => '30 days',
+        'badge_label' => 'Easy returns',
+        'meta1_value' => '30 days',
+        'meta1_label' => 'Easy returns',
+        'meta2_value' => '$150',
+        'meta2_label' => 'Free shipping over',
         'meta3_value' => '10 Min',
         'meta3_label' => 'To Apply',
         // Ảnh facet — upload thủ công (ưu tiên); collection chỉ là fallback khi chưa upload
@@ -38,8 +38,8 @@
         'slide2_subheading' => 'Subtle mother-of-pearl shimmer on every tip — hand-finished for a jewelry-like glow.',
         'slide2_images' => [],
         'slide2_collection' => '',
-        'slide2_badge_number' => '4.9★',
-        'slide2_badge_label' => 'Average Rating',
+        'slide2_badge_number' => '$150',
+        'slide2_badge_label' => 'Free shipping over',
         'slide3_tagline' => 'New Arrival',
         'slide3_heading' => 'Sculpted',
         'slide3_heading_highlight' => 'Gem Architecture',
@@ -213,8 +213,8 @@
             'subheading' => $hero['subheading'] ?? '',
             'manual_images' => $heroResolveImages($hero['slide1_images'] ?? []),
             'collection' => $hero['slide1_collection'] ?? '',
-            'badge_number' => $hero['badge_number'] ?? '50k+',
-            'badge_label' => $hero['badge_label'] ?? 'Happy Customers',
+            'badge_number' => $hero['badge_number'] ?? '30 days',
+            'badge_label' => $hero['badge_label'] ?? 'Easy returns',
         ],
         [
             'tagline' => $hero['slide2_tagline'] ?? '',
@@ -223,8 +223,8 @@
             'subheading' => $hero['slide2_subheading'] ?? '',
             'manual_images' => $heroResolveImages($hero['slide2_images'] ?? []),
             'collection' => $hero['slide2_collection'] ?? '',
-            'badge_number' => $hero['slide2_badge_number'] ?: ($hero['badge_number'] ?? '50k+'),
-            'badge_label' => $hero['slide2_badge_label'] ?: ($hero['badge_label'] ?? 'Happy Customers'),
+            'badge_number' => $hero['slide2_badge_number'] ?: ($hero['badge_number'] ?? '$150'),
+            'badge_label' => $hero['slide2_badge_label'] ?: ($hero['badge_label'] ?? 'Free shipping over'),
         ],
         [
             'tagline' => $hero['slide3_tagline'] ?? '',
@@ -233,8 +233,8 @@
             'subheading' => $hero['slide3_subheading'] ?? '',
             'manual_images' => $heroResolveImages($hero['slide3_images'] ?? []),
             'collection' => $hero['slide3_collection'] ?? '',
-            'badge_number' => $hero['slide3_badge_number'] ?: ($hero['badge_number'] ?? '50k+'),
-            'badge_label' => $hero['slide3_badge_label'] ?: ($hero['badge_label'] ?? 'Happy Customers'),
+            'badge_number' => $hero['slide3_badge_number'] ?: ($hero['badge_number'] ?? '30 days'),
+            'badge_label' => $hero['slide3_badge_label'] ?: ($hero['badge_label'] ?? 'Easy returns'),
         ],
     ];
     $heroSlides = [];
@@ -262,7 +262,7 @@
             'tagline' => '', 'heading' => 'Manicure in', 'heading_highlight' => 'Minutes',
             'subheading' => '', 'collection' => '',
             'images' => $heroPadImages([], 4, $heroFallbackImage ?: asset('storage/images/44ad1fa40f4f3b0b55214cf29e1dd8a2.jpg')),
-            'badge_number' => '50k+', 'badge_label' => 'Happy Customers',
+            'badge_number' => '30 days', 'badge_label' => 'Easy returns',
         ]];
     }
     $heroSlidesJs = collect($heroSlides)->map(fn ($s) => [
@@ -367,16 +367,16 @@ document.addEventListener('DOMContentLoaded', function() {
             <p id="hero-subheading" class="hero-subheading text-base sm:text-lg leading-relaxed max-w-md" data-content-field="subheading">{{ $heroSlides[0]['subheading'] }}</p>
             <div class="flex flex-wrap gap-3 sm:gap-4 pt-2">
                 <a href="{{ $hero['cta_primary_url'] ?? route('products.index') }}" class="hero-btn-primary inline-block px-7 sm:px-8 py-3.5 sm:py-4 rounded font-bold text-sm sm:text-base uppercase tracking-wide transition-all active:scale-95" data-content-field="cta_primary_url"><span data-content-field="cta_primary_label">{{ $hero['cta_primary_label'] ?? 'Shop the Collection' }}</span></a>
-                <a href="{{ $hero['cta_secondary_url'] ?? '#' }}" class="hero-btn-secondary inline-block px-7 sm:px-8 py-3.5 sm:py-4 rounded font-bold text-sm sm:text-base uppercase tracking-wide transition-all" data-content-field="cta_secondary_url"><span data-content-field="cta_secondary_label">{{ $hero['cta_secondary_label'] ?? 'How it Works' }}</span></a>
+                <a href="{{ page_url($hero['cta_secondary_url'] ?? 'about-us') }}" class="hero-btn-secondary inline-block px-7 sm:px-8 py-3.5 sm:py-4 rounded font-bold text-sm sm:text-base uppercase tracking-wide transition-all" data-content-field="cta_secondary_url"><span data-content-field="cta_secondary_label">{{ $hero['cta_secondary_label'] ?? 'How it Works' }}</span></a>
             </div>
             <div class="hero-meta-row flex flex-wrap gap-6 sm:gap-8 pt-6 sm:pt-7 mt-1 border-t">
                 <div>
-                    <p class="hero-meta-label text-[10px] sm:text-[11px] uppercase tracking-[0.1em] font-bold mb-1" data-content-field="meta1_label">{{ $hero['meta1_label'] ?? 'Happy Customers' }}</p>
-                    <p class="hero-heading-font hero-meta-value text-xl sm:text-2xl" data-content-field="meta1_value">{{ $hero['meta1_value'] ?? '50K+' }}</p>
+                    <p class="hero-meta-label text-[10px] sm:text-[11px] uppercase tracking-[0.1em] font-bold mb-1" data-content-field="meta1_label">{{ $hero['meta1_label'] ?? 'Easy returns' }}</p>
+                    <p class="hero-heading-font hero-meta-value text-xl sm:text-2xl" data-content-field="meta1_value">{{ $hero['meta1_value'] ?? '30 days' }}</p>
                 </div>
                 <div>
-                    <p class="hero-meta-label text-[10px] sm:text-[11px] uppercase tracking-[0.1em] font-bold mb-1" data-content-field="meta2_label">{{ $hero['meta2_label'] ?? 'Average Rating' }}</p>
-                    <p class="hero-heading-font hero-meta-value text-xl sm:text-2xl" data-content-field="meta2_value">{{ $hero['meta2_value'] ?? '4.9/5' }}</p>
+                    <p class="hero-meta-label text-[10px] sm:text-[11px] uppercase tracking-[0.1em] font-bold mb-1" data-content-field="meta2_label">{{ $hero['meta2_label'] ?? 'Free shipping over' }}</p>
+                    <p class="hero-heading-font hero-meta-value text-xl sm:text-2xl" data-content-field="meta2_value">{{ $hero['meta2_value'] ?? '$150' }}</p>
                 </div>
                 <div>
                     <p class="hero-meta-label text-[10px] sm:text-[11px] uppercase tracking-[0.1em] font-bold mb-1" data-content-field="meta3_label">{{ $hero['meta3_label'] ?? 'To Apply' }}</p>
@@ -1089,7 +1089,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             <div class="flex items-center gap-3 sm:gap-4 p-2 sm:p-3 bg-white">
                                 <div class="relative w-16 h-20 sm:w-20 sm:h-24 lg:w-24 lg:h-28 shrink-0 rounded-xl overflow-hidden bg-slate-100">
                                     @if($collection->image)
-                                        <img alt="" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" src="{{ $collection->image }}" loading="lazy">
+                                        <img alt="{{ $collection->name }} collection" width="96" height="112" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" src="{{ $collection->image }}" loading="lazy">
                                     @else
                                         <div class="w-full h-full bg-gradient-to-br from-primary/30 to-primary/5"></div>
                                     @endif
@@ -1330,7 +1330,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'heading' => 'Indulge in salon-quality at home',
         'button_label' => 'SHOP NOW',
         'button_url' => route('products.index'),
-        'review_text' => '50k+ Reviews',
+        'review_text' => 'Customer reviews',
         'title' => 'Premium Press-on Nails',
         'subtitle' => 'Complete set • Reusable • Easy to apply',
         'bg_color' => '#2b2533',
@@ -1434,7 +1434,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <svg class="w-5 h-5 sm:w-6 sm:h-6 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
                     @endfor
                     </span>
-                    <span class="text-sm sm:text-base font-bold text-white/90" data-content-field="review_text">{{ $indulge['review_text'] ?? '50k+ Reviews' }}</span>
+                    <span class="text-sm sm:text-base font-bold text-white/90" data-content-field="review_text">{{ $indulge['review_text'] ?? 'Customer reviews' }}</span>
                 </div>
 
                 <div>

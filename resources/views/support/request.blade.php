@@ -1,5 +1,8 @@
 @extends('layouts.app')
 
+@section('title', 'Support Request')
+@section('robots', 'noindex, follow')
+
 @section('content')
 <div class="bg-gray-50 py-10">
   <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">

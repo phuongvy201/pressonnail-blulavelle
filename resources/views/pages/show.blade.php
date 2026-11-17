@@ -8,6 +8,8 @@
     // If page content already includes its own Tailwind layout (seeded pages),
     // don't wrap it in an extra narrow container/card/prose.
     $content = (string) ($page->content ?? '');
+    $content = preg_replace('/<h1(\s[^>]*)?>/i', '<h2$1>', $content) ?? $content;
+    $content = preg_replace('/<\/h1>/i', '</h2>', $content) ?? $content;
     $hasOwnLayout =
         str_contains($content, 'max-w-') ||
         str_contains($content, 'mx-auto') ||
@@ -53,10 +55,10 @@
             @endif
 
             @if($hasOwnLayout)
-                {!! $page->content !!}
+                {!! $content !!}
             @else
                 <div class="prose prose-lg max-w-none">
-                    {!! $page->content !!}
+                    {!! $content !!}
                 </div>
             @endif
         @if(!$hasOwnLayout)
@@ -69,7 +71,7 @@
                 <h2 class="text-2xl font-bold text-gray-900 mb-6">Related Pages</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     @foreach($childPages as $child)
-                        <a href="{{ route('page.show', $child->slug) }}" class="bg-white rounded-xl shadow-sm p-6 hover:shadow-lg transition-all">
+                        <a href="{{ route('pages.show', $child->slug) }}" class="bg-white rounded-xl shadow-sm p-6 hover:shadow-lg transition-all">
                             <h3 class="text-lg font-bold text-gray-900 mb-2 hover:text-[#005366]">{{ $child->title }}</h3>
                             @if($child->excerpt)
                                 <p class="text-gray-600 text-sm">{{ Str::limit($child->excerpt, 120) }}</p>

@@ -26,6 +26,19 @@ class Seo
         return 'BluLavelle | Handcrafted Stained Glass Press-On Nails';
     }
 
+    public static function metaDescription(string $value): string
+    {
+        $value = self::plain($value);
+        if ($value === '') {
+            $value = 'Premium press-on nails with free shipping. Discover reusable, salon-quality nails at BluLavelle.';
+        }
+        if (mb_strlen($value) <= 160) {
+            return $value;
+        }
+
+        return rtrim(mb_substr($value, 0, 157)).'...';
+    }
+
     public static function productTitle(Product $product): string
     {
         $name = self::plain((string) $product->name);
@@ -178,6 +191,14 @@ class Seo
         if (in_array($slug, ['shipping-delivery', 'sizing-kit'], true)) {
             return '/'.$slug;
         }
+        $aliases = [
+            'contact-us-2' => '/contact-us',
+            'order-tracking' => '/track-order',
+            'free-return' => '/returns-exchanges-policy',
+        ];
+        if (isset($aliases[$slug])) {
+            return $aliases[$slug];
+        }
         if (self::hasDedicatedGetRoute($slug)) {
             return null;
         }
@@ -248,6 +269,165 @@ class Seo
         return self::publicAsset('/images/logo/BABYBLUE.png');
     }
 
+    /**
+     * @param  array<int, array<string, mixed>>  $nodes
+     */
+    public static function jsonLdScript(array $nodes): string
+    {
+        $nodes = array_values(array_filter($nodes));
+        if ($nodes === []) {
+            return '';
+        }
+
+        $json = json_encode(
+            ['@context' => 'https://schema.org', '@graph' => $nodes],
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG
+        );
+
+        return '<script type="application/ld+json">'.$json.'</script>';
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function organizationNode(): array
+    {
+        $home = self::canonicalPath('/');
+
+        return [
+            '@type' => 'Organization',
+            '@id' => $home.'#organization',
+            'name' => 'BluLavelle',
+            'url' => $home,
+            'logo' => self::defaultShareImage(),
+            'email' => 'support@blulavelle.com',
+            'address' => [
+                '@type' => 'PostalAddress',
+                'streetAddress' => '5900 Balcones Dr Ste 100',
+                'addressLocality' => 'Austin',
+                'addressRegion' => 'TX',
+                'postalCode' => '78731',
+                'addressCountry' => 'US',
+            ],
+            'sameAs' => [
+                'https://www.instagram.com/blulavelle/',
+                'https://www.facebook.com/profile.php?id=61571564261584',
+                'https://www.trustpilot.com/review/blulavelle.com',
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function websiteNode(): array
+    {
+        $home = self::canonicalPath('/');
+
+        return [
+            '@type' => 'WebSite',
+            '@id' => $home.'#website',
+            'url' => $home,
+            'name' => 'BluLavelle',
+            'publisher' => ['@id' => $home.'#organization'],
+            'potentialAction' => [
+                '@type' => 'SearchAction',
+                'target' => self::canonicalPath('/search').'?q={search_term_string}',
+                'query-input' => 'required name=search_term_string',
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<int, array{name?: string, url?: string}>  $breadcrumbs
+     * @return array<int, array<string, mixed>>
+     */
+    public static function productNodes(Product $product, array $breadcrumbs = []): array
+    {
+        $url = self::canonicalPath('/products/'.ltrim((string) $product->slug, '/'));
+        $name = self::plain((string) $product->name);
+        $shop = self::plain((string) ($product->shop?->shop_name ?? ''));
+        $description = self::schemaDescription($product);
+        $node = [
+            '@type' => 'Product',
+            'name' => $name,
+            'url' => $url,
+            'description' => $description,
+            'brand' => [
+                '@type' => 'Brand',
+                'name' => $shop !== '' ? $shop : 'BluLavelle',
+            ],
+            'offers' => [
+                '@type' => 'Offer',
+                'url' => $url,
+                'priceCurrency' => strtoupper(currency()),
+                'price' => number_format((float) ($product->price ?? $product->base_price ?? 0), 2, '.', ''),
+                'availability' => self::productInStock($product)
+                    ? 'https://schema.org/InStock'
+                    : 'https://schema.org/OutOfStock',
+                'itemCondition' => 'https://schema.org/NewCondition',
+            ],
+        ];
+        $image = self::productImageUrls($product);
+        if ($image !== []) {
+            $node['image'] = $image;
+        }
+        $sku = self::plain((string) ($product->sku ?? ''));
+        if ($sku !== '') {
+            $node['sku'] = $sku;
+        }
+        $rating = self::productRating($product);
+        if ($rating !== null) {
+            $node['aggregateRating'] = $rating;
+        }
+
+        if ($breadcrumbs === []) {
+            $breadcrumbs = [
+                ['name' => 'Home', 'url' => self::canonicalPath('/')],
+                ['name' => 'Products', 'url' => self::canonicalPath('/products')],
+                ['name' => $name, 'url' => $url],
+            ];
+        }
+
+        return [$node, self::breadcrumbNode($breadcrumbs, $url)];
+    }
+
+    /**
+     * @param  array<int, array{name?: string, url?: string}>  $items
+     * @return array<string, mixed>
+     */
+    public static function breadcrumbNode(array $items, string $fallbackUrl): array
+    {
+        $list = [];
+        $position = 1;
+        $lastIndex = count($items) - 1;
+        foreach ($items as $index => $item) {
+            $name = self::plain((string) ($item['name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $entry = [
+                '@type' => 'ListItem',
+                'position' => $position,
+                'name' => $name,
+            ];
+            $itemUrl = trim((string) ($item['url'] ?? ''));
+            if ($itemUrl === '' && $index === $lastIndex) {
+                $itemUrl = $fallbackUrl;
+            }
+            if ($itemUrl !== '') {
+                $entry['item'] = $itemUrl;
+            }
+            $list[] = $entry;
+            $position++;
+        }
+
+        return [
+            '@type' => 'BreadcrumbList',
+            'itemListElement' => $list,
+        ];
+    }
+
     public static function publicAsset(string $path): string
     {
         $path = trim($path);
@@ -277,6 +457,78 @@ class Seo
         $absolute = self::publicAsset($path);
 
         return $absolute !== '' ? $absolute : null;
+    }
+
+    private static function schemaDescription(Product $product): string
+    {
+        $raw = (string) ($product->description ?? '');
+        if (trim($raw) === '' && $product->template) {
+            $raw = (string) ($product->template->description ?? '');
+        }
+        $raw = self::plain(strip_tags($raw));
+        if ($raw === '') {
+            return self::productDescription($product);
+        }
+
+        return Str::limit($raw, 500, '…');
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private static function productImageUrls(Product $product): array
+    {
+        $urls = [];
+        foreach ($product->getMergedDisplayMedia() as $item) {
+            $url = self::mediaUrl($item);
+            if ($url === null || in_array($url, $urls, true)) {
+                continue;
+            }
+            $urls[] = $url;
+            if (count($urls) >= 4) {
+                break;
+            }
+        }
+
+        return $urls;
+    }
+
+    private static function productInStock(Product $product): bool
+    {
+        if ((int) $product->quantity > 0) {
+            return true;
+        }
+        if ($product->relationLoaded('variants')) {
+            return $product->variants->contains(fn ($variant) => (int) $variant->quantity > 0);
+        }
+        if (! $product->exists) {
+            return false;
+        }
+
+        return $product->hasStock();
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private static function productRating(Product $product): ?array
+    {
+        if (! $product->exists) {
+            return null;
+        }
+
+        $count = (int) $product->approvedReviews()->count();
+        if ($count < 1) {
+            return null;
+        }
+
+        return [
+            '@type' => 'AggregateRating',
+            'ratingValue' => number_format(round((float) $product->approvedReviews()->avg('rating'), 1), 1, '.', ''),
+            'reviewCount' => (string) $count,
+            'bestRating' => '5',
+            'worstRating' => '1',
+        ];
     }
 
     private static function plain(string $value): string

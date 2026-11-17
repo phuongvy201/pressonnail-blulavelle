@@ -62,6 +62,24 @@ if (! function_exists('convert_currency')) {
     }
 }
 
+if (! function_exists('page_url')) {
+    function page_url(?string $urlOrSlug): string
+    {
+        $value = trim((string) $urlOrSlug);
+        if ($value === '') {
+            return '#';
+        }
+        if (preg_match('#^(?:https?://[^/]+)?/page/([^/?\#]+)#', $value, $matches) === 1) {
+            return route('pages.show', rawurldecode($matches[1]));
+        }
+        if (! str_contains($value, '/') && ! str_contains($value, ':')) {
+            return route('pages.show', $value);
+        }
+
+        return $value;
+    }
+}
+
 if (! function_exists('content_block')) {
     /**
      * Lấy nội dung block (trang chủ, v.v.) đã merge với default.
@@ -125,7 +143,7 @@ if (! function_exists('footer_faq_block_defaults')) {
             'q3' => 'How do I apply and remove them safely?',
             'a3' => 'Application is an effortless 10-minute ritual: simply prep, size, and press. To remove, soak your hands in warm soapy water with a touch of oil for a few minutes. This gentle process ensures your natural nails remain healthy and damage-free, preserved for your next BluLavelle set.',
             'q4' => 'Do you offer returns or refunds?',
-            'a4' => 'Due to hygiene and safety standards, we generally do not accept returns. However, your satisfaction is our priority. If your order arrives damaged or incorrect, please reach out to our concierge team within 7 days, and we will ensure a seamless solution for you.',
+            'a4' => 'You can request a return or exchange within 30 days of delivery. If an item arrives damaged, incorrect, or does not fit, contact support@blulavelle.com and we will help. There is no restocking fee.',
         ];
     }
 }

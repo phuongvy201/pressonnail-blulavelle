@@ -175,7 +175,7 @@
             ?? $creatorSupportPages->firstWhere('slug', 'faqs')
             ?? $creatorSupportPages->first();
         $creatorHelpUrl = $creatorHelpPage
-            ? route('page.show', ['slug' => $creatorHelpPage->slug])
+            ? route('pages.show', ['slug' => $creatorHelpPage->slug])
             : route('creator.home');
     @endphp
 
@@ -392,7 +392,7 @@
                         <ul class="space-y-3 text-base text-[#404753]">
                             @foreach($creatorSupportPages as $p)
                                 <li>
-                                    <a href="{{ route('page.show', ['slug' => $p->slug]) }}" class="transition-colors duration-200 hover:text-primary">{{ $p->title }}</a>
+                                    <a href="{{ route('pages.show', ['slug' => $p->slug]) }}" class="transition-colors duration-200 hover:text-primary">{{ $p->title }}</a>
                                 </li>
                             @endforeach
                         </ul>

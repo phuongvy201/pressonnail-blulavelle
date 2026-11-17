@@ -46,7 +46,9 @@
     <div class="relative aspect-square overflow-hidden bg-gray-100">
         @if($imageUrl)
             <img src="{{ $webpUrl ?: $imageUrl }}"
-                 alt="{{ $imgAlt }}"
+                 alt="{{ $imgAlt !== '' ? $imgAlt : $product->name }}"
+                 width="800"
+                 height="800"
                  loading="lazy"
                  decoding="async"
                  class="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-110">

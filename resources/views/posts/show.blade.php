@@ -14,7 +14,7 @@
         <div class="absolute bottom-0 left-0 right-0">
             <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 @if($post->category)
-                    <a href="{{ route('blog.category', $post->category->slug) }}" class="inline-block px-3 py-1 bg-[#005366] text-white text-sm font-semibold rounded-full mb-4">
+                    <a href="{{ route('blog.category', $post->category->slug) }}" class="inline-block px-3 py-1 bg-[#0195FE] text-white text-sm font-semibold rounded-full mb-4">
                         {{ $post->category->name }}
                     </a>
                 @endif
@@ -32,7 +32,7 @@
         </div>
     </div>
 @else
-    <div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white py-16">
+    <div class="bg-gradient-to-r from-[#0195FE] to-[#0180d9] text-white py-16">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             @if($post->category)
                 <a href="{{ route('blog.category', $post->category->slug) }}" class="inline-block px-3 py-1 bg-white/20 text-white text-sm font-semibold rounded-full mb-4">
@@ -64,13 +64,13 @@
                         @if($post->shop->shop_logo)
                             <img src="{{ $post->shop->shop_logo }}" alt="{{ $post->shop->shop_name }}" class="w-full h-full object-cover">
                         @else
-                            <div class="w-full h-full flex items-center justify-center bg-[#005366] text-white font-bold">
+                            <div class="w-full h-full flex items-center justify-center bg-[#0195FE] text-white font-bold">
                                 {{ substr($post->shop->shop_name, 0, 1) }}
                             </div>
                         @endif
                     </div>
                     <div>
-                        <a href="{{ route('shops.show', $post->shop->shop_slug) }}" class="font-bold text-gray-900 hover:text-[#005366]">
+                        <a href="{{ route('shops.show', $post->shop->shop_slug) }}" class="font-bold text-gray-900 hover:text-[#0195FE]">
                             {{ $post->shop->shop_name }}
                         </a>
                         <p class="text-sm text-gray-500">Posted by {{ $post->user->name }}</p>
@@ -101,7 +101,7 @@
             @if($post->tags->isNotEmpty())
                 <div class="flex flex-wrap gap-2 pt-6 border-t border-gray-200">
                     @foreach($post->tags as $tag)
-                        <a href="{{ route('blog.tag', $tag->slug) }}" class="inline-block px-3 py-1 bg-gray-100 hover:bg-[#005366] hover:text-white text-gray-700 text-sm rounded-full transition">
+                        <a href="{{ route('blog.tag', $tag->slug) }}" class="inline-block px-3 py-1 bg-gray-100 hover:bg-[#0195FE] hover:text-white text-gray-700 text-sm rounded-full transition">
                             #{{ $tag->name }}
                         </a>
                     @endforeach
@@ -152,7 +152,7 @@
                                     </div>
                                 @endif
                                 <div class="p-4">
-                                    <h3 class="font-bold text-gray-900 group-hover:text-[#005366] line-clamp-2 mb-2">
+                                    <h3 class="font-bold text-gray-900 group-hover:text-[#0195FE] line-clamp-2 mb-2">
                                         {{ $related->title }}
                                     </h3>
                                     <p class="text-sm text-gray-500">{{ $related->published_at ? $related->published_at->format('M d, Y') : 'Draft' }}</p>

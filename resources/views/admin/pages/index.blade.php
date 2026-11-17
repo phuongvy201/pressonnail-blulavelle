@@ -34,10 +34,10 @@
                     <tr class="hover:bg-gray-50">
                         <td class="px-6 py-4">
                             <div>
-                                <a href="{{ route('page.show', $page->slug) }}" target="_blank" class="font-medium text-gray-900 hover:text-[#005366]">
+                                <a href="{{ route('pages.show', $page->slug) }}" target="_blank" class="font-medium text-gray-900 hover:text-[#005366]">
                                     {{ $page->title }}
                                 </a>
-                                <p class="text-xs text-gray-500">/page/{{ $page->slug }}</p>
+                                <p class="text-xs text-gray-500">/{{ $page->slug }}</p>
                             </div>
                         </td>
                         <td class="px-6 py-4">

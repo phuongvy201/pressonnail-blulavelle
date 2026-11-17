@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Collections - Bluprinter')
+@section('title', 'Collections')
 @section('meta_description', 'Browse our curated collections of custom products')
 
 @section('content')

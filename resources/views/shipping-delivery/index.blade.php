@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Shipping & Delivery - Bluprinter Worldwide Shipping Information')
-@section('meta_description', 'Learn about Bluprinter shipping and delivery. Processing times, delivery times by product, shipping costs, tracking, and customs information.')
+@section('title', 'Shipping & Delivery')
+@section('meta_description', 'Learn about BluLavelle shipping and delivery. Processing times, delivery times by product, shipping costs, tracking, and customs information.')
 
 @section('content')
 <div class="max-w-7xl mx-auto py-8 px-4">
@@ -188,7 +188,7 @@
                         <div>
                             <h3 class="text-2xl font-bold text-red-900 mb-2">Failed Deliveries</h3>
                             <p class="text-gray-800 leading-relaxed">
-                                Bluprinter is <strong class="text-red-600">not responsible</strong> for packages delayed, lost, or returned due to incorrect addresses. Additional fees may apply to resend.
+                                BluLavelle is <strong class="text-red-600">not responsible</strong> for packages delayed, lost, or returned due to incorrect addresses. Additional fees may apply to resend.
                             </p>
                         </div>
                     </div>
@@ -208,14 +208,14 @@
                 <p class="text-xl text-cyan-100 mb-6 max-w-3xl mx-auto">
                     If your order hasn't arrived or you have concerns about your shipment, we're here to help!
                 </p>
-                <a href="mailto:support@bluprinter.com" class="inline-flex items-center px-10 py-4 bg-white text-teal-600 font-bold rounded-lg shadow-xl hover:shadow-2xl transition duration-200 text-xl">
+                <a href="mailto:support@blulavelle.com" class="inline-flex items-center px-10 py-4 bg-white text-teal-600 font-bold rounded-lg shadow-xl hover:shadow-2xl transition duration-200 text-xl">
                     <svg class="w-7 h-7 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                     </svg>
                     Contact Customer Service
                 </a>
                 <p class="mt-6 text-blue-100 text-lg">
-                    At Bluprinter, customer satisfaction is our priority. Thank you for choosing us!
+                    At BluLavelle, customer satisfaction is our priority. Thank you for choosing us!
                 </p>
             </div>
         </div>

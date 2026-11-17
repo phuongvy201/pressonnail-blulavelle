@@ -363,8 +363,16 @@ class LiveChatController extends Controller
         if ($path === '/sizing-kit' || str_starts_with($path, '/sizing-kit/')) {
             return 'blucommerce://content/nail-sizing';
         }
-        if (preg_match('~/page/([^/]+)~', $path, $matches) === 1) {
-            return 'blucommerce://content/'.$this->appContentKey(rawurldecode($matches[1]));
+        if (preg_match('~^/(?:page/)?([^/]+)$~', $path, $matches) === 1) {
+            $slug = rawurldecode($matches[1]);
+            $known = [
+                'shipping-delivery', 'returns-exchanges-policy', 'refund-policy', 'cancelchange-order',
+                'privacy-policy', 'privacy', 'terms-of-service', 'terms', 'terms-and-conditions',
+                'faqs', 'about-us', 'contact-us', 'help-center',
+            ];
+            if (str_contains($path, '/page/') || in_array($slug, $known, true)) {
+                return 'blucommerce://content/'.$this->appContentKey($slug);
+            }
         }
         if (($parts['fragment'] ?? '') === 'footer-faq') {
             return 'blucommerce://content/support';

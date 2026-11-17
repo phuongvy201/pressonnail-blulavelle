@@ -28,7 +28,6 @@ use App\Http\Controllers\Seller\SellerDashboardController;
 use App\Http\Controllers\Seller\ShopController as SellerShopController;
 use App\Http\Controllers\Seller\PostController as SellerPostController;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\AboutController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\PageController;
@@ -71,6 +70,12 @@ Route::get('/_media/resize', [PublicMediaResizeController::class, 'show'])->name
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+Route::get('/favicon.ico', function () {
+    return response()->file(public_path('favicon.png'), [
+        'Content-Type' => 'image/png',
+        'Cache-Control' => 'public, max-age=604800',
+    ]);
+});
 Route::get('/robots.txt', function () {
     $base = rtrim(config('app.url'), '/');
     $body = "User-agent: *\nDisallow:\n\nSitemap: {$base}/sitemap.xml\n";
@@ -82,6 +87,7 @@ Route::get('/products/recently-viewed', [ProductController::class, 'recentlyView
 Route::get('/products/{slug}', [ProductController::class, 'show'])->name('products.show');
 Route::post('/products/{slug}/reviews', [ProductController::class, 'storeReview'])->middleware('auth')->name('products.reviews.store');
 Route::post('/products/calculate-shipping', [ProductController::class, 'calculateShippingCost'])->name('products.calculate-shipping');
+Route::get('/shops', [App\Http\Controllers\ShopController::class, 'index'])->name('shops.index');
 Route::get('/shops/{shop}', [App\Http\Controllers\ShopController::class, 'show'])->name('shops.show');
 Route::get('/shops/{shop}/reviews', [App\Http\Controllers\ShopController::class, 'reviews'])->name('shops.reviews');
 Route::get('/reviews', [ReviewListingController::class, 'index'])->name('reviews.public');
@@ -539,7 +545,10 @@ Route::get('/test-shop-view/{slug}', function ($slug) {
 
 Route::post('/shops/{shop}/follow', [App\Http\Controllers\ShopController::class, 'follow'])->name('shops.follow');
 Route::post('/shops/{shop}/contact', [App\Http\Controllers\ShopController::class, 'contact'])->name('shops.contact');
-Route::get('/about', [AboutController::class, 'index'])->name('about');
+Route::permanentRedirect('/about', '/about-us')->name('about');
+Route::permanentRedirect('/policies/affiliate-privacy-policy', '/affiliate-privacy-policy');
+Route::permanentRedirect('/policies/affiliate-commission-payout-policy', '/affiliate-commission-payout-policy');
+Route::permanentRedirect('/policies/affiliate-attribution-cookie-policy', '/affiliate-attribution-cookie-policy');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
 Route::get('/cart', [CartController::class, 'index'])->name('cart.index');

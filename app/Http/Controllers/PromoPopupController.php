@@ -18,7 +18,7 @@ class PromoPopupController extends Controller
     {
         $trigger = $request->query('trigger');
         if (!in_array($trigger, [PromoCodeSendService::TRIGGER_ADD_TO_CART, PromoCodeSendService::TRIGGER_WISHLIST, PromoCodeSendService::TRIGGER_CHECKOUT_FAIL], true)) {
-            return response()->json(['available' => false]);
+            return response()->json(['available' => false])->header('X-Robots-Tag', 'noindex, nofollow');
         }
 
         $promo = PromoCode::where('send_on_trigger', $trigger)
@@ -26,7 +26,7 @@ class PromoPopupController extends Controller
             ->first();
 
         if (!$promo || !$promo->isValid()) {
-            return response()->json(['available' => false]);
+            return response()->json(['available' => false])->header('X-Robots-Tag', 'noindex, nofollow');
         }
 
         $headline = $this->buildHeadline($promo);
@@ -37,7 +37,7 @@ class PromoPopupController extends Controller
             'headline' => $headline,
             'subline' => 'Enter your email to receive your discount code.',
             'description' => $description,
-        ]);
+        ])->header('X-Robots-Tag', 'noindex, nofollow');
     }
 
     /**

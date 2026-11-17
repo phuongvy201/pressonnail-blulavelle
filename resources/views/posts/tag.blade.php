@@ -3,7 +3,7 @@
 @section('title', 'Tag: ' . $tag->name)
 
 @section('content')
-<div class="bg-gradient-to-r from-[#F0427C] to-[#d6386a] text-white py-16">
+<div class="bg-gradient-to-r from-[#0195FE] to-[#0180d9] text-white py-16">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <div class="inline-flex items-center px-6 py-3 bg-white/20 rounded-full text-2xl font-bold mb-4">
             #{{ $tag->name }}
@@ -30,7 +30,7 @@
                         @endif
                         <div class="p-6">
                             <p class="text-xs text-gray-500 mb-2">{{ $post->published_at ? $post->published_at->format('M d, Y') : 'Draft' }} • {{ $post->reading_time ?? 1 }} min</p>
-                            <h2 class="text-xl font-bold text-gray-900 mb-3 line-clamp-2 hover:text-[#005366]">{{ $post->title }}</h2>
+                            <h2 class="text-xl font-bold text-gray-900 mb-3 line-clamp-2 hover:text-[#0195FE]">{{ $post->title }}</h2>
                             @if($post->excerpt)
                                 <p class="text-gray-600 text-sm line-clamp-3">{{ $post->excerpt }}</p>
                             @endif

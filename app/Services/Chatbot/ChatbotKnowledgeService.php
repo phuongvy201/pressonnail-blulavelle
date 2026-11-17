@@ -132,7 +132,7 @@ class ChatbotKnowledgeService
             $matches[] = [
                 'title' => (string) $page->title,
                 'body' => $this->excerpt($plain, $terms),
-                'url' => route('page.show', $slug),
+                'url' => route('pages.show', $slug),
                 'source' => 'page:'.$slug,
                 'score' => max(1, $score),
             ];

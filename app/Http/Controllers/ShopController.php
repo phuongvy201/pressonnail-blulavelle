@@ -12,6 +12,18 @@ use Illuminate\Support\Facades\Log;
 
 class ShopController extends Controller
 {
+    public function index()
+    {
+        $shops = Shop::query()
+            ->active()
+            ->whereNotNull('shop_slug')
+            ->where('shop_slug', '!=', '')
+            ->orderBy('shop_name')
+            ->get();
+
+        return view('shops.index', compact('shops'));
+    }
+
     public function show(Shop $shop)
     {
         // Load relationships

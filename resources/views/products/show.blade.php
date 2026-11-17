@@ -7,6 +7,10 @@
 @section('og_type', 'product')
 @section('og_image', \App\Support\Seo::productImageUrl($product) ?? \App\Support\Seo::defaultShareImage())
 
+@push('json-ld')
+    {!! \App\Support\Seo::jsonLdScript(\App\Support\Seo::productNodes($product, $breadcrumbs ?? [])) !!}
+@endpush
+
 @section('content')
 @php
     $currentCurrency = currency();
@@ -1156,7 +1160,7 @@
                         </div>
                         @if(!empty($sReview->image_url_for_display))
                             <div class="mt-3">
-                                <img src="{{ $sReview->image_url_for_display }}" alt="" class="w-full max-h-32 object-cover rounded-lg border border-slate-200 cursor-pointer js-review-photo-trigger hover:ring-2 hover:ring-[#0297FE]/40 transition-shadow" loading="lazy" onerror="this.style.display='none';">
+                                <img src="{{ $sReview->image_url_for_display }}" alt="Customer review photo" width="320" height="128" class="w-full max-h-32 object-cover rounded-lg border border-slate-200 cursor-pointer js-review-photo-trigger hover:ring-2 hover:ring-[#0297FE]/40 transition-shadow" loading="lazy" onerror="this.style.display='none';">
                             </div>
                         @endif
                     </article>
@@ -1196,7 +1200,7 @@
                                     </div>
                                     @if(!empty($sReview->image_url_for_display))
                                         <div class="mt-3">
-                                            <img src="{{ $sReview->image_url_for_display }}" alt="" class="w-full max-h-32 object-cover rounded-lg border border-slate-200 cursor-pointer js-review-photo-trigger hover:ring-2 hover:ring-[#0297FE]/40 transition-shadow" loading="lazy" onerror="this.style.display='none';">
+                                            <img src="{{ $sReview->image_url_for_display }}" alt="Customer review photo" width="320" height="128" class="w-full max-h-32 object-cover rounded-lg border border-slate-200 cursor-pointer js-review-photo-trigger hover:ring-2 hover:ring-[#0297FE]/40 transition-shadow" loading="lazy" onerror="this.style.display='none';">
                                         </div>
                                     @endif
                                 </article>

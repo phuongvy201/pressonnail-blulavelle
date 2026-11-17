@@ -200,7 +200,7 @@
                 <p>You received this email because you subscribed to our newsletter.</p>
                 <p>
                     <a href="{{ route('newsletter.unsubscribe', ['email' => $email]) }}">Unsubscribe</a> &nbsp;·&nbsp;
-                    <a href="{{ route('page.show', 'privacy-policy') }}">Privacy Policy</a>
+                    <a href="{{ route('pages.show', 'privacy-policy') }}">Privacy Policy</a>
                 </p>
             </div>
         </div>

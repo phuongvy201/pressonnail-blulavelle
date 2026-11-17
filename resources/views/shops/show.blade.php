@@ -1,6 +1,13 @@
 @extends('layouts.app')
 
-@section('title', $shop->shop_name . ' - Shop Profile')
+@php
+    $shopBio = trim(strip_tags((string) ($shop->shop_description ?? '')));
+    if ($shopBio === '') {
+        $shopBio = $shop->shop_name.' is an independent press-on nail artist on BluLavelle. Browse handmade reusable sets from this shop.';
+    }
+@endphp
+@section('meta_title', $shop->shop_name.' | Press-On Nail Artist | BluLavelle')
+@section('meta_description', $shopBio)
 
 @section('content')
 @php
@@ -63,7 +70,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 <!-- Shop Info -->
                 <div class="flex-1 text-center md:text-left">
-                    <h2 class="text-2xl font-bold text-slate-900 mb-2">{{ $shop->shop_name }}</h2>
+                    <h1 class="text-2xl font-bold text-slate-900 mb-2">{{ $shop->shop_name }}</h1>
+                    <p class="text-sm text-slate-600 leading-relaxed mb-3 max-w-xl">{{ $shopBio }}</p>
                     <div class="flex items-center justify-center md:justify-start gap-6 text-slate-500 text-sm font-medium">
                         <span class="flex items-center gap-1.5">
                             <span class="material-symbols-outlined text-lg">group</span>

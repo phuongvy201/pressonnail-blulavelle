@@ -97,5 +97,34 @@ BLADE);
         ->and($html)->toContain('content="https://cdn.example.com/black-cat.jpg"')
         ->and($html)->toContain('property="og:type" content="product"')
         ->and($html)->not->toContain('BluLavelle - Home')
-        ->and($html)->not->toContain('property="og:image" content="https://blulavelle.com/favicon.png"');
+        ->and($html)->not->toContain('property="og:image" content="https://blulavelle.com/favicon.png"')
+        ->and($html)->toContain('"@type":"Organization"')
+        ->and($html)->toContain('"@type":"WebSite"');
+});
+
+test('product schema uses the real offer and skips a rating when there are no reviews', function () {
+    config(['app.url' => 'https://blulavelle.com']);
+    $product = new Product([
+        'name' => 'Black Cat Stained Glass Press-On Nails',
+        'slug' => 'black-cat',
+        'sku' => 'BC-1',
+        'price' => 29.99,
+        'quantity' => 4,
+        'description' => 'Hand-painted celestial set.',
+        'media' => [['url' => 'https://cdn.example.com/black-cat.jpg']],
+    ]);
+    $product->setRelation('shop', new Shop(['shop_name' => 'BluVienne']));
+
+    $json = Seo::jsonLdScript(Seo::productNodes($product, [
+        ['name' => 'Home', 'url' => 'https://blulavelle.com/'],
+        ['name' => 'Products', 'url' => 'https://blulavelle.com/products'],
+        ['name' => $product->name, 'url' => ''],
+    ]));
+
+    expect($json)->toContain('"@type":"Product"')
+        ->and($json)->toContain('"price":"29.99"')
+        ->and($json)->toContain('"name":"BluVienne"')
+        ->and($json)->toContain('"@type":"BreadcrumbList"')
+        ->and($json)->toContain('https://blulavelle.com/products/black-cat')
+        ->and($json)->not->toContain('AggregateRating');
 });

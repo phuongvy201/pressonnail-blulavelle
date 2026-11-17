@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', $category->meta_title ?? $category->name . ' - Bluprinter')
+@section('title', $category->meta_title ?? $category->name)
 @section('meta_description', $category->meta_description ?? 'Browse ' . $category->name . ' products and designs')
 
 @section('content')

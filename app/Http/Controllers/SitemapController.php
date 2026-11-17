@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 
 class SitemapController extends Controller
 {
-    private const CACHE_KEY = 'http.sitemap.xml.v3';
+    private const CACHE_KEY = 'http.sitemap.xml.v4';
 
     public function index(): Response
     {
@@ -58,7 +58,6 @@ class SitemapController extends Controller
         // --- Home & catalog hubs ---
         $addRoute('home', [], now(), 'daily', '1.0');
         $addRoute('products.index', [], now(), 'daily', '0.95');
-        $addRoute('search', [], now(), 'weekly', '0.55');
 
         // --- 1) Collections: index + từng trang collection ---
         $addRoute('collections.index', [], now(), 'weekly', '0.88');
@@ -95,31 +94,24 @@ class SitemapController extends Controller
             });
 
         // --- 4) Trang tĩnh: route cố định + CMS Page (policy, terms, privacy, v.v.) ---
-        $addRoute('about', [], now(), 'monthly', '0.7');
         $addRoute('contact', [], now(), 'monthly', '0.7');
         $addRoute('shipping-delivery.index', [], now(), 'monthly', '0.65');
         $addRoute('sizing-kit.index', [], now(), 'monthly', '0.65');
-        $addRoute('orders.track', [], now(), 'monthly', '0.45');
-        $addRoute('bulk.order.create', [], now(), 'monthly', '0.45');
         $addRoute('seller.apply', [], now(), 'monthly', '0.5');
 
         Page::query()
             ->published()
             ->whereNotNull('slug')
             ->where('slug', '!=', '')
-            ->whereNotIn('slug', ['shipping-delivery', 'sizing-kit'])
+            ->whereNotIn('slug', ['shipping-delivery', 'sizing-kit', 'contact-us-2', 'order-tracking', 'free-return'])
             ->orderBy('id')
             ->each(function (Page $page) use ($add): void {
                 $mod = $page->updated_at ?? $page->published_at;
-                $add(route('page.show', $page->slug), $mod, 'monthly', '0.68');
+                $add(route('pages.show', $page->slug), $mod, 'monthly', '0.68');
             });
 
         // --- 5) Landing / campaign / social proof ---
         $addRoute('reviews.public', [], now(), 'weekly', '0.75');
-        $addRoute('promo.offer', [], now(), 'weekly', '0.62');
-        $addRoute('promo.code.create', [], now(), 'weekly', '0.58');
-        $addRoute('support.ticket.create', [], now(), 'monthly', '0.5');
-        $addRoute('support.request.create', [], now(), 'monthly', '0.5');
 
         // --- Blog (nội dung / seasonal có thể gắn qua bài viết) ---
         $addRoute('blog.index', [], now(), 'weekly', '0.78');
@@ -152,6 +144,7 @@ class SitemapController extends Controller
             });
 
         // --- Shops ---
+        $addRoute('shops.index', [], now(), 'weekly', '0.7');
         Shop::query()
             ->active()
             ->whereNotNull('shop_slug')
