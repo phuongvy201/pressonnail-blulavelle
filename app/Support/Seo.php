@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
@@ -54,6 +55,91 @@ class Seo
         }
 
         return Str::limit($name, 55, '…').' | BluLavelle';
+    }
+
+    public static function preferredProductSlug(Product $product): string
+    {
+        $winner = self::duplicateIndex()['redirect'][$product->id] ?? null;
+
+        return is_string($winner) && $winner !== '' ? $winner : (string) $product->slug;
+    }
+
+    public static function productHeading(Product $product): string
+    {
+        $heading = self::duplicateIndex()['heading'][$product->id] ?? null;
+
+        return is_string($heading) && $heading !== '' ? $heading : self::plain((string) $product->name);
+    }
+
+    /**
+     * @return list<int>
+     */
+    public static function redirectedProductIds(): array
+    {
+        return array_map('intval', array_keys(self::duplicateIndex()['redirect']));
+    }
+
+    /**
+     * @param  list<array{id:int,name:string,slug:string,shop?:string,shop_id?:int|null,price:mixed,description?:string}>  $rows
+     * @return array{redirect: array<int, string>, heading: array<int, string>}
+     */
+    public static function resolveDuplicateProductHeadings(array $rows): array
+    {
+        $redirect = [];
+        $heading = [];
+        $groups = [];
+        foreach ($rows as $row) {
+            $key = self::compareKey((string) ($row['name'] ?? ''));
+            $slug = trim((string) ($row['slug'] ?? ''));
+            if ($key === '' || $slug === '') {
+                continue;
+            }
+            $row['slug'] = $slug;
+            $groups[$key][] = $row;
+        }
+
+        foreach ($groups as $group) {
+            if (count($group) < 2) {
+                continue;
+            }
+            $contentGroups = [];
+            foreach ($group as $row) {
+                $contentKey = implode('|', [
+                    (string) ($row['shop_id'] ?? ''),
+                    number_format((float) ($row['price'] ?? 0), 2, '.', ''),
+                    self::compareKey(strip_tags((string) ($row['description'] ?? ''))),
+                ]);
+                $contentGroups[$contentKey][] = $row;
+            }
+
+            $remaining = [];
+            foreach ($contentGroups as $siblings) {
+                usort($siblings, fn (array $a, array $b): int => ((int) $a['id']) <=> ((int) $b['id']));
+                $winner = $siblings[0];
+                $remaining[] = $winner;
+                foreach (array_slice($siblings, 1) as $loser) {
+                    $redirect[(int) $loser['id']] = (string) $winner['slug'];
+                }
+            }
+
+            if (count($remaining) < 2) {
+                continue;
+            }
+            usort($remaining, fn (array $a, array $b): int => ((int) $a['id']) <=> ((int) $b['id']));
+            $used = [self::compareKey((string) $remaining[0]['name']) => true];
+            foreach (array_slice($remaining, 1) as $row) {
+                $name = self::plain((string) $row['name']);
+                $shop = self::plain((string) ($row['shop'] ?? ''));
+                $candidate = $shop !== '' ? $name.' by '.$shop : $name.' ('.$row['slug'].')';
+                if (isset($used[self::compareKey($candidate)])) {
+                    $candidate = $name.' ('.$row['slug'].')';
+                }
+                $used[self::compareKey($candidate)] = true;
+                $heading[(int) $row['id']] = $candidate;
+            }
+        }
+
+        return ['redirect' => $redirect, 'heading' => $heading];
     }
 
     public static function productDescription(Product $product): string
@@ -266,7 +352,7 @@ class Seo
 
     public static function defaultShareImage(): string
     {
-        return self::publicAsset('/images/logo/BABYBLUE.png');
+        return self::publicAsset('/images/og/blulavelle-share.png');
     }
 
     /**
@@ -529,6 +615,40 @@ class Seo
             'bestRating' => '5',
             'worstRating' => '1',
         ];
+    }
+
+    /**
+     * @return array{redirect: array<int, string>, heading: array<int, string>}
+     */
+    private static function duplicateIndex(): array
+    {
+        $index = Cache::remember('seo.duplicate-product-headings.v1', 3600, function (): array {
+            $rows = Product::query()
+                ->availableForDisplay()
+                ->whereNotNull('slug')
+                ->where('slug', '!=', '')
+                ->with('shop:id,shop_name')
+                ->get(['id', 'name', 'slug', 'shop_id', 'price', 'description'])
+                ->map(fn (Product $product): array => [
+                    'id' => (int) $product->id,
+                    'name' => (string) $product->name,
+                    'slug' => (string) $product->slug,
+                    'shop_id' => $product->shop_id,
+                    'shop' => (string) ($product->shop?->shop_name ?? ''),
+                    'price' => $product->price,
+                    'description' => (string) $product->description,
+                ])
+                ->all();
+
+            return self::resolveDuplicateProductHeadings($rows);
+        });
+
+        return is_array($index) ? $index : ['redirect' => [], 'heading' => []];
+    }
+
+    private static function compareKey(string $value): string
+    {
+        return mb_strtolower(self::plain($value));
     }
 
     private static function plain(string $value): string

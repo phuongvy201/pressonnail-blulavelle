@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Blog')
+@section('meta_description', 'Guides for handmade press-on nails: how to size, apply, and care for reusable sets, plus stories from BluLavelle artists.')
 
 @section('content')
 <!-- Blog Header -->

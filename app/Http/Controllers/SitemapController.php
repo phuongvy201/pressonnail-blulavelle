@@ -10,13 +10,14 @@ use App\Models\PostCategory;
 use App\Models\PostTag;
 use App\Models\Product;
 use App\Models\Shop;
+use App\Support\Seo;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 
 class SitemapController extends Controller
 {
-    private const CACHE_KEY = 'http.sitemap.xml.v4';
+    private const CACHE_KEY = 'http.sitemap.xml.v5';
 
     public function index(): Response
     {
@@ -72,14 +73,18 @@ class SitemapController extends Controller
             });
 
         // --- 2) Product detail pages (ưu tiên SEO cao nhất trong nội dung sản phẩm) ---
+        $duplicateProductIds = array_fill_keys(Seo::redirectedProductIds(), true);
         Product::query()
             ->availableForDisplay()
             ->whereNotNull('slug')
             ->where('slug', '!=', '')
             ->select(['id', 'slug', 'updated_at'])
             ->orderBy('id')
-            ->chunkById(500, function ($products) use ($add): void {
+            ->chunkById(500, function ($products) use ($add, $duplicateProductIds): void {
                 foreach ($products as $product) {
+                    if (isset($duplicateProductIds[$product->id])) {
+                        continue;
+                    }
                     $add(route('products.show', $product->slug), $product->updated_at, 'daily', '0.98');
                 }
             });

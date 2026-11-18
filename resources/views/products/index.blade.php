@@ -212,7 +212,7 @@ document.addEventListener('DOMContentLoaded', function() {
 />
 
 {{-- Feedback / Testimonials --}}
-<x-testimonials title="Over 50,000+ Happy Customers" rating="4.8/5" />
+<x-testimonials />
 
 {{-- Dark promo section (Indulge in skin softness style) --}}
 <section class="px-4 sm:px-6 lg:px-20 py-20 bg-[#2b2533] text-white overflow-hidden">

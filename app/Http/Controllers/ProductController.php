@@ -14,6 +14,7 @@ use App\Services\TikTokEventsService;
 use App\Services\CurrencyService;
 use App\Services\CrossSellService;
 use App\Support\ReferenceNailSizeChart;
+use App\Support\Seo;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
@@ -185,6 +186,11 @@ class ProductController extends Controller
                 $query->orderBy('created_at', 'desc')->limit(10);
             }])
             ->firstOrFail();
+
+        $preferredSlug = Seo::preferredProductSlug($product);
+        if ($preferredSlug !== $product->slug) {
+            return redirect()->route('products.show', ['slug' => $preferredSlug], status: 301);
+        }
 
         if (Auth::check()) {
             RecentProductView::recordView(Auth::id(), $product->id);

@@ -77,6 +77,15 @@
     }
     $tabs = array_slice($tabs, 0, 4);
 
+    $tabs = array_map(function (array $tab): array {
+        $raw = $tab['image_url'] ?? null;
+        if (is_string($raw) && $raw !== '') {
+            $tab['image_url'] = optimized_local_img($raw, 960);
+        }
+
+        return $tab;
+    }, $tabs);
+
     $activeTabKey = $tabs[0]['key'] ?? 'nail';
     $firstTab = $tabs[0] ?? [];
     $firstImg = $firstTab['image_url'] ?? null;
@@ -148,7 +157,7 @@
                             aria-label="Show {{ $label }}">
                         <div class="relative aspect-[4/5] overflow-hidden">
                             @if($img)
-                                <img src="{{ $img }}" alt="" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
+                                <img src="{{ $img }}" alt="{{ $label }} press-on nail preview" width="480" height="600" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" decoding="async">
                             @else
                                 <div class="absolute inset-0 transition-transform duration-500 group-hover:scale-105" style="background: {{ $gradient }};"></div>
                             @endif
@@ -172,7 +181,9 @@
                     </video>
                     <img class="seeit-main-image absolute inset-0 w-full h-full object-cover {{ $firstVid ? 'hidden' : '' }}"
                          src="{{ $firstImg ?: '' }}"
-                         alt="See it in action"
+                         alt="{{ $firstLabel }} press-on nail preview"
+                         width="960"
+                         height="1200"
                          loading="lazy"
                          decoding="async"
                          onerror="this.style.display='none';" />

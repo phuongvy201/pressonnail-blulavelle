@@ -3,7 +3,7 @@
 @section('title', $product->name)
 @section('meta_title', \App\Support\Seo::productTitle($product))
 @section('meta_description', \App\Support\Seo::productDescription($product))
-@section('canonical', \App\Support\Seo::canonicalPath('/products/'.$product->slug))
+@section('canonical', \App\Support\Seo::canonicalPath('/products/'.\App\Support\Seo::preferredProductSlug($product)))
 @section('og_type', 'product')
 @section('og_image', \App\Support\Seo::productImageUrl($product) ?? \App\Support\Seo::defaultShareImage())
 
@@ -468,7 +468,7 @@
                         <span class="text-sm font-medium text-slate-500">{{ $reviewsCount }} {{ $reviewsCount === 1 ? 'Review' : 'Reviews' }}</span>
                     </div>
                     @endif
-                    <h1 class="text-2xl md:text-3xl text-heading font-extrabold text-slate-900 tracking-tight leading-tight">{{ $product->name }}</h1>
+                    <h1 class="text-2xl md:text-3xl text-heading font-extrabold text-slate-900 tracking-tight leading-tight">{{ \App\Support\Seo::productHeading($product) }}</h1>
                     @if($product->collections->isNotEmpty())
                     <div class="mt-3 flex items-center gap-2">
                         <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-[#0297FE]/10 text-[#0297FE] border border-[#0297FE]/20 uppercase tracking-wide">
