@@ -1,15 +1,15 @@
 @extends('layouts.app')
 
 @section('title', $page->meta_title ?? $page->title)
-@section('meta_description', $page->meta_description ?? $page->excerpt)
+@section('meta_description', \App\Support\Seo::pageDescription((string) $page->slug, (string) ($page->meta_description ?: $page->excerpt ?: '')))
 
 @section('content')
 @php
     // If page content already includes its own Tailwind layout (seeded pages),
     // don't wrap it in an extra narrow container/card/prose.
-    $content = (string) ($page->content ?? '');
-    $content = preg_replace('/<h1(\s[^>]*)?>/i', '<h2$1>', $content) ?? $content;
-    $content = preg_replace('/<\/h1>/i', '</h2>', $content) ?? $content;
+    $content = \App\Support\Seo::rootRelativeHrefs(
+        \App\Support\Seo::demoteExtraHeadings((string) ($page->content ?? ''))
+    );
     $hasOwnLayout =
         str_contains($content, 'max-w-') ||
         str_contains($content, 'mx-auto') ||

@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Collections')
-@section('meta_description', 'Browse our curated collections of custom products')
+@section('title', 'Handmade Press-On Collections')
+@section('meta_description', \App\Support\Seo::catalogDescription('collections'))
 
 @section('content')
 <main class="flex-1">

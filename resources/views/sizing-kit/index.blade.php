@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Sizing Kit - Find Your Perfect Fit')
+@section('meta_description', \App\Support\Seo::catalogDescription('sizing-kit'))
 
 @section('content')
 @php

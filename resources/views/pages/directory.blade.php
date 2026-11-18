@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Sitemap')
-@section('meta_description', 'Browse BluLavelle pages, collections, categories, and nail artists.')
+@section('title', 'Pages, Collections, and Artists')
+@section('meta_description', \App\Support\Seo::catalogDescription('sitemap'))
 
 @section('content')
 <div class="bg-white">

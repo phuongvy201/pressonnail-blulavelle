@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Nail Artists')
-@section('meta_description', 'Meet the independent press-on nail artists on BluLavelle and shop their handmade sets.')
+@section('title', 'Independent Nail Artists')
+@section('meta_description', \App\Support\Seo::catalogDescription('shops'))
 
 @section('content')
 <div class="bg-white">

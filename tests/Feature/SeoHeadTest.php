@@ -29,7 +29,7 @@ test('product seo uses the set name, shop, and first image', function () {
     ]);
     $product->setRelation('shop', $shop);
 
-    expect(Seo::productTitle($product))->toBe('Black Cat Stained Glass Press-On Nails | BluVienne | BluLavelle')
+    expect(Seo::productTitle($product))->toBe('Black Cat Stained Glass Press-On Nails | BluLavelle')
         ->and(Seo::productDescription($product))->toContain('Black Cat Stained Glass Press-On Nails')
         ->and(Seo::productDescription($product))->toContain('BluVienne')
         ->and(mb_strlen(Seo::productDescription($product)))->toBeLessThanOrEqual(160)
@@ -49,7 +49,7 @@ test('long product names stay unique without repeating the brand', function () {
 
     expect($title)->toEndWith('| BluLavelle')
         ->and(substr_count(mb_strtolower($title), 'blulavelle'))->toBe(1)
-        ->and(mb_strlen($title))->toBeLessThanOrEqual(70);
+        ->and(mb_strlen($title))->toBeLessThanOrEqual(60);
 });
 
 test('listing canonical keeps the page and filters and drops campaign parameters', function () {
@@ -127,4 +127,50 @@ test('product schema uses the real offer and skips a rating when there are no re
         ->and($json)->toContain('"@type":"BreadcrumbList"')
         ->and($json)->toContain('https://blulavelle.com/products/black-cat')
         ->and($json)->not->toContain('AggregateRating');
+});
+
+test('short product titles keep the shop and long titles stay within 60 characters', function () {
+    $short = new Product(['name' => 'Black Cat Nails', 'slug' => 'black-cat-nails']);
+    $short->setRelation('shop', new Shop(['shop_name' => 'BluVienne']));
+
+    $title = Seo::productTitle($short);
+
+    expect($title)->toBe('Black Cat Nails | BluVienne | BluLavelle')
+        ->and(mb_strlen($title))->toBeGreaterThanOrEqual(30)
+        ->and(mb_strlen($title))->toBeLessThanOrEqual(60);
+
+    $page = Seo::documentTitle('', 'Artistic Press-On Nails | Creative Hand-Painted Designs', '');
+    expect(mb_strlen($page))->toBeLessThanOrEqual(60)
+        ->and($page)->toEndWith('| BluLavelle');
+
+    $listing = Seo::documentTitle('', Seo::listingTitle('CELESTIAL ART'), '');
+    expect(mb_strlen($listing))->toBeGreaterThanOrEqual(30)
+        ->and(mb_strlen($listing))->toBeLessThanOrEqual(60)
+        ->and($listing)->toBe('CELESTIAL ART Press-On Nails | BluLavelle');
+});
+
+test('catalog and generated descriptions stay between 120 and 160 characters', function () {
+    foreach (Seo::catalogDescriptions() as $description) {
+        expect(mb_strlen($description))->toBeGreaterThanOrEqual(120)
+            ->and(mb_strlen($description))->toBeLessThanOrEqual(160);
+    }
+
+    expect(mb_strlen(Seo::collectionDescription('CELESTIAL ART')))->toBeGreaterThanOrEqual(120)
+        ->and(mb_strlen(Seo::collectionDescription('CELESTIAL ART')))->toBeLessThanOrEqual(160)
+        ->and(mb_strlen(Seo::categoryDescription('Nail Box')))->toBeGreaterThanOrEqual(120)
+        ->and(mb_strlen(Seo::categoryDescription('Nail Box')))->toBeLessThanOrEqual(160)
+        ->and(mb_strlen(Seo::shopDescription('BluLavelle', 'Handmade, hand-painted press-on nails by BluLavelle.')))->toBeGreaterThanOrEqual(120)
+        ->and(mb_strlen(Seo::pageDescription('about-us', 'Discover Blu Lavelle - your go-to for stylish press-on nails.')))->toBeGreaterThanOrEqual(120)
+        ->and(Seo::pageDescription('about-us', str_repeat('Unique about copy. ', 8)))->toStartWith('Unique about copy.');
+});
+
+test('cms html keeps one page heading and root-relative links', function () {
+    $html = '<h1>Prep the set</h1><p>Read <a href="sizing-kit">the kit</a> and <a href="https://blulavelle.com/contact">contact</a>.</p>';
+
+    $fixed = Seo::rootRelativeHrefs(Seo::demoteExtraHeadings($html));
+
+    expect($fixed)->not->toContain('<h1')
+        ->and($fixed)->toContain('<h2>Prep the set</h2>')
+        ->and($fixed)->toContain('href="/sizing-kit"')
+        ->and($fixed)->toContain('href="https://blulavelle.com/contact"');
 });

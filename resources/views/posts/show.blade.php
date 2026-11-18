@@ -80,7 +80,7 @@
 
             <!-- Post Content -->
             <div class="prose prose-lg max-w-none mb-8">
-                {!! $post->content !!}
+                {!! \App\Support\Seo::rootRelativeHrefs(\App\Support\Seo::demoteExtraHeadings((string) $post->content)) !!}
             </div>
 
             <!-- Gallery -->

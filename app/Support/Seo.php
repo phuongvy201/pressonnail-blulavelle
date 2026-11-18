@@ -10,6 +10,10 @@ use Illuminate\Support\Str;
 
 class Seo
 {
+    public const TITLE_LIMIT = 60;
+
+    private const BRAND_SUFFIX = ' | BluLavelle';
+
     public static function documentTitle(string $metaTitle, string $sectionTitle, string $viewTitle): string
     {
         foreach ([$metaTitle, $sectionTitle, $viewTitle] as $candidate) {
@@ -17,11 +21,11 @@ class Seo
             if ($candidate === '') {
                 continue;
             }
-            if (str_contains(mb_strtolower($candidate), 'blulavelle')) {
-                return $candidate;
+            if (! str_contains(mb_strtolower($candidate), 'blulavelle')) {
+                $candidate .= self::BRAND_SUFFIX;
             }
 
-            return $candidate.' | BluLavelle';
+            return self::clampTitle($candidate);
         }
 
         return 'BluLavelle | Handcrafted Stained Glass Press-On Nails';
@@ -43,18 +47,177 @@ class Seo
     public static function productTitle(Product $product): string
     {
         $name = self::plain((string) $product->name);
+        if ($name === '') {
+            return 'Press-On Nails'.self::BRAND_SUFFIX;
+        }
+
         $shop = self::plain((string) ($product->shop?->shop_name ?? ''));
-        $withShop = $shop !== '' ? $name.' | '.$shop.' | BluLavelle' : $name.' | BluLavelle';
-        if (mb_strlen($withShop) <= 70) {
-            return $withShop;
+        if ($shop !== '') {
+            $withShop = $name.' | '.$shop.self::BRAND_SUFFIX;
+            if (mb_strlen($withShop) <= self::TITLE_LIMIT) {
+                return $withShop;
+            }
         }
 
-        $branded = $name.' | BluLavelle';
-        if (mb_strlen($branded) <= 70) {
-            return $branded;
+        return self::clampTitle($name.self::BRAND_SUFFIX);
+    }
+
+    public static function listingTitle(string $name): string
+    {
+        $name = self::plain($name);
+        if ($name === '' || str_contains(mb_strtolower($name), 'blulavelle')) {
+            return self::clampTitle($name);
+        }
+        if (mb_strlen($name.self::BRAND_SUFFIX) >= 30) {
+            return $name;
+        }
+        if (! preg_match('/press-?on/i', $name)) {
+            $expanded = $name.' Press-On Nails';
+            if (mb_strlen($expanded.self::BRAND_SUFFIX) <= self::TITLE_LIMIT) {
+                return $expanded;
+            }
         }
 
-        return Str::limit($name, 55, '…').' | BluLavelle';
+        return $name;
+    }
+
+    public static function clampTitle(string $title): string
+    {
+        $title = self::plain($title);
+        if (mb_strlen($title) <= self::TITLE_LIMIT) {
+            return $title;
+        }
+
+        $suffix = '';
+        $body = $title;
+        if (str_ends_with(mb_strtolower($title), mb_strtolower(self::BRAND_SUFFIX))) {
+            $suffix = self::BRAND_SUFFIX;
+            $body = rtrim(mb_substr($title, 0, mb_strlen($title) - mb_strlen($suffix)));
+        }
+
+        $room = self::TITLE_LIMIT - mb_strlen($suffix) - 1;
+        if ($room < 8) {
+            return rtrim(mb_substr($title, 0, self::TITLE_LIMIT - 1)).'…';
+        }
+
+        $slice = rtrim(mb_substr($body, 0, $room));
+        $space = mb_strrpos($slice, ' ');
+        if ($space !== false && $space >= (int) floor($room * 0.6)) {
+            $slice = rtrim(mb_substr($slice, 0, $space));
+        }
+        if ($slice === '') {
+            $slice = rtrim(mb_substr($body, 0, $room));
+        }
+
+        return $slice.'…'.$suffix;
+    }
+
+    public static function catalogDescription(string $key): string
+    {
+        return self::catalogDescriptions()[$key] ?? '';
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function catalogDescriptions(): array
+    {
+        return [
+            'products' => 'Shop every handmade press-on nail set on BluLavelle. Filter by artist, shape, and style, then size your reusable set at home.',
+            'contact' => 'Contact BluLavelle about an order, a sizing kit, or a handmade set. Email support@blulavelle.com or call +1 205-389-9573.',
+            'sizing-kit' => 'Order a BluLavelle sizing kit and match each nail before you buy a set. The kit helps you find a custom fit for reusable press-on nails.',
+            'become-a-seller' => 'Apply to sell handmade press-on nails on BluLavelle. Independent artists get a shop page, product tools, and orders fulfilled from our warehouses.',
+            'reviews' => 'Read customer reviews of handmade press-on nails on BluLavelle. See notes on fit, wear, and the artists who made the reusable sets.',
+            'collections' => 'Browse BluLavelle press-on nail collections, from stained glass to seasonal art. Each collection is handmade by an independent artist.',
+            'shops' => 'Meet the independent press-on nail artists on BluLavelle and shop their handmade reusable sets, sized at home with the sizing kit.',
+            'sitemap' => 'Browse the BluLavelle sitemap for help, shipping, returns, collections, categories, nail artist shops, and the press-on nail catalog.',
+            'about-us' => 'BluLavelle sells handmade stained-glass and custom-sized press-on nails from independent artists, shipped from our US and UK warehouses.',
+            'affiliate-attribution-cookie-policy' => 'How BluLavelle credits an affiliate sale: the last creator link wins, how long the cookie lasts, and what happens when a shopper clicks two links.',
+            'affiliate-commission-payout-policy' => 'BluLavelle affiliate commission tiers, how a qualifying sale is counted, when payouts are sent, and which orders are left out of commission.',
+            'affiliate-privacy-policy' => 'Privacy practices for the BluLavelle creator portal: what we collect from affiliates, how long we keep it, and how to ask for a correction or deletion.',
+            'affiliate-program-terms' => 'Rules for BluLavelle creators and affiliates, including honest promotion, banned claims, when a commission counts, and how the program can end.',
+            'help-center' => 'BluLavelle Help Center for sizing, shipping times, order tracking, 30-day returns, and how to reach support about a handmade press-on order.',
+            'secure-payments' => 'How BluLavelle protects checkout: encrypted pages, card handling built for PCI rules, fraud checks, and the payment methods accepted on an order.',
+        ];
+    }
+
+    public static function pageDescription(string $slug, string $existing = ''): string
+    {
+        $catalog = self::catalogDescription($slug);
+        if ($catalog !== '') {
+            return self::descriptionOrFallback($existing, $catalog);
+        }
+
+        return self::plain(strip_tags($existing));
+    }
+
+    public static function collectionDescription(string $name, string $existing = ''): string
+    {
+        $fallback = 'Shop the '.self::plain($name).' press-on nail collection at BluLavelle. Handmade reusable sets from independent artists, with a sizing kit for a custom fit.';
+
+        return self::descriptionOrFallback($existing, $fallback);
+    }
+
+    public static function categoryDescription(string $name, string $existing = ''): string
+    {
+        $fallback = 'Shop '.self::plain($name).' press-on nails at BluLavelle. Handmade reusable sets from independent artists, with a sizing kit so you can match the fit at home.';
+
+        return self::descriptionOrFallback($existing, $fallback);
+    }
+
+    public static function shopDescription(string $name, string $existing = ''): string
+    {
+        $existing = self::plain(strip_tags($existing));
+        if (mb_strlen($existing) >= 120) {
+            return $existing;
+        }
+
+        $fallback = self::plain($name).' designs handmade press-on nails on BluLavelle. Browse reusable sets from this independent artist and size them at home with the kit.';
+        if ($existing === '') {
+            return $fallback;
+        }
+
+        $combined = rtrim($existing, '.').'. Browse handmade reusable press-on sets from this independent artist, sized at home with the kit.';
+        if (mb_strlen($combined) >= 120) {
+            return $combined;
+        }
+
+        return $fallback;
+    }
+
+    public static function descriptionOrFallback(string $value, string $fallback): string
+    {
+        $value = self::plain(strip_tags($value));
+        if (mb_strlen($value) >= 120) {
+            return $value;
+        }
+
+        return self::plain($fallback);
+    }
+
+    public static function demoteExtraHeadings(string $html): string
+    {
+        $html = preg_replace('/<h1(\s[^>]*)?>/i', '<h2$1>', $html) ?? $html;
+
+        return preg_replace('/<\/h1>/i', '</h2>', $html) ?? $html;
+    }
+
+    public static function rootRelativeHrefs(string $html): string
+    {
+        $rewritten = preg_replace_callback(
+            '/\bhref=(["\'])([^"\']*)\1/i',
+            static function (array $match): string {
+                $href = trim($match[2]);
+                if ($href === '' || preg_match('~^(#|\?|/|mailto:|tel:|javascript:|https?:|data:)~i', $href)) {
+                    return $match[0];
+                }
+
+                return 'href='.$match[1].'/'.ltrim($href, '/').$match[1];
+            },
+            $html
+        );
+
+        return $rewritten ?? $html;
     }
 
     public static function preferredProductSlug(Product $product): string

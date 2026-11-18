@@ -1,10 +1,7 @@
 @extends('layouts.app')
 
 @php
-    $shopBio = trim(strip_tags((string) ($shop->shop_description ?? '')));
-    if ($shopBio === '') {
-        $shopBio = $shop->shop_name.' is an independent press-on nail artist on BluLavelle. Browse handmade reusable sets from this shop.';
-    }
+    $shopBio = \App\Support\Seo::shopDescription((string) $shop->shop_name, (string) ($shop->shop_description ?? ''));
 @endphp
 @section('meta_title', $shop->shop_name.' | Press-On Nail Artist | BluLavelle')
 @section('meta_description', $shopBio)

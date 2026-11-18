@@ -1,5 +1,8 @@
 @extends('layouts.app')
 
+@section('title', 'Sell Handmade Press-On Nails')
+@section('meta_description', \App\Support\Seo::catalogDescription('become-a-seller'))
+
 @section('content')
 @php
     $recaptchaSiteKey = config('services.recaptcha.site_key');

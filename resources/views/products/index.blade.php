@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'All Products')
+@section('title', 'Shop All Press-On Nails')
+@section('meta_description', \App\Support\Seo::catalogDescription('products'))
 
 @section('content')
 @php

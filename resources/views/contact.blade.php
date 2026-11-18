@@ -1,5 +1,8 @@
 @extends('layouts.app')
 
+@section('title', 'Order and Sizing Support')
+@section('meta_description', \App\Support\Seo::catalogDescription('contact'))
+
 @section('content')
 <!-- Hero Section -->
 <div class="bg-gradient-to-r from-blue-600 to-blue-800">

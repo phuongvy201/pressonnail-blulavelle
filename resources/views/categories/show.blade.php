@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', $category->meta_title ?? $category->name)
-@section('meta_description', $category->meta_description ?? 'Browse ' . $category->name . ' products and designs')
+@section('title', \App\Support\Seo::listingTitle((string) ($category->meta_title ?: $category->name)))
+@section('meta_description', \App\Support\Seo::categoryDescription((string) $category->name, (string) ($category->meta_description ?? '')))
 
 @section('content')
 @php

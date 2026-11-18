@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
 @php
-    $collectionDescription = trim(strip_tags((string) ($collection->meta_description ?: $collection->description)));
-    if ($collectionDescription === '') {
-        $collectionDescription = 'Shop the '.$collection->name.' press-on nail collection at BluLavelle. Handmade reusable sets from independent artists.';
-    }
+    $collectionDescription = \App\Support\Seo::collectionDescription(
+        (string) $collection->name,
+        (string) ($collection->meta_description ?: $collection->description)
+    );
 @endphp
-@section('title', $collection->meta_title ?? $collection->name)
+@section('title', \App\Support\Seo::listingTitle((string) ($collection->meta_title ?: $collection->name)))
 @section('meta_description', $collectionDescription)
 
 @section('content')
