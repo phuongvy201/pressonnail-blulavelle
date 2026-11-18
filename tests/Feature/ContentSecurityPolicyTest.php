@@ -24,7 +24,22 @@ it('sends Content-Security-Policy on html by default', function () {
         ->and($csp)->toContain('https://analytics.tiktok.com')
         ->and($csp)->toContain('https://s.pinimg.com')
         ->and($csp)->toContain('https://widget.trustpilot.com')
-        ->and($csp)->toContain('https://images.dmca.com');
+        ->and($csp)->toContain('https://images.dmca.com')
+        ->and($csp)->not->toContain('localhost:5173');
+});
+
+it('allows the vite dev server only while the app environment is local', function () {
+    $this->app->detectEnvironment(fn () => 'local');
+    config([
+        'csp.enabled' => true,
+        'csp.report_only' => false,
+        'csp.use_nonces' => false,
+    ]);
+
+    $csp = (string) $this->get('/')->headers->get('Content-Security-Policy');
+
+    expect($csp)->toContain('http://localhost:5173')
+        ->and($csp)->toContain('ws://localhost:5173');
 });
 
 it('can send report-only instead of enforcing', function () {

@@ -329,7 +329,11 @@ def parse_page(html: str) -> dict[str, object]:
     imgs = parser.imgs
     no_alt = sum(1 for img in imgs if not img.get("alt", "").strip())
     no_dims = sum(1 for img in imgs if not img.get("width") or not img.get("height"))
-    gifs = [src for src in parser.srcs if ".gif" in src.lower()]
+    gifs = [
+        src
+        for src in parser.srcs
+        if urlparse(urljoin(ORIGIN, src)).path.lower().endswith(".gif")
+    ]
     bare_hrefs = [
         href
         for href in parser.hrefs
@@ -381,7 +385,11 @@ def same_host(url: str) -> bool:
 
 
 def normalize(url: str) -> str:
-    parsed = urlparse(urljoin(ORIGIN, url))
+    absolute = urljoin(ORIGIN, url.strip())
+    parsed = urlparse(absolute)
+    host = (parsed.hostname or "").lower()
+    if host not in {"", HOST, "www." + HOST}:
+        return absolute.split("#", 1)[0]
     path = parsed.path or "/"
     if path != "/":
         path = path.rstrip("/")

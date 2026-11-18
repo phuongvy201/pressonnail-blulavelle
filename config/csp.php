@@ -87,10 +87,6 @@ return [
             'https://cdn.tailwindcss.com',
             'https://cdn.tiny.cloud',
             'https://bzrcdn.openai.com',
-            'http://localhost:5173',
-            'http://127.0.0.1:5173',
-            'ws://localhost:5173',
-            'ws://127.0.0.1:5173',
         ],
         'style-src' => [
             "'self'",
@@ -100,8 +96,6 @@ return [
             'https://cdn.jsdelivr.net',
             'https://cdn.tiny.cloud',
             'https://widget.trustpilot.com',
-            'http://localhost:5173',
-            'http://127.0.0.1:5173',
         ],
         'img-src' => [
             "'self'",
@@ -153,10 +147,6 @@ return [
             'https://cdn.tiny.cloud',
             'https://bzrcdn.openai.com',
             'https://ads.chatgpt.com',
-            'http://localhost:5173',
-            'http://127.0.0.1:5173',
-            'ws://localhost:5173',
-            'ws://127.0.0.1:5173',
         ],
         'frame-src' => [
             "'self'",

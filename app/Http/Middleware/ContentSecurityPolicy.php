@@ -81,6 +81,16 @@ class ContentSecurityPolicy
             if (isset($extra[$name]) && is_array($extra[$name])) {
                 $merged = array_merge($merged, $extra[$name]);
             }
+            if (app()->environment('local')) {
+                $viteDev = [
+                    'script-src' => ['http://localhost:5173', 'http://127.0.0.1:5173', 'ws://localhost:5173', 'ws://127.0.0.1:5173'],
+                    'style-src' => ['http://localhost:5173', 'http://127.0.0.1:5173'],
+                    'connect-src' => ['http://localhost:5173', 'http://127.0.0.1:5173', 'ws://localhost:5173', 'ws://127.0.0.1:5173'],
+                ];
+                if (isset($viteDev[$name])) {
+                    $merged = array_merge($merged, $viteDev[$name]);
+                }
+            }
 
             // Nonce mode: allow listed scripts + this request's nonce.
             // Browsers ignore 'unsafe-inline' when a nonce/hash is present.

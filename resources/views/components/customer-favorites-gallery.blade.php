@@ -56,19 +56,24 @@
                     if ($username !== '' && !str_starts_with($username, '@')) {
                         $username = '@'.$username;
                     }
-                    $imageUrl = trim((string) ($item['image_url'] ?? ''));
-                    $avatarUrl = trim((string) ($item['avatar_url'] ?? ''));
-                    $hasGif = $imageUrl !== '';
-                    $badge = $hasGif ? 'GIF' : '';
+                    $rawImage = trim((string) ($item['image_url'] ?? ''));
+                    $imageUrl = $rawImage !== '' ? optimized_local_img($rawImage, 720) : '';
+                    $rawAvatar = trim((string) ($item['avatar_url'] ?? ''));
+                    $avatarUrl = $rawAvatar !== '' ? optimized_local_img($rawAvatar, 96) : '';
+                    $imagePath = strtolower((string) parse_url($imageUrl, PHP_URL_PATH));
+                    $servesGif = $imagePath !== '' && str_ends_with($imagePath, '.gif');
+                    $badge = $servesGif ? 'GIF' : '';
                     $initial = $username !== '' ? strtoupper(substr(ltrim($username, '@'), 0, 1)) : '?';
                     $layoutClass = $cardLayouts[$idx] ?? 'cf-card--1';
                     $placeholderBg = $placeholders[$idx] ?? $placeholders[0];
                 @endphp
                 <article class="cf-card {{ $layoutClass }} group relative overflow-hidden rounded-2xl bg-slate-200 shadow-md shadow-slate-200/60 ring-1 ring-slate-900/5">
-                    @if($hasGif)
+                    @if($imageUrl !== '')
                         <img class="cf-card-media absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                              src="{{ $imageUrl }}"
                              alt="{{ $username ?: 'Community favorite' }}"
+                             width="720"
+                             height="900"
                              loading="lazy"
                              decoding="async">
                     @else
