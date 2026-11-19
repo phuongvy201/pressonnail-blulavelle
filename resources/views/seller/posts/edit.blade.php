@@ -9,7 +9,7 @@
         <p class="text-gray-600">Edit: {{ $post->title }}</p>
     </div>
 
-    <form action="{{ route('admin.posts.update', $post) }}" method="POST" enctype="multipart/form-data" class="max-w-5xl">
+    <form id="blog-post-form" action="{{ route('admin.posts.update', $post) }}" method="POST" enctype="multipart/form-data" class="max-w-5xl">
         @csrf
         @method('PUT')
         
@@ -28,7 +28,7 @@
                     <!-- Content -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Content *</label>
-                        <textarea name="content" id="content" rows="20" required
+                        <textarea name="content" id="content" rows="20"
                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#005366]">{{ old('content', $post->content) }}</textarea>
                         @error('content')<p class="text-red-500 text-sm mt-1">{{ $message }}</p>@enderror
                     </div>
@@ -198,60 +198,4 @@
 </div>
 @endsection
 
-@push('scripts')
-<script src="https://cdn.tiny.cloud/1/pw52gj1ywkblbwxr7ywefhxjq28di8umadjb79gk9hlpqzzy/tinymce/8/tinymce.min.js" referrerpolicy="origin" crossorigin="anonymous"></script>
-<script>
-    tinymce.init({
-        selector: '#content',
-        height: 500,
-        menubar: true,
-        plugins: [
-            // Core editing features
-            'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'link', 'lists', 'media', 'searchreplace', 'table', 'visualblocks', 'wordcount',
-            // Premium features
-            'checklist', 'mediaembed', 'casechange', 'formatpainter', 'pageembed', 'a11ychecker', 'tinymcespellchecker', 'permanentpen', 'powerpaste', 'advtable', 'advcode', 'advtemplate', 'ai', 'uploadcare', 'mentions', 'tinycomments', 'tableofcontents', 'footnotes', 'mergetags', 'autocorrect', 'typography', 'inlinecss', 'markdown', 'importword', 'exportword', 'exportpdf'
-        ],
-        toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography uploadcare | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
-        content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
-        branding: false,
-        promotion: false,
-        relative_urls: false,
-        remove_script_host: false,
-        convert_urls: true,
-        tinycomments_mode: 'embedded',
-        tinycomments_author: '{{ auth()->user()->name }}',
-        mergetags_list: [
-            { value: 'First.Name', title: 'First Name' },
-            { value: 'Email', title: 'Email' },
-        ],
-        ai_request: (request, respondWith) => respondWith.string(() => Promise.reject('See docs to implement AI Assistant')),
-        uploadcare_public_key: 'b02167f0f3e107779bde',
-        images_upload_handler: function (blobInfo, success, failure) {
-            var xhr, formData;
-            xhr = new XMLHttpRequest();
-            xhr.withCredentials = false;
-            xhr.open('POST', '{{ route("admin.posts.upload-image") }}');
-            xhr.setRequestHeader('X-CSRF-TOKEN', '{{ csrf_token() }}');
-            
-            xhr.onload = function() {
-                var json;
-                if (xhr.status != 200) {
-                    failure('HTTP Error: ' + xhr.status);
-                    return;
-                }
-                json = JSON.parse(xhr.responseText);
-                if (!json || typeof json.location != 'string') {
-                    failure('Invalid JSON: ' + xhr.responseText);
-                    return;
-                }
-                success(json.location);
-            };
-            
-            formData = new FormData();
-            formData.append('file', blobInfo.blob(), blobInfo.filename());
-            xhr.send(formData);
-        }
-    });
-</script>
-@endpush
-
+@include('seller.posts.partials.editor')

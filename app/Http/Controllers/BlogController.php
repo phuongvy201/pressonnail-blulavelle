@@ -115,7 +115,7 @@ class BlogController extends Controller
                 $q->where('post_category_id', $post->post_category_id);
             })
             ->latest('published_at')
-            ->limit(4)
+            ->limit(3)
             ->get();
 
         return view('posts.show', compact('post', 'relatedPosts'));

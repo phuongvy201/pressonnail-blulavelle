@@ -714,6 +714,7 @@
                             <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-4">Company</h3>
                             <ul class="space-y-2.5 text-sm">
                                 <li><a href="{{ route('pages.show', 'about-us') }}" class="text-slate-300 hover:text-primary transition-colors">About Us</a></li>
+                                <li><a href="{{ route('blog.index') }}" class="text-slate-300 hover:text-primary transition-colors">Blog</a></li>
                                 <li><a href="{{ route('pages.show', 'privacy-policy') }}" class="text-slate-300 hover:text-primary transition-colors">Privacy Policy</a></li>
                                 <li><a href="{{ route('pages.show', 'terms-of-service') }}" class="text-slate-300 hover:text-primary transition-colors">Terms of Service</a></li>
                                 <li><a href="{{ route('pages.show', 'secure-payments') }}" class="text-slate-300 hover:text-primary transition-colors">Secure Payments</a></li>

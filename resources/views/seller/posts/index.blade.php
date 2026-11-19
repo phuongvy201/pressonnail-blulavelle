@@ -15,7 +15,7 @@
                 @endif
             </h1>
             @if(auth()->user()->hasRole('admin'))
-                <p class="text-gray-600 mt-1">Manage and approve posts from all sellers</p>
+                <p class="text-gray-600 mt-1">Write a post with New Post, or approve posts from sellers.</p>
             @else
                 <p class="text-gray-600 mt-1">
                     Your posts need admin approval before appearing on the website

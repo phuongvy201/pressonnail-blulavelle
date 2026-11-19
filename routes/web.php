@@ -797,6 +797,8 @@ Route::middleware('auth')->group(function () {
 
         // Analytics Dashboard
         Route::get('analytics', [App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('analytics.index');
+        Route::get('app-store', [App\Http\Controllers\Admin\AppStoreAnalyticsController::class, 'index'])->name('app-store.index');
+        Route::post('app-store/sync', [App\Http\Controllers\Admin\AppStoreAnalyticsController::class, 'sync'])->name('app-store.sync');
 
         // API Token (Admin only)
         Route::get('/api-token', [App\Http\Controllers\ApiDocController::class, 'tokenDashboard'])->name('api-token');

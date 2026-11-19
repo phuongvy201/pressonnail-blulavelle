@@ -1,47 +1,42 @@
 @extends('layouts.app')
 
-@section('title', 'Category: ' . $category->name)
+@section('title', \Illuminate\Support\Str::contains(strtolower($category->name), 'guide') ? $category->name.' for Press-On Nails' : $category->name.' Press-On Articles')
+@section('meta_description', $category->description ?: 'BluLavelle articles in '.$category->name.'.')
 
 @section('content')
-<div class="bg-gradient-to-r from-[#0195FE] to-[#0180d9] text-white py-16">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <h1 class="text-4xl md:text-5xl font-bold mb-4">{{ $category->name }}</h1>
-        @if($category->description)
-            <p class="text-xl text-gray-100">{{ $category->description }}</p>
+<main class="bg-background-light">
+    <nav class="max-w-7xl mx-auto px-6 lg:px-20 py-4 flex items-center gap-2 text-xs font-medium text-slate-400 uppercase tracking-widest">
+        <a class="hover:text-primary transition-colors" href="{{ route('home') }}">Home</a>
+        <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        <a class="hover:text-primary transition-colors" href="{{ route('blog.index') }}">Blog</a>
+        <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        <span class="text-slate-600">{{ $category->name }}</span>
+    </nav>
+
+    <section class="bg-primary/5 py-12 sm:py-16 mb-10">
+        <div class="max-w-7xl mx-auto px-6 lg:px-20 text-center">
+            <h1 class="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 mb-4">{{ $category->name }}</h1>
+            @if($category->description)
+                <p class="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">{{ $category->description }}</p>
+            @endif
+            <p class="mt-4 text-xs font-extrabold uppercase tracking-widest text-slate-400">{{ $posts->total() }} articles</p>
+        </div>
+    </section>
+
+    <section class="max-w-7xl mx-auto px-6 lg:px-20 pb-24">
+        @if($posts->isEmpty())
+            <div class="text-center py-16">
+                <h2 class="font-display text-2xl font-extrabold text-slate-900">No articles in this category yet</h2>
+                <a href="{{ route('blog.index') }}" class="inline-flex mt-6 px-6 py-3 rounded-full bg-primary text-white font-extrabold">Back to the blog</a>
+            </div>
+        @else
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10">
+                @foreach($posts as $post)
+                    @include('posts.partials.card', ['post' => $post])
+                @endforeach
+            </div>
+            <div class="mt-12">{{ $posts->links() }}</div>
         @endif
-        <p class="text-gray-200 mt-4">{{ $posts->total() }} articles in this category</p>
-    </div>
-</div>
-
-<div class="bg-gray-50 py-12">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            @foreach($posts as $post)
-                <article class="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-xl transition-all">
-                    <a href="{{ route('blog.show', $post->slug) }}">
-                        @if($post->featured_image)
-                            <div class="aspect-video overflow-hidden bg-gray-100">
-                                <img src="{{ $post->featured_image_url }}" 
-                                     alt="{{ $post->title }}"
-                                     class="w-full h-full object-cover group-hover:scale-110 transition-transform">
-                            </div>
-                        @endif
-                        <div class="p-6">
-                            <p class="text-xs text-gray-500 mb-2">{{ $post->published_at ? $post->published_at->format('M d, Y') : 'Draft' }} • {{ $post->reading_time ?? 1 }} min</p>
-                            <h2 class="text-xl font-bold text-gray-900 mb-3 line-clamp-2 hover:text-[#0195FE]">{{ $post->title }}</h2>
-                            @if($post->excerpt)
-                                <p class="text-gray-600 text-sm line-clamp-3">{{ $post->excerpt }}</p>
-                            @endif
-                        </div>
-                    </a>
-                </article>
-            @endforeach
-        </div>
-
-        <div class="mt-8">
-            {{ $posts->links() }}
-        </div>
-    </div>
-</div>
+    </section>
+</main>
 @endsection
-

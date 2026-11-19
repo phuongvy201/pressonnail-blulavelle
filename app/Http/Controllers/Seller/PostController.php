@@ -96,15 +96,15 @@ class PostController extends Controller
                 'meta_keywords' => 'nullable|string',
             ]);
 
-            // Check if user has shop (required for posts)
-            if (!auth()->user()->shop) {
+            $shop = auth()->user()->shop;
+            if (!$shop && !auth()->user()->hasRole('admin')) {
                 return back()
                     ->withInput($request->all())
                     ->with('error', 'Bạn cần có shop để tạo bài viết. Vui lòng tạo shop trước.');
             }
 
             $validated['user_id'] = auth()->id();
-            $validated['shop_id'] = auth()->user()->shop->id;
+            $validated['shop_id'] = $shop?->id;
 
             try {
                 $validated['slug'] = Post::generateSlug($validated['title']);

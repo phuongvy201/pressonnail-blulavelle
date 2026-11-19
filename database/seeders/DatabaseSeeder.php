@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
             PageSeeder::class,
             AffiliatePolicyPageSeeder::class,
             PostSeeder::class,
+            BlogArticleSeeder::class,
 
             // Virtual try-on sample hand library (no-op until photos are added).
             SampleHandSeeder::class,
