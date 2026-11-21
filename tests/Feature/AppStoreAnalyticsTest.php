@@ -119,7 +119,7 @@ test('sync stores download totals and skips an unchanged instance', function () 
         if (str_contains($url, '/reports')) {
             return Http::response(['data' => [[
                 'id' => 'report-1',
-                'attributes' => ['name' => 'App Downloads Detailed', 'category' => 'APP_STORE_ENGAGEMENT'],
+                'attributes' => ['name' => 'App Downloads Detailed', 'category' => 'COMMERCE'],
             ]]]);
         }
 

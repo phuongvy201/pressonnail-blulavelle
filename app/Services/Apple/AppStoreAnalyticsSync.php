@@ -102,10 +102,6 @@ class AppStoreAnalyticsSync
                 continue;
             }
             $name = (string) ($report['attributes']['name'] ?? '');
-            $category = (string) ($report['attributes']['category'] ?? '');
-            if ($category !== 'APP_STORE_ENGAGEMENT') {
-                continue;
-            }
             if ($name === 'App Downloads Detailed') {
                 $detailed = $report;
             }
